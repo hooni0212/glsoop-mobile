@@ -3,8 +3,8 @@ import { router } from "expo-router";
 import React from "react";
 import { Pressable, Text, View } from "react-native";
 
-import { COLORS, TAB_META, TAB_ORDER, type TabRouteName } from "tabs.meta";
-import { tabsStyles } from "tabs.styles";
+import { COLORS, TAB_META, TAB_ORDER, type TabRouteName } from "./tabs.meta";
+import { tabsStyles } from "./tabs.styles";
 
 /**
  * ✅ 최종 탭바(실전용)

@@ -1,5 +1,5 @@
 import { StyleSheet } from "react-native";
-import { COLORS } from "tabs.meta";
+import { COLORS } from "./tabs.meta";
 
 export const tabsStyles = StyleSheet.create({
   barWrap: {
