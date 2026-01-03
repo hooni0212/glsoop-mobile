@@ -144,7 +144,7 @@ const styles = StyleSheet.create({
 
   // ✅ 직사각형 바
   bar: {
-    height: 74,
+    height: 74, //텝바 베이스 높이
     backgroundColor: COLORS.bg,
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
