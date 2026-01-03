@@ -13,6 +13,7 @@ import {
 
 import { FeedCard } from "@/components/FeedCard";
 import { useFeed } from "@/features/feed/useFeed";
+import { router } from "expo-router";
 
 const CATEGORIES = ["추천", "인기", "힐링", "일상", "여행"] as const;
 type Category = (typeof CATEGORIES)[number];
@@ -131,7 +132,7 @@ export default function Home() {
             post={item}
             liked={Boolean((item as any).viewer?.isLiked)}
             bookmarked={Boolean((item as any).viewer?.isBookmarked)}
-            onPress={() => {}}
+            onPress={() => router.push(`/posts/${String(item.id)}`)}
             onLikePress={() => {}}
             onBookmarkPress={() => {}}
           />
