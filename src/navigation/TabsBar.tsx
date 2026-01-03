@@ -2,9 +2,10 @@ import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React from "react";
 import { Pressable, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { COLORS, TAB_META, TAB_ORDER, type TabRouteName } from "./tabs.meta";
-import { tabsStyles } from "./tabs.styles";
+import { createTabsStyles } from "./tabs.styles";
 
 /**
  * ✅ 최종 탭바(실전용)
@@ -27,6 +28,12 @@ import { tabsStyles } from "./tabs.styles";
 export function TabsBar(props: any /* BottomTabBarProps */) {
   const { state, navigation } = props;
 
+  const insets = useSafeAreaInsets();
+  const styles = React.useMemo(
+    () => createTabsStyles(insets.bottom),
+    [insets.bottom]
+  );
+
   const go = (name: TabRouteName) => {
     // expo-router Tabs는 내부적으로 React Navigation 기반이라 navigate로 이동 가능
     navigation.navigate(name);
@@ -35,9 +42,9 @@ export function TabsBar(props: any /* BottomTabBarProps */) {
   const focusedRouteName: string | undefined = state.routes[state.index]?.name;
 
   return (
-    <View style={tabsStyles.barWrap}>
+    <View style={styles.barWrap}>
       {/* 직사각형 바 */}
-      <View style={tabsStyles.bar}>
+      <View style={styles.bar}>
         {/* 왼쪽 2개 */}
         {TAB_ORDER.slice(0, 2).map((name) => (
           <TabButton
@@ -46,11 +53,12 @@ export function TabsBar(props: any /* BottomTabBarProps */) {
             icon={TAB_META[name].icon}
             active={focusedRouteName === name}
             onPress={() => go(name)}
+            styles={styles}
           />
         ))}
 
         {/* 가운데 FAB 공간 확보 */}
-        <View style={tabsStyles.centerGap} />
+        <View style={styles.centerGap} />
 
         {/* 오른쪽 2개 */}
         {TAB_ORDER.slice(2).map((name) => (
@@ -60,15 +68,16 @@ export function TabsBar(props: any /* BottomTabBarProps */) {
             icon={TAB_META[name].icon}
             active={focusedRouteName === name}
             onPress={() => go(name)}
+            styles={styles}
           />
         ))}
       </View>
 
       {/* FAB 오버레이 */}
-      <View style={tabsStyles.fabWrap} pointerEvents="box-none">
+      <View style={styles.fabWrap} pointerEvents="box-none">
         <Pressable
           onPress={() => router.push("/write")}
-          style={tabsStyles.fab}
+          style={styles.fab}
           hitSlop={12}
         >
           <Ionicons name="create-outline" size={26} color="#FFFFFF" />
@@ -83,21 +92,23 @@ function TabButton({
   label,
   active,
   onPress,
+  styles,
 }: {
   icon: any;
   label: string;
   active: boolean;
   onPress: () => void;
+  styles: any;
 }) {
   const color = active ? COLORS.active : COLORS.inactive;
 
   return (
-    <Pressable onPress={onPress} style={tabsStyles.tabSlot} hitSlop={10}>
+    <Pressable onPress={onPress} style={styles.tabSlot} hitSlop={10}>
       {/* 선택 상단 라인 */}
-      <View style={[tabsStyles.activeLine, active && tabsStyles.activeLineOn]} />
+      <View style={[styles.activeLine, active && styles.activeLineOn]} />
 
       <Ionicons name={icon} size={22} color={color} />
-      <Text style={[tabsStyles.label, { color }]} numberOfLines={1}>
+      <Text style={[styles.label, { color }]} numberOfLines={1}>
         {label}
       </Text>
     </Pressable>
