@@ -2,6 +2,7 @@ import { usePost } from "@/features/posts/usePost";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useMemo } from "react";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   ActivityIndicator,
   Pressable,
@@ -11,6 +12,8 @@ import {
   Text,
   View,
 } from "react-native";
+
+import { getTabBarPaddingBottom, getTabBarTotalHeight } from "@/navigation/tabs.styles";
 
 function formatKoreanDate(iso?: string) {
   if (!iso) return "";
@@ -23,6 +26,7 @@ function formatKoreanDate(iso?: string) {
 }
 
 export default function PostDetail() {
+  const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ id: string }>();
   const id = params?.id ? String(params.id) : undefined;
 
@@ -41,6 +45,19 @@ export default function PostDetail() {
     const b = dateText ? dateText : "";
     return b ? `${a}  ·  ${b}` : a;
   }, [authorName, dateText]);
+
+  const actionsBarStyle = useMemo(
+    () => [
+      styles.actionsBar,
+      {
+        // 탭바와 "같은 기준"(base + safe-area)으로 맞춰서
+        // Home/Detail 등 화면마다 달라 보이는 하단바 체감을 없앤다
+        height: getTabBarTotalHeight(insets.bottom),
+        paddingBottom: getTabBarPaddingBottom(insets.bottom),
+      },
+    ],
+    [insets.bottom]
+  );
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -83,7 +100,7 @@ export default function PostDetail() {
             <View style={{ height: 110 }} />
           </ScrollView>
 
-          <View style={styles.actionsBar}>
+          <View style={actionsBarStyle}>
             <Pressable onPress={() => {}} style={styles.actionBtn} hitSlop={10}>
               <Ionicons
                 name={isLiked ? "heart" : "heart-outline"}
