@@ -138,6 +138,34 @@ export function createPostDetailStyles(actionBarHeight: number) {
       paddingHorizontal: tokens.space.xl,
       gap: tokens.space.sm as any,
     },
+
+    stateBox: {
+      width: "100%",
+      maxWidth: 420,
+      paddingVertical: tokens.space.lg,
+      paddingHorizontal: tokens.space.xl,
+      borderRadius: tokens.radius.xl,
+      backgroundColor: tokens.colors.surfaceStrong,
+      borderWidth: 1,
+      borderColor: tokens.colors.border,
+      alignItems: "center",
+      justifyContent: "center",
+      gap: tokens.space.sm as any,
+
+      // Home 패턴 톤: 은은한 그림자
+      shadowColor: tokens.shadow.color,
+      shadowOpacity: tokens.shadow.opacity,
+      shadowRadius: tokens.shadow.radius,
+      shadowOffset: { width: 0, height: tokens.shadow.offsetY },
+      elevation: 2,
+    },
+
+    loadingText: {
+      fontSize: 12,
+      fontWeight: "700",
+      color: tokens.colors.textMuted,
+      letterSpacing: -0.2,
+    },
     errTitle: {
       fontSize: 15,
       fontWeight: "800",
@@ -154,12 +182,14 @@ export function createPostDetailStyles(actionBarHeight: number) {
       paddingHorizontal: tokens.space.md,
       paddingVertical: tokens.space.sm,
       borderRadius: tokens.radius.pill,
-      backgroundColor: tokens.colors.border,
+      backgroundColor: tokens.colors.green100,
+      borderWidth: 1,
+      borderColor: tokens.colors.borderStrong,
     },
     retryText: {
       fontSize: 12,
       fontWeight: "800",
-      color: tokens.colors.text,
+      color: tokens.colors.green900,
       opacity: 0.85,
     },
   });

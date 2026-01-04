@@ -3,10 +3,12 @@ import { ActivityIndicator, Pressable, Text, View } from "react-native";
 
 export type PostStatesStyles = {
   center: any;
+  stateBox: any;
   errTitle: any;
   errSub: any;
   retryBtn: any;
   retryText: any;
+  loadingText: any;
 };
 
 export type PostStatesProps = {
@@ -21,7 +23,10 @@ export function PostStates({ kind, errorText, onRetry, onBack, styles }: PostSta
   if (kind === "loading") {
     return (
       <View style={styles.center}>
-        <ActivityIndicator />
+        <View style={styles.stateBox}>
+          <ActivityIndicator />
+          <Text style={styles.loadingText}>불러오는 중…</Text>
+        </View>
       </View>
     );
   }
@@ -29,13 +34,15 @@ export function PostStates({ kind, errorText, onRetry, onBack, styles }: PostSta
   if (kind === "error") {
     return (
       <View style={styles.center}>
-        <Text style={styles.errTitle}>불러오기에 실패했어요</Text>
-        {!!errorText && <Text style={styles.errSub}>{errorText}</Text>}
-        {!!onRetry && (
-          <Pressable onPress={onRetry} style={styles.retryBtn}>
-            <Text style={styles.retryText}>다시 시도</Text>
-          </Pressable>
-        )}
+        <View style={styles.stateBox}>
+          <Text style={styles.errTitle}>불러오기에 실패했어요</Text>
+          {!!errorText && <Text style={styles.errSub}>{errorText}</Text>}
+          {!!onRetry && (
+            <Pressable onPress={onRetry} style={styles.retryBtn}>
+              <Text style={styles.retryText}>다시 시도</Text>
+            </Pressable>
+          )}
+        </View>
       </View>
     );
   }
@@ -43,12 +50,14 @@ export function PostStates({ kind, errorText, onRetry, onBack, styles }: PostSta
   // notFound
   return (
     <View style={styles.center}>
-      <Text style={styles.errTitle}>글을 찾을 수 없어요</Text>
-      {!!onBack && (
-        <Pressable onPress={onBack} style={styles.retryBtn}>
-          <Text style={styles.retryText}>뒤로가기</Text>
-        </Pressable>
-      )}
+      <View style={styles.stateBox}>
+        <Text style={styles.errTitle}>글을 찾을 수 없어요</Text>
+        {!!onBack && (
+          <Pressable onPress={onBack} style={styles.retryBtn}>
+            <Text style={styles.retryText}>뒤로가기</Text>
+          </Pressable>
+        )}
+      </View>
     </View>
   );
 }
