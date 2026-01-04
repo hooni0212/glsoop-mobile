@@ -32,6 +32,11 @@ export function createPostDetailStyles(actionBarHeight: number) {
       justifyContent: "center",
     },
 
+    topBarSpacer: {
+      width: 40,
+      height: 40,
+    },
+
     // --- Scroll ---
     scrollContent: {
       paddingHorizontal: tokens.space.xl,
