@@ -59,6 +59,13 @@ export default function Write() {
   const hasShownRestorePromptRef = useRef(false);
   const skipNextBeforeRemoveRef = useRef(false);
 
+  const cancelAutosaveTimer = useCallback(() => {
+    if (autosaveTimerRef.current) {
+      clearTimeout(autosaveTimerRef.current);
+      autosaveTimerRef.current = null;
+    }
+  }, []);
+
   const hasChanges = title.trim().length > 0 || body.trim().length > 0;
   const canSubmit = hasChanges;
 
@@ -126,6 +133,10 @@ export default function Write() {
             variant: "destructive",
             onPress: () => {
               closeConfirm();
+              cancelAutosaveTimer();
+              void (async () => {
+                if (draftId) await deleteWriteDraft(draftId);
+              })();
               skipNextBeforeRemoveRef.current = true;
               proceedNavigation(opts?.action);
             },
