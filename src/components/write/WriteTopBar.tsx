@@ -21,7 +21,14 @@ export function WriteTopBar({
 }: Props) {
   return (
     <View style={styles.topBar}>
-      <Pressable onPress={onPressClose} hitSlop={12} style={styles.iconBtn}>
+      <Pressable
+        onPress={onPressClose}
+        hitSlop={12}
+        style={styles.iconBtn}
+        accessibilityRole="button"
+        accessibilityLabel="글쓰기 닫기"
+        testID="write-close-btn"
+      >
         <Ionicons name="close" size={22} color="#2B2B2B" />
       </Pressable>
 
@@ -29,7 +36,14 @@ export function WriteTopBar({
 
       <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
         {!!onPressDrafts && (
-          <Pressable onPress={onPressDrafts} hitSlop={12} style={styles.iconBtn}>
+          <Pressable
+            onPress={onPressDrafts}
+            hitSlop={12}
+            style={styles.iconBtn}
+            accessibilityRole="button"
+            accessibilityLabel="임시저장 목록 열기"
+            testID="write-drafts-btn"
+          >
             <Ionicons name="file-tray-outline" size={20} color="#2B2B2B" />
           </Pressable>
         )}
@@ -39,6 +53,9 @@ export function WriteTopBar({
           disabled={!canSubmit}
           hitSlop={12}
           style={[styles.doneBtn, !canSubmit && styles.doneBtnDisabled]}
+          accessibilityRole="button"
+          accessibilityLabel="글쓰기 완료"
+          testID="write-submit-btn"
         >
           <Text style={[styles.doneText, !canSubmit && styles.doneTextDisabled]}>
             완료

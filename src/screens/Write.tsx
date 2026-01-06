@@ -5,6 +5,8 @@ import {
   KeyboardAvoidingView,
   Platform,
   SafeAreaView,
+  Pressable,
+  Text,
   View,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
@@ -20,6 +22,7 @@ import {
   loadLatestWriteDraft,
   loadWriteDraftById,
   upsertWriteDraft,
+  clearAllWriteDrafts,
 } from "@/services/draftStorage";
 
 import { createWriteStyles } from "./Write.styles";
@@ -35,6 +38,7 @@ type ConfirmState =
         text: string;
         variant?: "default" | "destructive" | "cancel";
         onPress: () => void;
+        testID?: string;
       }>;
     }
   | null;
@@ -114,6 +118,7 @@ export default function Write() {
             text: "취소",
             variant: "cancel",
             onPress: () => closeConfirm(),
+            testID: "confirm-close-cancel",
           },
           {
             text: "그냥 닫기",
@@ -122,6 +127,7 @@ export default function Write() {
               closeConfirm();
               proceedNavigation(opts?.action);
             },
+            testID: "confirm-close-discard",
           },
           {
             text: "저장하고 닫기",
@@ -132,6 +138,7 @@ export default function Write() {
                 proceedNavigation(opts?.action);
               })();
             },
+            testID: "confirm-close-save",
           },
         ],
       });
@@ -147,6 +154,14 @@ export default function Write() {
   const onPressDrafts = useCallback(() => {
     console.log("[WRITE][ui] open draft list");
     router.push("/write-drafts");
+  }, []);
+
+  const clearDraftsForDev = useCallback(async () => {
+    if (!__DEV__) return;
+    await clearAllWriteDrafts();
+    setDraftId(null);
+    setTitle("");
+    setBody("");
   }, []);
 
   const onPressSubmit = useCallback(async () => {
@@ -221,22 +236,30 @@ export default function Write() {
       // ✅ 요구사항: 임시저장 한 상태에서 글쓰기 진입 → 복구 여부 물어보기
       openConfirm({
         title: "임시저장된 글이 있어요",
-        message: drafts.length === 1 ? "이어서 작성할까요?" : "최근 임시저장을 이어쓰거나, 목록에서 선택할 수 있어요.",
+        message: "작성 중인 글을 어떻게 할까요?",
         buttons: [
           {
-            text: "새로 쓰기",
+            text: "나중에",
             variant: "cancel",
             onPress: () => closeConfirm(),
+            testID: "confirm-draft-later",
           },
           {
-            text: "목록 보기",
+            text: "버리기",
+            variant: "destructive",
             onPress: () => {
               closeConfirm();
-              router.push("/write-drafts");
+              void (async () => {
+                await clearAllWriteDrafts();
+                setDraftId(null);
+                setTitle("");
+                setBody("");
+              })();
             },
+            testID: "confirm-draft-discard",
           },
           {
-            text: "최근 이어쓰기",
+            text: "복구",
             onPress: () => {
               closeConfirm();
               void (async () => {
@@ -248,6 +271,7 @@ export default function Write() {
                 setBody(latest.body);
               })();
             },
+            testID: "confirm-draft-restore",
           },
         ],
       });
@@ -298,6 +322,48 @@ export default function Write() {
 
         {/* ✅ 키보드 ON 시 ActionBar 숨김 */}
         {!isKeyboardVisible && <WriteActionBar styles={styles} />}
+
+        {__DEV__ && (
+          <View style={{ padding: 12 }}>
+            <View
+              style={{
+                borderWidth: 1,
+                borderStyle: "dashed",
+                borderColor: "rgba(0,0,0,0.2)",
+                borderRadius: 10,
+                padding: 10,
+                backgroundColor: "rgba(0,0,0,0.03)",
+              }}
+            >
+              <View
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <View>
+                  <Text style={{ fontWeight: "800", color: "#333" }}>
+                    DEV: Draft helpers
+                  </Text>
+                  <Text style={{ color: "#444", marginTop: 4, fontSize: 12 }}>
+                    테스트 전 임시저장 비우기
+                  </Text>
+                </View>
+                <Pressable
+                  onPress={clearDraftsForDev}
+                  hitSlop={8}
+                  style={[styles.chip, { paddingHorizontal: 10 }]}
+                  accessibilityRole="button"
+                  accessibilityLabel="임시저장 초기화"
+                  testID="dev-clear-write-drafts"
+                >
+                  <Text style={styles.chipText}>초기화</Text>
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        )}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

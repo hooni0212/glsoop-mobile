@@ -48,3 +48,19 @@ Join our community of developers creating universal apps.
 
 - [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
 - [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+
+## E2E tests (웹)
+
+프로젝트에는 Playwright 기반의 웹 E2E 테스트가 준비되어 있습니다.
+
+1. 의존성 설치
+   ```bash
+   npm install
+   npx playwright install chromium
+   ```
+2. 테스트 실행 (Expo 웹 서버를 자동으로 띄우고 종료)
+   ```bash
+   npm run e2e:web
+   ```
+   - 기본 포트는 `8081`이며 `EXPO_WEB_PORT` 환경 변수로 변경 가능합니다.
+   - Expo 번들이 처음 빌드될 때 시간이 다소 소요될 수 있습니다.

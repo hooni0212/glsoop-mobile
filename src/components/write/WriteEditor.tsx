@@ -26,6 +26,8 @@ export function WriteEditor({
         placeholderTextColor="#9AA0A6"
         style={styles.inputTitle}
         returnKeyType="next"
+        accessibilityLabel="글쓰기 제목"
+        testID="write-title-input"
       />
 
       <View style={styles.divider} />
@@ -38,6 +40,8 @@ export function WriteEditor({
         placeholderTextColor="#9AA0A6"
         style={styles.inputBody}
         multiline
+        accessibilityLabel="글쓰기 내용"
+        testID="write-body-input"
       />
     </View>
   );
