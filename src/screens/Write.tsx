@@ -39,6 +39,8 @@ export default function Write() {
   const hasChanges = title.trim().length > 0 || body.trim().length > 0;
   const canSubmit = hasChanges;
 
+  const isWeb = Platform.OS === "web";
+
   const saveDraftNow = useCallback(async () => {
     if (!hasChanges) {
       await clearWriteDraft();
@@ -63,6 +65,32 @@ export default function Write() {
         return;
       }
 
+      // NOTE: react-native-web의 Alert는 multi-button 동작이 환경에 따라 무시될 수 있어,
+      //       웹에서는 window.confirm 기반으로 3가지 선택지를 구현한다.
+      if (isWeb && typeof window !== "undefined") {
+        const saveAndClose = window.confirm(
+          "작성 중인 내용이 있어요. 임시저장하고 닫을까요?\n\n확인: 저장하고 닫기\n취소: 다른 선택"
+        );
+
+        if (saveAndClose) {
+          // fire & await, then navigate
+          void (async () => {
+            await saveDraftNow();
+            proceedNavigation(opts?.action);
+          })();
+          return;
+        }
+
+        const closeWithoutSaving = window.confirm(
+          "임시저장 없이 그냥 닫을까요?\n\n확인: 그냥 닫기\n취소: 취소"
+        );
+
+        if (closeWithoutSaving) {
+          proceedNavigation(opts?.action);
+        }
+        return;
+      }
+
       Alert.alert(
         "작성 중인 내용이 있어요",
         "닫으면 입력 내용이 사라질 수 있어요. 어떻게 할까요?",
@@ -83,7 +111,7 @@ export default function Write() {
         ]
       );
     },
-    [hasChanges, proceedNavigation, saveDraftNow]
+    [hasChanges, proceedNavigation, saveDraftNow, isWeb]
   );
 
   const onPressClose = useCallback(() => {
@@ -144,6 +172,28 @@ export default function Write() {
       // 현재 입력이 비어있을 때만 복구 제안
       const isEmptyNow = title.trim().length === 0 && body.trim().length === 0;
       if (!isEmptyNow) return;
+
+      // NOTE: 웹 환경에서 Alert multi-button이 먹지 않는 경우가 있어 confirm 2단계로 처리
+      if (isWeb && typeof window !== "undefined") {
+        const restore = window.confirm(
+          "임시저장된 글이 있어요. 이어서 작성할까요?\n\n확인: 복구\n취소: 다른 선택"
+        );
+
+        if (restore) {
+          setTitle(draft.title);
+          setBody(draft.body);
+          return;
+        }
+
+        const discard = window.confirm(
+          "임시저장된 글을 버릴까요?\n\n확인: 버리기\n취소: 나중에"
+        );
+
+        if (discard) {
+          await clearWriteDraft();
+        }
+        return;
+      }
 
       Alert.alert("임시저장된 글이 있어요", "이어서 작성할까요?", [
         { text: "나중에", style: "cancel" },
