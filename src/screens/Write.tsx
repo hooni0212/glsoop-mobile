@@ -8,6 +8,8 @@ import {
   Pressable,
   Text,
   View,
+  ActivityIndicator,
+  Modal,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 
@@ -54,6 +56,7 @@ export default function Write() {
 
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const [confirm, setConfirm] = useState<ConfirmState>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hasShownRestorePromptRef = useRef(false);
@@ -148,6 +151,7 @@ export default function Write() {
               closeConfirm();
               void (async () => {
                 await saveDraftNow();
+                if (draftId) await deleteWriteDraft(draftId);
                 skipNextBeforeRemoveRef.current = true;
                 proceedNavigation(opts?.action);
               })();
@@ -181,12 +185,21 @@ export default function Write() {
   const onPressSubmit = useCallback(async () => {
     console.log("[WRITE] submit", { draftId, titleLen: title.length, bodyLen: body.length });
 
-    // ✅ 게시 성공(가정) 시 해당 draft 삭제
-    if (draftId) {
-      await deleteWriteDraft(draftId);
-      setDraftId(null);
+    setIsSubmitting(true);
+    try {
+      // ✅ 게시 성공(가정) 시 해당 draft 삭제
+      if (draftId) {
+        await deleteWriteDraft(draftId);
+        setDraftId(null);
+      }
+      // TODO: 실제 전송 API 연결 필요
+      console.log("[WRITE] submit success -> go home");
+      router.replace("/(tabs)");
+    } catch (err) {
+      console.log("[WRITE] submit error", err);
+    } finally {
+      setIsSubmitting(false);
     }
-    router.back();
   }, [draftId, title.length, body.length]);
 
   // 1) 키보드 상태 감지
@@ -341,6 +354,32 @@ export default function Write() {
 
         {/* ✅ 키보드 ON 시 ActionBar 숨김 */}
         {!isKeyboardVisible && <WriteActionBar styles={styles} />}
+
+        <Modal visible={isSubmitting} transparent animationType="fade">
+          <View
+            style={{
+              flex: 1,
+              backgroundColor: "rgba(0,0,0,0.2)",
+              justifyContent: "center",
+              alignItems: "center",
+            }}
+          >
+            <View
+              style={{
+                padding: 20,
+                borderRadius: 14,
+                backgroundColor: "#fff",
+                alignItems: "center",
+                width: 200,
+              }}
+            >
+              <ActivityIndicator size="large" color="#2E5A3D" />
+              <Text style={{ marginTop: 12, fontWeight: "800", color: "#2B2B2B" }}>
+                전송 중...
+              </Text>
+            </View>
+          </View>
+        </Modal>
 
         {__DEV__ && (
           <View style={{ padding: 12 }}>
