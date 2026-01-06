@@ -113,5 +113,95 @@ export function createWriteStyles() {
       fontWeight: "700",
       letterSpacing: -0.2,
     },
+
+    // --- Modal (cross-platform confirm UI) ---
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: "rgba(0,0,0,0.35)",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: 18,
+    },
+    modalCard: {
+      width: "100%",
+      maxWidth: 420,
+      borderRadius: 16,
+      backgroundColor: "#FFFFFF",
+      padding: 16,
+      borderWidth: 1,
+      borderColor: "rgba(0,0,0,0.08)",
+    },
+    modalTitle: {
+      fontSize: 15,
+      fontWeight: "900",
+      color: "#1E1E1E",
+      letterSpacing: -0.2,
+    },
+    modalMessage: {
+      marginTop: 8,
+      fontSize: 13,
+      lineHeight: 18,
+      color: "#4B4B4B",
+      fontWeight: "700",
+      letterSpacing: -0.2,
+    },
+    modalButtons: {
+      marginTop: 14,
+      gap: 10,
+    },
+    modalBtn: {
+      borderRadius: 12,
+      paddingVertical: 12,
+      alignItems: "center",
+      justifyContent: "center",
+      borderWidth: 1,
+      borderColor: "rgba(0,0,0,0.08)",
+      backgroundColor: "#F6F6F4",
+    },
+    modalBtnCancel: {
+      backgroundColor: "#FFFFFF",
+    },
+    modalBtnDestructive: {
+      borderColor: "rgba(180,50,50,0.25)",
+      backgroundColor: "rgba(180,50,50,0.06)",
+    },
+    modalBtnText: {
+      fontSize: 13,
+      fontWeight: "900",
+      color: "#2B2B2B",
+      letterSpacing: -0.2,
+    },
+    modalBtnTextCancel: {
+      color: "#2B2B2B",
+    },
+    modalBtnTextDestructive: {
+      color: "rgba(180,50,50,0.95)",
+    },
+
+    // --- Small util for topbar text-icon (draft list screen) ---
+    iconText: {
+      fontSize: 16,
+      fontWeight: "900",
+      color: "#2B2B2B",
+    },
+
+    // --- Simple chip buttons (Draft list actions) ---
+    chip: {
+      borderRadius: 12,
+      paddingVertical: 10,
+      paddingHorizontal: 12,
+      alignItems: "center",
+      justifyContent: "center",
+      borderWidth: 1,
+      borderColor: "rgba(0,0,0,0.10)",
+      backgroundColor: "rgba(255,255,255,0.55)",
+    },
+    chipText: {
+      fontSize: 13,
+      fontWeight: "900",
+      color: "#2B2B2B",
+      letterSpacing: -0.2,
+    },
+
   });
 }
