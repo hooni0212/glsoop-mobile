@@ -21,15 +21,12 @@ import { WriteTopBar } from "@/components/write/WriteTopBar";
 import {
   deleteWriteDraft,
   listWriteDrafts,
-  loadLatestWriteDraft,
   loadWriteDraftById,
   upsertWriteDraft,
   clearAllWriteDrafts,
 } from "@/services/draftStorage";
 
 import { createWriteStyles } from "./Write.styles";
-
-const AUTOSAVE_DEBOUNCE_MS = 800;
 
 type ConfirmState =
   | {
@@ -57,20 +54,13 @@ export default function Write() {
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const [confirm, setConfirm] = useState<ConfirmState>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
 
-  const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hasShownRestorePromptRef = useRef(false);
   const skipNextBeforeRemoveRef = useRef(false);
 
-  const cancelAutosaveTimer = useCallback(() => {
-    if (autosaveTimerRef.current) {
-      clearTimeout(autosaveTimerRef.current);
-      autosaveTimerRef.current = null;
-    }
-  }, []);
-
   const hasChanges = title.trim().length > 0 || body.trim().length > 0;
-  const canSubmit = hasChanges;
+  const canSubmit = title.trim().length > 0 && body.trim().length > 0;
 
   const closeConfirm = useCallback(() => setConfirm(null), []);
 
@@ -82,26 +72,20 @@ export default function Write() {
     []
   );
 
-  const saveDraftNow = useCallback(async () => {
-    console.log("[WRITE][draft] saveDraftNow called", {
-      hasChanges,
+  const saveDraftExplicit = useCallback(async () => {
+    const trimmedTitle = title.trim();
+    const trimmedBody = body.trim();
+    if (!trimmedTitle && !trimmedBody) return;
+
+    console.log("[WRITE][draft] explicit save", {
       draftId,
-      titleLen: title.length,
-      bodyLen: body.length,
+      titleLen: trimmedTitle.length,
+      bodyLen: trimmedBody.length,
     });
 
-    if (!hasChanges) {
-      // If user cleared everything, remove current draft (if any)
-      if (draftId) {
-        await deleteWriteDraft(draftId);
-        setDraftId(null);
-      }
-      return;
-    }
-
-    const id = await upsertWriteDraft({ id: draftId, title, body });
+    const id = await upsertWriteDraft({ id: draftId, title: trimmedTitle, body: trimmedBody });
     if (!draftId) setDraftId(id);
-  }, [title, body, hasChanges, draftId]);
+  }, [title, body, draftId]);
 
   const proceedNavigation = useCallback(
     (action?: any) => {
@@ -122,8 +106,8 @@ export default function Write() {
       }
 
       openConfirm({
-        title: "작성 중인 내용이 있어요",
-        message: "닫으면 입력 내용이 사라질 수 있어요. 어떻게 할까요?",
+        title: "작성중인 내용이 있어요.",
+        message: "닫으면 입력 내용이 사라질 수 있어요.\n어떻게 할까요?",
         buttons: [
           {
             text: "취소",
@@ -136,7 +120,6 @@ export default function Write() {
             variant: "destructive",
             onPress: () => {
               closeConfirm();
-              cancelAutosaveTimer();
               void (async () => {
                 if (draftId) await deleteWriteDraft(draftId);
               })();
@@ -146,12 +129,11 @@ export default function Write() {
             testID: "confirm-close-discard",
           },
           {
-            text: "저장하고 닫기",
+            text: "임시 저장하기",
             onPress: () => {
               closeConfirm();
               void (async () => {
-                await saveDraftNow();
-                if (draftId) await deleteWriteDraft(draftId);
+                await saveDraftExplicit();
                 skipNextBeforeRemoveRef.current = true;
                 proceedNavigation(opts?.action);
               })();
@@ -161,7 +143,7 @@ export default function Write() {
         ],
       });
     },
-    [hasChanges, proceedNavigation, saveDraftNow, openConfirm, closeConfirm]
+    [hasChanges, proceedNavigation, saveDraftExplicit, openConfirm, closeConfirm]
   );
 
   const onPressClose = useCallback(() => {
@@ -188,7 +170,6 @@ export default function Write() {
     const payload = { title, body };
     console.log("[WRITE] submit payload", payload);
 
-    cancelAutosaveTimer();
     skipNextBeforeRemoveRef.current = true; // 완료 시 beforeRemove confirm 뜨지 않도록 스킵
 
     setIsSubmitting(true);
@@ -201,15 +182,17 @@ export default function Write() {
         await deleteWriteDraft(draftId);
         setDraftId(null);
       }
-      // TODO: 실제 전송 API 연결 필요
-      console.log("[WRITE] submit success -> go home");
-      router.replace("/(tabs)");
+      console.log("[WRITE] submit success -> show success and go home");
+      setSubmitSuccess(true);
+      setTimeout(() => {
+        router.replace("/(tabs)");
+      }, 600);
     } catch (err) {
       console.log("[WRITE] submit error", err);
     } finally {
       setIsSubmitting(false);
     }
-  }, [draftId, title, body, cancelAutosaveTimer]);
+  }, [draftId, title, body]);
 
   // 1) 키보드 상태 감지
   useEffect(() => {
@@ -226,23 +209,7 @@ export default function Write() {
     };
   }, []);
 
-  // 2) 자동 임시저장 (debounce)
-  useEffect(() => {
-    if (autosaveTimerRef.current) {
-      clearTimeout(autosaveTimerRef.current);
-      autosaveTimerRef.current = null;
-    }
-
-    autosaveTimerRef.current = setTimeout(() => {
-      void saveDraftNow();
-    }, AUTOSAVE_DEBOUNCE_MS);
-
-    return () => {
-      if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
-    };
-  }, [title, body, saveDraftNow]);
-
-  // 3) Write 진입 시: (a) 파라미터로 draftId가 오면 해당 draft 복구, (b) 아니면 draft 존재 여부에 따라 UX 제공
+  // 2) Write 진입 시: (a) 파라미터로 draftId가 오면 해당 draft 복구, (b) 아니면 draft 존재 여부에 따라 UX 제공
   useEffect(() => {
     if (hasShownRestorePromptRef.current) return;
     hasShownRestorePromptRef.current = true;
@@ -250,10 +217,6 @@ export default function Write() {
     void (async () => {
       const paramDraftId =
         params && (params as any).draftId ? String((params as any).draftId) : null;
-
-      // 현재 입력이 비어있을 때만 복구 제안
-      const isEmptyNow = title.trim().length === 0 && body.trim().length === 0;
-      if (!isEmptyNow) return;
 
       if (paramDraftId) {
         const d = await loadWriteDraftById(paramDraftId);
@@ -269,45 +232,23 @@ export default function Write() {
       const drafts = await listWriteDrafts();
       if (drafts.length === 0) return;
 
-      // ✅ 요구사항: 임시저장 한 상태에서 글쓰기 진입 → 복구 여부 물어보기
+      // ✅ 임시저장 존재 시 먼저 선택 Alert
       openConfirm({
-        title: "임시저장된 글이 있어요",
-        message: "작성 중인 글을 어떻게 할까요?",
+        title: "임시저장한 글이 있어요. 어떻게 할까요?",
         buttons: [
           {
-            text: "나중에",
+            text: "새로 쓰기",
             variant: "cancel",
             onPress: () => closeConfirm(),
-            testID: "confirm-draft-later",
+            testID: "confirm-draft-new",
           },
           {
-            text: "버리기",
-            variant: "destructive",
+            text: "임시저장함",
             onPress: () => {
               closeConfirm();
-              void (async () => {
-                await clearAllWriteDrafts();
-                setDraftId(null);
-                setTitle("");
-                setBody("");
-              })();
+              router.push("/write-drafts");
             },
-            testID: "confirm-draft-discard",
-          },
-          {
-            text: "복구",
-            onPress: () => {
-              closeConfirm();
-              void (async () => {
-                const latest = await loadLatestWriteDraft();
-                if (!latest) return;
-                console.log("[WRITE][draft] restore latest", { id: latest.id });
-                setDraftId(latest.id);
-                setTitle(latest.title);
-                setBody(latest.body);
-              })();
-            },
-            testID: "confirm-draft-restore",
+            testID: "confirm-draft-list",
           },
         ],
       });
@@ -385,6 +326,34 @@ export default function Write() {
               <ActivityIndicator size="large" color="#2E5A3D" />
               <Text style={{ marginTop: 12, fontWeight: "800", color: "#2B2B2B" }}>
                 전송 중...
+              </Text>
+            </View>
+          </View>
+        </Modal>
+
+        <Modal visible={submitSuccess} transparent animationType="fade">
+          <View
+            style={{
+              flex: 1,
+              backgroundColor: "rgba(0,0,0,0.25)",
+              justifyContent: "center",
+              alignItems: "center",
+            }}
+          >
+            <View
+              style={{
+                padding: 20,
+                borderRadius: 14,
+                backgroundColor: "#fff",
+                alignItems: "center",
+                width: 220,
+              }}
+            >
+              <Text style={{ fontWeight: "900", fontSize: 16, color: "#2B2B2B" }}>
+                완료되었어요
+              </Text>
+              <Text style={{ marginTop: 8, fontWeight: "700", color: "#444", textAlign: "center" }}>
+                홈으로 이동합니다
               </Text>
             </View>
           </View>
