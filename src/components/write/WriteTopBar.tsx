@@ -7,6 +7,7 @@ type Props = {
   canSubmit: boolean;
   onPressClose: () => void;
   onPressSubmit: () => void;
+  onPressDrafts?: () => void;
   styles: any;
 };
 
@@ -15,6 +16,7 @@ export function WriteTopBar({
   canSubmit,
   onPressClose,
   onPressSubmit,
+  onPressDrafts,
   styles,
 }: Props) {
   return (
@@ -25,16 +27,24 @@ export function WriteTopBar({
 
       <Text style={styles.screenTitle}>{title}</Text>
 
-      <Pressable
-        onPress={onPressSubmit}
-        disabled={!canSubmit}
-        hitSlop={12}
-        style={[styles.doneBtn, !canSubmit && styles.doneBtnDisabled]}
-      >
-        <Text style={[styles.doneText, !canSubmit && styles.doneTextDisabled]}>
-          완료
-        </Text>
-      </Pressable>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+        {!!onPressDrafts && (
+          <Pressable onPress={onPressDrafts} hitSlop={12} style={styles.iconBtn}>
+            <Ionicons name="file-tray-outline" size={20} color="#2B2B2B" />
+          </Pressable>
+        )}
+
+        <Pressable
+          onPress={onPressSubmit}
+          disabled={!canSubmit}
+          hitSlop={12}
+          style={[styles.doneBtn, !canSubmit && styles.doneBtnDisabled]}
+        >
+          <Text style={[styles.doneText, !canSubmit && styles.doneTextDisabled]}>
+            완료
+          </Text>
+        </Pressable>
+      </View>
     </View>
   );
 }
