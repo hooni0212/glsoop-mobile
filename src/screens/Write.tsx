@@ -91,7 +91,7 @@ export default function Write() {
     (action?: any) => {
       console.log("[WRITE][nav] proceed", { hasAction: !!action });
       if (action) navigation.dispatch(action);
-      else router.back();
+      else router.replace("/(tabs)");
     },
     [navigation]
   );
@@ -101,6 +101,8 @@ export default function Write() {
       console.log("[WRITE][ui] close pressed", { hasChanges });
 
       if (!hasChanges) {
+        skipNextBeforeRemoveRef.current = true;
+        console.log("[WRITE][ui] close with empty form -> go home");
         proceedNavigation(opts?.action);
         return;
       }

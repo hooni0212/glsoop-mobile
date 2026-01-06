@@ -64,3 +64,7 @@ Join our community of developers creating universal apps.
    ```
    - 기본 포트는 `8081`이며 `EXPO_WEB_PORT` 환경 변수로 변경 가능합니다.
    - Expo 번들이 처음 빌드될 때 시간이 다소 소요될 수 있습니다.
+   - 특정 시나리오만 실행하려면 `--grep`을 활용하세요:
+     ```bash
+     npm run e2e:web -- --grep "Write 임시저장 UX"
+     ```

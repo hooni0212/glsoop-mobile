@@ -79,6 +79,9 @@ export function TabsBar(props: any /* BottomTabBarProps */) {
           onPress={() => router.push("/write")}
           style={styles.fab}
           hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel="글쓰기"
+          testID="fab-write"
         >
           <Ionicons name="create-outline" size={26} color="#FFFFFF" />
         </Pressable>
