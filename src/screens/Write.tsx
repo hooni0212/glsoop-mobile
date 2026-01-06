@@ -57,6 +57,7 @@ export default function Write() {
 
   const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hasShownRestorePromptRef = useRef(false);
+  const skipNextBeforeRemoveRef = useRef(false);
 
   const hasChanges = title.trim().length > 0 || body.trim().length > 0;
   const canSubmit = hasChanges;
@@ -125,6 +126,7 @@ export default function Write() {
             variant: "destructive",
             onPress: () => {
               closeConfirm();
+              skipNextBeforeRemoveRef.current = true;
               proceedNavigation(opts?.action);
             },
             testID: "confirm-close-discard",
@@ -135,6 +137,7 @@ export default function Write() {
               closeConfirm();
               void (async () => {
                 await saveDraftNow();
+                skipNextBeforeRemoveRef.current = true;
                 proceedNavigation(opts?.action);
               })();
             },
@@ -282,6 +285,11 @@ export default function Write() {
   // 4) 뒤로가기/닫기 정책: 네비게이션 이벤트(beforeRemove) 가로채기
   useEffect(() => {
     const unsubscribe = navigation.addListener("beforeRemove", (e: any) => {
+      if (skipNextBeforeRemoveRef.current) {
+        skipNextBeforeRemoveRef.current = false;
+        return;
+      }
+
       if (!hasChanges) return;
 
       e.preventDefault();
