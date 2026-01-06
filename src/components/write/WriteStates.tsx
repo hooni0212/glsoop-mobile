@@ -5,6 +5,7 @@ type ModalButton = {
   text: string;
   variant?: "default" | "destructive" | "cancel";
   onPress: () => void;
+  testID?: string;
 };
 
 type ConfirmModalProps = {
@@ -20,7 +21,7 @@ function ConfirmModal({ visible, title, message, buttons, styles }: ConfirmModal
 
   return (
     <Modal transparent visible animationType="fade">
-      <View style={styles.modalOverlay}>
+      <View style={styles.modalOverlay} testID="write-confirm-modal">
         <View style={styles.modalCard}>
           <Text style={styles.modalTitle}>{title}</Text>
           {!!message && <Text style={styles.modalMessage}>{message}</Text>}
@@ -38,6 +39,9 @@ function ConfirmModal({ visible, title, message, buttons, styles }: ConfirmModal
                     isCancel && styles.modalBtnCancel,
                     isDestructive && styles.modalBtnDestructive,
                   ]}
+                  accessibilityRole="button"
+                  accessibilityLabel={b.text}
+                  testID={b.testID}
                 >
                   <Text
                     style={[

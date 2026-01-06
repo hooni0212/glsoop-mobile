@@ -40,13 +40,27 @@ export default function WriteDrafts() {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.topBar}>
-        <Pressable onPress={() => router.back()} hitSlop={12} style={styles.iconBtn}>
+        <Pressable
+          onPress={() => router.back()}
+          hitSlop={12}
+          style={styles.iconBtn}
+          accessibilityRole="button"
+          accessibilityLabel="임시저장 목록 닫기"
+          testID="drafts-back-btn"
+        >
           <Text style={styles.iconText}>←</Text>
         </Pressable>
 
         <Text style={styles.screenTitle}>임시저장</Text>
 
-        <Pressable onPress={() => router.push("/write")} hitSlop={12} style={styles.doneBtn}>
+        <Pressable
+          onPress={() => router.push("/write")}
+          hitSlop={12}
+          style={styles.doneBtn}
+          accessibilityRole="button"
+          accessibilityLabel="새 글 작성"
+          testID="drafts-new-btn"
+        >
           <Text style={styles.doneText}>새 글</Text>
         </Pressable>
       </View>
@@ -59,7 +73,7 @@ export default function WriteDrafts() {
             const preview = (d.body || "").replace(/\s+/g, " ").slice(0, 90);
             const title = d.title?.trim() ? d.title.trim() : "(제목 없음)";
             return (
-              <View key={d.id} style={styles.metaCard}>
+              <View key={d.id} style={styles.metaCard} testID={`draft-item-${d.id}`}>
                 <Text style={{ fontSize: 14, fontWeight: "900", color: "#2B2B2B" }}>{title}</Text>
                 <Text style={{ marginTop: 6, fontSize: 12, color: "#6C6C6C", fontWeight: "700" }}>
                   {formatDate(d.updatedAt)}
@@ -71,13 +85,23 @@ export default function WriteDrafts() {
                 )}
 
                 <View style={{ flexDirection: "row", gap: 10, marginTop: 12 }}>
-                  <Pressable onPress={() => onPressOpen(d.id)} style={[styles.chip, { flex: 1 }]} hitSlop={6}>
+                  <Pressable
+                    onPress={() => onPressOpen(d.id)}
+                    style={[styles.chip, { flex: 1 }]}
+                    hitSlop={6}
+                    accessibilityRole="button"
+                    accessibilityLabel="임시저장 열기"
+                    testID={`draft-open-${d.id}`}
+                  >
                     <Text style={styles.chipText}>열기</Text>
                   </Pressable>
                   <Pressable
                     onPress={() => onPressDelete(d.id)}
                     style={[styles.chip, { flex: 1, borderColor: "rgba(180,50,50,0.35)" }]}
                     hitSlop={6}
+                    accessibilityRole="button"
+                    accessibilityLabel="임시저장 삭제"
+                    testID={`draft-delete-${d.id}`}
                   >
                     <Text style={[styles.chipText, { color: "rgba(180,50,50,0.95)" }]}>삭제</Text>
                   </Pressable>
