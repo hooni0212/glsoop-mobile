@@ -185,8 +185,17 @@ export default function Write() {
   const onPressSubmit = useCallback(async () => {
     console.log("[WRITE] submit", { draftId, titleLen: title.length, bodyLen: body.length });
 
+    const payload = { title, body };
+    console.log("[WRITE] submit payload", payload);
+
+    cancelAutosaveTimer();
+    skipNextBeforeRemoveRef.current = true; // 완료 시 beforeRemove confirm 뜨지 않도록 스킵
+
     setIsSubmitting(true);
     try {
+      // TODO: 실제 전송 API 연결 필요 (예: fetch/axios)
+      // await fetch("/api/write", { method: "POST", body: JSON.stringify(payload) });
+
       // ✅ 게시 성공(가정) 시 해당 draft 삭제
       if (draftId) {
         await deleteWriteDraft(draftId);
@@ -200,7 +209,7 @@ export default function Write() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [draftId, title.length, body.length]);
+  }, [draftId, title, body, cancelAutosaveTimer]);
 
   // 1) 키보드 상태 감지
   useEffect(() => {
