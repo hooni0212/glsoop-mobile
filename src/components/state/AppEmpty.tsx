@@ -1,0 +1,71 @@
+import React from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+
+import { tokens } from "@/theme/tokens";
+
+type Props = {
+  title: string;
+  subtitle?: string;
+  actionLabel?: string;
+  onAction?: () => void;
+};
+
+export function AppEmpty({ title, subtitle, actionLabel, onAction }: Props) {
+  const showAction = Boolean(actionLabel && onAction);
+
+  return (
+    <View style={styles.container}>
+      <Text style={styles.title}>{title}</Text>
+      {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+      {showAction ? (
+        <Pressable
+          onPress={onAction}
+          style={styles.actionButton}
+          accessibilityRole="button"
+          accessibilityLabel={actionLabel}
+        >
+          <Text style={styles.actionText}>{actionLabel}</Text>
+        </Pressable>
+      ) : null}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    paddingVertical: tokens.space.lg,
+    paddingHorizontal: tokens.space.xl,
+    borderRadius: tokens.radius.xl,
+    backgroundColor: tokens.colors.surfaceStrong,
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: tokens.space.sm as any,
+  },
+  title: {
+    fontSize: tokens.font.body,
+    fontWeight: "800",
+    color: tokens.colors.text,
+    textAlign: "center",
+  },
+  subtitle: {
+    fontSize: tokens.font.small,
+    color: tokens.colors.textMuted,
+    textAlign: "center",
+  },
+  actionButton: {
+    marginTop: tokens.space.sm,
+    paddingHorizontal: tokens.space.md,
+    paddingVertical: tokens.space.sm,
+    borderRadius: tokens.radius.pill,
+    backgroundColor: tokens.colors.green100,
+    borderWidth: 1,
+    borderColor: tokens.colors.borderStrong,
+  },
+  actionText: {
+    fontSize: tokens.font.small,
+    fontWeight: "800",
+    color: tokens.colors.green900,
+  },
+});
