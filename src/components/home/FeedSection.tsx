@@ -7,15 +7,17 @@ import {
 } from "react-native";
 
 import { FeedCard } from "@/components/FeedCard";
-import { feedSectionStyles as styles, homeStateStyles } from "@/screens/Home.styles";
-import { EmptyState } from "@/components/home/EmptyState";
-import { ErrorState } from "@/components/home/ErrorState";
+import { AppEmpty } from "@/components/state/AppEmpty";
+import { AppError } from "@/components/state/AppError";
+import { AppLoading } from "@/components/state/AppLoading";
+import type { AppErrorModel } from "@/lib/errors";
+import { feedSectionStyles as styles } from "@/screens/Home.styles";
 
 type Props<Item extends { id: string | number }> = {
   items: Item[];
   loading: boolean;
   refreshing: boolean;
-  error?: string | null;
+  error?: AppErrorModel | null;
   hasMore: boolean;
   sectionLabel: string;
   onRefresh: () => void;
@@ -47,15 +49,18 @@ export function FeedSection<Item extends { id: string | number }>({
           <Text style={styles.sectionLabel}>{sectionLabel}</Text>
           <View style={styles.headerSpacerAfterLabel} />
 
-          {error ? <ErrorState message={error} onRetry={onRefresh} /> : null}
+          {error ? <AppError error={error} onRetry={onRefresh} /> : null}
 
-          {loading && items.length === 0 ? (
-            <View style={homeStateStyles.loadingBox}>
-              <ActivityIndicator />
-            </View>
+          {loading && items.length === 0 ? <AppLoading /> : null}
+
+          {!loading && items.length === 0 && !error ? (
+            <AppEmpty
+              title="아직 글이 없어요"
+              subtitle="다른 카테고리를 눌러보거나 새로고침 해보세요."
+              actionLabel="새로고침"
+              onAction={onRefresh}
+            />
           ) : null}
-
-          {!loading && items.length === 0 && !error ? <EmptyState /> : null}
         </View>
       }
       ListFooterComponent={
