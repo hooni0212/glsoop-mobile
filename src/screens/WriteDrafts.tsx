@@ -7,6 +7,7 @@ import { AppError } from "@/components/state/AppError";
 import { AppLoading } from "@/components/state/AppLoading";
 import { normalizeApiError, type AppErrorModel } from "@/lib/errors";
 import { deleteWriteDraft, listWriteDrafts, WriteDraft } from "@/services/draftStorage";
+import { useConfirmBeforeLeave } from "@/hooks/useConfirmBeforeLeave";
 import { createWriteStyles } from "./Write.styles";
 
 function formatDate(ts: number) {
@@ -24,6 +25,16 @@ export default function WriteDrafts() {
   const [drafts, setDrafts] = useState<WriteDraft[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<AppErrorModel | null>(null);
+  const hasChanges = false;
+
+  const { requestLeave } = useConfirmBeforeLeave({
+    hasChanges,
+    onLeave: () => router.back(),
+    buildConfirm: () => ({
+      title: "",
+      buttons: [],
+    }),
+  });
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -55,7 +66,7 @@ export default function WriteDrafts() {
     <SafeAreaView style={styles.safe}>
       <View style={styles.topBar}>
         <Pressable
-          onPress={() => router.back()}
+          onPress={() => requestLeave()}
           hitSlop={12}
           style={styles.iconBtn}
           accessibilityRole="button"

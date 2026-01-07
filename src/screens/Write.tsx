@@ -10,7 +10,6 @@ import {
   View,
   Modal,
 } from "react-native";
-import { useNavigation } from "@react-navigation/native";
 
 import { WriteActionBar } from "@/components/write/WriteActionBar";
 import { WriteEditor } from "@/components/write/WriteEditor";
@@ -27,26 +26,12 @@ import {
   upsertWriteDraft,
   clearAllWriteDrafts,
 } from "@/services/draftStorage";
+import { ConfirmState, useConfirmBeforeLeave } from "@/hooks/useConfirmBeforeLeave";
 
 import { createWriteStyles } from "./Write.styles";
 
-type ConfirmState =
-  | {
-      visible: true;
-      title: string;
-      message?: string;
-      buttons: Array<{
-        text: string;
-        variant?: "default" | "destructive" | "cancel";
-        onPress: () => void;
-        testID?: string;
-      }>;
-    }
-  | null;
-
 export default function Write() {
   const styles = useMemo(() => createWriteStyles(), []);
-  const navigation = useNavigation();
   const params = useLocalSearchParams();
 
   const [title, setTitle] = useState("");
@@ -54,26 +39,22 @@ export default function Write() {
   const [draftId, setDraftId] = useState<string | null>(null);
 
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
-  const [confirm, setConfirm] = useState<ConfirmState>(null);
+  const [draftPrompt, setDraftPrompt] = useState<ConfirmState>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [submitError, setSubmitError] = useState<AppErrorModel | null>(null);
 
   const hasShownRestorePromptRef = useRef(false);
-  const skipNextBeforeRemoveRef = useRef(false);
 
   const hasChanges = title.trim().length > 0 || body.trim().length > 0;
   const canSubmit = title.trim().length > 0 && body.trim().length > 0;
 
-  const closeConfirm = useCallback(() => setConfirm(null), []);
+  const closeDraftPrompt = useCallback(() => setDraftPrompt(null), []);
 
-  const openConfirm = useCallback(
-    (next: Omit<NonNullable<ConfirmState>, "visible">) => {
-      console.log("[WRITE][confirm] open:", next.title);
-      setConfirm({ visible: true, ...next });
-    },
-    []
-  );
+  const openDraftPrompt = useCallback((next: Omit<NonNullable<ConfirmState>, "visible">) => {
+    console.log("[WRITE][confirm] open:", next.title);
+    setDraftPrompt({ visible: true, ...next });
+  }, []);
 
   const saveDraftExplicit = useCallback(async () => {
     const trimmedTitle = title.trim();
@@ -90,71 +71,50 @@ export default function Write() {
     if (!draftId) setDraftId(id);
   }, [title, body, draftId]);
 
-  const proceedNavigation = useCallback(
-    (action?: any) => {
-      console.log("[WRITE][nav] proceed", { hasAction: !!action });
-      if (action) navigation.dispatch(action);
-      else router.replace("/(tabs)");
-    },
-    [navigation]
-  );
-
-  const confirmClose = useCallback(
-    (opts?: { action?: any }) => {
-      console.log("[WRITE][ui] close pressed", { hasChanges });
-
-      if (!hasChanges) {
-        skipNextBeforeRemoveRef.current = true;
-        console.log("[WRITE][ui] close with empty form -> go home");
-        proceedNavigation(opts?.action);
-        return;
-      }
-
-      openConfirm({
-        title: "작성중인 내용이 있어요.",
-        message: "닫으면 입력 내용이 사라질 수 있어요.\n어떻게 할까요?",
-        buttons: [
-          {
-            text: "취소",
-            variant: "cancel",
-            onPress: () => closeConfirm(),
-            testID: "confirm-close-cancel",
+  const { confirm: leaveConfirm, requestLeave, allowNextLeave } = useConfirmBeforeLeave({
+    hasChanges,
+    onLeave: () => router.replace("/(tabs)"),
+    buildConfirm: ({ action, proceed, dismiss }) => ({
+      title: "작성중인 내용이 있어요.",
+      message: "닫으면 입력 내용이 사라질 수 있어요.\n어떻게 할까요?",
+      buttons: [
+        {
+          text: "취소",
+          variant: "cancel",
+          onPress: () => dismiss(),
+          testID: "confirm-close-cancel",
+        },
+        {
+          text: "그냥 닫기",
+          variant: "destructive",
+          onPress: () => {
+            dismiss();
+            void (async () => {
+              if (draftId) await deleteWriteDraft(draftId);
+              proceed(action);
+            })();
           },
-          {
-            text: "그냥 닫기",
-            variant: "destructive",
-            onPress: () => {
-              closeConfirm();
-              void (async () => {
-                if (draftId) await deleteWriteDraft(draftId);
-              })();
-              skipNextBeforeRemoveRef.current = true;
-              proceedNavigation(opts?.action);
-            },
-            testID: "confirm-close-discard",
+          testID: "confirm-close-discard",
+        },
+        {
+          text: "임시 저장하기",
+          onPress: () => {
+            dismiss();
+            void (async () => {
+              await saveDraftExplicit();
+              proceed(action);
+            })();
           },
-          {
-            text: "임시 저장하기",
-            onPress: () => {
-              closeConfirm();
-              void (async () => {
-                await saveDraftExplicit();
-                skipNextBeforeRemoveRef.current = true;
-                proceedNavigation(opts?.action);
-              })();
-            },
-            testID: "confirm-close-save",
-          },
-        ],
-      });
-    },
-    [hasChanges, proceedNavigation, saveDraftExplicit, openConfirm, closeConfirm]
-  );
+          testID: "confirm-close-save",
+        },
+      ],
+    }),
+  });
 
   const onPressClose = useCallback(() => {
     console.log("[WRITE][ui] topbar close press");
-    confirmClose();
-  }, [confirmClose]);
+    requestLeave();
+  }, [requestLeave]);
 
   const onPressDrafts = useCallback(() => {
     console.log("[WRITE][ui] open draft list");
@@ -175,8 +135,6 @@ export default function Write() {
     const payload = { title, body };
     console.log("[WRITE] submit payload", payload);
 
-    skipNextBeforeRemoveRef.current = true; // 완료 시 beforeRemove confirm 뜨지 않도록 스킵
-
     setSubmitError(null);
     setIsSubmitting(true);
     try {
@@ -191,6 +149,7 @@ export default function Write() {
       console.log("[WRITE] submit success -> show success and go home");
       setSubmitSuccess(true);
       setTimeout(() => {
+        allowNextLeave();
         router.replace("/(tabs)");
       }, 600);
     } catch (err) {
@@ -199,7 +158,7 @@ export default function Write() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [draftId, title, body]);
+  }, [draftId, title, body, allowNextLeave]);
 
   // 1) 키보드 상태 감지
   useEffect(() => {
@@ -240,19 +199,19 @@ export default function Write() {
       if (drafts.length === 0) return;
 
       // ✅ 임시저장 존재 시 먼저 선택 Alert
-      openConfirm({
+      openDraftPrompt({
         title: "임시저장한 글이 있어요. 어떻게 할까요?",
         buttons: [
           {
             text: "새로 쓰기",
             variant: "cancel",
-            onPress: () => closeConfirm(),
+            onPress: () => closeDraftPrompt(),
             testID: "confirm-draft-new",
           },
           {
             text: "임시저장함",
             onPress: () => {
-              closeConfirm();
+              closeDraftPrompt();
               router.push("/write-drafts");
             },
             testID: "confirm-draft-list",
@@ -263,22 +222,7 @@ export default function Write() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // 4) 뒤로가기/닫기 정책: 네비게이션 이벤트(beforeRemove) 가로채기
-  useEffect(() => {
-    const unsubscribe = navigation.addListener("beforeRemove", (e: any) => {
-      if (skipNextBeforeRemoveRef.current) {
-        skipNextBeforeRemoveRef.current = false;
-        return;
-      }
-
-      if (!hasChanges) return;
-
-      e.preventDefault();
-      confirmClose({ action: e.data.action });
-    });
-
-    return unsubscribe;
-  }, [navigation, hasChanges, confirmClose]);
+  const activeConfirm = draftPrompt ?? leaveConfirm;
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -314,7 +258,7 @@ export default function Write() {
 
           <WriteMetaSection styles={styles} />
 
-          <WriteStates styles={styles} confirm={confirm} />
+          <WriteStates styles={styles} confirm={activeConfirm} />
         </View>
 
         {/* ✅ 키보드 ON 시 ActionBar 숨김 */}
