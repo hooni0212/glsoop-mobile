@@ -118,6 +118,7 @@ export default function AuthSignup() {
                 (busy || !name || !email || !pw) && styles.primaryBtnDisabled,
                 pressed && !busy && styles.primaryBtnPressed,
               ]}
+              testID="auth-submit-signup"
             >
               <Text style={styles.primaryBtnText}>{busy ? "가입 중..." : "회원가입"}</Text>
             </Pressable>

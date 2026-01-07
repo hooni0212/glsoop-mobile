@@ -122,6 +122,7 @@ export default function AuthLogin() {
                 (busy || !email || !pw) && styles.primaryBtnDisabled,
                 pressed && !busy && styles.primaryBtnPressed,
               ]}
+              testID="auth-submit-login"
             >
               <Text style={styles.primaryBtnText}>{busy ? "로그인 중..." : "로그인"}</Text>
             </Pressable>

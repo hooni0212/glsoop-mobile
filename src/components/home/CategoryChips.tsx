@@ -30,6 +30,7 @@ export function CategoryChips<T extends string>({
               style={[styles.chip, isActive && styles.chipActive]}
               accessibilityRole="button"
               accessibilityState={{ selected: isActive }}
+              testID={`home-chip-${c}`}
             >
               <Text
                 style={[styles.chipText, isActive && styles.chipTextActive]}
