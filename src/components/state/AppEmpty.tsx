@@ -5,26 +5,28 @@ import { tokens } from "@/theme/tokens";
 
 type Props = {
   title: string;
-  subtitle?: string;
-  actionLabel?: string;
-  onAction?: () => void;
+  description?: string;
+  primaryAction?: {
+    label: string;
+    onPress: () => void;
+  };
 };
 
-export function AppEmpty({ title, subtitle, actionLabel, onAction }: Props) {
-  const showAction = Boolean(actionLabel && onAction);
+export function AppEmpty({ title, description, primaryAction }: Props) {
+  const showAction = Boolean(primaryAction);
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>{title}</Text>
-      {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+      {description ? <Text style={styles.subtitle}>{description}</Text> : null}
       {showAction ? (
         <Pressable
-          onPress={onAction}
+          onPress={primaryAction?.onPress}
           style={styles.actionButton}
           accessibilityRole="button"
-          accessibilityLabel={actionLabel}
+          accessibilityLabel={primaryAction?.label}
         >
-          <Text style={styles.actionText}>{actionLabel}</Text>
+          <Text style={styles.actionText}>{primaryAction?.label}</Text>
         </Pressable>
       ) : null}
     </View>

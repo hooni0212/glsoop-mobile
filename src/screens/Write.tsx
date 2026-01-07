@@ -8,7 +8,6 @@ import {
   Pressable,
   Text,
   View,
-  ActivityIndicator,
   Modal,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
@@ -18,6 +17,9 @@ import { WriteEditor } from "@/components/write/WriteEditor";
 import { WriteMetaSection } from "@/components/write/WriteMetaSection";
 import { WriteStates } from "@/components/write/WriteStates";
 import { WriteTopBar } from "@/components/write/WriteTopBar";
+import { AppError } from "@/components/state/AppError";
+import { AppLoading } from "@/components/state/AppLoading";
+import { normalizeApiError, type AppErrorModel } from "@/lib/errors";
 import {
   deleteWriteDraft,
   listWriteDrafts,
@@ -55,6 +57,7 @@ export default function Write() {
   const [confirm, setConfirm] = useState<ConfirmState>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [submitError, setSubmitError] = useState<AppErrorModel | null>(null);
 
   const hasShownRestorePromptRef = useRef(false);
   const skipNextBeforeRemoveRef = useRef(false);
@@ -174,6 +177,7 @@ export default function Write() {
 
     skipNextBeforeRemoveRef.current = true; // 완료 시 beforeRemove confirm 뜨지 않도록 스킵
 
+    setSubmitError(null);
     setIsSubmitting(true);
     try {
       // TODO: 실제 전송 API 연결 필요 (예: fetch/axios)
@@ -191,6 +195,7 @@ export default function Write() {
       }, 600);
     } catch (err) {
       console.log("[WRITE] submit error", err);
+      setSubmitError(normalizeApiError(err));
     } finally {
       setIsSubmitting(false);
     }
@@ -291,6 +296,14 @@ export default function Write() {
         />
 
         <View style={styles.container}>
+          {submitError ? (
+            <View style={styles.center}>
+              <AppError
+                error={submitError}
+                onRetry={submitError.canRetry ? onPressSubmit : undefined}
+              />
+            </View>
+          ) : null}
           <WriteEditor
             title={title}
             body={body}
@@ -308,27 +321,9 @@ export default function Write() {
         {!isKeyboardVisible && <WriteActionBar styles={styles} />}
 
         <Modal visible={isSubmitting} transparent animationType="fade">
-          <View
-            style={{
-              flex: 1,
-              backgroundColor: "rgba(0,0,0,0.2)",
-              justifyContent: "center",
-              alignItems: "center",
-            }}
-          >
-            <View
-              style={{
-                padding: 20,
-                borderRadius: 14,
-                backgroundColor: "#fff",
-                alignItems: "center",
-                width: 200,
-              }}
-            >
-              <ActivityIndicator size="large" color="#2E5A3D" />
-              <Text style={{ marginTop: 12, fontWeight: "800", color: "#2B2B2B" }}>
-                전송 중...
-              </Text>
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalCard}>
+              <AppLoading message="전송 중..." />
             </View>
           </View>
         </Modal>

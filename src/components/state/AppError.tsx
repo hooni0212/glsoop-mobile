@@ -4,14 +4,16 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { AppErrorModel } from "@/lib/errors";
 import { tokens } from "@/theme/tokens";
 
+type AppErrorDisplay = Pick<AppErrorModel, "title" | "description">;
+
 type Props = {
-  error: AppErrorModel;
+  error: AppErrorDisplay;
   onRetry?: () => void;
   retryLabel?: string;
 };
 
 export function AppError({ error, onRetry, retryLabel = "다시 시도" }: Props) {
-  const showRetry = Boolean(onRetry && error.canRetry);
+  const showRetry = Boolean(onRetry);
 
   return (
     <View style={styles.container}>
