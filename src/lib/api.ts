@@ -4,10 +4,18 @@ type ApiOk<T> = { success: true; data: T };
 type ApiErr = { success: false; error: { code: string; message: string } };
 type ApiResponse<T> = ApiOk<T> | ApiErr;
 
-const API_BASE = (process.env.EXPO_PUBLIC_API_BASE_URL || '').replace(/\/+$/, '');
+const API_BASE = (process.env.EXPO_PUBLIC_API_BASE_URL || "").replace(/\/+$/, "");
+const API_DEBUG =
+  typeof process !== "undefined" && process?.env?.EXPO_PUBLIC_API_DEBUG === "true";
+
+// EXPO_PUBLIC_API_DEBUG=true (dev)로 API 로그 활성화
+function apiLog(...args: unknown[]) {
+  if (!__DEV__ || !API_DEBUG) return;
+  console.log(...args);
+}
 
 if (!API_BASE) {
-  console.warn('[api] EXPO_PUBLIC_API_BASE_URL is empty. Check your .env');
+  console.warn("[api] EXPO_PUBLIC_API_BASE_URL is empty. Check your .env");
 }
 
 // 간단 타임아웃 유틸
@@ -51,7 +59,7 @@ export async function apiGet<T>(path: string): Promise<T> {
     }
 
     // 디버그용 (원하면 지워도 됨)
-    console.log('[api] GET', url, 'status=', res.status, 'json=', parsed);
+    apiLog("[api] GET", url, "status=", res.status, "json=", parsed);
 
     // ✅ HTTP 에러 처리
     if (!res.ok) {
