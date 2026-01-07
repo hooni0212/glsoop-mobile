@@ -32,12 +32,14 @@ export default function AuthSignup() {
   const [pw, setPw] = React.useState("");
   const [busy, setBusy] = React.useState(false);
   const [message, setMessage] = React.useState<string | null>(null);
+  const [signupDone, setSignupDone] = React.useState(false);
   const [error, setError] = React.useState<ReturnType<typeof normalizeApiError> | null>(null);
 
   async function onSignup() {
     setBusy(true);
     setMessage(null);
     setError(null);
+    setSignupDone(false);
 
     try {
       const res = await apiPost<SignupResponse>("/api/signup", { name, email, pw });
@@ -57,6 +59,7 @@ export default function AuthSignup() {
       // token이 없으면(대부분: 이메일 인증 필요)
       // ✅ 여기서는 자동 이동하지 않고, 안내 메시지만 보여준다.
       // (다음 step3에서: 로그인 화면으로 handoff + 이메일 프리필을 추가할 예정)
+      setSignupDone(true);
       setMessage("회원가입이 완료됐어요. 이메일 인증 메일을 확인한 뒤 로그인해 주세요.");
       return;
     } catch (e) {
@@ -126,6 +129,20 @@ export default function AuthSignup() {
 
             {message ? <Text style={styles.helper}>{message}</Text> : null}
 
+            {signupDone ? (
+              <Pressable
+                onPress={() =>
+                  router.replace({ pathname: "/(auth)/login", params: { from: "signup", email } })
+                }
+                style={({ pressed }) => [
+                  styles.secondaryBtn,
+                  pressed && styles.secondaryBtnPressed,
+                ]}
+              >
+                <Text style={styles.secondaryBtnText}>로그인으로 이동</Text>
+              </Pressable>
+            ) : null}
+
             <Pressable onPress={() => router.replace("/(auth)/login")}>
               <Text style={styles.link}>이미 계정이 있나요? 로그인</Text>
             </Pressable>
@@ -185,6 +202,16 @@ const styles = StyleSheet.create({
   primaryBtnPressed: { opacity: 0.92 },
   primaryBtnDisabled: { opacity: 0.5 },
   primaryBtnText: { color: "white", fontSize: 15, fontWeight: "800" },
+  secondaryBtn: {
+    backgroundColor: tokens.colors.surfaceStrong,
+    borderRadius: tokens.radius.lg,
+    paddingVertical: 14,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: tokens.colors.borderStrong,
+  },
+  secondaryBtnPressed: { opacity: 0.9 },
+  secondaryBtnText: { color: tokens.colors.text, fontSize: 15, fontWeight: "800" },
   helper: { fontSize: tokens.font.small, color: tokens.colors.textMuted, marginTop: 4 },
   link: {
     fontSize: tokens.font.small,
