@@ -1,4 +1,5 @@
 import { apiGet } from "@/lib/api";
+import { normalizeApiError, type AppErrorModel } from "@/lib/errors";
 import type { Post } from "@/types/post";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -89,7 +90,7 @@ function normalizePostDetail(row: any): any {
 export function usePost(id: string | undefined) {
   const [post, setPost] = useState<(Post & { content?: string; contentRaw?: string }) | null>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<AppErrorModel | null>(null);
   const inflightRef = useRef(false);
 
   const fetchPost = useCallback(async () => {
@@ -109,7 +110,7 @@ export function usePost(id: string | undefined) {
 
       setPost(normalizePostDetail(raw));
     } catch (e: any) {
-      setError(e?.message || "글을 불러오지 못했어요.");
+      setError(normalizeApiError(e));
       setPost(null);
     } finally {
       setLoading(false);

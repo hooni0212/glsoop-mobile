@@ -61,6 +61,11 @@ export function createWriteStyles() {
       paddingHorizontal: 16,
       paddingTop: 14,
     },
+    center: {
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: 12,
+    },
 
     card: {
       borderRadius: 16,

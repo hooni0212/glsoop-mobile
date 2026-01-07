@@ -2,7 +2,12 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { router } from "expo-router";
 import { Pressable, SafeAreaView, ScrollView, Text, View } from "react-native";
 
+import { AppEmpty } from "@/components/state/AppEmpty";
+import { AppError } from "@/components/state/AppError";
+import { AppLoading } from "@/components/state/AppLoading";
+import { normalizeApiError, type AppErrorModel } from "@/lib/errors";
 import { deleteWriteDraft, listWriteDrafts, WriteDraft } from "@/services/draftStorage";
+import { useConfirmBeforeLeave } from "@/hooks/useConfirmBeforeLeave";
 import { createWriteStyles } from "./Write.styles";
 
 function formatDate(ts: number) {
@@ -18,10 +23,30 @@ function formatDate(ts: number) {
 export default function WriteDrafts() {
   const styles = useMemo(() => createWriteStyles(), []);
   const [drafts, setDrafts] = useState<WriteDraft[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<AppErrorModel | null>(null);
+  const hasChanges = false;
+
+  const { requestLeave } = useConfirmBeforeLeave({
+    hasChanges,
+    onLeave: () => router.back(),
+    buildConfirm: () => ({
+      title: "",
+      buttons: [],
+    }),
+  });
 
   const refresh = useCallback(async () => {
-    const items = await listWriteDrafts();
-    setDrafts(items);
+    setLoading(true);
+    setError(null);
+    try {
+      const items = await listWriteDrafts();
+      setDrafts(items);
+    } catch (err) {
+      setError(normalizeApiError(err));
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -41,7 +66,7 @@ export default function WriteDrafts() {
     <SafeAreaView style={styles.safe}>
       <View style={styles.topBar}>
         <Pressable
-          onPress={() => router.back()}
+          onPress={() => requestLeave()}
           hitSlop={12}
           style={styles.iconBtn}
           accessibilityRole="button"
@@ -66,8 +91,22 @@ export default function WriteDrafts() {
       </View>
 
       <ScrollView contentContainerStyle={{ padding: 14, paddingBottom: 40 }}>
-        {drafts.length === 0 ? (
-          <Text style={styles.hint}>임시저장된 글이 없어요.</Text>
+        {loading ? (
+          <View style={styles.center}>
+            <AppLoading message="임시저장함을 불러오는 중…" />
+          </View>
+        ) : error ? (
+          <View style={styles.center}>
+            <AppError error={error} onRetry={error.canRetry ? refresh : undefined} />
+          </View>
+        ) : drafts.length === 0 ? (
+          <View style={styles.center}>
+            <AppEmpty
+              title="임시저장한 글이 없어요"
+              description="새 글을 작성하거나 자유롭게 기록해보세요."
+              primaryAction={{ label: "글 작성하기", onPress: () => router.push("/write") }}
+            />
+          </View>
         ) : (
           drafts.map((d) => {
             const preview = (d.body || "").replace(/\s+/g, " ").slice(0, 90);

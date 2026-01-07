@@ -5,11 +5,13 @@ import { PostActionBar } from "@/components/post/PostActionBar";
 import { PostBody } from "@/components/post/PostBody";
 import { PostHeader } from "@/components/post/PostHeader";
 import { PostMetaBar } from "@/components/post/PostMetaBar";
-import { PostStates } from "@/components/post/PostStates";
+import { AppEmpty } from "@/components/state/AppEmpty";
+import { AppError } from "@/components/state/AppError";
+import { AppLoading } from "@/components/state/AppLoading";
 import { PostTopBar } from "@/components/post/PostTopBar";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useMemo } from "react";
-import { SafeAreaView, ScrollView } from "react-native";
+import { SafeAreaView, ScrollView, View } from "react-native";
 
 function formatKoreanDate(iso?: string) {
   if (!iso) return "";
@@ -46,6 +48,7 @@ export default function PostDetail() {
   }, [authorName, dateText]);
 
   const onPressBack = () => router.back();
+  const showNotFound = error?.kind === "not_found";
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -53,11 +56,29 @@ export default function PostDetail() {
       <PostTopBar onPressBack={onPressBack} styles={styles} />
 
       {loading ? (
-        <PostStates kind="loading" styles={styles} />
+        <View style={styles.center}>
+          <AppLoading />
+        </View>
       ) : error ? (
-        <PostStates kind="error" errorText={error} onRetry={refetch} styles={styles} />
+        <View style={styles.center}>
+          {showNotFound ? (
+            <AppEmpty
+              title="글을 찾을 수 없어요"
+              description="삭제되었거나 주소가 잘못됐을 수 있어요."
+              primaryAction={{ label: "뒤로가기", onPress: onPressBack }}
+            />
+          ) : (
+            <AppError error={error} onRetry={error.canRetry ? refetch : undefined} />
+          )}
+        </View>
       ) : !post ? (
-        <PostStates kind="notFound" onBack={onPressBack} styles={styles} />
+        <View style={styles.center}>
+          <AppEmpty
+            title="글을 찾을 수 없어요"
+            description="삭제되었거나 주소가 잘못됐을 수 있어요."
+            primaryAction={{ label: "뒤로가기", onPress: onPressBack }}
+          />
+        </View>
       ) : (
         <>
           <ScrollView contentContainerStyle={styles.scrollContent}>
