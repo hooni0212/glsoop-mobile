@@ -1,6 +1,8 @@
 import React from "react";
 
+import { apiGet } from "@/lib/api";
 import { clearAuthToken, getAuthToken, setAuthToken } from "@/lib/authToken";
+import { normalizeApiError } from "@/lib/errors";
 
 type AuthState = {
   /** AsyncStorage 로드 완료 여부 */
@@ -19,14 +21,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = React.useState(false);
   const [token, setToken] = React.useState<string | null>(null);
 
+  // 앱 최초 실행 시
+  // 1) AsyncStorage에서 토큰 로드
+  // 2) 토큰이 있다면 /api/me 호출로 유효성(만료/폐기) 1회 검증
   React.useEffect(() => {
     let mounted = true;
+
     (async () => {
       const t = await getAuthToken();
       if (!mounted) return;
-      setToken(t);
-      setReady(true);
+
+      if (!t) {
+        setToken(null);
+        setReady(true);
+        return;
+      }
+
+      // 토큰이 있으면 1회 검증 (401/403이면 자동 로그아웃)
+      try {
+        await apiGet<any>("/api/me");
+        if (!mounted) return;
+        setToken(t);
+      } catch (e) {
+        const normalized = normalizeApiError(e);
+        if (normalized.kind === "auth") {
+          await clearAuthToken();
+          if (!mounted) return;
+          setToken(null);
+        } else {
+          // 네트워크/서버 오류 등은 토큰을 유지하고 UI에서 재시도할 수 있게 둠
+          if (!mounted) return;
+          setToken(t);
+        }
+      } finally {
+        if (mounted) setReady(true);
+      }
     })();
+
     return () => {
       mounted = false;
     };
