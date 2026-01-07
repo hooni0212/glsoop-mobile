@@ -9,7 +9,7 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 
 import { useAuth } from "@/auth/AuthContext";
 import { AppError } from "@/components/state/AppError";
@@ -27,11 +27,27 @@ export default function AuthLogin() {
   const router = useRouter();
   const { signIn } = useAuth();
 
+  const params = useLocalSearchParams<{ from?: string; email?: string }>();
+  const didPrefill = React.useRef(false);
+
   const [email, setEmail] = React.useState("");
   const [pw, setPw] = React.useState("");
   const [busy, setBusy] = React.useState(false);
   const [message, setMessage] = React.useState<string | null>(null);
   const [error, setError] = React.useState<ReturnType<typeof normalizeApiError> | null>(null);
+
+  React.useEffect(() => {
+    if (didPrefill.current) return;
+    didPrefill.current = true;
+
+    const pEmail = typeof params.email === "string" ? params.email : "";
+    const from = typeof params.from === "string" ? params.from : "";
+
+    if (pEmail) setEmail(pEmail);
+    if (from === "signup") {
+      setMessage("회원가입이 완료됐어요. 이메일 인증 후 로그인해 주세요.");
+    }
+  }, [params.email, params.from]);
 
   async function onLogin() {
     setBusy(true);

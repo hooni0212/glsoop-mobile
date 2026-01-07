@@ -54,9 +54,9 @@ export default function AuthSignup() {
         return;
       }
 
-      // token이 없으면 로그인 화면으로
-      setMessage("회원가입 완료! 로그인해 주세요.");
-      router.replace("/(auth)/login");
+      // token이 없으면(대부분: 이메일 인증 필요)
+      // 로그인 화면으로 보내되, 이메일 프리필 + 안내 메시지를 띄울 수 있게 파라미터 전달
+      router.replace({ pathname: "/(auth)/login", params: { from: "signup", email } });
     } catch (e) {
       setError(normalizeApiError(e));
     } finally {
