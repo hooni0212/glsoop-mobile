@@ -73,14 +73,33 @@ function normalizeFromStatus(status?: number): AppErrorModel | null {
   };
 }
 
+const NETWORK_ERROR_MESSAGES = [
+  "Failed to fetch",
+  "Network request failed",
+  "The Internet connection appears to be offline",
+  "Load failed",
+  "fetch failed",
+];
+
+function isAbortError(error: unknown) {
+  if (error instanceof ApiError && error.code === "timeout") return true;
+  if (error instanceof Error && error.name === "AbortError") return true;
+  return false;
+}
+
+function matchesNetworkMessage(message: string) {
+  return NETWORK_ERROR_MESSAGES.some((snippet) =>
+    message.toLowerCase().includes(snippet.toLowerCase())
+  );
+}
+
 function isNetworkError(error: unknown) {
-  if (error instanceof TypeError) return true;
-  if (error instanceof Error && /network|failed to fetch/i.test(error.message)) return true;
+  if (error instanceof Error && matchesNetworkMessage(error.message)) return true;
   return false;
 }
 
 function isTimeoutError(error: unknown) {
-  if (error instanceof ApiError && error.code === "timeout") return true;
+  if (isAbortError(error)) return true;
   if (error instanceof Error && /timeout/i.test(error.message)) return true;
   return false;
 }
@@ -125,3 +144,8 @@ export function normalizeApiError(error: unknown): AppErrorModel {
     canRetry: true,
   };
 }
+
+// Example classification (manual check)
+// normalizeApiError(new TypeError("Cannot read properties of undefined")).kind === "unknown"
+// normalizeApiError(new TypeError("Failed to fetch")).kind === "network"
+// normalizeApiError({ name: "AbortError", message: "The user aborted a request." }).kind === "timeout"
