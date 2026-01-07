@@ -1,10 +1,3 @@
-import React from "react";
-import { SafeAreaView, Text } from "react-native";
+import Me from "@/screens/Me";
 
-export default function Me() {
-  return (
-    <SafeAreaView style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-      <Text>마이페이지</Text>
-    </SafeAreaView>
-  );
-}
+export default Me;

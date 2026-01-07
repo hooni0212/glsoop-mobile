@@ -143,7 +143,7 @@ export function useFeed(query: FeedQuery = {}) {
         const params = new URLSearchParams(baseParams);
         params.set("offset", String(offsetRef.current));
 
-        const res = await apiGet<FeedResponse>(`/posts?${params.toString()}`);
+        const res = await apiGet<FeedResponse>(`/api/posts?${params.toString()}`);
 
         if (!res?.ok) throw new Error(res?.message || "피드를 불러오지 못했어요.");
 
