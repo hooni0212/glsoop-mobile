@@ -1,4 +1,5 @@
 import { apiGet } from "@/lib/api";
+import { normalizeApiError, type AppErrorModel } from "@/lib/errors";
 import type { Post } from "@/types/post";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -108,7 +109,7 @@ export function useFeed(query: FeedQuery = {}) {
   const [items, setItems] = useState<Post[]>([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<AppErrorModel | null>(null);
   const [hasMore, setHasMore] = useState(true);
 
   const offsetRef = useRef(0);
@@ -157,7 +158,7 @@ export function useFeed(query: FeedQuery = {}) {
         setHasMore(inferredHasMore);
         offsetRef.current += next.length;
       } catch (e: any) {
-        setError(e?.message || "피드를 불러오지 못했어요.");
+        setError(normalizeApiError(e));
       } finally {
         setLoading(false);
         setRefreshing(false);
