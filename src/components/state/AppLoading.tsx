@@ -4,14 +4,14 @@ import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { tokens } from "@/theme/tokens";
 
 type Props = {
-  label?: string;
+  message?: string;
 };
 
-export function AppLoading({ label = "불러오는 중…" }: Props) {
+export function AppLoading({ message = "불러오는 중…" }: Props) {
   return (
     <View style={styles.container}>
       <ActivityIndicator />
-      <Text style={styles.label}>{label}</Text>
+      <Text style={styles.label}>{message}</Text>
     </View>
   );
 }

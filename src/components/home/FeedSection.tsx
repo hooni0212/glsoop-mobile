@@ -49,16 +49,17 @@ export function FeedSection<Item extends { id: string | number }>({
           <Text style={styles.sectionLabel}>{sectionLabel}</Text>
           <View style={styles.headerSpacerAfterLabel} />
 
-          {error ? <AppError error={error} onRetry={onRefresh} /> : null}
+          {error ? (
+            <AppError error={error} onRetry={error.canRetry ? onRefresh : undefined} />
+          ) : null}
 
           {loading && items.length === 0 ? <AppLoading /> : null}
 
           {!loading && items.length === 0 && !error ? (
             <AppEmpty
               title="아직 글이 없어요"
-              subtitle="다른 카테고리를 눌러보거나 새로고침 해보세요."
-              actionLabel="새로고침"
-              onAction={onRefresh}
+              description="다른 카테고리를 눌러보거나 새로고침 해보세요."
+              primaryAction={{ label: "새로고침", onPress: onRefresh }}
             />
           ) : null}
         </View>

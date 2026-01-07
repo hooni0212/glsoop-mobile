@@ -64,21 +64,19 @@ export default function PostDetail() {
           {showNotFound ? (
             <AppEmpty
               title="글을 찾을 수 없어요"
-              subtitle="삭제되었거나 주소가 잘못됐을 수 있어요."
-              actionLabel="뒤로가기"
-              onAction={onPressBack}
+              description="삭제되었거나 주소가 잘못됐을 수 있어요."
+              primaryAction={{ label: "뒤로가기", onPress: onPressBack }}
             />
           ) : (
-            <AppError error={error} onRetry={refetch} />
+            <AppError error={error} onRetry={error.canRetry ? refetch : undefined} />
           )}
         </View>
       ) : !post ? (
         <View style={styles.center}>
           <AppEmpty
             title="글을 찾을 수 없어요"
-            subtitle="삭제되었거나 주소가 잘못됐을 수 있어요."
-            actionLabel="뒤로가기"
-            onAction={onPressBack}
+            description="삭제되었거나 주소가 잘못됐을 수 있어요."
+            primaryAction={{ label: "뒤로가기", onPress: onPressBack }}
           />
         </View>
       ) : (
