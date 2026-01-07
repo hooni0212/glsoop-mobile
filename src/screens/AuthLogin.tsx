@@ -61,14 +61,22 @@ export default function AuthLogin() {
         return;
       }
       if (!res.token) {
-        setMessage("서버가 token을 응답하지 않았어요. (Bearer 계약 필요)");
+        setMessage(__DEV__ ? "서버가 token을 응답하지 않았어요. (Bearer 계약 필요)" : "로그인 처리 중 문제가 발생했어요. 다시 시도해주세요.");
         return;
       }
 
       await signIn(res.token);
       router.replace("/(tabs)");
     } catch (e) {
-      setError(normalizeApiError(e));
+      const n = normalizeApiError(e);
+
+      // 로그인 실패(401/403)는 '인증 오류'로 분류되므로, 전체 에러 화면 대신 인라인 메시지로 처리
+      if (n.kind === "auth") {
+        setMessage("이메일 또는 비밀번호가 올바르지 않아요.");
+        return;
+      }
+
+      setError(n);
     } finally {
       setBusy(false);
     }
