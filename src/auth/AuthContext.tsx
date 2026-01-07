@@ -1,6 +1,6 @@
 import React from "react";
 
-import { apiGet } from "@/lib/api";
+import { apiGet, apiPost } from "@/lib/api";
 import { clearAuthToken, getAuthToken, setAuthToken } from "@/lib/authToken";
 import { normalizeApiError } from "@/lib/errors";
 
@@ -69,8 +69,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signOut = React.useCallback(async () => {
-    await clearAuthToken();
-    setToken(null);
+    // 서버 세션/로그아웃 엔드포인트가 있을 경우 best-effort 호출
+    // (실패해도 로컬 토큰은 반드시 삭제)
+    try {
+      await apiPost("/api/logout");
+    } catch {
+      // ignore
+    } finally {
+      await clearAuthToken();
+      setToken(null);
+    }
   }, []);
 
   const value = React.useMemo<AuthState>(
