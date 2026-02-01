@@ -35,17 +35,12 @@ export default function PostDetail() {
 
   const title = post?.title || "";
   const authorName = post?.author?.name || "익명";
+  const authorId = post?.author?.id;
   const dateText = formatKoreanDate((post as any)?.createdAt);
   const content = (post as any)?.content || "";
   const likeCount = post?.stats?.likeCount ?? 0;
   const isLiked = Boolean((post as any)?.viewer?.isLiked);
   const isBookmarked = Boolean((post as any)?.viewer?.isBookmarked);
-
-  const metaLine = useMemo(() => {
-    const a = authorName ? authorName : "익명";
-    const b = dateText ? dateText : "";
-    return b ? `${a}  ·  ${b}` : a;
-  }, [authorName, dateText]);
 
   const onPressBack = () => router.back();
   const showNotFound = error?.kind === "not_found";
@@ -82,7 +77,13 @@ export default function PostDetail() {
       ) : (
         <>
           <ScrollView contentContainerStyle={styles.scrollContent}>
-            <PostHeader title={title} metaLine={metaLine} styles={styles} />
+            <PostHeader
+              title={title}
+              authorName={authorName}
+              dateText={dateText}
+              onPressAuthor={authorId ? () => router.push(`/users/${authorId}`) : undefined}
+              styles={styles}
+            />
             <PostMetaBar type={post.type} tags={post.tags} styles={styles} />
             <PostBody content={content} styles={styles} />
           </ScrollView>
