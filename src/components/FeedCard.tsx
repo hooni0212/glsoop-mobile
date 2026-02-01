@@ -7,6 +7,9 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 type Props = {
   post: Post;
   onPress?: () => void;
+  testID?: string;
+  likeTestID?: string;
+  likeDisabled?: boolean;
 
   // (선택) 액션
   liked?: boolean;
@@ -18,6 +21,9 @@ type Props = {
 export function FeedCard({
   post,
   onPress,
+  testID,
+  likeTestID,
+  likeDisabled,
   liked = false,
   bookmarked = false,
   onLikePress,
@@ -29,7 +35,7 @@ export function FeedCard({
   const likeCount = post.stats?.likeCount ?? 0;
 
   return (
-    <Pressable style={styles.card} onPress={onPress}>
+    <Pressable style={styles.card} onPress={onPress} testID={testID}>
       {/* 제목 */}
       <Text style={styles.title} numberOfLines={1}>
         {post.title || "(제목 없음)"}
@@ -59,6 +65,8 @@ export function FeedCard({
             onPress={onLikePress}
             hitSlop={10}
             style={styles.actionBtn}
+            disabled={likeDisabled}
+            testID={likeTestID}
           >
             <Ionicons
               name={liked ? "heart" : "heart-outline"}

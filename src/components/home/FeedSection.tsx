@@ -23,6 +23,8 @@ type Props<Item extends { id: string | number }> = {
   onRefresh: () => void;
   onEndReached: () => void;
   onPressItem: (id: Item["id"]) => void;
+  onLikePress?: (id: Item["id"]) => void;
+  getLikeDisabled?: (id: Item["id"]) => boolean;
 };
 
 export function FeedSection<Item extends { id: string | number }>({
@@ -35,6 +37,8 @@ export function FeedSection<Item extends { id: string | number }>({
   onRefresh,
   onEndReached,
   onPressItem,
+  onLikePress,
+  getLikeDisabled,
 }: Props<Item>) {
   return (
     <FlatList
@@ -80,8 +84,10 @@ export function FeedSection<Item extends { id: string | number }>({
           liked={Boolean((item as any).viewer?.isLiked)}
           bookmarked={Boolean((item as any).viewer?.isBookmarked)}
           onPress={() => onPressItem(item.id)}
-          onLikePress={() => {}}
+          onLikePress={() => onLikePress?.(item.id)}
           onBookmarkPress={() => {}}
+          likeTestID={`feed-like-btn-${item.id}`}
+          likeDisabled={getLikeDisabled ? getLikeDisabled(item.id) : false}
         />
       )}
     />

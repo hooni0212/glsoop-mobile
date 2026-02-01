@@ -117,7 +117,7 @@
 
 ## 5) 작가(Author) 페이지
 
-### 5.1 GET `/users/:userId`
+### 5.1 GET `/users/:userId/profile`
 작가 프로필 상단 정보.
 
 #### Auth
@@ -126,18 +126,18 @@
 #### Response (200)
 ```json
 {
-  "success": true,
-  "data": {
-    "user": {
-      "id": "user_10",
-      "name": "유재원",
-      "bio": "짧은 소개 문장",
-      "joinedAt": "2025-12-01T00:00:00Z"
-    },
-    "stats": {
-      "postCount": 24,
-      "totalLikes": 312
-    }
+  "ok": true,
+  "message": "success",
+  "user": {
+    "id": "user_10",
+    "name": "유재원",
+    "bio": "짧은 소개 문장",
+    "joinedAt": "2025-12-01T00:00:00Z",
+    "post_count": 24,
+    "total_likes": 312
+  },
+  "viewer": {
+    "isFollowing": false
   }
 }
 ```

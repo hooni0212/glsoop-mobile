@@ -102,7 +102,7 @@ export function usePost(id: string | undefined) {
       setError(null);
       setLoading(true);
 
-      const res = await apiGet<PostDetailResponse>(`/posts/${encodeURIComponent(id)}`);
+      const res = await apiGet<PostDetailResponse>(`/api/posts/${encodeURIComponent(id)}`);
       if (!res?.ok) throw new Error(res?.message || "글을 불러오지 못했어요.");
 
       const raw = res.post ?? null;
@@ -122,5 +122,16 @@ export function usePost(id: string | undefined) {
     fetchPost();
   }, [fetchPost]);
 
-  return { post, loading, error, refetch: fetchPost };
+  const mutatePost = useCallback(
+    (
+      updater: (
+        prev: Post & { content?: string; contentRaw?: string }
+      ) => Post & { content?: string; contentRaw?: string }
+    ) => {
+      setPost((prev) => (prev ? updater(prev) : prev));
+    },
+    []
+  );
+
+  return { post, loading, error, refetch: fetchPost, mutatePost };
 }

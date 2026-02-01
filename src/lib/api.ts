@@ -1,4 +1,7 @@
+import { Platform } from "react-native";
+
 import { ApiError } from "@/lib/errors";
+import { getAuthToken } from "@/lib/authToken";
 
 type ApiOk<T> = { success: true; data: T };
 type ApiErr = { success: false; error: { code: string; message: string } };
@@ -33,47 +36,75 @@ function safeJsonParse(text: string) {
   }
 }
 
-export async function apiGet<T>(path: string): Promise<T> {
-  const url = `${API_BASE}${path.startsWith('/') ? path : `/${path}`}`;
+function joinUrl(path: string) {
+  const normalized = path.startsWith("/") ? path : `/${path}`;
+  return `${API_BASE}${normalized}`;
+}
 
-  const { controller, clear } = withTimeout(12000);
+type RequestOptions = {
+  method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+  body?: unknown;
+  timeoutMs?: number;
+  // 쿠키 인증을 써야 할 때만 true
+  credentials?: boolean;
+};
+
+async function apiRequest<T>(path: string, options: RequestOptions): Promise<T> {
+  const url = joinUrl(path);
+  const { controller, clear } = withTimeout(options.timeoutMs ?? 12000);
 
   try {
+    const token = await getAuthToken();
+
+    const headers: Record<string, string> = {
+      Accept: "application/json",
+    };
+
+    // JSON 바디가 있을 때만 Content-Type
+    const hasBody = options.body !== undefined;
+    if (hasBody) headers["Content-Type"] = "application/json";
+
+    // ✅ Bearer 토큰 인증(권장)
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+
     const res = await fetch(url, {
-      method: 'GET',
-      headers: { Accept: 'application/json' },
+      method: options.method,
+      headers,
+      body: hasBody ? JSON.stringify(options.body) : undefined,
       signal: controller.signal,
-      // 웹에서 쿠키 인증을 쓰면 필요할 수 있음(지금은 토큰 방식 전이면 생략 가능)
-      // credentials: 'include',
-    });
+      // ✅ 쿠키 인증이 필요할 때만 include
+      ...(options.credentials && Platform.OS === "web" ? { credentials: "include" } : null),
+    } as any);
 
     // ✅ res.json() 대신 text→parse (HTML/빈바디/에러페이지 대비)
     const text = await res.text();
     const parsed = safeJsonParse(text);
 
     if (!parsed) {
-      // JSON이 아닌 응답이면 원인 바로 보이게
       throw new ApiError(`Non-JSON response (HTTP ${res.status}): ${text.slice(0, 160)}`, {
         status: res.status,
       });
     }
 
-    // 디버그용 (원하면 지워도 됨)
-    apiLog("[api] GET", url, "status=", res.status, "json=", parsed);
+    apiLog(`[api] ${options.method}`, url, "status=", res.status, "json=", parsed);
 
     // ✅ HTTP 에러 처리
     if (!res.ok) {
       // 서버가 { success:false, error:{message} }를 지키는 경우
       if (parsed?.success === false) {
-        throw new ApiError(parsed?.error?.message || parsed?.error?.code || `HTTP ${res.status}`, {
-          status: res.status,
-          code: parsed?.error?.code,
-        });
+        throw new ApiError(parsed?.error?.message || parsed?.error?.code || `HTTP ${res.status}`,
+          {
+            status: res.status,
+            code: parsed?.error?.code,
+          }
+        );
       }
       // 서버가 { ok:false, message } 같은 경우
-      throw new ApiError(parsed?.message || parsed?.error?.message || `HTTP ${res.status}`, {
-        status: res.status,
-      });
+      throw new ApiError(parsed?.message || parsed?.error?.message || `HTTP ${res.status}`,
+        {
+          status: res.status,
+        }
+      );
     }
 
     // ✅ (A) 공통 포맷: { success:true, data:T }
@@ -82,16 +113,24 @@ export async function apiGet<T>(path: string): Promise<T> {
         code: parsed?.error?.code,
       });
     }
-    if (parsed?.success === true && 'data' in parsed) {
+    if (parsed?.success === true && "data" in parsed) {
       return (parsed as ApiOk<T>).data;
     }
 
-    // ✅ (B) 글숲 서버 포맷: { ok:true, posts:[...] } 등 -> json 자체 반환
+    // ✅ (B) 글숲 서버 포맷: { ok:true, ... } 등 -> json 자체 반환
     return parsed as T;
   } catch (e: any) {
-    if (e?.name === 'AbortError') throw new ApiError('Request timeout', { code: 'timeout' });
+    if (e?.name === "AbortError") throw new ApiError("Request timeout", { code: "timeout" });
     throw e;
   } finally {
     clear();
   }
+}
+
+export function apiGet<T>(path: string): Promise<T> {
+  return apiRequest<T>(path, { method: "GET" });
+}
+
+export function apiPost<T>(path: string, body?: unknown): Promise<T> {
+  return apiRequest<T>(path, { method: "POST", body });
 }
