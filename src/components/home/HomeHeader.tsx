@@ -12,7 +12,9 @@ type Props = {
 export function HomeHeader({ onPressSearch }: Props) {
   return (
     <View style={homeHeaderStyles.header}>
-      <Text style={homeHeaderStyles.brand}>글숲</Text>
+      <Text style={homeHeaderStyles.brand} testID="home-brand">
+        글숲
+      </Text>
 
       <Pressable
         onPress={onPressSearch}
@@ -20,6 +22,7 @@ export function HomeHeader({ onPressSearch }: Props) {
         style={homeHeaderStyles.iconBtn}
         accessibilityRole="button"
         accessibilityLabel="검색"
+        testID="home-search-button"
       >
         <Ionicons
           name="search-outline"

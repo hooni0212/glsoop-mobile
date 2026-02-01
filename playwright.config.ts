@@ -1,6 +1,6 @@
 import { defineConfig } from "@playwright/test";
 
-const webPort = process.env.EXPO_WEB_PORT || "8081";
+const webPort = process.env.E2E_WEB_PORT || "8081";
 
 export default defineConfig({
   testDir: "./e2e",
@@ -15,13 +15,13 @@ export default defineConfig({
     headless: true,
   },
   webServer: {
-    command: `expo start --web --port ${webPort} --host localhost`,
+    command: "node e2e/start-web.js",
     url: `http://localhost:${webPort}`,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
     env: {
       ...process.env,
-      EXPO_WEB_PORT: webPort,
+      E2E_WEB_PORT: webPort,
     },
   },
 });

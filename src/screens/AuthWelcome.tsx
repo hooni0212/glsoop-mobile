@@ -24,6 +24,7 @@ export default function AuthWelcome() {
           <Pressable
             onPress={() => router.push("/(auth)/login")}
             style={({ pressed }) => [styles.primaryBtn, pressed && styles.primaryBtnPressed]}
+            testID="auth-go-login"
           >
             <Text style={styles.primaryText}>로그인</Text>
           </Pressable>
@@ -31,6 +32,7 @@ export default function AuthWelcome() {
           <Pressable
             onPress={() => router.push("/(auth)/signup")}
             style={({ pressed }) => [styles.secondaryBtn, pressed && styles.secondaryBtnPressed]}
+            testID="auth-go-signup"
           >
             <Text style={styles.secondaryText}>회원가입</Text>
           </Pressable>
