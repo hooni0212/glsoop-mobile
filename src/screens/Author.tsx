@@ -43,8 +43,8 @@ export default function Author() {
 
   const name = user?.name || "익명";
   const bio = user?.bio || "소개가 아직 없어요.";
-  const postCount = stats?.postCount ?? 0;
-  const totalLikes = stats?.totalLikes ?? 0;
+  const postCount = stats?.postCount ?? user?.postCount ?? user?.post_count ?? 0;
+  const totalLikes = stats?.totalLikes ?? user?.totalLikes ?? user?.total_likes ?? 0;
   const joinedAtLabel = formatJoinedDate(user?.joinedAt);
 
   const showInitialLoading = profileLoading && !user;

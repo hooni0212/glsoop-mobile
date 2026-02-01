@@ -42,7 +42,7 @@ export function useAuthorProfile(userId?: string) {
       setError(null);
 
       const res = await apiGet<AuthorProfileResponse>(
-        `/api/users/${encodeURIComponent(userId)}`
+        `/api/users/${encodeURIComponent(userId)}/profile`
       );
       const payload = extractProfilePayload(res);
 
