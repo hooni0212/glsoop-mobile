@@ -51,8 +51,23 @@ export function createPostDetailStyles(actionBarHeight: number) {
       color: tokens.colors.text,
       lineHeight: 30,
     },
-    meta: {
+    metaRow: {
       marginTop: tokens.space.sm,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+    },
+    metaAuthor: {
+      fontSize: 13,
+      fontWeight: "800",
+      color: tokens.colors.green900,
+    },
+    metaDot: {
+      fontSize: 13,
+      fontWeight: "700",
+      color: tokens.colors.textFaint,
+    },
+    metaDate: {
       fontSize: 13,
       fontWeight: "700",
       color: tokens.colors.textFaint,

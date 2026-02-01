@@ -1,23 +1,21 @@
+import { useCallback, useEffect, useRef, useState } from "react";
+
 import { apiGet } from "@/lib/api";
 import { normalizeApiError, type AppErrorModel } from "@/lib/errors";
 import type { Post } from "@/types/post";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-type Sort = "latest" | "popular";
-
-export type FeedQuery = {
-  limit?: number;
-  sort?: Sort;
-  category?: string;
-  tag?: string;
-};
-
-type FeedResponse = {
-  ok: boolean;
-  posts?: any[];
-  hasMore?: boolean;
+type AuthorPostsResponse = {
+  ok?: boolean;
   message?: string;
+  data?: any;
+  items?: any[];
+  posts?: any[];
+  nextCursor?: string | null;
+  hasNext?: boolean;
+  hasMore?: boolean;
 };
+
+const PAGE_SIZE = 10;
 
 function stripHtml(s: string) {
   return s.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
@@ -61,11 +59,26 @@ function normalizePost(row: any): Post {
   const id = String(row?.id ?? row?.post_id ?? "");
   const title = pickFirstString(row?.title, row?.post_title);
   const content = pickFirstString(row?.content, row?.body, row?.html, row?.text);
-  const createdAt = pickFirstString(row?.createdAt, row?.created_at, row?.created, row?.date);
-  const authorName = pickFirstString(row?.author_name, row?.authorName, row?.nickname, row?.name);
+  const createdAt = pickFirstString(
+    row?.createdAt,
+    row?.created_at,
+    row?.created,
+    row?.date
+  );
+  const authorName = pickFirstString(
+    row?.author_name,
+    row?.authorName,
+    row?.nickname,
+    row?.name
+  );
   const authorId = String(row?.author_id ?? row?.user_id ?? row?.uid ?? "");
 
-  const likeCount = pickFirstNumber(row?.like_count, row?.likeCount, row?.likes, row?.likes_count);
+  const likeCount = pickFirstNumber(
+    row?.like_count,
+    row?.likeCount,
+    row?.likes,
+    row?.likes_count
+  );
   const bookmarkCount = pickFirstNumber(
     row?.bookmark_count,
     row?.bookmarkCount,
@@ -74,7 +87,9 @@ function normalizePost(row: any): Post {
   );
 
   const userLiked = Boolean(row?.user_liked ?? row?.liked ?? row?.isLiked);
-  const userBookmarked = Boolean(row?.user_bookmarked ?? row?.bookmarked ?? row?.isBookmarked);
+  const userBookmarked = Boolean(
+    row?.user_bookmarked ?? row?.bookmarked ?? row?.isBookmarked
+  );
 
   const category = pickFirstString(row?.category, row?.type) || "short";
 
@@ -102,32 +117,49 @@ function normalizePost(row: any): Post {
   return post as Post;
 }
 
-export function useFeed(query: FeedQuery = {}) {
-  const limit = query.limit ?? 10;
-  const sort = query.sort ?? "latest";
+function extractPostsPayload(res: AuthorPostsResponse) {
+  if (res?.ok === false) {
+    throw new Error(res?.message || "작가 글을 불러오지 못했어요.");
+  }
 
+  const base = res?.data && typeof res.data === "object" ? res.data : res;
+
+  const items = Array.isArray(base?.items)
+    ? base.items
+    : Array.isArray(base?.posts)
+      ? base.posts
+      : [];
+
+  const nextCursorValue = base?.nextCursor ?? base?.next_cursor ?? base?.cursor ?? null;
+  const nextCursor = nextCursorValue ? String(nextCursorValue) : null;
+
+  const hasNext =
+    typeof base?.hasNext === "boolean"
+      ? base.hasNext
+      : typeof base?.hasMore === "boolean"
+        ? base.hasMore
+        : nextCursor
+          ? true
+          : items.length >= PAGE_SIZE;
+
+  return { items, nextCursor, hasNext };
+}
+
+export function useAuthorPosts(userId?: string) {
   const [items, setItems] = useState<Post[]>([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<AppErrorModel | null>(null);
   const [hasMore, setHasMore] = useState(true);
 
-  const offsetRef = useRef(0);
+  const cursorRef = useRef<string | null>(null);
   const inflightRef = useRef(false);
-
-  const baseParams = useMemo(() => {
-    const p = new URLSearchParams();
-    p.set("limit", String(limit));
-    p.set("sort", sort);
-    if (query.category) p.set("category", query.category);
-    if (query.tag) p.set("tag", query.tag);
-    return p;
-  }, [limit, sort, query.category, query.tag]);
 
   const fetchPage = useCallback(
     async (opts: { reset?: boolean } = {}) => {
+      if (!userId || inflightRef.current) return;
+
       const reset = Boolean(opts.reset);
-      if (inflightRef.current) return;
       inflightRef.current = true;
 
       try {
@@ -135,37 +167,33 @@ export function useFeed(query: FeedQuery = {}) {
 
         if (reset) {
           setRefreshing(true);
-          offsetRef.current = 0;
+          cursorRef.current = null;
         } else {
           setLoading(true);
         }
 
-        const params = new URLSearchParams(baseParams);
-        params.set("offset", String(offsetRef.current));
+        const params = new URLSearchParams();
+        params.set("limit", String(PAGE_SIZE));
+        if (!reset && cursorRef.current) params.set("cursor", cursorRef.current);
 
-        const res = await apiGet<FeedResponse>(`/api/posts?${params.toString()}`);
+        const res = await apiGet<AuthorPostsResponse>(
+          `/api/users/${encodeURIComponent(userId)}/posts?${params.toString()}`
+        );
+        const payload = extractPostsPayload(res);
+        const nextItems = payload.items.map(normalizePost);
 
-        if (!res?.ok) throw new Error(res?.message || "피드를 불러오지 못했어요.");
-
-        const nextRaw = res.posts ?? [];
-        const next = nextRaw.map(normalizePost);
-
-        setItems((prev) => (reset ? next : [...prev, ...next]));
-
-        const inferredHasMore =
-          typeof res.hasMore === "boolean" ? res.hasMore : next.length >= limit;
-
-        setHasMore(inferredHasMore);
-        offsetRef.current += next.length;
-      } catch (e: any) {
-        setError(normalizeApiError(e));
+        setItems((prev) => (reset ? nextItems : [...prev, ...nextItems]));
+        cursorRef.current = payload.nextCursor;
+        setHasMore(payload.hasNext);
+      } catch (err) {
+        setError(normalizeApiError(err));
       } finally {
         setLoading(false);
         setRefreshing(false);
         inflightRef.current = false;
       }
     },
-    [baseParams, limit]
+    [userId]
   );
 
   const refresh = useCallback(async () => {
@@ -178,8 +206,12 @@ export function useFeed(query: FeedQuery = {}) {
   }, [fetchPage, hasMore, loading, refreshing]);
 
   useEffect(() => {
+    if (!userId) return;
+    setItems([]);
+    cursorRef.current = null;
+    setHasMore(true);
     refresh();
-  }, [limit, sort, query.category, query.tag]);
+  }, [refresh, userId]);
 
   const patchItem = useCallback((postId: string, updater: (p: Post) => Post) => {
     setItems((prev) => prev.map((p) => (p.id === postId ? updater(p) : p)));

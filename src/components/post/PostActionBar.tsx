@@ -10,6 +10,8 @@ export type PostActionBarProps = {
   onPressLike: () => void;
   onPressBookmark: () => void;
   onPressShare: () => void;
+  likeDisabled?: boolean;
+  likeTestID?: string;
   height: number;
   paddingBottom: number;
   styles: {
@@ -26,13 +28,21 @@ export function PostActionBar({
   onPressLike,
   onPressBookmark,
   onPressShare,
+  likeDisabled,
+  likeTestID,
   height,
   paddingBottom,
   styles,
 }: PostActionBarProps) {
   return (
     <View style={[styles.actionsBar, { height, paddingBottom }]}> 
-      <Pressable onPress={onPressLike} style={styles.actionBtn} hitSlop={10}>
+      <Pressable
+        onPress={onPressLike}
+        style={styles.actionBtn}
+        hitSlop={10}
+        disabled={likeDisabled}
+        testID={likeTestID}
+      >
         <Ionicons
           name={isLiked ? "heart" : "heart-outline"}
           size={22}
