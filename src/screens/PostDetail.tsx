@@ -9,9 +9,12 @@ import { AppEmpty } from "@/components/state/AppEmpty";
 import { AppError } from "@/components/state/AppError";
 import { AppLoading } from "@/components/state/AppLoading";
 import { PostTopBar } from "@/components/post/PostTopBar";
+import { useAuth } from "@/auth/AuthContext";
+import { togglePostLike } from "@/services/likeService";
+import { ApiError } from "@/lib/errors";
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useMemo } from "react";
-import { SafeAreaView, ScrollView, View } from "react-native";
+import React, { useMemo, useState } from "react";
+import { Alert, SafeAreaView, ScrollView, View } from "react-native";
 
 function formatKoreanDate(iso?: string) {
   if (!iso) return "";
@@ -31,7 +34,9 @@ export default function PostDetail() {
   const params = useLocalSearchParams<{ id: string }>();
   const id = params?.id ? String(params.id) : undefined;
 
-  const { post, loading, error, refetch } = usePost(id);
+  const { post, loading, error, refetch, mutatePost } = usePost(id);
+  const { signOut } = useAuth();
+  const [likePending, setLikePending] = useState(false);
 
   const title = post?.title || "";
   const authorName = post?.author?.name || "익명";
@@ -44,6 +49,51 @@ export default function PostDetail() {
 
   const onPressBack = () => router.back();
   const showNotFound = error?.kind === "not_found";
+
+  const handleLikeAuthError = async () => {
+    await signOut();
+    router.replace("/(auth)");
+    Alert.alert("로그인이 필요해요", "다시 로그인해주세요.");
+  };
+
+  const onPressLike = async () => {
+    if (!post || likePending) return;
+
+    const prevLiked = Boolean(post.viewer?.isLiked);
+    const prevCount = post.stats?.likeCount ?? 0;
+    const nextLiked = !prevLiked;
+    const nextCount = Math.max(0, prevCount + (nextLiked ? 1 : -1));
+
+    mutatePost((prev) => ({
+      ...prev,
+      viewer: { ...prev.viewer, isLiked: nextLiked },
+      stats: { ...prev.stats, likeCount: nextCount },
+    }));
+
+    setLikePending(true);
+    try {
+      const res = await togglePostLike(post.id);
+      mutatePost((prev) => ({
+        ...prev,
+        viewer: { ...prev.viewer, isLiked: res.liked },
+        stats: { ...prev.stats, likeCount: res.likeCount },
+      }));
+    } catch (err) {
+      mutatePost((prev) => ({
+        ...prev,
+        viewer: { ...prev.viewer, isLiked: prevLiked },
+        stats: { ...prev.stats, likeCount: prevCount },
+      }));
+
+      if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
+        await handleLikeAuthError();
+      } else {
+        Alert.alert("좋아요 실패", "잠시 후 다시 시도해주세요.");
+      }
+    } finally {
+      setLikePending(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -92,9 +142,11 @@ export default function PostDetail() {
             likeCount={likeCount}
             isLiked={isLiked}
             isBookmarked={isBookmarked}
-            onPressLike={() => {}}
+            onPressLike={onPressLike}
             onPressBookmark={() => {}}
             onPressShare={() => {}}
+            likeDisabled={likePending}
+            likeTestID="post-like-btn"
             height={dock.height}
             paddingBottom={dock.paddingBottom}
             styles={styles}

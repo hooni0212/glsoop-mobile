@@ -181,5 +181,9 @@ export function useFeed(query: FeedQuery = {}) {
     refresh();
   }, [limit, sort, query.category, query.tag]);
 
-  return { items, loading, refreshing, error, hasMore, refresh, loadMore };
+  const patchItem = useCallback((postId: string, updater: (p: Post) => Post) => {
+    setItems((prev) => prev.map((p) => (p.id === postId ? updater(p) : p)));
+  }, []);
+
+  return { items, loading, refreshing, error, hasMore, refresh, loadMore, patchItem };
 }

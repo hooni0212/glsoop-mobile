@@ -8,6 +8,8 @@ type Props = {
   post: Post;
   onPress?: () => void;
   testID?: string;
+  likeTestID?: string;
+  likeDisabled?: boolean;
 
   // (선택) 액션
   liked?: boolean;
@@ -20,6 +22,8 @@ export function FeedCard({
   post,
   onPress,
   testID,
+  likeTestID,
+  likeDisabled,
   liked = false,
   bookmarked = false,
   onLikePress,
@@ -61,6 +65,8 @@ export function FeedCard({
             onPress={onLikePress}
             hitSlop={10}
             style={styles.actionBtn}
+            disabled={likeDisabled}
+            testID={likeTestID}
           >
             <Ionicons
               name={liked ? "heart" : "heart-outline"}

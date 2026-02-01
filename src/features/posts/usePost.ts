@@ -122,5 +122,16 @@ export function usePost(id: string | undefined) {
     fetchPost();
   }, [fetchPost]);
 
-  return { post, loading, error, refetch: fetchPost };
+  const mutatePost = useCallback(
+    (
+      updater: (
+        prev: Post & { content?: string; contentRaw?: string }
+      ) => Post & { content?: string; contentRaw?: string }
+    ) => {
+      setPost((prev) => (prev ? updater(prev) : prev));
+    },
+    []
+  );
+
+  return { post, loading, error, refetch: fetchPost, mutatePost };
 }
