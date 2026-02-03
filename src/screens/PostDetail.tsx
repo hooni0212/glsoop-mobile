@@ -10,6 +10,7 @@ import { AppError } from "@/components/state/AppError";
 import { AppLoading } from "@/components/state/AppLoading";
 import { PostTopBar } from "@/components/post/PostTopBar";
 import { useAuth } from "@/auth/AuthContext";
+import { getLike, setLike, useLikeSnapshot } from "@/features/likes/likeStore";
 import { togglePostLike } from "@/services/likeService";
 import { ApiError } from "@/lib/errors";
 import { router, useLocalSearchParams } from "expo-router";
@@ -43,8 +44,12 @@ export default function PostDetail() {
   const authorId = post?.author?.id;
   const dateText = formatKoreanDate((post as any)?.createdAt);
   const content = (post as any)?.content || "";
-  const likeCount = post?.stats?.likeCount ?? 0;
-  const isLiked = Boolean((post as any)?.viewer?.isLiked);
+  const fallbackLikeCount = post?.stats?.likeCount ?? 0;
+  const fallbackIsLiked = Boolean((post as any)?.viewer?.isLiked);
+  const postId = post?.id ?? id ?? "";
+  const likeSnapshot = useLikeSnapshot(postId, fallbackIsLiked, fallbackLikeCount);
+  const likeCount = likeSnapshot.likeCount;
+  const isLiked = likeSnapshot.liked;
   const isBookmarked = Boolean((post as any)?.viewer?.isBookmarked);
 
   const onPressBack = () => router.back();
@@ -59,11 +64,13 @@ export default function PostDetail() {
   const onPressLike = async () => {
     if (!post || likePending) return;
 
-    const prevLiked = Boolean(post.viewer?.isLiked);
-    const prevCount = post.stats?.likeCount ?? 0;
+    const stored = getLike(post.id);
+    const prevLiked = stored?.liked ?? Boolean(post.viewer?.isLiked);
+    const prevCount = stored?.likeCount ?? (post.stats?.likeCount ?? 0);
     const nextLiked = !prevLiked;
     const nextCount = Math.max(0, prevCount + (nextLiked ? 1 : -1));
 
+    setLike(post.id, nextLiked, nextCount);
     mutatePost((prev) => ({
       ...prev,
       viewer: { ...prev.viewer, isLiked: nextLiked },
@@ -73,12 +80,14 @@ export default function PostDetail() {
     setLikePending(true);
     try {
       const res = await togglePostLike(post.id);
+      setLike(post.id, res.liked, res.likeCount);
       mutatePost((prev) => ({
         ...prev,
         viewer: { ...prev.viewer, isLiked: res.liked },
         stats: { ...prev.stats, likeCount: res.likeCount },
       }));
     } catch (err) {
+      setLike(post.id, prevLiked, prevCount);
       mutatePost((prev) => ({
         ...prev,
         viewer: { ...prev.viewer, isLiked: prevLiked },

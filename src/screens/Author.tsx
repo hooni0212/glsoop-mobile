@@ -10,6 +10,7 @@ import { AppLoading } from "@/components/state/AppLoading";
 import { useAuthorPosts } from "@/features/users/useAuthorPosts";
 import { useAuthorProfile } from "@/features/users/useAuthorProfile";
 import { authorScreenStyles } from "@/screens/Author.styles";
+import { getLike, setLike, useLikeSnapshot } from "@/features/likes/likeStore";
 import { useAuth } from "@/auth/AuthContext";
 import { togglePostLike } from "@/services/likeService";
 import { ApiError } from "@/lib/errors";
@@ -71,11 +72,13 @@ export default function Author() {
     const target = items.find((item) => item.id === postId);
     if (!target) return;
 
-    const prevLiked = Boolean(target.viewer?.isLiked);
-    const prevCount = target.stats?.likeCount ?? 0;
+    const stored = getLike(postId);
+    const prevLiked = stored?.liked ?? Boolean(target.viewer?.isLiked);
+    const prevCount = stored?.likeCount ?? (target.stats?.likeCount ?? 0);
     const nextLiked = !prevLiked;
     const nextCount = Math.max(0, prevCount + (nextLiked ? 1 : -1));
 
+    setLike(postId, nextLiked, nextCount);
     patchItem(postId, (prev) => ({
       ...prev,
       viewer: { ...prev.viewer, isLiked: nextLiked },
@@ -85,12 +88,14 @@ export default function Author() {
     setPending(postId, true);
     try {
       const res = await togglePostLike(postId);
+      setLike(postId, res.liked, res.likeCount);
       patchItem(postId, (prev) => ({
         ...prev,
         viewer: { ...prev.viewer, isLiked: res.liked },
         stats: { ...prev.stats, likeCount: res.likeCount },
       }));
     } catch (err) {
+      setLike(postId, prevLiked, prevCount);
       patchItem(postId, (prev) => ({
         ...prev,
         viewer: { ...prev.viewer, isLiked: prevLiked },
@@ -175,15 +180,10 @@ export default function Author() {
           <View style={authorScreenStyles.listItemSpacer} />
         )}
         renderItem={({ item }) => (
-          <FeedCard
-            post={item}
-            onPress={() => router.push(`/posts/${item.id}`)}
-            testID={`author-post-card-${item.id}`}
-            onLikePress={() => handleLike(item.id)}
-            likeDisabled={Boolean(likePending[item.id])}
-            likeTestID={`feed-like-btn-${item.id}`}
-            liked={Boolean(item.viewer?.isLiked)}
-            bookmarked={Boolean(item.viewer?.isBookmarked)}
+          <AuthorFeedItem
+            item={item}
+            likePending={likePending}
+            onLikePress={handleLike}
           />
         )}
         onEndReached={() => {
@@ -221,5 +221,36 @@ export default function Author() {
         }}
       />
     </SafeAreaView>
+  );
+}
+
+function AuthorFeedItem({
+  item,
+  likePending,
+  onLikePress,
+}: {
+  item: Post;
+  likePending: Record<string, boolean>;
+  onLikePress: (postId: string) => void;
+}) {
+  const fallbackLiked = Boolean(item.viewer?.isLiked);
+  const fallbackCount = item.stats?.likeCount ?? 0;
+  const { liked, likeCount } = useLikeSnapshot(item.id, fallbackLiked, fallbackCount);
+  const postSnapshot = {
+    ...item,
+    stats: { ...item.stats, likeCount },
+  };
+
+  return (
+    <FeedCard
+      post={postSnapshot}
+      onPress={() => router.push(`/posts/${item.id}`)}
+      testID={`author-post-card-${item.id}`}
+      onLikePress={() => onLikePress(item.id)}
+      likeDisabled={Boolean(likePending[item.id])}
+      likeTestID={`feed-like-btn-${item.id}`}
+      liked={liked}
+      bookmarked={Boolean(item.viewer?.isBookmarked)}
+    />
   );
 }

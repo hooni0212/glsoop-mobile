@@ -6,6 +6,7 @@ import { FeedSection } from "@/components/home/FeedSection";
 import { HomeHeader } from "@/components/home/HomeHeader";
 import { homeScreenStyles } from "@/screens/Home.styles";
 import { useFeed } from "@/features/feed/useFeed";
+import { getLike, setLike } from "@/features/likes/likeStore";
 import { useAuth } from "@/auth/AuthContext";
 import { togglePostLike } from "@/services/likeService";
 import { ApiError } from "@/lib/errors";
@@ -50,11 +51,13 @@ export default function Home() {
     const target = items.find((item) => item.id === postId);
     if (!target) return;
 
-    const prevLiked = Boolean(target.viewer?.isLiked);
-    const prevCount = target.stats?.likeCount ?? 0;
+    const stored = getLike(postId);
+    const prevLiked = stored?.liked ?? Boolean(target.viewer?.isLiked);
+    const prevCount = stored?.likeCount ?? (target.stats?.likeCount ?? 0);
     const nextLiked = !prevLiked;
     const nextCount = Math.max(0, prevCount + (nextLiked ? 1 : -1));
 
+    setLike(postId, nextLiked, nextCount);
     patchItem(postId, (prev) => ({
       ...prev,
       viewer: { ...prev.viewer, isLiked: nextLiked },
@@ -64,12 +67,14 @@ export default function Home() {
     setPending(postId, true);
     try {
       const res = await togglePostLike(postId);
+      setLike(postId, res.liked, res.likeCount);
       patchItem(postId, (prev) => ({
         ...prev,
         viewer: { ...prev.viewer, isLiked: res.liked },
         stats: { ...prev.stats, likeCount: res.likeCount },
       }));
     } catch (err) {
+      setLike(postId, prevLiked, prevCount);
       patchItem(postId, (prev) => ({
         ...prev,
         viewer: { ...prev.viewer, isLiked: prevLiked },
