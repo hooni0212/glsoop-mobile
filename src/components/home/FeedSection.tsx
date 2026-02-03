@@ -10,6 +10,7 @@ import { FeedCard } from "@/components/FeedCard";
 import { AppEmpty } from "@/components/state/AppEmpty";
 import { AppError } from "@/components/state/AppError";
 import { AppLoading } from "@/components/state/AppLoading";
+import { useLikeSnapshot } from "@/features/likes/likeStore";
 import type { AppErrorModel } from "@/lib/errors";
 import { feedSectionStyles as styles } from "@/screens/Home.styles";
 
@@ -79,17 +80,46 @@ export function FeedSection<Item extends { id: string | number }>({
       onEndReached={onEndReached}
       onEndReachedThreshold={0.6}
       renderItem={({ item }: { item: Item }) => (
-        <FeedCard
-          post={item as any}
-          liked={Boolean((item as any).viewer?.isLiked)}
-          bookmarked={Boolean((item as any).viewer?.isBookmarked)}
-          onPress={() => onPressItem(item.id)}
-          onLikePress={() => onLikePress?.(item.id)}
-          onBookmarkPress={() => {}}
-          likeTestID={`feed-like-btn-${item.id}`}
-          likeDisabled={getLikeDisabled ? getLikeDisabled(item.id) : false}
+        <FeedSectionItem
+          item={item}
+          onPressItem={onPressItem}
+          onLikePress={onLikePress}
+          getLikeDisabled={getLikeDisabled}
         />
       )}
+    />
+  );
+}
+
+function FeedSectionItem<Item extends { id: string | number }>({
+  item,
+  onPressItem,
+  onLikePress,
+  getLikeDisabled,
+}: {
+  item: Item;
+  onPressItem: (id: Item["id"]) => void;
+  onLikePress?: (id: Item["id"]) => void;
+  getLikeDisabled?: (id: Item["id"]) => boolean;
+}) {
+  const fallbackLiked = Boolean((item as any).viewer?.isLiked);
+  const fallbackCount = (item as any).stats?.likeCount ?? 0;
+  const { liked, likeCount } = useLikeSnapshot(item.id, fallbackLiked, fallbackCount);
+  const postSnapshot = {
+    ...(item as any),
+    stats: { ...(item as any).stats, likeCount },
+  };
+
+  return (
+    <FeedCard
+      post={postSnapshot}
+      liked={liked}
+      bookmarked={Boolean((item as any).viewer?.isBookmarked)}
+      onPress={() => onPressItem(item.id)}
+      onLikePress={() => onLikePress?.(item.id)}
+      onBookmarkPress={() => {}}
+      likeTestID={`feed-like-btn-${item.id}`}
+      likeDisabled={getLikeDisabled ? getLikeDisabled(item.id) : false}
     />
   );
 }
