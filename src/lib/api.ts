@@ -1,7 +1,7 @@
 import { Platform } from "react-native";
 
-import { ApiError } from "@/lib/errors";
 import { getAuthToken } from "@/lib/authToken";
+import { ApiError } from "@/lib/errors";
 
 type ApiOk<T> = { success: true; data: T };
 type ApiErr = { success: false; error: { code: string; message: string } };
@@ -20,8 +20,10 @@ function apiLog(...args: unknown[]) {
 }
 
 if (__DEV__ && !RAW_API_BASE) {
-  console.warn("[api] EXPO_PUBLIC_API_BASE_URL is empty. Using same-origin /api/*.");
+  console.warn("[api] EXPO_PUBLIC_API_BASE_URL is empty. Using same-origin paths.");
 }
+
+let didLogJoin = false;
 
 if (__DEV__ && API_DEBUG) {
   console.log("[api] base url =", API_BASE || "(same-origin)");
@@ -47,11 +49,23 @@ function joinUrl(path: string) {
   let base = API_BASE === "/" ? "" : API_BASE;
   let pathSuffix = normalizedPath;
 
+  // ✅ C안: "/api" 중복 제거
+  // base가 "/api"(또는 ".../api")로 끝나는데 path도 "/api/..."로 들어오면 하나 제거
+  // 예) base="/api", path="/api/login" => "/api/login"
+  // 예) base="https://m.glsoop.com/api", path="/api/login" => "https://m.glsoop.com/api/login"
   if (base.endsWith("/api") && pathSuffix.startsWith("/api")) {
     pathSuffix = pathSuffix.replace(/^\/api(?=\/|$)/, "");
   }
 
-  return `${base}${pathSuffix}`;
+  const url = `${base}${pathSuffix}`;
+
+  // dev에서 1회만 조합 결과 출력(옵션)
+  if (__DEV__ && API_DEBUG && !didLogJoin) {
+    console.debug("[api] join", { base: base || "(same-origin)", path: normalizedPath, url });
+    didLogJoin = true;
+  }
+
+  return url;
 }
 
 type RequestOptions = {
@@ -105,7 +119,8 @@ async function apiRequest<T>(path: string, options: RequestOptions): Promise<T> 
     if (!res.ok) {
       // 서버가 { success:false, error:{message} }를 지키는 경우
       if (parsed?.success === false) {
-        throw new ApiError(parsed?.error?.message || parsed?.error?.code || `HTTP ${res.status}`,
+        throw new ApiError(
+          parsed?.error?.message || parsed?.error?.code || `HTTP ${res.status}`,
           {
             status: res.status,
             code: parsed?.error?.code,
@@ -113,11 +128,9 @@ async function apiRequest<T>(path: string, options: RequestOptions): Promise<T> 
         );
       }
       // 서버가 { ok:false, message } 같은 경우
-      throw new ApiError(parsed?.message || parsed?.error?.message || `HTTP ${res.status}`,
-        {
-          status: res.status,
-        }
-      );
+      throw new ApiError(parsed?.message || parsed?.error?.message || `HTTP ${res.status}`, {
+        status: res.status,
+      });
     }
 
     // ✅ (A) 공통 포맷: { success:true, data:T }

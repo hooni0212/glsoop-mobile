@@ -51,8 +51,9 @@ Join our community of developers creating universal apps.
 
 ## API base URL and proxy (웹)
 
-- Production (m.glsoop.com): `EXPO_PUBLIC_API_BASE_URL`는 비워두거나 `/`로 설정하세요. 앱은 같은 도메인의 `/api/*`를 호출하며, Nginx가 `/api/*`를 백엔드로 프록시해야 합니다.
-- Local dev: 로컬 백엔드를 직접 쓰려면 `EXPO_PUBLIC_API_BASE_URL=http://localhost:3000`처럼 전체 도메인만 지정하세요. `/api`는 앱이 경로로 붙입니다.
+- Production (m.glsoop.com): 동일 출처(`/api/*`)로 호출되도록 `EXPO_PUBLIC_API_BASE_URL`은 비워두거나 `/`로 설정하세요. Nginx가 `/api/*`를 백엔드로 프록시해야 합니다.
+- API helper는 `/api` prefix를 자동으로 중복 제거하므로, call site에서 `/api/login` 또는 `/login`을 넘겨도 최종 요청은 `/api/login`으로 정리됩니다.
+- Local dev: 로컬 백엔드를 직접 쓰려면 `EXPO_PUBLIC_API_BASE_URL=http://localhost:3000`처럼 전체 도메인만 지정하세요.
 
 ## E2E tests (웹)
 
