@@ -49,6 +49,11 @@ Join our community of developers creating universal apps.
 - [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
 - [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
 
+## API base URL and proxy (웹)
+
+- Production (m.glsoop.com): `EXPO_PUBLIC_API_BASE_URL`는 비워두거나 `/`로 설정하세요. 앱은 같은 도메인의 `/api/*`를 호출하며, Nginx가 `/api/*`를 백엔드로 프록시해야 합니다.
+- Local dev: 로컬 백엔드를 직접 쓰려면 `EXPO_PUBLIC_API_BASE_URL=http://localhost:3000`처럼 전체 도메인만 지정하세요. `/api`는 앱이 경로로 붙입니다.
+
 ## E2E tests (웹)
 
 프로젝트에는 Playwright 기반의 웹 E2E 테스트가 준비되어 있습니다.
