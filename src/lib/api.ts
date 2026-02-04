@@ -1,13 +1,15 @@
 import { Platform } from "react-native";
 
-import { ApiError } from "@/lib/errors";
 import { getAuthToken } from "@/lib/authToken";
+import { ApiError } from "@/lib/errors";
 
 type ApiOk<T> = { success: true; data: T };
 type ApiErr = { success: false; error: { code: string; message: string } };
 type ApiResponse<T> = ApiOk<T> | ApiErr;
 
-const API_BASE = (process.env.EXPO_PUBLIC_API_BASE_URL || "").replace(/\/+$/, "");
+const RAW_API_BASE = (process.env.EXPO_PUBLIC_API_BASE_URL || "").trim();
+const NORMALIZED_API_BASE = RAW_API_BASE.replace(/\/+$/, "");
+const API_BASE = __DEV__ ? NORMALIZED_API_BASE : "";
 const API_DEBUG =
   typeof process !== "undefined" && process?.env?.EXPO_PUBLIC_API_DEBUG === "true";
 
@@ -17,8 +19,14 @@ function apiLog(...args: unknown[]) {
   console.log(...args);
 }
 
-if (!API_BASE) {
-  console.warn("[api] EXPO_PUBLIC_API_BASE_URL is empty. Check your .env");
+if (__DEV__ && !RAW_API_BASE) {
+  console.warn("[api] EXPO_PUBLIC_API_BASE_URL is empty. Using same-origin paths.");
+}
+
+let didLogJoin = false;
+
+if (__DEV__ && API_DEBUG) {
+  console.log("[api] base url =", API_BASE || "(same-origin)");
 }
 
 // 간단 타임아웃 유틸
@@ -37,8 +45,27 @@ function safeJsonParse(text: string) {
 }
 
 function joinUrl(path: string) {
-  const normalized = path.startsWith("/") ? path : `/${path}`;
-  return `${API_BASE}${normalized}`;
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  let base = API_BASE === "/" ? "" : API_BASE;
+  let pathSuffix = normalizedPath;
+
+  // ✅ C안: "/api" 중복 제거
+  // base가 "/api"(또는 ".../api")로 끝나는데 path도 "/api/..."로 들어오면 하나 제거
+  // 예) base="/api", path="/api/login" => "/api/login"
+  // 예) base="https://m.glsoop.com/api", path="/api/login" => "https://m.glsoop.com/api/login"
+  if (base.endsWith("/api") && pathSuffix.startsWith("/api")) {
+    pathSuffix = pathSuffix.replace(/^\/api(?=\/|$)/, "");
+  }
+
+  const url = `${base}${pathSuffix}`;
+
+  // dev에서 1회만 조합 결과 출력(옵션)
+  if (__DEV__ && API_DEBUG && !didLogJoin) {
+    console.debug("[api] join", { base: base || "(same-origin)", path: normalizedPath, url });
+    didLogJoin = true;
+  }
+
+  return url;
 }
 
 type RequestOptions = {
@@ -92,7 +119,8 @@ async function apiRequest<T>(path: string, options: RequestOptions): Promise<T> 
     if (!res.ok) {
       // 서버가 { success:false, error:{message} }를 지키는 경우
       if (parsed?.success === false) {
-        throw new ApiError(parsed?.error?.message || parsed?.error?.code || `HTTP ${res.status}`,
+        throw new ApiError(
+          parsed?.error?.message || parsed?.error?.code || `HTTP ${res.status}`,
           {
             status: res.status,
             code: parsed?.error?.code,
@@ -100,11 +128,9 @@ async function apiRequest<T>(path: string, options: RequestOptions): Promise<T> 
         );
       }
       // 서버가 { ok:false, message } 같은 경우
-      throw new ApiError(parsed?.message || parsed?.error?.message || `HTTP ${res.status}`,
-        {
-          status: res.status,
-        }
-      );
+      throw new ApiError(parsed?.message || parsed?.error?.message || `HTTP ${res.status}`, {
+        status: res.status,
+      });
     }
 
     // ✅ (A) 공통 포맷: { success:true, data:T }
