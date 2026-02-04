@@ -1,6 +1,6 @@
-import { useSyncExternalStore } from "react";
+import { useRef, useSyncExternalStore } from "react";
 
-export type LikeState = { liked: boolean; likeCount: number; updatedAt: number };
+export type LikeState = { liked: boolean; likeCount: number };
 
 const likeStore = new Map<string, LikeState>();
 const listeners = new Set<() => void>();
@@ -17,7 +17,6 @@ export function setLike(postId: string | number, liked: boolean, likeCount: numb
   likeStore.set(toKey(postId), {
     liked,
     likeCount,
-    updatedAt: Date.now(),
   });
   notify();
 }
@@ -37,6 +36,14 @@ export function useLikeSnapshot(
   fallbackCount: number
 ) {
   const key = toKey(postId);
+  const fallbackRef = useRef<LikeState>({ liked: fallbackLiked, likeCount: fallbackCount });
+
+  if (
+    fallbackRef.current.liked !== fallbackLiked ||
+    fallbackRef.current.likeCount !== fallbackCount
+  ) {
+    fallbackRef.current = { liked: fallbackLiked, likeCount: fallbackCount };
+  }
 
   return useSyncExternalStore(
     (listener) => {
@@ -45,10 +52,8 @@ export function useLikeSnapshot(
     },
     () => {
       const stored = likeStore.get(key);
-      return stored
-        ? { liked: stored.liked, likeCount: stored.likeCount }
-        : { liked: fallbackLiked, likeCount: fallbackCount };
+      return stored ?? fallbackRef.current;
     },
-    () => ({ liked: fallbackLiked, likeCount: fallbackCount })
+    () => fallbackRef.current
   );
 }
