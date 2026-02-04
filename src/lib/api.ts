@@ -7,7 +7,8 @@ type ApiOk<T> = { success: true; data: T };
 type ApiErr = { success: false; error: { code: string; message: string } };
 type ApiResponse<T> = ApiOk<T> | ApiErr;
 
-const API_BASE = (process.env.EXPO_PUBLIC_API_BASE_URL || "").replace(/\/+$/, "");
+const RAW_API_BASE = (process.env.EXPO_PUBLIC_API_BASE_URL || "").trim();
+const API_BASE = RAW_API_BASE.replace(/\/+$/, "");
 const API_DEBUG =
   typeof process !== "undefined" && process?.env?.EXPO_PUBLIC_API_DEBUG === "true";
 
@@ -17,8 +18,8 @@ function apiLog(...args: unknown[]) {
   console.log(...args);
 }
 
-if (!API_BASE) {
-  console.warn("[api] EXPO_PUBLIC_API_BASE_URL is empty. Check your .env");
+if (__DEV__ && !API_BASE) {
+  console.warn("[api] EXPO_PUBLIC_API_BASE_URL is empty. Using same-origin base.");
 }
 
 // 간단 타임아웃 유틸
@@ -37,8 +38,16 @@ function safeJsonParse(text: string) {
 }
 
 function joinUrl(path: string) {
-  const normalized = path.startsWith("/") ? path : `/${path}`;
-  return `${API_BASE}${normalized}`;
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  if (!API_BASE) return normalizedPath;
+
+  const baseHasApiSuffix = API_BASE.endsWith("/api");
+  const pathHasApiPrefix = normalizedPath === "/api" || normalizedPath.startsWith("/api/");
+  if (baseHasApiSuffix && pathHasApiPrefix) {
+    return `${API_BASE}${normalizedPath.replace(/^\/api/, "")}`;
+  }
+
+  return `${API_BASE}${normalizedPath}`;
 }
 
 type RequestOptions = {

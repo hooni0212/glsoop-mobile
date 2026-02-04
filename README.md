@@ -25,6 +25,23 @@ In the output, you'll find options to open the app in a
 
 You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
 
+## API base URL & proxy (웹)
+
+모바일 웹은 기본적으로 **same-origin** `/api/*` 경로를 호출하도록 구성되어 있습니다. 즉, 배포 환경에서는 `https://m.glsoop.com/api/login` 같은 상대 경로가 사용됩니다.
+
+- 프로덕션(Proxy) 모드:
+  - `EXPO_PUBLIC_API_BASE_URL`는 **비워두거나** `/`로 설정하세요.
+  - `EXPO_PUBLIC_API_BASE_URL`에 `/api`를 포함하면 `/api/api/...`가 되어 잘못된 경로가 될 수 있습니다.
+- 로컬 개발:
+  - `EXPO_PUBLIC_API_BASE_URL=http://localhost:3000` 처럼 명시하면 로컬 서버로 요청합니다.
+
+**Nginx 예시 (문서 참고용)**
+```
+location /api {
+  proxy_pass http://127.0.0.1:3000;
+}
+```
+
 ## Get a fresh project
 
 When you're ready, run:
