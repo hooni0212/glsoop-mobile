@@ -6,6 +6,8 @@
 - 공통 규칙: `README.md` 참고
 - 시간: ISO 8601 (UTC)
 
+> 앱 내부 camelCase 사용 여부와 상관없이 API 응답은 **snake_case**가 기준이다.
+
 ---
 
 ## 1) 데이터 모델(요약)
@@ -16,15 +18,15 @@
   "id": "user_10",
   "name": "유재원",
   "bio": "짧은 소개 문장",
-  "joinedAt": "2025-12-01T00:00:00Z"
+  "joined_at": "2025-12-01T00:00:00Z"
 }
 ```
 
 ### 1.2 UserStats (Public)
 ```json
 {
-  "postCount": 24,
-  "totalLikes": 312
+  "post_count": 24,
+  "total_likes": 312
 }
 ```
 
@@ -35,12 +37,12 @@
   "name": "유재원",
   "email": "user@example.com",
   "bio": "짧은 소개 문장",
-  "joinedAt": "2025-12-01T00:00:00Z",
+  "joined_at": "2025-12-01T00:00:00Z",
   "stats": {
-    "postCount": 24,
-    "totalLikes": 312,
-    "streakDays": 7,
-    "maxStreakDays": 21
+    "post_count": 24,
+    "total_likes": 312,
+    "streak_days": 7,
+    "max_streak_days": 21
   }
 }
 ```
@@ -58,8 +60,9 @@
 #### Response (200)
 ```json
 {
-  "success": true,
-  "data": {
+  "ok": true,
+  "message": "success",
+  "user": {
     /* MyProfile */
   }
 }
@@ -76,18 +79,17 @@
 - 🔒 Private
 
 #### Query Parameters
-- `cursor` (optional)
+- `offset` (optional, default: 0)
 - `limit` (optional, default: 10)
 
 #### Response (200)
 ```json
 {
-  "success": true,
-  "data": {
-    "items": [/* Post[] */],
-    "nextCursor": "cursor_abc",
-    "hasNext": true
-  }
+  "ok": true,
+  "message": "success",
+  "posts": [/* Post[] */],
+  "offset": 10,
+  "has_more": true
 }
 ```
 
@@ -104,12 +106,11 @@
 #### Response (200)
 ```json
 {
-  "success": true,
-  "data": {
-    "items": [/* Post[] */],
-    "nextCursor": null,
-    "hasNext": false
-  }
+  "ok": true,
+  "message": "success",
+  "posts": [/* Post[] */],
+  "offset": 10,
+  "has_more": false
 }
 ```
 
@@ -132,12 +133,12 @@
     "id": "user_10",
     "name": "유재원",
     "bio": "짧은 소개 문장",
-    "joinedAt": "2025-12-01T00:00:00Z",
+    "joined_at": "2025-12-01T00:00:00Z",
     "post_count": 24,
     "total_likes": 312
   },
   "viewer": {
-    "isFollowing": false
+    "is_following": false
   }
 }
 ```
@@ -153,18 +154,17 @@
 - 🔓 Public
 
 #### Query Parameters
-- `cursor` (optional)
+- `offset` (optional, default: 0)
 - `limit` (optional, default: 10)
 
 #### Response (200)
 ```json
 {
-  "success": true,
-  "data": {
-    "items": [/* Post[] */],
-    "nextCursor": "cursor_def",
-    "hasNext": true
-  }
+  "ok": true,
+  "message": "success",
+  "posts": [/* Post[] */],
+  "offset": 10,
+  "has_more": true
 }
 ```
 
@@ -189,10 +189,9 @@
 #### Response (200)
 ```json
 {
-  "success": true,
-  "data": {
-    "updatedAt": "2026-01-03T09:00:00Z"
-  }
+  "ok": true,
+  "message": "success",
+  "updated_at": "2026-01-03T09:00:00Z"
 }
 ```
 
@@ -203,22 +202,16 @@
 ### 8.1 인증 필요 API에서 토큰 누락
 ```json
 {
-  "success": false,
-  "error": {
-    "code": "UNAUTHORIZED",
-    "message": "Login required."
-  }
+  "ok": false,
+  "message": "Login required."
 }
 ```
 
 ### 8.2 사용자 없음
 ```json
 {
-  "success": false,
-  "error": {
-    "code": "NOT_FOUND",
-    "message": "User not found."
-  }
+  "ok": false,
+  "message": "User not found."
 }
 ```
 
@@ -227,5 +220,5 @@
 ## 9) 구현 메모
 
 - 작가 페이지는 **팔로우/랭킹 없이도 충분히 탐색성이 좋도록 설계**
-- `totalLikes`는 서버에서 집계(캐시 권장)
+- `total_likes`는 서버에서 집계(캐시 권장)
 - 마이페이지 성장 정보는 `growth.md`에서 상세 정의

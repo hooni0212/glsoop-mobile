@@ -33,12 +33,11 @@
 #### Response (200)
 ```json
 {
-  "success": true,
-  "data": {
-    "postId": "post_123",
-    "isLiked": true,
-    "likeCount": 13
-  }
+  "ok": true,
+  "message": "success",
+  "post_id": "post_123",
+  "is_liked": true,
+  "like_count": 13
 }
 ```
 
@@ -57,12 +56,11 @@
 #### Response (200)
 ```json
 {
-  "success": true,
-  "data": {
-    "postId": "post_123",
-    "isLiked": false,
-    "likeCount": 12
-  }
+  "ok": true,
+  "message": "success",
+  "post_id": "post_123",
+  "is_liked": false,
+  "like_count": 12
 }
 ```
 
@@ -79,12 +77,11 @@
 #### Response (200)
 ```json
 {
-  "success": true,
-  "data": {
-    "postId": "post_123",
-    "isBookmarked": true,
-    "bookmarkCount": 4
-  }
+  "ok": true,
+  "message": "success",
+  "post_id": "post_123",
+  "is_bookmarked": true,
+  "bookmark_count": 4
 }
 ```
 
@@ -99,12 +96,11 @@
 #### Response (200)
 ```json
 {
-  "success": true,
-  "data": {
-    "postId": "post_123",
-    "isBookmarked": false,
-    "bookmarkCount": 3
-  }
+  "ok": true,
+  "message": "success",
+  "post_id": "post_123",
+  "is_bookmarked": false,
+  "bookmark_count": 3
 }
 ```
 
@@ -112,7 +108,7 @@
 
 ## 4) 상호작용 상태 조회(옵션)
 
-> v1에서는 피드/상세 API가 `viewer.isLiked`, `viewer.isBookmarked`를 포함하므로,
+> v1에서는 피드/상세 API가 `viewer.is_liked`, `viewer.is_bookmarked`를 포함하므로,
 > 별도 상태 조회 API가 없어도 동작 가능하다.
 >
 > 다만 “대량 동기화”가 필요해지면 아래 API를 추가할 수 있다.
@@ -129,13 +125,12 @@
 #### Response (200)
 ```json
 {
-  "success": true,
-  "data": {
-    "items": [
-      { "postId": "post_1", "isLiked": true,  "isBookmarked": false },
-      { "postId": "post_2", "isLiked": false, "isBookmarked": true  }
-    ]
-  }
+  "ok": true,
+  "message": "success",
+  "posts": [
+    { "post_id": "post_1", "is_liked": true,  "is_bookmarked": false },
+    { "post_id": "post_2", "is_liked": false, "is_bookmarked": true  }
+  ]
 }
 ```
 
@@ -146,22 +141,16 @@
 ### 5.1 로그인 필요
 ```json
 {
-  "success": false,
-  "error": {
-    "code": "UNAUTHORIZED",
-    "message": "Login required."
-  }
+  "ok": false,
+  "message": "Login required."
 }
 ```
 
 ### 5.2 글 없음
 ```json
 {
-  "success": false,
-  "error": {
-    "code": "NOT_FOUND",
-    "message": "Post not found."
-  }
+  "ok": false,
+  "message": "Post not found."
 }
 ```
 
@@ -177,7 +166,7 @@
   - 운영에서는 post_stats 테이블(캐시) 또는 트리거/배치 집계 고려
 
 ### 6.2 카운트 반환 방식
-- 응답의 `likeCount`, `bookmarkCount`는 **현재 DB 기준 최종 값**을 반환 권장
+- 응답의 `like_count`, `bookmark_count`는 **현재 DB 기준 최종 값**을 반환 권장
 - 클라이언트는 서버 값을 신뢰해 UI를 확정(동기화)
 
 ### 6.3 멱등 처리

@@ -17,17 +17,20 @@ export type AppErrorModel = {
 type ApiErrorOptions = {
   status?: number;
   code?: string;
+  payload?: any;
 };
 
 export class ApiError extends Error {
   status?: number;
   code?: string;
+  payload?: any;
 
   constructor(message: string, options: ApiErrorOptions = {}) {
     super(message);
     this.name = "ApiError";
     this.status = options.status;
     this.code = options.code;
+    this.payload = options.payload;
   }
 }
 
