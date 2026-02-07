@@ -4,8 +4,6 @@ import { getAuthToken } from "@/lib/authToken";
 import { ApiError } from "@/lib/errors";
 
 type ApiOk<T> = { success: true; data: T };
-type ApiErr = { success: false; error: { code: string; message: string } };
-type ApiResponse<T> = ApiOk<T> | ApiErr;
 
 const RAW_BASE = process.env.EXPO_PUBLIC_API_BASE_URL;
 const API_BASE = (RAW_BASE || "").replace(/\/+$/, "");
