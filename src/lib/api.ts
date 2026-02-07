@@ -126,12 +126,14 @@ async function apiRequest<T>(path: string, options: RequestOptions): Promise<T> 
           {
             status: res.status,
             code: parsed?.error?.code,
+            payload: parsed,
           }
         );
       }
       // 서버가 { ok:false, message } 같은 경우
       throw new ApiError(parsed?.message || parsed?.error?.message || `HTTP ${res.status}`, {
         status: res.status,
+        payload: parsed,
       });
     }
 
