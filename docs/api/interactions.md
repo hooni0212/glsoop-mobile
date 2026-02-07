@@ -127,7 +127,7 @@
 {
   "ok": true,
   "message": "success",
-  "items": [
+  "posts": [
     { "post_id": "post_1", "is_liked": true,  "is_bookmarked": false },
     { "post_id": "post_2", "is_liked": false, "is_bookmarked": true  }
   ]

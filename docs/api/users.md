@@ -62,7 +62,7 @@
 {
   "ok": true,
   "message": "success",
-  "profile": {
+  "user": {
     /* MyProfile */
   }
 }
@@ -87,7 +87,7 @@
 {
   "ok": true,
   "message": "success",
-  "items": [/* Post[] */],
+  "posts": [/* Post[] */],
   "offset": 10,
   "has_more": true
 }
@@ -108,7 +108,7 @@
 {
   "ok": true,
   "message": "success",
-  "items": [/* Post[] */],
+  "posts": [/* Post[] */],
   "offset": 10,
   "has_more": false
 }
@@ -162,7 +162,7 @@
 {
   "ok": true,
   "message": "success",
-  "items": [/* Post[] */],
+  "posts": [/* Post[] */],
   "offset": 10,
   "has_more": true
 }

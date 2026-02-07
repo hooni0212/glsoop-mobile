@@ -13,7 +13,7 @@
 
 ### 회원가입 플로우 불일치(OTP + nickname) — 서버 기준
 
-- `POST /api/signup` body: `{ name, nickname, email, pw }` → `pending_id`, `email_masked`, `otp_ttl`, `resend_after` (plus `ok/message`)
+- `POST /api/signup` body: `{ name, nickname, email, pw }` → `pending_id`, `email_masked`, `otp_ttl_seconds`, `resend_after` (plus `ok/message`)
 - `POST /api/verify-email` body: `{ pending_id, verification_code }`
 - `POST /api/verify-email/resend` body: `{ pending_id }` 또는 `{ email }`  
   - 응답: `retry_after` 포함 (HTTP 429 포함)
@@ -48,7 +48,7 @@
   "ok": true,
   "pending_id": "pend_123",
   "email_masked": "u***@example.com",
-  "otp_ttl": 300,
+  "otp_ttl_seconds": 300,
   "resend_after": 60
 }
 ```

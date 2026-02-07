@@ -101,7 +101,7 @@
 {
   "ok": true,
   "message": "success",
-  "items": [/* Post[] */],
+  "posts": [/* Post[] */],
   "offset": 10,
   "has_more": true
 }
@@ -248,7 +248,7 @@
 {
   "ok": true,
   "message": "success",
-  "items": [
+  "tags": [
     { "tag": "힐링", "post_count": 120 },
     { "tag": "일상", "post_count": 98 }
   ]

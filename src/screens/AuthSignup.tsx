@@ -22,6 +22,7 @@ type SignupResponse = {
   message?: string;
   pending_id?: string;
   email_masked?: string;
+  otp_ttl_seconds?: number;
   otp_ttl?: number;
   resend_after?: number;
   retry_after?: number;
@@ -137,7 +138,7 @@ export default function AuthSignup() {
 
       setPendingId(res.pending_id ?? null);
       setEmailMasked(res.email_masked ?? null);
-      setOtpTtl(res.otp_ttl ?? null);
+      setOtpTtl(res.otp_ttl_seconds ?? res.otp_ttl ?? null);
       setResendAfter(res.resend_after ?? res.retry_after ?? 0);
       setOtp("");
       setStep("otp");

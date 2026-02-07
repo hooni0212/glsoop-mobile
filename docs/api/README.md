@@ -98,7 +98,7 @@ Authorization: Bearer <access_token>
 {
   "ok": true,
   "message": "success",
-  "items": [],
+  "posts": [],
   "offset": 10,
   "has_more": true
 }
