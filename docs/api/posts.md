@@ -5,7 +5,9 @@
 - Base URL: `/api`
 - 공통 규칙: `docs/api/README.md` 참고
 - 시간: ISO 8601 (UTC)
-- Pagination: Cursor 기반
+- Pagination: Offset 기반
+
+> 앱 내부에서 camelCase를 사용하더라도 API 응답은 **snake_case**가 기준이며, 필요 시 매핑 레이어에서 변환한다.
 
 ---
 
@@ -28,14 +30,14 @@
     "name": "유재원"
   },
   "tags": ["힐링", "일상"],
-  "createdAt": "2026-01-01T12:34:56Z",
+  "created_at": "2026-01-01T12:34:56Z",
   "stats": {
-    "likeCount": 12,
-    "bookmarkCount": 3
+    "like_count": 12,
+    "bookmark_count": 3
   },
   "viewer": {
-    "isLiked": false,
-    "isBookmarked": true
+    "is_liked": false,
+    "is_bookmarked": true
   }
 }
 ```
@@ -47,29 +49,29 @@
   "type": "essay",
   "title": "겨울 숲의 문장",
   "content": "긴 본문 텍스트...",
-  "contentFormat": "plain",
+  "content_format": "plain",
   "author": {
     "id": "user_10",
     "name": "유재원",
     "bio": "짧은 소개(선택)"
   },
   "tags": ["힐링", "일상"],
-  "createdAt": "2026-01-01T12:34:56Z",
-  "updatedAt": "2026-01-02T10:00:00Z",
+  "created_at": "2026-01-01T12:34:56Z",
+  "updated_at": "2026-01-02T10:00:00Z",
   "stats": {
-    "likeCount": 12,
-    "bookmarkCount": 3,
-    "viewCount": 120
+    "like_count": 12,
+    "bookmark_count": 3,
+    "view_count": 120
   },
   "viewer": {
-    "isLiked": false,
-    "isBookmarked": true,
-    "canEdit": true
+    "is_liked": false,
+    "is_bookmarked": true,
+    "can_edit": true
   }
 }
 ```
 
-> `contentFormat`은 v1에서는 기본 `plain`을 권장.  
+> `content_format`은 v1에서는 기본 `plain`을 권장.  
 > 기존 웹이 HTML 기반이라면 `html`도 가능하나, **모바일 렌더/보안(sanitize)** 정책을 확정한 뒤에 사용하는 것을 권장.
 
 ---
@@ -81,28 +83,27 @@
 
 #### Auth
 - 🔓 Public (비로그인도 조회 가능)
-- 로그인 상태면 `viewer.isLiked`, `viewer.isBookmarked`가 정확히 채워짐
+- 로그인 상태면 `viewer.is_liked`, `viewer.is_bookmarked`가 정확히 채워짐
 
 #### Query Parameters
 - `type` (optional): `poem | essay | short`
 - `tag` (optional): 단일 태그 (예: `힐링`)
 - `tags` (optional): 복수 태그(AND) — 쉼표 구분 (예: `힐링,일상`)
 - `sort` (optional): `recommend | popular | latest` (default: `latest`)
-- `cursor` (optional): 다음 페이지 커서
+- `offset` (optional): 다음 페이지 offset (기본 0)
 - `limit` (optional): 1~30 (default: 10)
 
 #### Example
-`GET /api/posts?type=essay&tag=힐링&sort=latest&limit=10`
+`GET /api/posts?type=essay&tag=힐링&sort=latest&offset=0&limit=10`
 
 #### Response (200)
 ```json
 {
-  "success": true,
-  "data": {
-    "items": [/* Post[] */],
-    "nextCursor": "cursor_def456",
-    "hasNext": true
-  }
+  "ok": true,
+  "message": "success",
+  "items": [/* Post[] */],
+  "offset": 10,
+  "has_more": true
 }
 ```
 
@@ -124,8 +125,9 @@
 #### Response (200)
 ```json
 {
-  "success": true,
-  "data": {
+  "ok": true,
+  "message": "success",
+  "post": {
     /* PostDetail */
   }
 }
@@ -151,7 +153,7 @@
   "type": "essay",
   "title": "제목(선택)",
   "content": "본문 텍스트",
-  "contentFormat": "plain",
+  "content_format": "plain",
   "tags": ["힐링", "일상"]
 }
 ```
@@ -166,10 +168,9 @@
 #### Response (201)
 ```json
 {
-  "success": true,
-  "data": {
-    "id": "post_123"
-  }
+  "ok": true,
+  "message": "success",
+  "post_id": "post_123"
 }
 ```
 
@@ -196,11 +197,10 @@
 #### Response (200)
 ```json
 {
-  "success": true,
-  "data": {
-    "id": "post_123",
-    "updatedAt": "2026-01-02T10:00:00Z"
-  }
+  "ok": true,
+  "message": "success",
+  "post_id": "post_123",
+  "updated_at": "2026-01-02T10:00:00Z"
 }
 ```
 
@@ -221,11 +221,10 @@
 #### Response (200)
 ```json
 {
-  "success": true,
-  "data": {
-    "id": "post_123",
-    "deleted": true
-  }
+  "ok": true,
+  "message": "success",
+  "post_id": "post_123",
+  "deleted": true
 }
 ```
 
@@ -247,13 +246,12 @@
 #### Response (200)
 ```json
 {
-  "success": true,
-  "data": {
-    "items": [
-      { "tag": "힐링", "postCount": 120 },
-      { "tag": "일상", "postCount": 98 }
-    ]
-  }
+  "ok": true,
+  "message": "success",
+  "items": [
+    { "tag": "힐링", "post_count": 120 },
+    { "tag": "일상", "post_count": 98 }
+  ]
 }
 ```
 
@@ -264,22 +262,16 @@
 ### 8.1 인증 필요 API에서 토큰 누락
 ```json
 {
-  "success": false,
-  "error": {
-    "code": "UNAUTHORIZED",
-    "message": "Login required."
-  }
+  "ok": false,
+  "message": "Login required."
 }
 ```
 
 ### 8.2 잘못된 요청
 ```json
 {
-  "success": false,
-  "error": {
-    "code": "INVALID_REQUEST",
-    "message": "Invalid 'type' value."
-  }
+  "ok": false,
+  "message": "Invalid 'type' value."
 }
 ```
 
@@ -288,8 +280,8 @@
 ## 9) 구현 메모 (서버)
 
 - 피드 조회는 `sort`에 따라 인덱스/정렬 전략이 달라질 수 있음
-  - `latest`: createdAt DESC
-  - `popular`: likeCount(또는 score) DESC
+  - `latest`: created_at DESC
+  - `popular`: like_count(또는 score) DESC
   - `recommend`: 앱/서비스 추천 로직(초기엔 latest와 동일로 시작해도 됨)
-- `viewer.isLiked`, `viewer.isBookmarked`는 **로그인 유저 기준**으로 조립
+- `viewer.is_liked`, `viewer.is_bookmarked`는 **로그인 유저 기준**으로 조립
 - `excerpt`는 서버에서 생성해 클라이언트 간 일관성 유지 권장

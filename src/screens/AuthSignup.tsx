@@ -24,6 +24,7 @@ type SignupResponse = {
   email_masked?: string;
   otp_ttl?: number;
   resend_after?: number;
+  retry_after?: number;
 };
 
 type VerifyEmailResponse = {
@@ -36,6 +37,13 @@ type LoginResponse = {
   ok: boolean;
   message?: string;
   token?: string;
+};
+
+type ResendResponse = {
+  ok: boolean;
+  message?: string;
+  resend_after?: number;
+  retry_after?: number;
 };
 
 export default function AuthSignup() {
@@ -76,7 +84,7 @@ export default function AuthSignup() {
         if (err.status && [400, 409, 429].includes(err.status)) {
           setMessage(err.message || "요청을 처리할 수 없어요.");
           if (err.status === 429) {
-            const retryAfter = Number(err.payload?.retry_after);
+            const retryAfter = Number(err.payload?.retry_after ?? err.payload?.resend_after);
             if (Number.isFinite(retryAfter)) {
               setResendAfter(retryAfter);
             }
@@ -130,7 +138,7 @@ export default function AuthSignup() {
       setPendingId(res.pending_id ?? null);
       setEmailMasked(res.email_masked ?? null);
       setOtpTtl(res.otp_ttl ?? null);
-      setResendAfter(res.resend_after ?? 0);
+      setResendAfter(res.resend_after ?? res.retry_after ?? 0);
       setOtp("");
       setStep("otp");
       setMessage(res?.message || "이메일로 받은 인증번호를 입력해 주세요.");
@@ -189,15 +197,16 @@ export default function AuthSignup() {
 
     try {
       const payload = pendingId ? { pending_id: pendingId } : { email };
-      const res = await apiPost<SignupResponse>("/api/verify-email/resend", payload);
+      const res = await apiPost<ResendResponse>("/api/verify-email/resend", payload);
 
       if (!res?.ok) {
         setMessage(res?.message || "인증번호 재발송에 실패했어요.");
         return;
       }
 
-      if (typeof res.resend_after === "number") {
-        setResendAfter(res.resend_after);
+      const seconds = res.retry_after ?? res.resend_after ?? 0;
+      if (typeof seconds === "number") {
+        setResendAfter(seconds);
       }
       setMessage(res?.message || "인증번호를 다시 보냈어요.");
     } catch (e) {

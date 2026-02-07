@@ -1,5 +1,8 @@
 # 📘 글숲 모바일 API Specification (v1)
 
+> **Canonical = 현재 서버 동작**  
+> 모든 계약은 **서버 현실( ok + message, snake_case, offset/has_more )**을 기준으로 한다.
+
 ## 1. 목적 (Purpose)
 
 이 문서는 **글숲(glsoop) 모바일 앱**에서 사용하는 API의 공통 규칙과 설계 원칙을 정의한다.
@@ -66,89 +69,64 @@ Authorization: Bearer <access_token>
 
 ---
 
-## 5. 공통 응답 형식 (Response Format)
+## 5. Naming + Envelope + Pagination (Canonical)
 
-### 5.1 성공 응답
+### 5.1 Naming
+- 모든 필드는 `snake_case`
+- 앱 내부에서 필요하면 `snake_case → camelCase` 매핑 가능 (공유 레이어 권장)
+
+### 5.2 Envelope
 ```json
 {
-  "success": true,
-  "data": {}
+  "ok": true,
+  "message": "success"
 }
 ```
 
-### 5.2 실패 응답
+실패 응답 예시:
 ```json
 {
-  "success": false,
-  "error": {
-    "code": "ERROR_CODE",
-    "message": "Human readable error message"
-  }
+  "ok": false,
+  "message": "Human readable error message"
+}
+```
+
+### 5.3 Pagination
+- `limit + offset + has_more` 사용
+- 예시: `GET /posts?offset=0&limit=10`
+```json
+{
+  "ok": true,
+  "message": "success",
+  "items": [],
+  "offset": 10,
+  "has_more": true
 }
 ```
 
 ---
 
-## 6. 에러 코드 규칙 (Error Codes)
-
-| Code | 의미 |
-|---|---|
-| UNAUTHORIZED | 인증되지 않음 |
-| FORBIDDEN | 권한 없음 |
-| NOT_FOUND | 리소스 없음 |
-| INVALID_REQUEST | 잘못된 요청 |
-| INTERNAL_ERROR | 서버 오류 |
-
-> 프론트에서는 `code`를 기준으로 분기 처리한다.
-
----
-
-## 7. 날짜 / 시간 규칙
+## 6. 날짜 / 시간 규칙
 
 - 모든 날짜는 **ISO 8601 문자열**
 - 서버 기준 UTC 사용
 
 ```json
-"createdAt": "2026-01-01T12:34:56Z"
+"created_at": "2026-01-01T12:34:56Z"
 ```
 
 ---
 
-## 8. Pagination 규칙 (Cursor-based)
+## 7. 콘텐츠 분류 규칙
 
-### 8.1 왜 Cursor 방식인가
-- 무한 스크롤 UI에 적합
-- 데이터 변경에 강함
-
-### 8.2 요청 예시
-```
-GET /posts?cursor=abc123&limit=10
-```
-
-### 8.3 응답 예시
-```json
-{
-  "success": true,
-  "data": {
-    "items": [],
-    "nextCursor": "def456",
-    "hasNext": true
-  }
-}
-```
-
----
-
-## 9. 콘텐츠 분류 규칙
-
-### 9.1 글 종류 (Post Type)
+### 7.1 글 종류 (Post Type)
 | 값 | 의미 |
 |---|---|
 | poem | 시 |
 | essay | 에세이 |
 | short | 짧은 글귀 |
 
-### 9.2 해시태그
+### 7.2 해시태그
 - 문자열 배열로 표현
 ```json
 "tags": ["힐링", "일상"]
@@ -156,7 +134,7 @@ GET /posts?cursor=abc123&limit=10
 
 ---
 
-## 10. 클라이언트 전용 처리 항목
+## 8. 클라이언트 전용 처리 항목
 
 다음 항목은 **서버 API 없이 클라이언트에서 처리**한다.
 
@@ -166,7 +144,7 @@ GET /posts?cursor=abc123&limit=10
 
 ---
 
-## 11. 문서 구성
+## 9. 문서 구성
 
 | 파일 | 설명 |
 |---|---|
@@ -178,7 +156,7 @@ GET /posts?cursor=abc123&limit=10
 
 ---
 
-## 12. 버전 관리
+## 10. 버전 관리
 
 - 현재 버전: **v1**
 - Breaking change 발생 시 문서 버전 명시
@@ -186,7 +164,7 @@ GET /posts?cursor=abc123&limit=10
 
 ---
 
-## 13. 참고 사항
+## 11. 참고 사항
 
 - 이 문서는 **UI(피그마) 기준으로 작성됨**
 - UI 변경 시 API 문서도 함께 수정해야 한다

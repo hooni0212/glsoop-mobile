@@ -16,7 +16,7 @@
 - `POST /api/signup` body: `{ name, nickname, email, pw }` → `pending_id`, `email_masked`, `otp_ttl`, `resend_after` (plus `ok/message`)
 - `POST /api/verify-email` body: `{ pending_id, verification_code }`
 - `POST /api/verify-email/resend` body: `{ pending_id }` 또는 `{ email }`  
-  - HTTP 429 가능: `retry_after` 포함
+  - 응답: `retry_after` 포함 (HTTP 429 포함)
 
 > snake_case → camelCase 변환은 **공유 레이어(api/mapper)**에서 처리하고, 화면 단위로 흩어지지 않도록 한다. 서버 응답은 `ok/message` 엔벨로프이며, 페이징은 `offset/has_more`가 기준이다.
 
@@ -122,7 +122,7 @@
 ```json
 {
   "ok": true,
-  "resend_after": 60
+  "retry_after": 60
 }
 ```
 
