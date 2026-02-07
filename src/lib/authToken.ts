@@ -1,20 +1,25 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const TOKEN_KEY = "glsoop:auth:token:v1";
+let cachedToken: string | null = null;
 
 export async function getAuthToken(): Promise<string | null> {
   try {
+    if (cachedToken) return cachedToken;
     const token = await AsyncStorage.getItem(TOKEN_KEY);
-    return token || null;
+    cachedToken = token || null;
+    return cachedToken;
   } catch {
     return null;
   }
 }
 
 export async function setAuthToken(token: string): Promise<void> {
+  cachedToken = token;
   await AsyncStorage.setItem(TOKEN_KEY, token);
 }
 
 export async function clearAuthToken(): Promise<void> {
+  cachedToken = null;
   await AsyncStorage.removeItem(TOKEN_KEY);
 }
