@@ -170,6 +170,7 @@ GET /posts?cursor=abc123&limit=10
 
 | 파일 | 설명 |
 |---|---|
+| auth.md | 인증/회원가입 (OTP) |
 | posts.md | 피드, 글 상세, 필터, 작성 |
 | users.md | 마이페이지, 작가 페이지 |
 | interactions.md | 좋아요, 북마크 |
