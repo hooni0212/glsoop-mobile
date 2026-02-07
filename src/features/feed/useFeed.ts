@@ -179,7 +179,7 @@ export function useFeed(query: FeedQuery = {}) {
 
   useEffect(() => {
     refresh();
-  }, [limit, sort, query.category, query.tag]);
+  }, [refresh]);
 
   const patchItem = useCallback((postId: string, updater: (p: Post) => Post) => {
     setItems((prev) => prev.map((p) => (p.id === postId ? updater(p) : p)));

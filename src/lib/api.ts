@@ -4,12 +4,9 @@ import { getAuthToken } from "@/lib/authToken";
 import { ApiError } from "@/lib/errors";
 
 type ApiOk<T> = { success: true; data: T };
-type ApiErr = { success: false; error: { code: string; message: string } };
-type ApiResponse<T> = ApiOk<T> | ApiErr;
 
-const RAW_API_BASE = (process.env.EXPO_PUBLIC_API_BASE_URL || "").trim();
-const NORMALIZED_API_BASE = RAW_API_BASE.replace(/\/+$/, "");
-const API_BASE = __DEV__ ? NORMALIZED_API_BASE : "";
+const RAW_BASE = process.env.EXPO_PUBLIC_API_BASE_URL;
+const API_BASE = (RAW_BASE || "").replace(/\/+$/, "");
 const API_DEBUG =
   typeof process !== "undefined" && process?.env?.EXPO_PUBLIC_API_DEBUG === "true";
 
@@ -19,8 +16,8 @@ function apiLog(...args: unknown[]) {
   console.log(...args);
 }
 
-if (__DEV__ && !RAW_API_BASE) {
-  console.warn("[api] EXPO_PUBLIC_API_BASE_URL is empty. Using same-origin paths.");
+if (__DEV__ && (RAW_BASE === undefined || RAW_BASE === null)) {
+  console.warn("[api] EXPO_PUBLIC_API_BASE_URL is not set. Using same-origin paths.");
 }
 
 let didLogJoin = false;
@@ -46,22 +43,21 @@ function safeJsonParse(text: string) {
 
 function joinUrl(path: string) {
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-  let base = API_BASE === "/" ? "" : API_BASE;
-  let pathSuffix = normalizedPath;
+  if (!API_BASE) return normalizedPath;
 
   // ✅ C안: "/api" 중복 제거
   // base가 "/api"(또는 ".../api")로 끝나는데 path도 "/api/..."로 들어오면 하나 제거
   // 예) base="/api", path="/api/login" => "/api/login"
   // 예) base="https://m.glsoop.com/api", path="/api/login" => "https://m.glsoop.com/api/login"
-  if (base.endsWith("/api") && pathSuffix.startsWith("/api")) {
-    pathSuffix = pathSuffix.replace(/^\/api(?=\/|$)/, "");
+  if (API_BASE.endsWith("/api") && normalizedPath.startsWith("/api/")) {
+    return `${API_BASE}${normalizedPath.slice(4)}`;
   }
 
-  const url = `${base}${pathSuffix}`;
+  const url = `${API_BASE}${normalizedPath}`;
 
   // dev에서 1회만 조합 결과 출력(옵션)
   if (__DEV__ && API_DEBUG && !didLogJoin) {
-    console.debug("[api] join", { base: base || "(same-origin)", path: normalizedPath, url });
+    console.debug("[api] join", { base: API_BASE || "(same-origin)", path: normalizedPath, url });
     didLogJoin = true;
   }
 
@@ -93,6 +89,12 @@ async function apiRequest<T>(path: string, options: RequestOptions): Promise<T> 
 
     // ✅ Bearer 토큰 인증(권장)
     if (token) headers["Authorization"] = `Bearer ${token}`;
+
+    apiLog(
+      `[api] ${options.method}`,
+      url,
+      `token=${token ? token.slice(0, 12) + "…" : "null"}`
+    );
 
     const res = await fetch(url, {
       method: options.method,

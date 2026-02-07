@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { Pressable, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import type { PostType } from "@/types/post";
 
 const TYPE_LABEL: Record<PostType, string> = {
