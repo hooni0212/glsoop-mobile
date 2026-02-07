@@ -124,6 +124,31 @@ export function normalizeApiError(error: unknown): AppErrorModel {
   }
 
   if (error instanceof ApiError) {
+    if (error.status === 429) {
+      return {
+        kind: "unknown",
+        title: "요청이 너무 많아요",
+        description: error.message || "잠시 후 다시 시도해주세요.",
+        canRetry: true,
+        status: error.status,
+      };
+    }
+
+    if (
+      error.status &&
+      error.status >= 400 &&
+      error.status < 500 &&
+      ![401, 403, 404].includes(error.status)
+    ) {
+      return {
+        kind: "unknown",
+        title: "요청을 처리할 수 없어요",
+        description: error.message || "잠시 후 다시 시도해주세요.",
+        canRetry: false,
+        status: error.status,
+      };
+    }
+
     const normalized = normalizeFromStatus(error.status);
     if (normalized) return normalized;
   }
