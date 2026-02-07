@@ -457,7 +457,6 @@ export default function MeScreen() {
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.container}>
         <Text style={styles.h1}>내 정보</Text>
-
         <View style={styles.tabRow}>
           {([
             ["summary", "요약"],
