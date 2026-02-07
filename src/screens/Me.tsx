@@ -231,6 +231,9 @@ export default function MeScreen() {
         <View style={styles.card}>
           <Text style={styles.name}>{displayName}</Text>
           <Text style={styles.meta}>{me?.email}</Text>
+          <Text style={styles.meta}>
+            {me?.is_verified ? "✅ 이메일 인증 완료" : "⚠️ 이메일 미인증"}
+          </Text>
           <View style={styles.row}>
             <Text style={styles.badge}>Lv. {pickFirstNumber(me?.level)}</Text>
             <Text style={styles.badge}>XP {pickFirstNumber(me?.xp)}</Text>

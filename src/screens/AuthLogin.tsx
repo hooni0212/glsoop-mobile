@@ -17,10 +17,6 @@ import { AppError } from "@/components/state/AppError";
 import { extractAuthToken } from "@/lib/authResponse";
 import { buildAuthRoute, resolvePostAuthRedirect } from "@/lib/authRedirect";
 import { apiPost } from "@/lib/api";
-import {
-  buildEmailVerificationNotice,
-  isEmailVerificationRequired,
-} from "@/lib/authMessages";
 import { COOKIE_SESSION_TOKEN } from "@/lib/authToken";
 import { ApiError, normalizeApiError } from "@/lib/errors";
 import { tokens } from "@/theme/tokens";
@@ -122,12 +118,7 @@ export default function AuthLogin() {
     try {
       const res = await apiPost<LoginResponse>("/api/login", { email, pw });
       if (!res?.ok) {
-        const rawMessage = res?.message || "로그인에 실패했어요.";
-        if (isEmailVerificationRequired(rawMessage)) {
-          setMessage(buildEmailVerificationNotice(email));
-        } else {
-          setMessage(rawMessage);
-        }
+        setMessage(res?.message || "로그인에 실패했어요.");
         return;
       }
       if (res?.reactivation_required) {
@@ -146,11 +137,6 @@ export default function AuthLogin() {
 
       await finishLogin(res);
     } catch (e) {
-      const rawMessage = e instanceof Error ? e.message : "";
-      if (isEmailVerificationRequired(rawMessage)) {
-        setMessage(buildEmailVerificationNotice(email));
-        return;
-      }
       setError(normalizeApiError(e));
     } finally {
       setBusy(false);

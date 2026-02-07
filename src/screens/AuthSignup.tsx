@@ -16,10 +16,6 @@ import { AppError } from "@/components/state/AppError";
 import { extractAuthToken } from "@/lib/authResponse";
 import { buildAuthRoute, resolvePostAuthRedirect } from "@/lib/authRedirect";
 import { apiGet, apiPost } from "@/lib/api";
-import {
-  buildEmailVerificationNotice,
-  isEmailVerificationRequired,
-} from "@/lib/authMessages";
 import { COOKIE_SESSION_TOKEN } from "@/lib/authToken";
 import { ApiError, normalizeApiError } from "@/lib/errors";
 import { tokens } from "@/theme/tokens";
@@ -148,14 +144,11 @@ export default function AuthSignup() {
             err.payload?.field_errors ??
             {}) as SignupFieldErrors;
           setFieldErrors(nextFieldErrors);
-          const rawMessage = err.message || "요청을 처리할 수 없어요.";
-          if (isEmailVerificationRequired(rawMessage)) {
-            setMessage(buildEmailVerificationNotice(email));
-          } else if (Object.keys(nextFieldErrors).length > 0) {
-            setMessage(Object.values(nextFieldErrors)[0] ?? rawMessage);
-          } else {
-            setMessage(rawMessage);
-          }
+          setMessage(
+            Object.keys(nextFieldErrors).length > 0
+              ? (Object.values(nextFieldErrors)[0] ?? err.message ?? "요청을 처리할 수 없어요.")
+              : (err.message || "요청을 처리할 수 없어요.")
+          );
           if (err.status === 429) {
             const retryAfter = Number(err.payload?.retry_after ?? err.payload?.resend_after);
             if (Number.isFinite(retryAfter)) {
@@ -167,7 +160,7 @@ export default function AuthSignup() {
       }
       setError(normalizeApiError(err));
     },
-    [email, setError]
+    [setError]
   );
 
   function resetOtpState() {
@@ -210,12 +203,7 @@ export default function AuthSignup() {
       });
 
       if (!res?.ok) {
-        const rawMessage = res?.message || "회원가입에 실패했어요.";
-        if (isEmailVerificationRequired(rawMessage)) {
-          setMessage(buildEmailVerificationNotice(email));
-        } else {
-          setMessage(rawMessage);
-        }
+        setMessage(res?.message || "회원가입에 실패했어요.");
         return;
       }
 
@@ -251,23 +239,13 @@ export default function AuthSignup() {
       });
 
       if (!res?.ok) {
-        const rawMessage = res?.message || "인증번호 확인에 실패했어요.";
-        if (isEmailVerificationRequired(rawMessage)) {
-          setMessage(buildEmailVerificationNotice(email));
-        } else {
-          setMessage(rawMessage);
-        }
+        setMessage(res?.message || "인증번호 확인에 실패했어요.");
         return;
       }
 
       const loginRes = await apiPost<LoginResponse>("/api/login", { email, pw });
       if (!loginRes?.ok) {
-        const rawMessage = loginRes?.message || "로그인에 실패했어요.";
-        if (isEmailVerificationRequired(rawMessage)) {
-          setMessage(buildEmailVerificationNotice(email));
-        } else {
-          setMessage(rawMessage);
-        }
+        setMessage(loginRes?.message || "로그인에 실패했어요.");
         return;
       }
       const nextAuthToken =
