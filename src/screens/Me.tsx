@@ -129,6 +129,7 @@ export default function MeScreen() {
             <Text style={styles.badge}>팔로워 {me.followerCount}</Text>
             <Text style={styles.badge}>팔로잉 {me.followingCount}</Text>
           </View>
+          <Text style={styles.meta}>{me.isVerified ? "✅ 이메일 인증 완료" : "⚠️ 이메일 미인증"}</Text>
         </View>
 
         <Pressable onPress={onLogout} style={styles.secondaryBtn}>

@@ -14,10 +14,6 @@ import { useRouter } from "expo-router";
 import { useAuth } from "@/auth/AuthContext";
 import { AppError } from "@/components/state/AppError";
 import { apiPost } from "@/lib/api";
-import {
-  buildEmailVerificationNotice,
-  isEmailVerificationRequired,
-} from "@/lib/authMessages";
 import { ApiError, normalizeApiError } from "@/lib/errors";
 import { tokens } from "@/theme/tokens";
 
@@ -87,12 +83,7 @@ export default function AuthSignup() {
     (err: unknown) => {
       if (err instanceof ApiError) {
         if (err.status && [400, 409, 429].includes(err.status)) {
-          const rawMessage = err.message || "요청을 처리할 수 없어요.";
-          if (isEmailVerificationRequired(rawMessage)) {
-            setMessage(buildEmailVerificationNotice(email));
-          } else {
-            setMessage(rawMessage);
-          }
+          setMessage(err.message || "요청을 처리할 수 없어요.");
           if (err.status === 429) {
             const retryAfter = Number(err.payload?.retry_after ?? err.payload?.resend_after);
             if (Number.isFinite(retryAfter)) {
@@ -104,7 +95,7 @@ export default function AuthSignup() {
       }
       setError(normalizeApiError(err));
     },
-    [email, setError]
+    [setError]
   );
 
   function resetOtpState() {
@@ -141,12 +132,7 @@ export default function AuthSignup() {
       });
 
       if (!res?.ok) {
-        const rawMessage = res?.message || "회원가입에 실패했어요.";
-        if (isEmailVerificationRequired(rawMessage)) {
-          setMessage(buildEmailVerificationNotice(email));
-        } else {
-          setMessage(rawMessage);
-        }
+        setMessage(res?.message || "회원가입에 실패했어요.");
         return;
       }
 
@@ -181,23 +167,13 @@ export default function AuthSignup() {
       });
 
       if (!res?.ok) {
-        const rawMessage = res?.message || "인증번호 확인에 실패했어요.";
-        if (isEmailVerificationRequired(rawMessage)) {
-          setMessage(buildEmailVerificationNotice(email));
-        } else {
-          setMessage(rawMessage);
-        }
+        setMessage(res?.message || "인증번호 확인에 실패했어요.");
         return;
       }
 
       const loginRes = await apiPost<LoginResponse>("/api/login", { email, pw });
       if (!loginRes?.ok) {
-        const rawMessage = loginRes?.message || "로그인에 실패했어요.";
-        if (isEmailVerificationRequired(rawMessage)) {
-          setMessage(buildEmailVerificationNotice(email));
-        } else {
-          setMessage(rawMessage);
-        }
+        setMessage(loginRes?.message || "로그인에 실패했어요.");
         return;
       }
       if (!loginRes.token) {

@@ -14,10 +14,6 @@ import { useRouter } from "expo-router";
 import { useAuth } from "@/auth/AuthContext";
 import { AppError } from "@/components/state/AppError";
 import { apiPost } from "@/lib/api";
-import {
-  buildEmailVerificationNotice,
-  isEmailVerificationRequired,
-} from "@/lib/authMessages";
 import { normalizeApiError } from "@/lib/errors";
 import { tokens } from "@/theme/tokens";
 
@@ -45,12 +41,7 @@ export default function AuthLogin() {
     try {
       const res = await apiPost<LoginResponse>("/api/login", { email, pw });
       if (!res?.ok) {
-        const rawMessage = res?.message || "로그인에 실패했어요.";
-        if (isEmailVerificationRequired(rawMessage)) {
-          setMessage(buildEmailVerificationNotice(email));
-        } else {
-          setMessage(rawMessage);
-        }
+        setMessage(res?.message || "로그인에 실패했어요.");
         return;
       }
       if (!res.token) {
@@ -61,11 +52,6 @@ export default function AuthLogin() {
       await signIn(res.token);
       router.replace("/(tabs)");
     } catch (e) {
-      const rawMessage = e instanceof Error ? e.message : "";
-      if (isEmailVerificationRequired(rawMessage)) {
-        setMessage(buildEmailVerificationNotice(email));
-        return;
-      }
       setError(normalizeApiError(e));
     } finally {
       setBusy(false);
