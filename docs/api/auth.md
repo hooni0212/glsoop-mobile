@@ -11,9 +11,23 @@
 - 응답 형식: `{ ok: boolean, message?: string, ... }`
 - 필드 네이밍: `snake_case`
 
+### 회원가입 플로우 불일치(OTP + nickname) — 서버 기준
+
+- `POST /api/signup` body: `{ name, nickname, email, pw }` → `pending_id`, `email_masked`, `otp_ttl`, `resend_after` (plus `ok/message`)
+- `POST /api/verify-email` body: `{ pending_id, verification_code }`
+- `POST /api/verify-email/resend` body: `{ pending_id }` 또는 `{ email }`  
+  - HTTP 429 가능: `retry_after` 포함
+
+> snake_case → camelCase 변환은 **공유 레이어(api/mapper)**에서 처리하고, 화면 단위로 흩어지지 않도록 한다. 서버 응답은 `ok/message` 엔벨로프이며, 페이징은 `offset/has_more`가 기준이다.
+
 ---
 
 ## 2. 회원가입 (OTP 요청)
+
+### 관련 경로
+
+- Route: `app/(auth)/signup.tsx`
+- UI: `src/screens/AuthSignup.tsx`
 
 ### 요청
 `POST /api/signup`
