@@ -26,9 +26,13 @@ import {
   upsertWriteDraft,
   clearAllWriteDrafts,
 } from "@/services/draftStorage";
+import { createPost } from "@/services/postService";
+import type { PostType } from "@/types/post";
 import { ConfirmState, useConfirmBeforeLeave } from "@/hooks/useConfirmBeforeLeave";
 
 import { createWriteStyles } from "./Write.styles";
+
+const DEFAULT_POST_TYPE: PostType = "short";
 
 export default function Write() {
   const styles = useMemo(() => createWriteStyles(), []);
@@ -132,14 +136,20 @@ export default function Write() {
   const onPressSubmit = useCallback(async () => {
     console.log("[WRITE] submit", { draftId, titleLen: title.length, bodyLen: body.length });
 
-    const payload = { title, body };
+    const trimmedTitle = title.trim();
+    const trimmedBody = body.trim();
+    const payload = { type: DEFAULT_POST_TYPE, title: trimmedTitle, content: trimmedBody };
     console.log("[WRITE] submit payload", payload);
 
     setSubmitError(null);
     setIsSubmitting(true);
     try {
-      // TODO: 실제 전송 API 연결 필요 (예: fetch/axios)
-      // await fetch("/api/write", { method: "POST", body: JSON.stringify(payload) });
+      await createPost({
+        type: DEFAULT_POST_TYPE,
+        title: trimmedTitle || undefined,
+        content: trimmedBody,
+        contentFormat: "plain",
+      });
 
       // ✅ 게시 성공(가정) 시 해당 draft 삭제
       if (draftId) {
