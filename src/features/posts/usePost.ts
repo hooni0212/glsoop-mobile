@@ -36,6 +36,19 @@ function pickFirstNumber(...vals: any[]) {
   return 0;
 }
 
+function parseFlag(...vals: any[]) {
+  for (const v of vals) {
+    if (typeof v === "boolean") return v;
+    if (typeof v === "number") return v === 1;
+    if (typeof v === "string") {
+      const s = v.trim().toLowerCase();
+      if (s === "1" || s === "true") return true;
+      if (s === "0" || s === "false" || s === "") return false;
+    }
+  }
+  return false;
+}
+
 function parseTags(row: any) {
   const a = row?.tags;
   if (Array.isArray(a)) return a.map(String).filter(Boolean);
@@ -66,8 +79,12 @@ function normalizePostDetail(row: any): any {
     row?.bookmarks_count
   );
 
-  const userLiked = Boolean(row?.user_liked ?? row?.liked ?? row?.isLiked);
-  const userBookmarked = Boolean(row?.user_bookmarked ?? row?.bookmarked ?? row?.isBookmarked);
+  const userLiked = parseFlag(row?.user_liked, row?.liked, row?.isLiked);
+  const userBookmarked = parseFlag(
+    row?.user_bookmarked,
+    row?.bookmarked,
+    row?.isBookmarked
+  );
 
   const category = pickFirstString(row?.category, row?.type) || "short";
 

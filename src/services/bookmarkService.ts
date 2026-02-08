@@ -48,6 +48,19 @@ function pickFirstNumber(...vals: any[]) {
   return 0;
 }
 
+function parseFlag(...vals: any[]) {
+  for (const v of vals) {
+    if (typeof v === "boolean") return v;
+    if (typeof v === "number") return v === 1;
+    if (typeof v === "string") {
+      const s = v.trim().toLowerCase();
+      if (s === "1" || s === "true") return true;
+      if (s === "0" || s === "false" || s === "") return false;
+    }
+  }
+  return false;
+}
+
 function stripHtml(s: string) {
   return s.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
 }
@@ -77,7 +90,7 @@ function normalizeBookmarkList(row: any): BookmarkList {
     name: pickFirstString(row?.name) || "이름 없는 폴더",
     description: typeof row?.description === "string" ? row.description : null,
     itemCount: pickFirstNumber(row?.item_count, row?.itemCount),
-    contains: Boolean(row?.contains),
+    contains: parseFlag(row?.contains, row?.isContained, row?.bookmarked),
   };
 }
 
@@ -92,8 +105,12 @@ function normalizeBookmarkPost(row: any): Post {
   const likeCount = pickFirstNumber(row?.like_count, row?.likeCount, row?.likes);
   const bookmarkCount = pickFirstNumber(row?.bookmark_count, row?.bookmarkCount, row?.bookmarks);
 
-  const userLiked = Boolean(row?.user_liked ?? row?.liked ?? row?.isLiked);
-  const userBookmarked = Boolean(row?.user_bookmarked ?? row?.bookmarked ?? row?.isBookmarked);
+  const userLiked = parseFlag(row?.user_liked, row?.liked, row?.isLiked);
+  const userBookmarked = parseFlag(
+    row?.user_bookmarked,
+    row?.bookmarked,
+    row?.isBookmarked
+  );
 
   const type = pickFirstString(row?.category, row?.type) || "short";
 
