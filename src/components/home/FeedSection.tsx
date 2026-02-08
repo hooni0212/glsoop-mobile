@@ -25,6 +25,7 @@ type Props<Item extends { id: string | number }> = {
   onEndReached: () => void;
   onPressItem: (id: Item["id"]) => void;
   onLikePress?: (id: Item["id"]) => void;
+  onBookmarkPress?: (id: Item["id"]) => void;
   getLikeDisabled?: (id: Item["id"]) => boolean;
 };
 
@@ -39,6 +40,7 @@ export function FeedSection<Item extends { id: string | number }>({
   onEndReached,
   onPressItem,
   onLikePress,
+  onBookmarkPress,
   getLikeDisabled,
 }: Props<Item>) {
   return (
@@ -84,6 +86,7 @@ export function FeedSection<Item extends { id: string | number }>({
           item={item}
           onPressItem={onPressItem}
           onLikePress={onLikePress}
+          onBookmarkPress={onBookmarkPress}
           getLikeDisabled={getLikeDisabled}
         />
       )}
@@ -95,11 +98,13 @@ function FeedSectionItem<Item extends { id: string | number }>({
   item,
   onPressItem,
   onLikePress,
+  onBookmarkPress,
   getLikeDisabled,
 }: {
   item: Item;
   onPressItem: (id: Item["id"]) => void;
   onLikePress?: (id: Item["id"]) => void;
+  onBookmarkPress?: (id: Item["id"]) => void;
   getLikeDisabled?: (id: Item["id"]) => boolean;
 }) {
   const fallbackLiked = Boolean((item as any).viewer?.isLiked);
@@ -117,7 +122,7 @@ function FeedSectionItem<Item extends { id: string | number }>({
       bookmarked={Boolean((item as any).viewer?.isBookmarked)}
       onPress={() => onPressItem(item.id)}
       onLikePress={() => onLikePress?.(item.id)}
-      onBookmarkPress={() => {}}
+      onBookmarkPress={() => onBookmarkPress?.(item.id)}
       likeTestID={`feed-like-btn-${item.id}`}
       likeDisabled={getLikeDisabled ? getLikeDisabled(item.id) : false}
     />

@@ -55,7 +55,7 @@ export function PostActionBar({
         <Ionicons
           name={isBookmarked ? "bookmark" : "bookmark-outline"}
           size={22}
-          color={tokens.colors.textMuted}
+          color={isBookmarked ? tokens.colors.green700 : tokens.colors.textMuted}
         />
         <Text style={styles.actionLabel}>저장</Text>
       </Pressable>
