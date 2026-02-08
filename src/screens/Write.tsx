@@ -45,6 +45,7 @@ export default function Write() {
   const [draftPrompt, setDraftPrompt] = useState<ConfirmState>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [createdPostId, setCreatedPostId] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<AppErrorModel | null>(null);
 
   const hasShownRestorePromptRef = useRef(false);
@@ -156,9 +157,10 @@ export default function Write() {
     console.log("[WRITE] submit payload", payload);
 
     setSubmitError(null);
+    setCreatedPostId(null);
     setIsSubmitting(true);
     try {
-      await createPost({
+      const created = await createPost({
         type: selectedType,
         category: selectedType,
         title: trimmedTitle || undefined,
@@ -171,19 +173,29 @@ export default function Write() {
         await deleteWriteDraft(draftId);
         setDraftId(null);
       }
-      console.log("[WRITE] submit success -> show success and go home");
+      setCreatedPostId(created.postId);
+      console.log("[WRITE] submit success -> show success actions", { postId: created.postId });
       setSubmitSuccess(true);
-      setTimeout(() => {
-        allowNextLeave();
-        router.replace("/(tabs)");
-      }, 600);
     } catch (err) {
       console.log("[WRITE] submit error", err);
       setSubmitError(normalizeApiError(err));
     } finally {
       setIsSubmitting(false);
     }
-  }, [selectedType, draftId, title, body, allowNextLeave]);
+  }, [selectedType, draftId, title, body]);
+
+  const onSuccessGoHome = useCallback(() => {
+    setSubmitSuccess(false);
+    allowNextLeave();
+    router.replace("/(tabs)");
+  }, [allowNextLeave]);
+
+  const onSuccessViewPost = useCallback(() => {
+    if (!createdPostId) return;
+    setSubmitSuccess(false);
+    allowNextLeave();
+    router.replace(`/posts/${createdPostId}`);
+  }, [createdPostId, allowNextLeave]);
 
   // 1) 키보드 상태 감지
   useEffect(() => {
@@ -317,15 +329,35 @@ export default function Write() {
                 borderRadius: 14,
                 backgroundColor: "#fff",
                 alignItems: "center",
-                width: 220,
+                width: 260,
               }}
             >
               <Text style={{ fontWeight: "900", fontSize: 16, color: "#2B2B2B" }}>
                 완료되었어요
               </Text>
               <Text style={{ marginTop: 8, fontWeight: "700", color: "#444", textAlign: "center" }}>
-                홈으로 이동합니다
+                어디로 이동할까요?
               </Text>
+              <View style={{ width: "100%", marginTop: 14, gap: 8 }}>
+                <Pressable
+                  onPress={onSuccessViewPost}
+                  style={[styles.modalBtn, { backgroundColor: "#2E5A3D", borderColor: "#2E5A3D" }]}
+                  accessibilityRole="button"
+                  accessibilityLabel="방금 작성한 글 보기"
+                  testID="write-success-view-post"
+                >
+                  <Text style={[styles.modalBtnText, { color: "#FFFFFF" }]}>방금 글 보기</Text>
+                </Pressable>
+                <Pressable
+                  onPress={onSuccessGoHome}
+                  style={styles.modalBtn}
+                  accessibilityRole="button"
+                  accessibilityLabel="홈으로 이동"
+                  testID="write-success-go-home"
+                >
+                  <Text style={styles.modalBtnText}>홈으로</Text>
+                </Pressable>
+              </View>
             </View>
           </View>
         </Modal>
