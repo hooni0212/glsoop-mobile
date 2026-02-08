@@ -6,6 +6,7 @@ import { FeedSection } from "@/components/home/FeedSection";
 import { HomeHeader } from "@/components/home/HomeHeader";
 import { homeScreenStyles } from "@/screens/Home.styles";
 import { useFeed } from "@/features/feed/useFeed";
+import { getBookmark, setBookmark } from "@/features/bookmarks/bookmarkStore";
 import { getLike, setLike } from "@/features/likes/likeStore";
 import { useAuth } from "@/auth/AuthContext";
 import { togglePostLike } from "@/services/likeService";
@@ -141,7 +142,8 @@ export default function Home() {
     const target = items.find((item) => item.id === postId);
     if (!target) return;
 
-    const prevBookmarked = Boolean(target.viewer?.isBookmarked);
+    const storedBookmark = getBookmark(postId);
+    const prevBookmarked = storedBookmark?.bookmarked ?? Boolean(target.viewer?.isBookmarked);
     const prevCount = target.stats?.bookmarkCount ?? 0;
     const nextCount = prevBookmarked ? Math.max(0, prevCount - 1) : prevCount + 1;
 
@@ -150,6 +152,7 @@ export default function Home() {
       viewer: { ...prev.viewer, isBookmarked: !prevBookmarked },
       stats: { ...prev.stats, bookmarkCount: nextCount },
     }));
+    setBookmark(postId, !prevBookmarked);
 
     setBookmarkPendingState(postId, true);
     try {
@@ -191,6 +194,7 @@ export default function Home() {
         }
 
         await addPostToBookmarkList({ listId: targetList.id, postId });
+        setBookmark(postId, true);
         showBookmarkToast(`'${targetList.name}' 폴더에 저장했어요.`);
       } else {
         const postLists = await listPostBookmarkLists(postId);
@@ -200,6 +204,7 @@ export default function Home() {
             contains.map((l) => removePostFromBookmarkList({ listId: l.id, postId }))
           );
         }
+        setBookmark(postId, false);
         showBookmarkToast("북마크에서 삭제했어요.");
       }
     } catch (err) {
@@ -208,6 +213,7 @@ export default function Home() {
         viewer: { ...prev.viewer, isBookmarked: prevBookmarked },
         stats: { ...prev.stats, bookmarkCount: prevCount },
       }));
+      setBookmark(postId, prevBookmarked);
 
       if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
         await handleAuthError();
