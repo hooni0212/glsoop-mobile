@@ -118,6 +118,39 @@ export function createWriteStyles() {
       fontWeight: "700",
       letterSpacing: -0.2,
     },
+    metaCard: {
+      marginTop: 12,
+      borderRadius: 14,
+      padding: 12,
+      backgroundColor: "rgba(255,255,255,0.7)",
+      borderWidth: 1,
+      borderColor: "rgba(0,0,0,0.06)",
+    },
+    metaChipRow: {
+      flexDirection: "row",
+      gap: 8,
+      marginTop: 4,
+    },
+    metaChip: {
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: "rgba(0,0,0,0.12)",
+      backgroundColor: "#FFFFFF",
+      paddingVertical: 7,
+      paddingHorizontal: 12,
+    },
+    metaChipActive: {
+      borderColor: "#2E5A3D",
+      backgroundColor: "rgba(46,90,61,0.12)",
+    },
+    metaChipText: {
+      fontSize: 12,
+      fontWeight: "800",
+      color: "#2B2B2B",
+    },
+    metaChipTextActive: {
+      color: "#2E5A3D",
+    },
 
     // --- Modal (cross-platform confirm UI) ---
     modalOverlay: {

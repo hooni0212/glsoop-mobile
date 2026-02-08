@@ -32,8 +32,6 @@ import { ConfirmState, useConfirmBeforeLeave } from "@/hooks/useConfirmBeforeLea
 
 import { createWriteStyles } from "./Write.styles";
 
-const DEFAULT_POST_TYPE: PostType = "short";
-
 export default function Write() {
   const styles = useMemo(() => createWriteStyles(), []);
   const params = useLocalSearchParams();
@@ -41,6 +39,7 @@ export default function Write() {
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [draftId, setDraftId] = useState<string | null>(null);
+  const [selectedType, setSelectedType] = useState<PostType | null>(null);
 
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const [draftPrompt, setDraftPrompt] = useState<ConfirmState>(null);
@@ -50,8 +49,9 @@ export default function Write() {
 
   const hasShownRestorePromptRef = useRef(false);
 
-  const hasChanges = title.trim().length > 0 || body.trim().length > 0;
-  const canSubmit = title.trim().length > 0 && body.trim().length > 0;
+  const hasChanges = title.trim().length > 0 || body.trim().length > 0 || selectedType !== null;
+  const canSubmit =
+    title.trim().length > 0 && body.trim().length > 0 && selectedType !== null;
 
   const closeDraftPrompt = useCallback(() => setDraftPrompt(null), []);
 
@@ -69,11 +69,17 @@ export default function Write() {
       draftId,
       titleLen: trimmedTitle.length,
       bodyLen: trimmedBody.length,
+      category: selectedType,
     });
 
-    const id = await upsertWriteDraft({ id: draftId, title: trimmedTitle, body: trimmedBody });
+    const id = await upsertWriteDraft({
+      id: draftId,
+      title: trimmedTitle,
+      body: trimmedBody,
+      category: selectedType ?? undefined,
+    });
     if (!draftId) setDraftId(id);
-  }, [title, body, draftId]);
+  }, [title, body, draftId, selectedType]);
 
   const { confirm: leaveConfirm, requestLeave, allowNextLeave } = useConfirmBeforeLeave({
     hasChanges,
@@ -131,21 +137,30 @@ export default function Write() {
     setDraftId(null);
     setTitle("");
     setBody("");
+    setSelectedType(null);
   }, []);
 
   const onPressSubmit = useCallback(async () => {
+    if (!selectedType) return;
+
     console.log("[WRITE] submit", { draftId, titleLen: title.length, bodyLen: body.length });
 
     const trimmedTitle = title.trim();
     const trimmedBody = body.trim();
-    const payload = { type: DEFAULT_POST_TYPE, title: trimmedTitle, content: trimmedBody };
+    const payload = {
+      type: selectedType,
+      category: selectedType,
+      title: trimmedTitle,
+      content: trimmedBody,
+    };
     console.log("[WRITE] submit payload", payload);
 
     setSubmitError(null);
     setIsSubmitting(true);
     try {
       await createPost({
-        type: DEFAULT_POST_TYPE,
+        type: selectedType,
+        category: selectedType,
         title: trimmedTitle || undefined,
         content: trimmedBody,
         contentFormat: "plain",
@@ -168,7 +183,7 @@ export default function Write() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [draftId, title, body, allowNextLeave]);
+  }, [selectedType, draftId, title, body, allowNextLeave]);
 
   // 1) 키보드 상태 감지
   useEffect(() => {
@@ -201,6 +216,7 @@ export default function Write() {
           setDraftId(d.id);
           setTitle(d.title);
           setBody(d.body);
+          setSelectedType(d.category ?? null);
         }
         return;
       }
@@ -266,7 +282,11 @@ export default function Write() {
             styles={styles}
           />
 
-          <WriteMetaSection styles={styles} />
+          <WriteMetaSection
+            styles={styles}
+            selectedType={selectedType}
+            onSelectType={setSelectedType}
+          />
 
           <WriteStates styles={styles} confirm={activeConfirm} />
         </View>

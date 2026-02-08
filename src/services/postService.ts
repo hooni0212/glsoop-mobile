@@ -3,6 +3,7 @@ import { apiPost } from "@/lib/api";
 
 export type CreatePostInput = {
   type: PostType;
+  category?: PostType;
   title?: string;
   content: string;
   contentFormat?: "plain";
@@ -18,6 +19,7 @@ type CreatePostResponse = {
 export async function createPost(input: CreatePostInput): Promise<{ postId: string }> {
   const payload: Record<string, unknown> = {
     type: input.type,
+    category: input.category ?? input.type,
     content: input.content,
     content_format: input.contentFormat ?? "plain",
   };

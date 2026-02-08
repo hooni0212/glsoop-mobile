@@ -10,6 +10,12 @@ import { deleteWriteDraft, listWriteDrafts, WriteDraft } from "@/services/draftS
 import { useConfirmBeforeLeave } from "@/hooks/useConfirmBeforeLeave";
 import { createWriteStyles } from "./Write.styles";
 
+const CATEGORY_LABEL: Record<string, string> = {
+  poem: "시",
+  essay: "에세이",
+  short: "짧은 구절",
+};
+
 function formatDate(ts: number) {
   try {
     const d = new Date(ts);
@@ -114,6 +120,11 @@ export default function WriteDrafts() {
             return (
               <View key={d.id} style={styles.metaCard} testID={`draft-item-${d.id}`}>
                 <Text style={{ fontSize: 14, fontWeight: "900", color: "#2B2B2B" }}>{title}</Text>
+                {!!d.category && (
+                  <Text style={{ marginTop: 6, fontSize: 12, color: "#2E5A3D", fontWeight: "800" }}>
+                    {CATEGORY_LABEL[d.category] ?? d.category}
+                  </Text>
+                )}
                 <Text style={{ marginTop: 6, fontSize: 12, color: "#6C6C6C", fontWeight: "700" }}>
                   {formatDate(d.updatedAt)}
                 </Text>
