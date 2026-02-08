@@ -1,5 +1,6 @@
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigation } from "@react-navigation/native";
 import {
   Keyboard,
   KeyboardAvoidingView,
@@ -35,6 +36,7 @@ import { createWriteStyles } from "./Write.styles";
 export default function Write() {
   const styles = useMemo(() => createWriteStyles(), []);
   const params = useLocalSearchParams();
+  const navigation = useNavigation();
 
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
@@ -84,7 +86,13 @@ export default function Write() {
 
   const { confirm: leaveConfirm, requestLeave, allowNextLeave } = useConfirmBeforeLeave({
     hasChanges,
-    onLeave: () => router.replace("/(tabs)"),
+    onLeave: () => {
+      if (navigation.canGoBack()) {
+        navigation.goBack();
+        return;
+      }
+      router.replace("/(tabs)");
+    },
     buildConfirm: ({ action, proceed, dismiss }) => ({
       title: "작성중인 내용이 있어요.",
       message: "닫으면 입력 내용이 사라질 수 있어요.\n어떻게 할까요?",

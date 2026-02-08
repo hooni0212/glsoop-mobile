@@ -314,7 +314,7 @@ export default function AuthSignup() {
 
                 {message ? <Text style={styles.helper}>{message}</Text> : null}
 
-                <Pressable onPress={() => router.replace("/(auth)/login")}>
+                <Pressable onPress={() => router.push("/(auth)/login")}>
                   <Text style={styles.link}>이미 계정이 있나요? 로그인</Text>
                 </Pressable>
               </>
