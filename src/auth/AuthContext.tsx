@@ -1,5 +1,6 @@
 import React from "react";
 
+import { clearBookmarks } from "@/features/bookmarks/bookmarkStore";
 import { clearLikes } from "@/features/likes/likeStore";
 import { clearAuthToken, getAuthToken, setAuthToken } from "@/lib/authToken";
 
@@ -35,6 +36,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = React.useCallback(async (nextToken: string) => {
     clearLikes();
+    clearBookmarks();
     await setAuthToken(nextToken);
     setToken(nextToken);
   }, []);
@@ -43,6 +45,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await clearAuthToken();
     setToken(null);
     clearLikes();
+    clearBookmarks();
   }, []);
 
   const value = React.useMemo<AuthState>(

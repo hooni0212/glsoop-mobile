@@ -10,6 +10,7 @@ import { AppError } from "@/components/state/AppError";
 import { AppLoading } from "@/components/state/AppLoading";
 import { PostTopBar } from "@/components/post/PostTopBar";
 import { useAuth } from "@/auth/AuthContext";
+import { setBookmark, useBookmarkSnapshot } from "@/features/bookmarks/bookmarkStore";
 import { getLike, setLike, useLikeSnapshot } from "@/features/likes/likeStore";
 import { togglePostLike } from "@/services/likeService";
 import { ApiError } from "@/lib/errors";
@@ -61,7 +62,9 @@ export default function PostDetail() {
   const likeSnapshot = useLikeSnapshot(postId, fallbackIsLiked, fallbackLikeCount);
   const likeCount = likeSnapshot.likeCount;
   const isLiked = likeSnapshot.liked;
-  const isBookmarked = Boolean((post as any)?.viewer?.isBookmarked);
+  const fallbackBookmarked = Boolean((post as any)?.viewer?.isBookmarked);
+  const bookmarkSnapshot = useBookmarkSnapshot(postId, fallbackBookmarked);
+  const isBookmarked = bookmarkSnapshot.bookmarked;
 
   const onPressBack = () => router.back();
   const showNotFound = error?.kind === "not_found";
@@ -117,6 +120,7 @@ export default function PostDetail() {
 
   const syncBookmarkSnapshot = (nextLists: BookmarkList[]) => {
     const nextBookmarked = nextLists.some((l) => Boolean(l.contains));
+    if (post?.id) setBookmark(post.id, nextBookmarked);
     mutatePost((prev) => ({
       ...prev,
       viewer: { ...prev.viewer, isBookmarked: nextBookmarked },

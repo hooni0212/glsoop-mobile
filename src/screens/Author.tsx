@@ -3,6 +3,7 @@ import { Alert, FlatList, SafeAreaView, Text, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 
 import { FeedCard } from "@/components/FeedCard";
+import { useBookmarkSnapshot } from "@/features/bookmarks/bookmarkStore";
 import { PostTopBar } from "@/components/post/PostTopBar";
 import { AppEmpty } from "@/components/state/AppEmpty";
 import { AppError } from "@/components/state/AppError";
@@ -236,6 +237,8 @@ function AuthorFeedItem({
   const fallbackLiked = Boolean(item.viewer?.isLiked);
   const fallbackCount = item.stats?.likeCount ?? 0;
   const { liked, likeCount } = useLikeSnapshot(item.id, fallbackLiked, fallbackCount);
+  const fallbackBookmarked = Boolean(item.viewer?.isBookmarked);
+  const { bookmarked } = useBookmarkSnapshot(item.id, fallbackBookmarked);
   const postSnapshot = {
     ...item,
     stats: { ...item.stats, likeCount },
@@ -250,7 +253,7 @@ function AuthorFeedItem({
       likeDisabled={Boolean(likePending[item.id])}
       likeTestID={`feed-like-btn-${item.id}`}
       liked={liked}
-      bookmarked={Boolean(item.viewer?.isBookmarked)}
+      bookmarked={bookmarked}
     />
   );
 }

@@ -7,6 +7,7 @@ import {
 } from "react-native";
 
 import { FeedCard } from "@/components/FeedCard";
+import { useBookmarkSnapshot } from "@/features/bookmarks/bookmarkStore";
 import { AppEmpty } from "@/components/state/AppEmpty";
 import { AppError } from "@/components/state/AppError";
 import { AppLoading } from "@/components/state/AppLoading";
@@ -109,7 +110,9 @@ function FeedSectionItem<Item extends { id: string | number }>({
 }) {
   const fallbackLiked = Boolean((item as any).viewer?.isLiked);
   const fallbackCount = (item as any).stats?.likeCount ?? 0;
+  const fallbackBookmarked = Boolean((item as any).viewer?.isBookmarked);
   const { liked, likeCount } = useLikeSnapshot(item.id, fallbackLiked, fallbackCount);
+  const { bookmarked } = useBookmarkSnapshot(item.id, fallbackBookmarked);
   const postSnapshot = {
     ...(item as any),
     stats: { ...(item as any).stats, likeCount },
@@ -119,7 +122,7 @@ function FeedSectionItem<Item extends { id: string | number }>({
     <FeedCard
       post={postSnapshot}
       liked={liked}
-      bookmarked={Boolean((item as any).viewer?.isBookmarked)}
+      bookmarked={bookmarked}
       onPress={() => onPressItem(item.id)}
       onLikePress={() => onLikePress?.(item.id)}
       onBookmarkPress={() => onBookmarkPress?.(item.id)}
