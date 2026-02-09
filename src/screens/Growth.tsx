@@ -128,8 +128,9 @@ export default function GrowthScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={styles.safe} testID="growth-screen">
       <ScrollView
+        testID="growth-scroll"
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
         refreshControl={
@@ -173,12 +174,14 @@ export default function GrowthScreen() {
             description={`전체 ${achievementSummary.total}개`}
             icon="trophy-outline"
             onPress={() => router.push("/growth/achievements")}
+            testID="growth-action-achievements"
           />
           <ActionCard
             title="퀘스트 상세"
             description={`전체 ${questSummary.total}개`}
             icon="trail-sign-outline"
             onPress={() => router.push("/growth/quests")}
+            testID="growth-action-quests"
           />
         </View>
 
@@ -188,6 +191,7 @@ export default function GrowthScreen() {
           items={achievementHighlights}
           emptyText="업적 데이터가 준비되면 여기서 바로 확인할 수 있어요."
           onPressMore={() => router.push("/growth/achievements")}
+          moreButtonTestID="growth-achievements-more"
         />
 
         <PreviewSection
@@ -196,6 +200,7 @@ export default function GrowthScreen() {
           items={questHighlights}
           emptyText="활성 퀘스트가 없어요. 다음 캠페인을 기다려주세요."
           onPressMore={() => router.push("/growth/quests")}
+          moreButtonTestID="growth-quests-more"
         />
 
         <TopPostsList
@@ -225,14 +230,20 @@ function ActionCard({
   description,
   icon,
   onPress,
+  testID,
 }: {
   title: string;
   description: string;
   icon: React.ComponentProps<typeof Ionicons>["name"];
   onPress: () => void;
+  testID: string;
 }) {
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [styles.actionCard, pressed && styles.pressed]}>
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [styles.actionCard, pressed && styles.pressed]}
+      testID={testID}
+    >
       <View style={styles.actionIcon}>
         <Ionicons name={icon} size={18} color={tokens.colors.green900} />
       </View>
@@ -251,12 +262,14 @@ function PreviewSection({
   items,
   emptyText,
   onPressMore,
+  moreButtonTestID,
 }: {
   title: string;
   caption: string;
   items: ProgressItem[];
   emptyText: string;
   onPressMore: () => void;
+  moreButtonTestID: string;
 }) {
   return (
     <View style={styles.sectionCard}>
@@ -265,7 +278,7 @@ function PreviewSection({
           <Text style={styles.sectionTitle}>{title}</Text>
           <Text style={styles.sectionCaption}>{caption}</Text>
         </View>
-        <Pressable onPress={onPressMore} style={styles.moreBtn}>
+        <Pressable onPress={onPressMore} style={styles.moreBtn} testID={moreButtonTestID}>
           <Text style={styles.moreBtnText}>전체보기</Text>
         </Pressable>
       </View>

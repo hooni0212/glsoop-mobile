@@ -66,8 +66,13 @@ export default function AchievementsScreen() {
 
   if (error?.kind === "auth") {
     return (
-      <SafeAreaView style={styles.safe}>
-        <GrowthDetailTopBar title="업적 상세" subtitle="로그인이 필요해요" onPressBack={() => router.back()} />
+      <SafeAreaView style={styles.safe} testID="growth-achievements-screen">
+        <GrowthDetailTopBar
+          title="업적 상세"
+          subtitle="로그인이 필요해요"
+          onPressBack={() => router.back()}
+          backButtonTestID="growth-achievements-back-btn"
+        />
         <View style={styles.center}>
           <AppEmpty
             title="로그인이 필요해요"
@@ -84,14 +89,16 @@ export default function AchievementsScreen() {
   const showEmpty = !showLoading && !showError && achievements.length === 0;
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={styles.safe} testID="growth-achievements-screen">
       <GrowthDetailTopBar
         title="업적 상세"
         subtitle={`전체 ${achievements.length}개`}
         onPressBack={() => router.back()}
+        backButtonTestID="growth-achievements-back-btn"
       />
 
       <ScrollView
+        testID="growth-achievements-scroll"
         contentContainerStyle={[
           styles.content,
           (showLoading || showError || showEmpty) && styles.contentCentered,

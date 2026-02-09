@@ -92,8 +92,13 @@ export default function QuestsScreen() {
 
   if (error?.kind === "auth") {
     return (
-      <SafeAreaView style={styles.safe}>
-        <GrowthDetailTopBar title="퀘스트 상세" subtitle="로그인이 필요해요" onPressBack={() => router.back()} />
+      <SafeAreaView style={styles.safe} testID="growth-quests-screen">
+        <GrowthDetailTopBar
+          title="퀘스트 상세"
+          subtitle="로그인이 필요해요"
+          onPressBack={() => router.back()}
+          backButtonTestID="growth-quests-back-btn"
+        />
         <View style={styles.center}>
           <AppEmpty
             title="로그인이 필요해요"
@@ -110,14 +115,16 @@ export default function QuestsScreen() {
   const showEmpty = !showLoading && !showError && questCount === 0;
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={styles.safe} testID="growth-quests-screen">
       <GrowthDetailTopBar
         title="퀘스트 상세"
         subtitle={`캠페인 ${campaigns.length}개 · 퀘스트 ${questCount}개`}
         onPressBack={() => router.back()}
+        backButtonTestID="growth-quests-back-btn"
       />
 
       <ScrollView
+        testID="growth-quests-scroll"
         contentContainerStyle={[
           styles.content,
           (showLoading || showError || showEmpty) && styles.contentCentered,
@@ -232,6 +239,7 @@ function QuestItem({
             claimPending && styles.claimBtnDisabled,
             pressed && !claimPending && styles.claimBtnPressed,
           ]}
+          testID={`quest-claim-btn-${quest.stateId}`}
         >
           <Text style={styles.claimBtnText}>{claimPending ? "수령 처리 중..." : "보상 받기"}</Text>
         </Pressable>

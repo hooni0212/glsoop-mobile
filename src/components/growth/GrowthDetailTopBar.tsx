@@ -8,9 +8,10 @@ type Props = {
   title: string;
   subtitle?: string;
   onPressBack: () => void;
+  backButtonTestID?: string;
 };
 
-export function GrowthDetailTopBar({ title, subtitle, onPressBack }: Props) {
+export function GrowthDetailTopBar({ title, subtitle, onPressBack, backButtonTestID }: Props) {
   return (
     <View style={styles.wrap}>
       <View style={styles.headerRow}>
@@ -20,6 +21,7 @@ export function GrowthDetailTopBar({ title, subtitle, onPressBack }: Props) {
           style={styles.iconBtn}
           accessibilityRole="button"
           accessibilityLabel="뒤로가기"
+          testID={backButtonTestID || "growth-detail-back-btn"}
         >
           <Ionicons name="chevron-back" size={22} color={tokens.colors.text} />
         </Pressable>
