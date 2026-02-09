@@ -27,6 +27,15 @@ function getQuestStatusMeta(status: GrowthQuest["status"]) {
   return { label: "잠금", color: tokens.colors.textMuted };
 }
 
+function formatCampaignType(value: string) {
+  if (value === "daily") return "데일리";
+  if (value === "weekly") return "위클리";
+  if (value === "season") return "시즌";
+  if (value === "event") return "이벤트";
+  if (value === "permanent") return "상시";
+  return "캠페인";
+}
+
 export default function QuestsScreen() {
   const router = useRouter();
   const { campaigns, loading, error, refetch, claimQuestReward } = useGrowthData();
@@ -172,7 +181,12 @@ export default function QuestsScreen() {
             {sortedCampaigns.map((campaign) => (
               <View key={campaign.id} style={styles.campaignCard}>
                 <View style={styles.campaignHeader}>
-                  <Text style={styles.campaignName}>{campaign.name}</Text>
+                  <View style={styles.campaignHeading}>
+                    <Text style={styles.campaignName}>{campaign.name}</Text>
+                    <View style={styles.campaignBadge}>
+                      <Text style={styles.campaignBadgeText}>{formatCampaignType(campaign.campaignType)}</Text>
+                    </View>
+                  </View>
                   <Text style={styles.campaignMeta}>{campaign.quests.length}개 퀘스트</Text>
                 </View>
                 {campaign.description ? <Text style={styles.campaignDesc}>{campaign.description}</Text> : null}
@@ -292,18 +306,41 @@ const styles = StyleSheet.create({
     backgroundColor: tokens.colors.surfaceStrong,
     padding: tokens.space.md,
     gap: tokens.space.sm as any,
+    shadowColor: tokens.shadow.color,
+    shadowOpacity: tokens.shadow.opacity,
+    shadowRadius: tokens.shadow.radius,
+    shadowOffset: { width: 0, height: tokens.shadow.offsetY },
+    elevation: 1,
   },
   campaignHeader: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     justifyContent: "space-between",
     gap: tokens.space.sm as any,
+  },
+  campaignHeading: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: tokens.space.xs as any,
+    flex: 1,
   },
   campaignName: {
     fontSize: tokens.font.body,
     fontWeight: "900",
     color: tokens.colors.text,
-    flex: 1,
+  },
+  campaignBadge: {
+    borderRadius: tokens.radius.pill,
+    borderWidth: 1,
+    borderColor: tokens.colors.borderStrong,
+    backgroundColor: tokens.colors.green100,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  campaignBadgeText: {
+    fontSize: tokens.font.small,
+    fontWeight: "800",
+    color: tokens.colors.green900,
   },
   campaignMeta: {
     fontSize: tokens.font.small,
@@ -326,6 +363,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: tokens.space.sm,
     paddingVertical: tokens.space.sm,
     gap: tokens.space.xs as any,
+    minHeight: 96,
   },
   questHeaderRow: {
     flexDirection: "row",

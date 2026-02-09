@@ -148,8 +148,14 @@ export default function GrowthScreen() {
         <View style={styles.heroCard}>
           <View style={styles.heroHeaderRow}>
             <View style={styles.heroTitleBlock}>
+              <Text style={styles.heroEyebrow}>오늘의 리포트</Text>
               <Text style={styles.h1}>성장</Text>
               <Text style={styles.subtitle}>오늘의 성장 상태를 한 번에 확인해요.</Text>
+              <Text style={styles.heroQuickStatus}>
+                {summary
+                  ? `Lv.${summary.level} · 오늘 +${summary.todayXp} XP`
+                  : "성장 데이터를 불러오는 중이에요."}
+              </Text>
             </View>
             {sourceLabel ? <Text style={styles.sourceBadge}>{sourceLabel}</Text> : null}
           </View>
@@ -330,7 +336,7 @@ const styles = StyleSheet.create({
     borderRadius: tokens.radius.xl,
     borderWidth: 1,
     borderColor: tokens.colors.borderStrong,
-    backgroundColor: tokens.colors.surfaceStrong,
+    backgroundColor: tokens.colors.green050,
     padding: tokens.space.lg,
     gap: tokens.space.md as any,
   },
@@ -344,6 +350,12 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 4,
   },
+  heroEyebrow: {
+    fontSize: tokens.font.small,
+    fontWeight: "900",
+    color: tokens.colors.green900,
+    letterSpacing: 0.2,
+  },
   h1: {
     fontSize: tokens.font.h1,
     fontWeight: "900",
@@ -352,6 +364,12 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: tokens.font.small,
     color: tokens.colors.textMuted,
+  },
+  heroQuickStatus: {
+    marginTop: 2,
+    fontSize: tokens.font.small,
+    color: tokens.colors.text,
+    fontWeight: "700",
   },
   sourceBadge: {
     fontSize: tokens.font.small,
@@ -365,6 +383,7 @@ const styles = StyleSheet.create({
   },
   heroStatsRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: tokens.space.sm as any,
   },
   heroStatPill: {
@@ -388,9 +407,11 @@ const styles = StyleSheet.create({
     color: tokens.colors.text,
   },
   actionRow: {
+    flexDirection: "row",
     gap: tokens.space.sm as any,
   },
   actionCard: {
+    flex: 1,
     borderRadius: tokens.radius.xl,
     borderWidth: 1,
     borderColor: tokens.colors.border,
@@ -431,6 +452,11 @@ const styles = StyleSheet.create({
     borderRadius: tokens.radius.xl,
     padding: tokens.space.lg,
     gap: tokens.space.sm as any,
+    shadowColor: tokens.shadow.color,
+    shadowOpacity: tokens.shadow.opacity,
+    shadowRadius: tokens.shadow.radius,
+    shadowOffset: { width: 0, height: tokens.shadow.offsetY },
+    elevation: 1,
   },
   sectionHeaderRow: {
     flexDirection: "row",
@@ -483,6 +509,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: tokens.space.sm as any,
+    minHeight: 62,
   },
   previewItemBody: {
     flex: 1,

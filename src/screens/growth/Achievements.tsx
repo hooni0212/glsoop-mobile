@@ -145,7 +145,10 @@ export default function AchievementsScreen() {
 
             {sections.map((section) => (
               <View key={section.key} style={styles.section}>
-                <Text style={styles.sectionTitle}>{section.title}</Text>
+                <View style={styles.sectionHeader}>
+                  <Text style={styles.sectionTitle}>{section.title}</Text>
+                  <Text style={styles.sectionCount}>{section.items.length}개</Text>
+                </View>
                 <View style={styles.list}>
                   {section.items.map((item) => (
                     <AchievementCard key={item.id} item={item} />
@@ -228,10 +231,21 @@ const styles = StyleSheet.create({
   section: {
     gap: tokens.space.sm as any,
   },
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: tokens.space.sm as any,
+  },
   sectionTitle: {
     fontSize: tokens.font.body,
     fontWeight: "900",
     color: tokens.colors.text,
+  },
+  sectionCount: {
+    fontSize: tokens.font.small,
+    color: tokens.colors.textMuted,
+    fontWeight: "800",
   },
   list: {
     gap: tokens.space.sm as any,
@@ -243,6 +257,11 @@ const styles = StyleSheet.create({
     backgroundColor: tokens.colors.surfaceStrong,
     padding: tokens.space.md,
     gap: tokens.space.sm as any,
+    shadowColor: tokens.shadow.color,
+    shadowOpacity: tokens.shadow.opacity,
+    shadowRadius: tokens.shadow.radius,
+    shadowOffset: { width: 0, height: tokens.shadow.offsetY },
+    elevation: 1,
   },
   cardHeader: {
     flexDirection: "row",
