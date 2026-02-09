@@ -70,6 +70,8 @@ export type GrowthTopPost = {
   title: string;
   excerpt: string;
   authorName: string;
+  category: string;
+  createdAt: string | null;
   likeCount: number;
   bookmarkCount: number;
 };
@@ -275,6 +277,8 @@ function normalizeTopPost(input: unknown): GrowthTopPost | null {
     title,
     excerpt: toText(row.excerpt),
     authorName: toText(row.author_name),
+    category: toText(row.category),
+    createdAt: toNullableText(row.created_at),
     likeCount: toNumber(row.like_count),
     bookmarkCount: toNumber(row.bookmark_count),
   };

@@ -13,6 +13,8 @@ export type TopPostItem = {
   title: string;
   excerpt?: string;
   authorName?: string;
+  category?: string;
+  createdAt?: string | null;
   likeCount?: number;
   bookmarkCount?: number;
 };
@@ -28,6 +30,16 @@ type Props = {
   emptyTitle?: string;
   emptyDescription?: string;
 };
+
+function formatCreatedAt(iso?: string | null) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}.${m}.${day}`;
+}
 
 export function TopPostsList({
   items,
@@ -86,6 +98,7 @@ export function TopPostsList({
 
       <View style={styles.list}>
         {items.map((item, index) => {
+          const createdAtLabel = formatCreatedAt(item.createdAt);
           const content = (
             <>
               <View style={styles.rankWrap}>
@@ -103,7 +116,11 @@ export function TopPostsList({
                 ) : null}
 
                 <View style={styles.metaRow}>
+                  {item.category ? (
+                    <Text style={[styles.metaText, styles.metaCategory]}>{item.category}</Text>
+                  ) : null}
                   {item.authorName ? <Text style={styles.metaText}>{item.authorName}</Text> : null}
+                  {createdAtLabel ? <Text style={styles.metaText}>{createdAtLabel}</Text> : null}
                   <Text style={styles.metaText}>좋아요 {item.likeCount ?? 0}</Text>
                   <Text style={styles.metaText}>저장 {item.bookmarkCount ?? 0}</Text>
                 </View>
@@ -260,5 +277,9 @@ const styles = StyleSheet.create({
     fontSize: tokens.font.small,
     color: tokens.colors.textFaint,
     fontWeight: "700",
+  },
+  metaCategory: {
+    color: tokens.colors.green900,
+    fontWeight: "800",
   },
 });

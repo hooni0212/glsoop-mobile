@@ -90,6 +90,8 @@
   "title": "오늘의 기록",
   "excerpt": "오늘 쓴 글 요약...",
   "author_name": "훈",
+  "category": "일상",
+  "created_at": "2026-02-10T01:10:00.000Z",
   "like_count": 12,
   "bookmark_count": 5
 }
@@ -238,14 +240,16 @@
 - `completed_at` -> `completedAt`
 - `reward_claimed_at` -> `rewardClaimedAt`
 - `author_name` -> `authorName`
+- `created_at` -> `createdAt`
 - `like_count` -> `likeCount`
 - `bookmark_count` -> `bookmarkCount`
+- `category` -> `category`
 
 ### 5.2 안전 기본값 (권장)
 - 배열: `achievements`, `campaigns`, `campaign.quests` -> 기본 `[]`
 - 숫자: XP/진행도/카운트 필드 -> 기본 `0`
 - 문자열: `title`, `name`, `description`, `icon` -> 기본 빈 문자열 또는 UI 기본 텍스트
-- nullable 시간값: `unlocked_at`, `completed_at`, `reward_claimed_at`, `end_at` -> `null` 허용
+- nullable 시간값: `unlocked_at`, `completed_at`, `reward_claimed_at`, `end_at`, `created_at` -> `null` 허용
 
 ### 5.3 상태값 처리
 - `status`는 `locked | in_progress | completed` 외 값이 오면 `locked`로 보정 권장
@@ -258,5 +262,6 @@
 - 성장 탭 초기 진입은 `/growth/dashboard` 1회 호출 기준으로 구현한다.
 - fallback은 네트워크/서버 오류 시에만 사용한다.
 - `top_posts`는 `/growth/dashboard` 응답의 canonical 필드다.
+  - 계약 필드: `id`, `title`, `excerpt`, `author_name`, `category`, `created_at`, `like_count`, `bookmark_count`
   - 값이 비어 있으면 `TopPostsList`는 empty UI를 표시
   - dashboard 자체가 실패해 fallback 모드가 되면 `TopPostsList`는 pending UI 유지
