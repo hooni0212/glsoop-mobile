@@ -8,6 +8,7 @@ import { FeedCard } from "@/components/FeedCard";
 import { AppEmpty } from "@/components/state/AppEmpty";
 import { AppError } from "@/components/state/AppError";
 import { AppLoading } from "@/components/state/AppLoading";
+import { useToast } from "@/feedback/ToastProvider";
 import { getLike, setLike, useLikeSnapshot } from "@/features/likes/likeStore";
 import { ApiError, normalizeApiError, type AppErrorModel } from "@/lib/errors";
 import {
@@ -40,6 +41,7 @@ function initialFolderItemsState(): FolderItemsState {
 
 export default function BookmarksScreen() {
   const { signOut } = useAuth();
+  const { showToast } = useToast();
   const [mode, setMode] = useState<ScreenMode>("lists");
 
   const [lists, setLists] = useState<BookmarkList[]>([]);
@@ -72,11 +74,15 @@ export default function BookmarksScreen() {
         setMode("lists");
       }
     } catch (e) {
-      setListsError(normalizeApiError(e));
+      const normalized = normalizeApiError(e);
+      setListsError(normalized);
+      showToast(normalized.description || normalized.title || "폴더 목록을 불러오지 못했어요.", {
+        tone: "error",
+      });
     } finally {
       setLoadingLists(false);
     }
-  }, [selectedListId]);
+  }, [selectedListId, showToast]);
 
   const loadItems = useCallback(
     async (opts: { reset?: boolean } = {}) => {
@@ -111,10 +117,15 @@ export default function BookmarksScreen() {
           offset: nextOffset + res.items.length,
         }));
       } catch (e) {
-        setFolderItems((prev) => ({ ...prev, loading: false, error: normalizeApiError(e) }));
+        const normalized = normalizeApiError(e);
+        setFolderItems((prev) => ({ ...prev, loading: false, error: normalized }));
+        showToast(
+          normalized.description || normalized.title || "저장한 글을 불러오지 못했어요.",
+          { tone: "error" }
+        );
       }
     },
-    [selectedListId]
+    [selectedListId, showToast]
   );
 
   useEffect(() => {
@@ -163,30 +174,41 @@ export default function BookmarksScreen() {
       setNewFolderName("");
       setNewFolderDesc("");
       setShowCreate(false);
+      showToast(`'${created.name}' 폴더를 만들었어요.`, { tone: "success" });
     } catch (e) {
-      setListsError(normalizeApiError(e));
+      const normalized = normalizeApiError(e);
+      setListsError(normalized);
+      showToast(normalized.description || normalized.title || "폴더 생성에 실패했어요.", {
+        tone: "error",
+      });
     } finally {
       setCreatingFolder(false);
     }
-  }, [newFolderName, newFolderDesc]);
+  }, [newFolderName, newFolderDesc, showToast]);
 
   const onPressDeleteFolder = useCallback(
     async (listId: string) => {
       setDeletingListId(listId);
       try {
+        const deletingName = lists.find((l) => l.id === listId)?.name || "폴더";
         await deleteBookmarkList(listId);
         setLists((prev) => prev.filter((l) => l.id !== listId));
         if (selectedListId === listId) {
           setSelectedListId(null);
           setMode("lists");
         }
+        showToast(`'${deletingName}' 폴더를 삭제했어요.`, { tone: "success" });
       } catch (e) {
-        setListsError(normalizeApiError(e));
+        const normalized = normalizeApiError(e);
+        setListsError(normalized);
+        showToast(normalized.description || normalized.title || "폴더 삭제에 실패했어요.", {
+          tone: "error",
+        });
       } finally {
         setDeletingListId(null);
       }
     },
-    [selectedListId]
+    [selectedListId, lists, showToast]
   );
 
   const onPressRemoveFromList = useCallback(
@@ -203,11 +225,16 @@ export default function BookmarksScreen() {
             l.id === selectedListId ? { ...l, itemCount: Math.max(0, (l.itemCount ?? 1) - 1) } : l
           )
         );
+        showToast("북마크에서 삭제했어요.", { tone: "success" });
       } catch (e) {
-        setFolderItems((prev) => ({ ...prev, error: normalizeApiError(e) }));
+        const normalized = normalizeApiError(e);
+        setFolderItems((prev) => ({ ...prev, error: normalized }));
+        showToast(normalized.description || normalized.title || "북마크 삭제에 실패했어요.", {
+          tone: "error",
+        });
       }
     },
-    [selectedListId]
+    [selectedListId, showToast]
   );
 
   const onPressLike = useCallback(
@@ -269,13 +296,17 @@ export default function BookmarksScreen() {
         if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
           await handleAuthError();
         } else {
-          setFolderItems((prev) => ({ ...prev, error: normalizeApiError(err) }));
+          const normalized = normalizeApiError(err);
+          setFolderItems((prev) => ({ ...prev, error: normalized }));
+          showToast(normalized.description || normalized.title || "좋아요 처리에 실패했어요.", {
+            tone: "error",
+          });
         }
       } finally {
         setLikePending((prev) => ({ ...prev, [postId]: false }));
       }
     },
-    [folderItems.items, likePending, handleAuthError]
+    [folderItems.items, likePending, handleAuthError, showToast]
   );
 
   const renderListsScreen = () => {
