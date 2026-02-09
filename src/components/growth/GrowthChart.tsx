@@ -1,5 +1,5 @@
 import React from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 
 import type { GrowthLoadSource, GrowthSummary } from "@/features/growth/useGrowthData";
 import type { AppErrorModel } from "@/lib/errors";
@@ -13,7 +13,6 @@ type Props = {
   loading?: boolean;
   error?: AppErrorModel | null;
   source?: GrowthLoadSource;
-  onRetry?: () => void;
 };
 
 function clampPercent(value: number) {
@@ -31,14 +30,13 @@ export function GrowthChart({
   loading = false,
   error = null,
   source = null,
-  onRetry,
 }: Props) {
   if (loading && !summary) {
     return <AppLoading message="성장 정보를 불러오는 중..." />;
   }
 
   if (error && !summary) {
-    return <AppError error={error} onRetry={error.canRetry ? onRetry : undefined} />;
+    return <AppError error={error} />;
   }
 
   if (!summary) {
@@ -46,7 +44,6 @@ export function GrowthChart({
       <AppEmpty
         title="아직 성장 데이터가 없어요"
         description="글을 작성하거나 상호작용을 시작하면 기록이 쌓여요."
-        primaryAction={onRetry ? { label: "새로고침", onPress: onRetry } : undefined}
       />
     );
   }
@@ -109,12 +106,7 @@ export function GrowthChart({
 
       {error ? (
         <View style={styles.noticeRow}>
-          <Text style={styles.noticeText}>일부 데이터를 불러오지 못해 대체 데이터로 표시 중입니다.</Text>
-          {onRetry ? (
-            <Pressable onPress={onRetry} style={styles.retryBtn}>
-              <Text style={styles.retryBtnText}>다시 시도</Text>
-            </Pressable>
-          ) : null}
+          <Text style={styles.noticeText}>일부 데이터가 최신이 아닐 수 있어요. 화면을 아래로 당겨 새로고침해 주세요.</Text>
         </View>
       ) : null}
     </View>
@@ -265,19 +257,5 @@ const styles = StyleSheet.create({
   noticeText: {
     fontSize: tokens.font.small,
     color: tokens.colors.textMuted,
-  },
-  retryBtn: {
-    alignSelf: "flex-start",
-    backgroundColor: tokens.colors.green100,
-    borderWidth: 1,
-    borderColor: tokens.colors.borderStrong,
-    borderRadius: tokens.radius.pill,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  retryBtnText: {
-    fontSize: tokens.font.small,
-    color: tokens.colors.green900,
-    fontWeight: "800",
   },
 });

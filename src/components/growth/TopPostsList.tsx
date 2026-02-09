@@ -20,7 +20,6 @@ type Props = {
   items: TopPostItem[];
   loading?: boolean;
   error?: AppErrorModel | null;
-  onRetry?: () => void;
   onPressItem?: (id: string) => void;
   title?: string;
   description?: string;
@@ -32,7 +31,6 @@ export function TopPostsList({
   items,
   loading = false,
   error = null,
-  onRetry,
   onPressItem,
   title = "인기 글",
   description = "좋아요와 저장 반응이 높은 글이에요.",
@@ -44,7 +42,7 @@ export function TopPostsList({
   }
 
   if (error && items.length === 0) {
-    return <AppError error={error} onRetry={error.canRetry ? onRetry : undefined} />;
+    return <AppError error={error} />;
   }
 
   if (items.length === 0) {
@@ -52,7 +50,6 @@ export function TopPostsList({
       <AppEmpty
         title={emptyTitle}
         description={emptyDescription}
-        primaryAction={onRetry ? { label: "새로고침", onPress: onRetry } : undefined}
       />
     );
   }
