@@ -51,7 +51,7 @@ export function TopPostsList({
   if (items.length === 0) {
     if (mode === "pending") {
       return (
-        <View style={styles.pendingCard}>
+        <View style={styles.pendingCard} testID="top-posts-pending">
           <View style={styles.pendingHeader}>
             <View style={styles.pendingIconWrap}>
               <Ionicons name="sparkles-outline" size={18} color={tokens.colors.green900} />
@@ -68,15 +68,17 @@ export function TopPostsList({
     }
 
     return (
-      <AppEmpty
-        title={emptyTitle}
-        description={emptyDescription}
-      />
+      <View testID="top-posts-empty">
+        <AppEmpty
+          title={emptyTitle}
+          description={emptyDescription}
+        />
+      </View>
     );
   }
 
   return (
-    <View style={styles.card}>
+    <View style={styles.card} testID="top-posts-list">
       <View style={styles.header}>
         <Text style={styles.title}>{title}</Text>
         <Text style={styles.description}>{description}</Text>
@@ -115,6 +117,7 @@ export function TopPostsList({
                 key={item.id}
                 onPress={() => onPressItem(item.id)}
                 style={({ pressed }) => [styles.itemRow, pressed && styles.itemRowPressed]}
+                testID={`top-post-item-${item.id}`}
               >
                 {content}
               </Pressable>
@@ -122,7 +125,7 @@ export function TopPostsList({
           }
 
           return (
-            <View key={item.id} style={styles.itemRow}>
+            <View key={item.id} style={styles.itemRow} testID={`top-post-item-${item.id}`}>
               {content}
             </View>
           );

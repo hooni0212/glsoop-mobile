@@ -345,14 +345,13 @@ function applyQuestClaim(snapshot: GrowthSnapshot, result: ClaimQuestResult, sta
 async function fetchDashboard() {
   const res = await apiGet<DashboardResponse>("/api/growth/dashboard");
   if (!res?.ok) throw new Error(res?.message || "성장 대시보드를 불러오지 못했어요.");
-  const hasTopPostsField = Object.prototype.hasOwnProperty.call(res, "top_posts");
 
   return {
     summary: normalizeSummary(res.summary),
     achievements: normalizeAchievements(res.achievements),
     campaigns: normalizeCampaigns(res.campaigns),
     topPosts: normalizeTopPosts(res.top_posts),
-    topPostsMode: hasTopPostsField ? ("ready" as const) : ("pending" as const),
+    topPostsMode: "ready" as const,
   };
 }
 
