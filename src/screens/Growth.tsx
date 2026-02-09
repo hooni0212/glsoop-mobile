@@ -99,6 +99,12 @@ export default function GrowthScreen() {
   }, [achievements]);
 
   const sourceLabel = source === "dashboard" ? "기본 데이터" : source === "fallback" ? "대체 데이터" : "";
+  const topPostsEmptyTitle =
+    topPostsMode === "ready" ? "아직 인기 글이 없어요" : "인기 글을 준비 중이에요";
+  const topPostsEmptyDescription =
+    topPostsMode === "ready"
+      ? "조금 더 활동이 쌓이면 여기에서 인기 글을 보여드릴게요."
+      : "인기 글 추천 기능을 준비 중이에요. 곧 여기에서 확인할 수 있어요.";
 
   const onRefresh = useCallback(async () => {
     if (refreshing || loading) return;
@@ -217,7 +223,8 @@ export default function GrowthScreen() {
           onPressItem={(id) => router.push(`/posts/${id}`)}
           title="인기 글"
           description="반응이 좋은 글을 모아 보여주는 영역이에요."
-          emptyDescription="인기 글 추천 기능을 준비 중이에요. 곧 여기에서 확인할 수 있어요."
+          emptyTitle={topPostsEmptyTitle}
+          emptyDescription={topPostsEmptyDescription}
         />
       </ScrollView>
     </SafeAreaView>

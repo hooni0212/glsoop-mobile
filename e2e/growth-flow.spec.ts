@@ -32,10 +32,12 @@ async function activateByTestId(page: Page, testId: string) {
 
 type GrowthMockOptions = {
   includeTopPostsField?: boolean;
+  topPostsEmpty?: boolean;
 };
 
 function growthDashboardFixture(options: GrowthMockOptions = {}) {
   const includeTopPostsField = options.includeTopPostsField ?? true;
+  const topPostsEmpty = options.topPostsEmpty ?? false;
   const payload: Record<string, unknown> = {
     ok: true,
     message: "성장 대시보드 정보를 불러왔습니다.",
@@ -132,16 +134,18 @@ function growthDashboardFixture(options: GrowthMockOptions = {}) {
   };
 
   if (includeTopPostsField) {
-    payload.top_posts = [
-      {
-        id: 701,
-        title: "테스트 인기 글",
-        excerpt: "반응이 좋은 글입니다.",
-        author_name: "테스터",
-        like_count: 21,
-        bookmark_count: 7,
-      },
-    ];
+    payload.top_posts = topPostsEmpty
+      ? []
+      : [
+          {
+            id: 701,
+            title: "테스트 인기 글",
+            excerpt: "반응이 좋은 글입니다.",
+            author_name: "테스터",
+            like_count: 21,
+            bookmark_count: 7,
+          },
+        ];
   }
 
   return payload;
@@ -262,5 +266,16 @@ test.describe("Growth 플로우", () => {
 
     await expect(page.getByTestId("growth-screen")).toBeVisible();
     await expect(page.getByText("인기 글 추천 기능을 준비 중이에요. 곧 여기에서 확인할 수 있어요.")).toBeVisible();
+  });
+
+  test("dashboard top_posts가 빈 배열이면 준비중이 아닌 empty UI를 보여준다", async ({ page }) => {
+    await mockGrowthApis(page, { includeTopPostsField: true, topPostsEmpty: true });
+    await setAuthToken(page, "mock-token-for-growth");
+
+    await page.goto("/growth");
+
+    await expect(page.getByTestId("growth-screen")).toBeVisible();
+    await expect(page.getByText("아직 인기 글이 없어요")).toBeVisible();
+    await expect(page.getByText("조금 더 활동이 쌓이면 여기에서 인기 글을 보여드릴게요.")).toBeVisible();
   });
 });
