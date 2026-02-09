@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 
+import { trackGrowthTelemetry, toGrowthTelemetryError } from "@/features/growth/growthTelemetry";
 import { apiGet, apiPost } from "@/lib/api";
 import { normalizeApiError, type AppErrorModel } from "@/lib/errors";
 
@@ -381,11 +382,13 @@ async function fetchFallback() {
 
 async function loadGrowth(force = false) {
   if (inflightLoad) {
+    trackGrowthTelemetry("growth_load_skipped_inflight", { force });
     await inflightLoad;
     return;
   }
 
   if (shouldUseCache(force)) {
+    trackGrowthTelemetry("growth_load_skipped_cache", { force });
     return;
   }
 
@@ -410,9 +413,21 @@ async function loadGrowth(force = false) {
         error: null,
         loading: false,
       });
+      trackGrowthTelemetry("growth_load_succeeded", {
+        source: "dashboard",
+        achievementsCount: dashboard.achievements.length,
+        campaignsCount: dashboard.campaigns.length,
+        topPostsCount: dashboard.topPosts.length,
+        force,
+      });
       lastLoadedAt = Date.now();
       return;
     } catch (dashboardError) {
+      trackGrowthTelemetry("growth_load_failed", {
+        source: "dashboard",
+        error: toGrowthTelemetryError(dashboardError),
+        force,
+      });
       if (__DEV__) {
         console.warn("[growth] dashboard failed, fallback to legacy endpoints", dashboardError);
       }
@@ -431,8 +446,20 @@ async function loadGrowth(force = false) {
         error: null,
         loading: false,
       });
+      trackGrowthTelemetry("growth_load_succeeded", {
+        source: "fallback",
+        achievementsCount: fallback.achievements.length,
+        campaignsCount: fallback.campaigns.length,
+        topPostsCount: 0,
+        force,
+      });
       lastLoadedAt = Date.now();
     } catch (fallbackError) {
+      trackGrowthTelemetry("growth_load_failed", {
+        source: "fallback",
+        error: toGrowthTelemetryError(fallbackError),
+        force,
+      });
       publishSnapshot({
         ...growthSnapshot,
         summary: null,
@@ -453,26 +480,42 @@ async function loadGrowth(force = false) {
 }
 
 async function claimQuestRewardRequest(stateId: number): Promise<ClaimQuestResult> {
-  const res = await apiPost<ClaimQuestResponse>(`/api/quests/${encodeURIComponent(String(stateId))}/claim`);
-  if (!res?.ok) {
-    throw new Error(res?.message || "퀘스트 보상 수령에 실패했어요.");
+  trackGrowthTelemetry("growth_quest_claim_started", { stateId });
+
+  try {
+    const res = await apiPost<ClaimQuestResponse>(`/api/quests/${encodeURIComponent(String(stateId))}/claim`);
+    if (!res?.ok) {
+      throw new Error(res?.message || "퀘스트 보상 수령에 실패했어요.");
+    }
+
+    const result: ClaimQuestResult = {
+      rewardClaimedAt: toNullableText(res.reward_claimed_at),
+      gainedXp: toNumber(res.gained_xp),
+      newXp: toNumber(res.new_xp),
+    };
+
+    publishSnapshot({
+      ...applyQuestClaim(growthSnapshot, result, stateId),
+      error: null,
+    });
+
+    // 서버 계산값(레벨/XP/요약)을 동기화하기 위해 1회 재조회
+    void loadGrowth(true);
+
+    trackGrowthTelemetry("growth_quest_claim_succeeded", {
+      stateId,
+      gainedXp: result.gainedXp,
+      newXp: result.newXp,
+    });
+
+    return result;
+  } catch (claimError) {
+    trackGrowthTelemetry("growth_quest_claim_failed", {
+      stateId,
+      error: toGrowthTelemetryError(claimError),
+    });
+    throw claimError;
   }
-
-  const result: ClaimQuestResult = {
-    rewardClaimedAt: toNullableText(res.reward_claimed_at),
-    gainedXp: toNumber(res.gained_xp),
-    newXp: toNumber(res.new_xp),
-  };
-
-  publishSnapshot({
-    ...applyQuestClaim(growthSnapshot, result, stateId),
-    error: null,
-  });
-
-  // 서버 계산값(레벨/XP/요약)을 동기화하기 위해 1회 재조회
-  void loadGrowth(true);
-
-  return result;
 }
 
 export function useGrowthData(): UseGrowthDataResult {

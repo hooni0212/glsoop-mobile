@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Pressable,
   RefreshControl,
@@ -13,6 +13,7 @@ import { useRouter } from "expo-router";
 
 import { GrowthChart } from "@/components/growth/GrowthChart";
 import { TopPostsList } from "@/components/growth/TopPostsList";
+import { trackGrowthTelemetry, toGrowthTelemetryError } from "@/features/growth/growthTelemetry";
 import { AppEmpty } from "@/components/state/AppEmpty";
 import { useGrowthData } from "@/features/growth/useGrowthData";
 import { tokens } from "@/theme/tokens";
@@ -106,11 +107,32 @@ export default function GrowthScreen() {
       ? "조금 더 활동이 쌓이면 여기에서 인기 글을 보여드릴게요."
       : "인기 글 추천 기능을 준비 중이에요. 곧 여기에서 확인할 수 있어요.";
 
+  useEffect(() => {
+    trackGrowthTelemetry("growth_screen_viewed", { screen: "home" });
+  }, []);
+
+  useEffect(() => {
+    if (!source) return;
+    trackGrowthTelemetry("growth_screen_source_updated", { screen: "home", source });
+  }, [source]);
+
   const onRefresh = useCallback(async () => {
     if (refreshing || loading) return;
+    const startedAt = Date.now();
+    trackGrowthTelemetry("growth_refresh_started", { screen: "home" });
     setRefreshing(true);
     try {
       await refetch();
+      trackGrowthTelemetry("growth_refresh_succeeded", {
+        screen: "home",
+        durationMs: Date.now() - startedAt,
+      });
+    } catch (refreshError) {
+      trackGrowthTelemetry("growth_refresh_failed", {
+        screen: "home",
+        durationMs: Date.now() - startedAt,
+        error: toGrowthTelemetryError(refreshError),
+      });
     } finally {
       setRefreshing(false);
     }
@@ -185,14 +207,20 @@ export default function GrowthScreen() {
             title="업적 보기"
             description={`전체 ${achievementSummary.total}개`}
             icon="trophy-outline"
-            onPress={() => router.push("/growth/achievements")}
+            onPress={() => {
+              trackGrowthTelemetry("growth_action_clicked", { action: "open_achievements" });
+              router.push("/growth/achievements");
+            }}
             testID="growth-action-achievements"
           />
           <ActionCard
             title="퀘스트 보기"
             description={`전체 ${questSummary.total}개`}
             icon="trail-sign-outline"
-            onPress={() => router.push("/growth/quests")}
+            onPress={() => {
+              trackGrowthTelemetry("growth_action_clicked", { action: "open_quests" });
+              router.push("/growth/quests");
+            }}
             testID="growth-action-quests"
           />
         </View>
@@ -220,7 +248,10 @@ export default function GrowthScreen() {
           loading={loading && topPostsMode === "ready"}
           error={topPostsMode === "ready" ? error : null}
           mode={topPostsMode === "ready" ? "default" : "pending"}
-          onPressItem={(id) => router.push(`/posts/${id}`)}
+          onPressItem={(id) => {
+            trackGrowthTelemetry("growth_action_clicked", { action: "open_top_post", postId: id });
+            router.push(`/posts/${id}`);
+          }}
           title="인기 글"
           description="반응이 좋은 글을 모아 보여주는 영역이에요."
           emptyTitle={topPostsEmptyTitle}

@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert, Pressable, RefreshControl, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 
@@ -6,6 +6,7 @@ import { GrowthDetailTopBar } from "@/components/growth/GrowthDetailTopBar";
 import { AppEmpty } from "@/components/state/AppEmpty";
 import { AppError } from "@/components/state/AppError";
 import { AppLoading } from "@/components/state/AppLoading";
+import { trackGrowthTelemetry, toGrowthTelemetryError } from "@/features/growth/growthTelemetry";
 import type { GrowthQuest } from "@/features/growth/useGrowthData";
 import { useGrowthData } from "@/features/growth/useGrowthData";
 import { normalizeApiError } from "@/lib/errors";
@@ -44,13 +45,29 @@ export default function QuestsScreen() {
 
   const onRefresh = useCallback(async () => {
     if (refreshing || loading) return;
+    const startedAt = Date.now();
+    trackGrowthTelemetry("growth_refresh_started", { screen: "quests" });
     setRefreshing(true);
     try {
       await refetch();
+      trackGrowthTelemetry("growth_refresh_succeeded", {
+        screen: "quests",
+        durationMs: Date.now() - startedAt,
+      });
+    } catch (refreshError) {
+      trackGrowthTelemetry("growth_refresh_failed", {
+        screen: "quests",
+        durationMs: Date.now() - startedAt,
+        error: toGrowthTelemetryError(refreshError),
+      });
     } finally {
       setRefreshing(false);
     }
   }, [refreshing, loading, refetch]);
+
+  useEffect(() => {
+    trackGrowthTelemetry("growth_screen_viewed", { screen: "quests" });
+  }, []);
 
   const sortedCampaigns = useMemo(() => {
     return campaigns

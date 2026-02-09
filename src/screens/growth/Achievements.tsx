@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { RefreshControl, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 
@@ -7,6 +7,7 @@ import { AppEmpty } from "@/components/state/AppEmpty";
 import { AppError } from "@/components/state/AppError";
 import { AppLoading } from "@/components/state/AppLoading";
 import type { GrowthAchievement } from "@/features/growth/useGrowthData";
+import { trackGrowthTelemetry, toGrowthTelemetryError } from "@/features/growth/growthTelemetry";
 import { useGrowthData } from "@/features/growth/useGrowthData";
 import { tokens } from "@/theme/tokens";
 
@@ -34,13 +35,29 @@ export default function AchievementsScreen() {
 
   const onRefresh = useCallback(async () => {
     if (refreshing || loading) return;
+    const startedAt = Date.now();
+    trackGrowthTelemetry("growth_refresh_started", { screen: "achievements" });
     setRefreshing(true);
     try {
       await refetch();
+      trackGrowthTelemetry("growth_refresh_succeeded", {
+        screen: "achievements",
+        durationMs: Date.now() - startedAt,
+      });
+    } catch (refreshError) {
+      trackGrowthTelemetry("growth_refresh_failed", {
+        screen: "achievements",
+        durationMs: Date.now() - startedAt,
+        error: toGrowthTelemetryError(refreshError),
+      });
     } finally {
       setRefreshing(false);
     }
   }, [refreshing, loading, refetch]);
+
+  useEffect(() => {
+    trackGrowthTelemetry("growth_screen_viewed", { screen: "achievements" });
+  }, []);
 
   const sections = useMemo(() => {
     const inProgress = achievements
