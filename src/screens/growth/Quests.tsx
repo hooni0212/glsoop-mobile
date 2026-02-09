@@ -6,6 +6,7 @@ import { GrowthDetailTopBar } from "@/components/growth/GrowthDetailTopBar";
 import { AppEmpty } from "@/components/state/AppEmpty";
 import { AppError } from "@/components/state/AppError";
 import { AppLoading } from "@/components/state/AppLoading";
+import { useToast } from "@/feedback/ToastProvider";
 import { trackGrowthTelemetry, toGrowthTelemetryError } from "@/features/growth/growthTelemetry";
 import type { GrowthQuest } from "@/features/growth/useGrowthData";
 import { useGrowthData } from "@/features/growth/useGrowthData";
@@ -39,6 +40,7 @@ function formatCampaignType(value: string) {
 
 export default function QuestsScreen() {
   const router = useRouter();
+  const { showToast } = useToast();
   const { campaigns, loading, error, refetch, claimQuestReward } = useGrowthData();
   const [refreshing, setRefreshing] = useState(false);
   const [claimPendingByStateId, setClaimPendingByStateId] = useState<Record<number, boolean>>({});
@@ -98,7 +100,7 @@ export default function QuestsScreen() {
       setClaimPendingByStateId((prev) => ({ ...prev, [stateId]: true }));
       try {
         const result = await claimQuestReward(stateId);
-        Alert.alert("보상 수령 완료", `+${result.gainedXp} XP를 얻었어요.`);
+        showToast(`보상 수령 완료: +${result.gainedXp} XP`, { tone: "success" });
       } catch (claimError) {
         const normalized = normalizeApiError(claimError);
 
@@ -108,12 +110,14 @@ export default function QuestsScreen() {
           return;
         }
 
-        Alert.alert(normalized.title, normalized.description || "잠시 후 다시 시도해주세요.");
+        showToast(normalized.description || normalized.title || "잠시 후 다시 시도해주세요.", {
+          tone: "error",
+        });
       } finally {
         setClaimPendingByStateId((prev) => ({ ...prev, [stateId]: false }));
       }
     },
-    [claimPendingByStateId, claimQuestReward, router]
+    [claimPendingByStateId, claimQuestReward, router, showToast]
   );
 
   if (error?.kind === "auth") {
