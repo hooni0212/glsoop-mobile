@@ -60,7 +60,7 @@ export function GrowthChart({
       <View style={styles.headerRow}>
         <View>
           <Text style={styles.headerTitle}>레벨 진행 현황</Text>
-          <Text style={styles.headerMeta}>XP와 스트릭을 기준으로 오늘의 성장을 보여줘요.</Text>
+          <Text style={styles.headerMeta}>XP와 스트릭을 기준으로 성장 흐름을 요약해요.</Text>
         </View>
         {sourceLabel ? (
           <Text style={styles.sourceBadge} accessibilityLabel={`데이터 소스: ${sourceLabel}`}>
@@ -84,7 +84,7 @@ export function GrowthChart({
         <View style={styles.progressTrack}>
           <View style={[styles.progressBar, { width: `${xpPercent}%` }]} />
         </View>
-        <Text style={styles.progressHint}>다음 레벨까지 {remainingXp} XP</Text>
+        <Text style={styles.progressHint}>다음 레벨까지 {remainingXp} XP 남았어요</Text>
       </View>
 
       <View style={styles.statsRow}>

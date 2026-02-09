@@ -27,7 +27,7 @@ type ProgressItem = {
 
 function getStatusMeta(status: ProgressItem["status"]) {
   if (status === "completed") return { label: "완료", color: tokens.colors.green700 };
-  if (status === "in_progress") return { label: "진행중", color: tokens.colors.green900 };
+  if (status === "in_progress") return { label: "진행 중", color: tokens.colors.green900 };
   return { label: "잠금", color: tokens.colors.textMuted };
 }
 
@@ -99,13 +99,12 @@ export default function GrowthScreen() {
       .map(({ id, title, subtitle, status }) => ({ id, title, subtitle, status }));
   }, [achievements]);
 
-  const sourceLabel = source === "dashboard" ? "기본 데이터" : source === "fallback" ? "대체 데이터" : "";
   const topPostsEmptyTitle =
     topPostsMode === "ready" ? "아직 인기 글이 없어요" : "인기 글을 준비 중이에요";
   const topPostsEmptyDescription =
     topPostsMode === "ready"
-      ? "조금 더 활동이 쌓이면 여기에서 인기 글을 보여드릴게요."
-      : "인기 글 추천 기능을 준비 중이에요. 곧 여기에서 확인할 수 있어요.";
+      ? "활동이 더 쌓이면, 여기에서 주목받는 글을 추천해드릴게요."
+      : "인기 글 추천 기능을 준비 중이에요. 잠시만 기다려 주세요.";
 
   useEffect(() => {
     trackGrowthTelemetry("growth_screen_viewed", { screen: "home" });
@@ -178,14 +177,13 @@ export default function GrowthScreen() {
             <View style={styles.heroTitleBlock}>
               <Text style={styles.heroEyebrow}>오늘의 리포트</Text>
               <Text style={styles.h1}>성장</Text>
-              <Text style={styles.subtitle}>오늘의 성장 상태를 한 번에 확인해요.</Text>
+              <Text style={styles.subtitle}>오늘의 성장 신호를 한눈에 확인해요.</Text>
               <Text style={styles.heroQuickStatus}>
                 {summary
                   ? `Lv.${summary.level} · 오늘 +${summary.todayXp} XP`
-                  : "성장 데이터를 불러오는 중이에요."}
+                  : "성장 데이터를 준비하고 있어요."}
               </Text>
             </View>
-            {sourceLabel ? <Text style={styles.sourceBadge}>{sourceLabel}</Text> : null}
           </View>
 
           <View style={styles.heroStatsRow}>
@@ -211,6 +209,7 @@ export default function GrowthScreen() {
               trackGrowthTelemetry("growth_action_clicked", { action: "open_achievements" });
               router.push("/growth/achievements");
             }}
+            accessibilityHint="업적 상세 화면으로 이동"
             testID="growth-action-achievements"
           />
           <ActionCard
@@ -221,6 +220,7 @@ export default function GrowthScreen() {
               trackGrowthTelemetry("growth_action_clicked", { action: "open_quests" });
               router.push("/growth/quests");
             }}
+            accessibilityHint="퀘스트 상세 화면으로 이동"
             testID="growth-action-quests"
           />
         </View>
@@ -229,7 +229,7 @@ export default function GrowthScreen() {
           title="업적 하이라이트"
           caption={`${achievementSummary.inProgress}개 진행 중`}
           items={achievementHighlights}
-          emptyText="진행 중인 업적이 없어요. 활동을 시작하면 자동으로 표시돼요."
+          emptyText="진행 중인 업적이 없어요. 활동을 시작하면 자동으로 채워져요."
           onPressMore={() => router.push("/growth/achievements")}
           moreButtonTestID="growth-achievements-more"
         />
@@ -238,7 +238,7 @@ export default function GrowthScreen() {
           title="퀘스트 진행 하이라이트"
           caption={`${questSummary.inProgress}개 진행 중`}
           items={questHighlights}
-          emptyText="진행 중인 퀘스트가 없어요. 새 캠페인이 시작되면 표시돼요."
+          emptyText="진행 중인 퀘스트가 없어요. 새 캠페인이 열리면 표시돼요."
           onPressMore={() => router.push("/growth/quests")}
           moreButtonTestID="growth-quests-more"
         />
@@ -276,18 +276,23 @@ function ActionCard({
   description,
   icon,
   onPress,
+  accessibilityHint,
   testID,
 }: {
   title: string;
   description: string;
   icon: React.ComponentProps<typeof Ionicons>["name"];
   onPress: () => void;
+  accessibilityHint?: string;
   testID: string;
 }) {
   return (
     <Pressable
       onPress={onPress}
       style={({ pressed }) => [styles.actionCard, pressed && styles.pressed]}
+      accessibilityRole="button"
+      accessibilityLabel={title}
+      accessibilityHint={accessibilityHint}
       testID={testID}
     >
       <View style={styles.actionIcon}>
@@ -324,7 +329,14 @@ function PreviewSection({
           <Text style={styles.sectionTitle}>{title}</Text>
           <Text style={styles.sectionCaption}>{caption}</Text>
         </View>
-        <Pressable onPress={onPressMore} style={styles.moreBtn} testID={moreButtonTestID}>
+        <Pressable
+          onPress={onPressMore}
+          style={styles.moreBtn}
+          testID={moreButtonTestID}
+          accessibilityRole="button"
+          accessibilityLabel={`${title} 전체보기`}
+          accessibilityHint="상세 화면으로 이동"
+        >
           <Text style={styles.moreBtnText}>전체보기</Text>
         </Pressable>
       </View>
@@ -410,16 +422,6 @@ const styles = StyleSheet.create({
     fontSize: tokens.font.small,
     color: tokens.colors.text,
     fontWeight: "700",
-  },
-  sourceBadge: {
-    fontSize: tokens.font.small,
-    fontWeight: "800",
-    color: tokens.colors.green900,
-    backgroundColor: tokens.colors.green100,
-    borderRadius: tokens.radius.pill,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    overflow: "hidden",
   },
   heroStatsRow: {
     flexDirection: "row",

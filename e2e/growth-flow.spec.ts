@@ -314,7 +314,7 @@ test.describe("Growth 플로우", () => {
     await expect(page.getByTestId("growth-screen")).toBeVisible();
     await expect(page.getByLabel("데이터 소스: 대체 데이터")).toBeVisible();
     await expect(page.getByTestId("top-posts-pending")).toBeVisible();
-    await expect(page.getByText("인기 글 추천 기능을 준비 중이에요. 곧 여기에서 확인할 수 있어요.")).toBeVisible();
+    await expect(page.getByText("인기 글 추천 기능을 준비 중이에요. 잠시만 기다려 주세요.")).toBeVisible();
   });
 
   test("dashboard top_posts가 빈 배열이면 준비중이 아닌 empty UI를 보여준다", async ({ page }) => {
@@ -326,6 +326,6 @@ test.describe("Growth 플로우", () => {
     await expect(page.getByTestId("growth-screen")).toBeVisible();
     await expect(page.getByTestId("top-posts-empty")).toBeVisible();
     await expect(page.getByText("아직 인기 글이 없어요")).toBeVisible();
-    await expect(page.getByText("조금 더 활동이 쌓이면 여기에서 인기 글을 보여드릴게요.")).toBeVisible();
+    await expect(page.getByText("활동이 더 쌓이면, 여기에서 주목받는 글을 추천해드릴게요.")).toBeVisible();
   });
 });

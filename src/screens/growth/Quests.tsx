@@ -24,7 +24,7 @@ function clampPercent(value: number) {
 
 function getQuestStatusMeta(status: GrowthQuest["status"]) {
   if (status === "completed") return { label: "완료", color: tokens.colors.green700 };
-  if (status === "in_progress") return { label: "진행중", color: tokens.colors.green900 };
+  if (status === "in_progress") return { label: "진행 중", color: tokens.colors.green900 };
   return { label: "잠금", color: tokens.colors.textMuted };
 }
 

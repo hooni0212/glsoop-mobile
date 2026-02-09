@@ -51,7 +51,7 @@ export function TopPostsList({
   if (items.length === 0) {
     if (mode === "pending") {
       return (
-        <View style={styles.pendingCard} testID="top-posts-pending">
+        <View style={styles.pendingCard} testID="top-posts-pending" accessibilityLabel="인기 글 준비 중">
           <View style={styles.pendingHeader}>
             <View style={styles.pendingIconWrap}>
               <Ionicons name="sparkles-outline" size={18} color={tokens.colors.green900} />
@@ -68,7 +68,7 @@ export function TopPostsList({
     }
 
     return (
-      <View testID="top-posts-empty">
+      <View testID="top-posts-empty" accessibilityLabel="인기 글 없음">
         <AppEmpty
           title={emptyTitle}
           description={emptyDescription}
@@ -118,6 +118,9 @@ export function TopPostsList({
                 onPress={() => onPressItem(item.id)}
                 style={({ pressed }) => [styles.itemRow, pressed && styles.itemRowPressed]}
                 testID={`top-post-item-${item.id}`}
+                accessibilityRole="button"
+                accessibilityLabel={`${index + 1}위 인기 글 ${item.title}`}
+                accessibilityHint="게시글 상세로 이동"
               >
                 {content}
               </Pressable>
