@@ -30,8 +30,13 @@ async function activateByTestId(page: Page, testId: string) {
   await page.keyboard.press("Enter");
 }
 
-function growthDashboardFixture() {
-  return {
+type GrowthMockOptions = {
+  includeTopPostsField?: boolean;
+};
+
+function growthDashboardFixture(options: GrowthMockOptions = {}) {
+  const includeTopPostsField = options.includeTopPostsField ?? true;
+  const payload: Record<string, unknown> = {
     ok: true,
     message: "성장 대시보드 정보를 불러왔습니다.",
     summary: {
@@ -125,9 +130,25 @@ function growthDashboardFixture() {
       },
     ],
   };
+
+  if (includeTopPostsField) {
+    payload.top_posts = [
+      {
+        id: 701,
+        title: "테스트 인기 글",
+        excerpt: "반응이 좋은 글입니다.",
+        author_name: "테스터",
+        like_count: 21,
+        bookmark_count: 7,
+      },
+    ];
+  }
+
+  return payload;
 }
 
-async function mockGrowthApis(page: Page) {
+async function mockGrowthApis(page: Page, options: GrowthMockOptions = {}) {
+  const dashboardFixture = growthDashboardFixture(options);
   await page.route("**/api/**", async (route) => {
     if (isApiRequest(route, "/api/me")) {
       await route.fulfill({
@@ -142,7 +163,7 @@ async function mockGrowthApis(page: Page) {
       await route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify(growthDashboardFixture()),
+        body: JSON.stringify(dashboardFixture),
       });
       return;
     }
@@ -151,7 +172,7 @@ async function mockGrowthApis(page: Page) {
       await route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify({ ok: true, message: "fallback summary", summary: growthDashboardFixture().summary }),
+        body: JSON.stringify({ ok: true, message: "fallback summary", summary: dashboardFixture.summary }),
       });
       return;
     }
@@ -163,7 +184,7 @@ async function mockGrowthApis(page: Page) {
         body: JSON.stringify({
           ok: true,
           message: "fallback achievements",
-          achievements: growthDashboardFixture().achievements,
+          achievements: dashboardFixture.achievements,
         }),
       });
       return;
@@ -173,16 +194,7 @@ async function mockGrowthApis(page: Page) {
       await route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify({ ok: true, message: "fallback quests", campaigns: growthDashboardFixture().campaigns }),
-      });
-      return;
-    }
-
-    if (isApiRequest(route, "/api/growth/top-posts")) {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({ ok: true, message: "top posts", top_posts: [] }),
+        body: JSON.stringify({ ok: true, message: "fallback quests", campaigns: dashboardFixture.campaigns }),
       });
       return;
     }
@@ -222,6 +234,7 @@ test.describe("Growth 플로우", () => {
 
     await expect(page.getByTestId("growth-screen")).toBeVisible();
     await expect(page.getByText("오늘의 리포트")).toBeVisible();
+    await expect(page.getByText("테스트 인기 글")).toBeVisible();
 
     await activateByTestId(page, "growth-action-achievements");
     await expect(page.getByTestId("growth-achievements-screen")).toBeVisible();
@@ -239,5 +252,15 @@ test.describe("Growth 플로우", () => {
 
     await page.goBack();
     await expect(page.getByTestId("growth-screen")).toBeVisible();
+  });
+
+  test("dashboard top_posts가 없으면 인기 글 pending UI를 유지한다", async ({ page }) => {
+    await mockGrowthApis(page, { includeTopPostsField: false });
+    await setAuthToken(page, "mock-token-for-growth");
+
+    await page.goto("/growth");
+
+    await expect(page.getByTestId("growth-screen")).toBeVisible();
+    await expect(page.getByText("인기 글 추천 기능을 준비 중이에요. 곧 여기에서 확인할 수 있어요.")).toBeVisible();
   });
 });
