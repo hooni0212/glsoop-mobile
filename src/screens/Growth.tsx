@@ -32,7 +32,7 @@ function getStatusMeta(status: ProgressItem["status"]) {
 
 export default function GrowthScreen() {
   const router = useRouter();
-  const { summary, achievements, campaigns, loading, error, source, refetch } = useGrowthData();
+  const { summary, achievements, campaigns, topPosts, topPostsMode, loading, error, source, refetch } = useGrowthData();
   const [refreshing, setRefreshing] = useState(false);
 
   const questSummary = useMemo(() => {
@@ -210,10 +210,11 @@ export default function GrowthScreen() {
         />
 
         <TopPostsList
-          items={[]}
-          loading={false}
-          error={null}
-          mode="pending"
+          items={topPosts}
+          loading={loading && topPostsMode === "ready"}
+          error={topPostsMode === "ready" ? error : null}
+          mode={topPostsMode === "ready" ? "default" : "pending"}
+          onPressItem={(id) => router.push(`/posts/${id}`)}
           title="인기 글"
           description="반응이 좋은 글을 모아 보여주는 영역이에요."
           emptyDescription="인기 글 추천 기능을 준비 중이에요. 곧 여기에서 확인할 수 있어요."

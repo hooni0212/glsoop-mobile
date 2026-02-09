@@ -178,6 +178,15 @@ async function mockGrowthApis(page: Page) {
       return;
     }
 
+    if (isApiRequest(route, "/api/growth/top-posts")) {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ ok: true, message: "top posts", top_posts: [] }),
+      });
+      return;
+    }
+
     if (isApiRequest(route, "/api/quests/9001/claim")) {
       await route.fulfill({
         status: 200,

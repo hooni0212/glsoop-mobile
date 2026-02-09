@@ -83,6 +83,18 @@
 }
 ```
 
+### 1.5 TopPost (optional)
+```json
+{
+  "id": 1203,
+  "title": "오늘의 기록",
+  "excerpt": "오늘 쓴 글 요약...",
+  "author_name": "훈",
+  "like_count": 12,
+  "bookmark_count": 5
+}
+```
+
 ---
 
 ## 2) 성장 대시보드 (권장 1순위)
@@ -106,9 +118,14 @@
   ],
   "campaigns": [
     /* Campaign[] */
+  ],
+  "top_posts": [
+    /* TopPost[] */
   ]
 }
 ```
+
+- `top_posts`는 서버 적용 단계에 따라 생략될 수 있다(미포함 시 모바일은 pending UI 사용).
 
 #### Response (500)
 ```json
@@ -172,6 +189,24 @@
 }
 ```
 
+### 3.4 GET `/growth/top-posts` (optional)
+
+> 서버 배포 시점에 따라 미지원일 수 있다. 미지원/실패 시 모바일은 pending UI를 유지한다.
+
+#### Auth
+- 🔒 Private
+
+#### Response (200)
+```json
+{
+  "ok": true,
+  "message": "인기 글 정보를 불러왔습니다.",
+  "top_posts": [
+    /* TopPost[] */
+  ]
+}
+```
+
 ---
 
 ## 4) 퀘스트 보상 수령
@@ -220,6 +255,9 @@
 - `ui_json` -> `uiJson`
 - `completed_at` -> `completedAt`
 - `reward_claimed_at` -> `rewardClaimedAt`
+- `author_name` -> `authorName`
+- `like_count` -> `likeCount`
+- `bookmark_count` -> `bookmarkCount`
 
 ### 5.2 안전 기본값 (권장)
 - 배열: `achievements`, `campaigns`, `campaign.quests` -> 기본 `[]`
@@ -237,6 +275,7 @@
 
 - 성장 탭 초기 진입은 `/growth/dashboard` 1회 호출 기준으로 구현한다.
 - fallback은 네트워크/서버 오류 시에만 사용한다.
-- 현재 서버 canonical 응답에는 `top_posts` 필드가 없다.
-  - `TopPostsList`는 별도 API 확정 전까지 임시 데이터 전략(예: 빈 상태/대체 데이터)을 명시적으로 처리해야 한다.
-
+- `top_posts`는 optional 계약으로 취급한다.
+  - 대시보드(`top_posts`)가 있으면 우선 사용
+  - 미포함이면 `/growth/top-posts`를 best-effort로 조회
+  - 둘 다 미지원이면 `TopPostsList`는 pending UI 유지

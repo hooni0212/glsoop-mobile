@@ -4,6 +4,7 @@ import { apiGet, apiPost } from "@/lib/api";
 import { normalizeApiError, type AppErrorModel } from "@/lib/errors";
 
 export type GrowthLoadSource = "dashboard" | "fallback" | null;
+export type GrowthTopPostsMode = "pending" | "ready";
 
 export type GrowthSummary = {
   level: number;
@@ -63,10 +64,21 @@ export type GrowthCampaign = {
   quests: GrowthQuest[];
 };
 
+export type GrowthTopPost = {
+  id: string;
+  title: string;
+  excerpt: string;
+  authorName: string;
+  likeCount: number;
+  bookmarkCount: number;
+};
+
 export type UseGrowthDataResult = {
   summary: GrowthSummary | null;
   achievements: GrowthAchievement[];
   campaigns: GrowthCampaign[];
+  topPosts: GrowthTopPost[];
+  topPostsMode: GrowthTopPostsMode;
   loading: boolean;
   error: AppErrorModel | null;
   source: GrowthLoadSource;
@@ -80,6 +92,7 @@ type DashboardResponse = {
   summary?: unknown;
   achievements?: unknown;
   campaigns?: unknown;
+  top_posts?: unknown;
 };
 
 type SummaryResponse = {
@@ -100,6 +113,12 @@ type ActiveQuestsResponse = {
   campaigns?: unknown;
 };
 
+type TopPostsResponse = {
+  ok?: boolean;
+  message?: string;
+  top_posts?: unknown;
+};
+
 type ClaimQuestResponse = {
   ok?: boolean;
   message?: string;
@@ -112,6 +131,8 @@ type GrowthSnapshot = {
   summary: GrowthSummary | null;
   achievements: GrowthAchievement[];
   campaigns: GrowthCampaign[];
+  topPosts: GrowthTopPost[];
+  topPostsMode: GrowthTopPostsMode;
   loading: boolean;
   error: AppErrorModel | null;
   source: GrowthLoadSource;
@@ -129,6 +150,8 @@ const INITIAL_SNAPSHOT: GrowthSnapshot = {
   summary: null,
   achievements: [],
   campaigns: [],
+  topPosts: [],
+  topPostsMode: "pending",
   loading: false,
   error: null,
   source: null,
@@ -150,6 +173,12 @@ function toText(value: unknown, fallback = "") {
 
 function toNullableText(value: unknown) {
   return typeof value === "string" && value.length > 0 ? value : null;
+}
+
+function toIdText(value: unknown) {
+  if (typeof value === "string" && value.length > 0) return value;
+  if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  return "";
 }
 
 function toRecord(value: unknown): Record<string, unknown> {
@@ -240,6 +269,29 @@ function normalizeCampaigns(input: unknown): GrowthCampaign[] {
   return Array.isArray(input) ? input.map(normalizeCampaign) : [];
 }
 
+function normalizeTopPost(input: unknown): GrowthTopPost | null {
+  const row = toRecord(input);
+  const id = toIdText(row.id);
+  const title = toText(row.title);
+  if (!id || !title) return null;
+
+  return {
+    id,
+    title,
+    excerpt: toText(row.excerpt),
+    authorName: toText(row.author_name),
+    likeCount: toNumber(row.like_count),
+    bookmarkCount: toNumber(row.bookmark_count),
+  };
+}
+
+function normalizeTopPosts(input: unknown): GrowthTopPost[] {
+  if (!Array.isArray(input)) return [];
+  return input
+    .map(normalizeTopPost)
+    .filter((item): item is GrowthTopPost => item !== null);
+}
+
 function publishSnapshot(next: GrowthSnapshot) {
   growthSnapshot = next;
   listeners.forEach((listener) => listener(growthSnapshot));
@@ -299,11 +351,14 @@ function applyQuestClaim(snapshot: GrowthSnapshot, result: ClaimQuestResult, sta
 async function fetchDashboard() {
   const res = await apiGet<DashboardResponse>("/api/growth/dashboard");
   if (!res?.ok) throw new Error(res?.message || "성장 대시보드를 불러오지 못했어요.");
+  const hasTopPostsField = Object.prototype.hasOwnProperty.call(res, "top_posts");
 
   return {
     summary: normalizeSummary(res.summary),
     achievements: normalizeAchievements(res.achievements),
     campaigns: normalizeCampaigns(res.campaigns),
+    topPosts: normalizeTopPosts(res.top_posts),
+    topPostsMode: hasTopPostsField ? ("ready" as const) : ("pending" as const),
   };
 }
 
@@ -331,6 +386,25 @@ async function fetchFallback() {
   };
 }
 
+async function fetchTopPostsOptional(): Promise<{
+  topPosts: GrowthTopPost[];
+  topPostsMode: GrowthTopPostsMode;
+}> {
+  try {
+    const res = await apiGet<TopPostsResponse>("/api/growth/top-posts");
+    if (!res?.ok || !Object.prototype.hasOwnProperty.call(res, "top_posts")) {
+      return { topPosts: [], topPostsMode: "pending" };
+    }
+
+    return {
+      topPosts: normalizeTopPosts(res.top_posts),
+      topPostsMode: "ready",
+    };
+  } catch {
+    return { topPosts: [], topPostsMode: "pending" };
+  }
+}
+
 async function loadGrowth(force = false) {
   if (inflightLoad) {
     await inflightLoad;
@@ -350,11 +424,22 @@ async function loadGrowth(force = false) {
 
     try {
       const dashboard = await fetchDashboard();
+      let topPosts = dashboard.topPosts;
+      let topPostsMode = dashboard.topPostsMode;
+
+      if (topPostsMode === "pending") {
+        const optionalTopPosts = await fetchTopPostsOptional();
+        topPosts = optionalTopPosts.topPosts;
+        topPostsMode = optionalTopPosts.topPostsMode;
+      }
+
       publishSnapshot({
         ...growthSnapshot,
         summary: dashboard.summary,
         achievements: dashboard.achievements,
         campaigns: dashboard.campaigns,
+        topPosts,
+        topPostsMode,
         source: "dashboard",
         error: null,
         loading: false,
@@ -369,11 +454,14 @@ async function loadGrowth(force = false) {
 
     try {
       const fallback = await fetchFallback();
+      const optionalTopPosts = await fetchTopPostsOptional();
       publishSnapshot({
         ...growthSnapshot,
         summary: fallback.summary,
         achievements: fallback.achievements,
         campaigns: fallback.campaigns,
+        topPosts: optionalTopPosts.topPosts,
+        topPostsMode: optionalTopPosts.topPostsMode,
         source: "fallback",
         error: null,
         loading: false,
@@ -385,6 +473,8 @@ async function loadGrowth(force = false) {
         summary: null,
         achievements: [],
         campaigns: [],
+        topPosts: [],
+        topPostsMode: "pending",
         source: null,
         error: normalizeApiError(fallbackError),
         loading: false,
@@ -445,6 +535,8 @@ export function useGrowthData(): UseGrowthDataResult {
     summary: snapshot.summary,
     achievements: snapshot.achievements,
     campaigns: snapshot.campaigns,
+    topPosts: snapshot.topPosts,
+    topPostsMode: snapshot.topPostsMode,
     loading: snapshot.loading,
     error: snapshot.error,
     source: snapshot.source,
