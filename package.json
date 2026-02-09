@@ -9,7 +9,9 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "e2e:web": "playwright test"
+    "e2e:web": "playwright test",
+    "sync:notion": "node tools/notion-sync/sync.mjs",
+    "sync:notion:dry": "NOTION_SYNC_DRY_RUN=true node tools/notion-sync/sync.mjs"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
