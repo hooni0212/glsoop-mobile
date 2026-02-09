@@ -213,6 +213,7 @@ export default function GrowthScreen() {
           items={[]}
           loading={false}
           error={null}
+          mode="pending"
           title="인기 글"
           description="반응이 좋은 글을 모아 보여주는 영역이에요."
           emptyDescription="인기 글 추천 기능을 준비 중이에요. 곧 여기에서 확인할 수 있어요."

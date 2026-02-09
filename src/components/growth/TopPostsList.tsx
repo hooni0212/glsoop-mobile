@@ -1,5 +1,6 @@
 import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 
 import { AppEmpty } from "@/components/state/AppEmpty";
 import { AppError } from "@/components/state/AppError";
@@ -21,6 +22,7 @@ type Props = {
   loading?: boolean;
   error?: AppErrorModel | null;
   onPressItem?: (id: string) => void;
+  mode?: "default" | "pending";
   title?: string;
   description?: string;
   emptyTitle?: string;
@@ -32,6 +34,7 @@ export function TopPostsList({
   loading = false,
   error = null,
   onPressItem,
+  mode = "default",
   title = "인기 글",
   description = "반응이 좋은 글을 모아 보여주는 영역이에요.",
   emptyTitle = "인기 글을 준비 중이에요",
@@ -46,6 +49,24 @@ export function TopPostsList({
   }
 
   if (items.length === 0) {
+    if (mode === "pending") {
+      return (
+        <View style={styles.pendingCard}>
+          <View style={styles.pendingHeader}>
+            <View style={styles.pendingIconWrap}>
+              <Ionicons name="sparkles-outline" size={18} color={tokens.colors.green900} />
+            </View>
+            <View style={styles.pendingTitleBlock}>
+              <Text style={styles.pendingTitle}>{title}</Text>
+              <Text style={styles.pendingDescription}>{description}</Text>
+            </View>
+            <Text style={styles.pendingBadge}>준비 중</Text>
+          </View>
+          <Text style={styles.pendingHint}>{emptyDescription}</Text>
+        </View>
+      );
+    }
+
     return (
       <AppEmpty
         title={emptyTitle}
@@ -112,6 +133,55 @@ export function TopPostsList({
 }
 
 const styles = StyleSheet.create({
+  pendingCard: {
+    backgroundColor: tokens.colors.surfaceStrong,
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+    borderRadius: tokens.radius.xl,
+    padding: tokens.space.lg,
+    gap: tokens.space.sm as any,
+  },
+  pendingHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: tokens.space.sm as any,
+  },
+  pendingIconWrap: {
+    width: 34,
+    height: 34,
+    borderRadius: tokens.radius.pill,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: tokens.colors.green100,
+  },
+  pendingTitleBlock: {
+    flex: 1,
+    gap: 2,
+  },
+  pendingTitle: {
+    fontSize: tokens.font.body,
+    color: tokens.colors.text,
+    fontWeight: "900",
+  },
+  pendingDescription: {
+    fontSize: tokens.font.small,
+    color: tokens.colors.textMuted,
+  },
+  pendingBadge: {
+    fontSize: tokens.font.small,
+    fontWeight: "800",
+    color: tokens.colors.green900,
+    backgroundColor: tokens.colors.green100,
+    borderRadius: tokens.radius.pill,
+    overflow: "hidden",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  pendingHint: {
+    fontSize: tokens.font.small,
+    color: tokens.colors.textMuted,
+    lineHeight: 18,
+  },
   card: {
     backgroundColor: tokens.colors.surfaceStrong,
     borderWidth: 1,
