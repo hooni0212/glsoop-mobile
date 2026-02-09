@@ -99,6 +99,31 @@ type ActiveQuestsResponse = {
   campaigns?: unknown;
 };
 
+type GrowthSnapshot = {
+  summary: GrowthSummary | null;
+  achievements: GrowthAchievement[];
+  campaigns: GrowthCampaign[];
+  loading: boolean;
+  error: AppErrorModel | null;
+  source: GrowthLoadSource;
+};
+
+const CACHE_TTL_MS = 60_000;
+
+const INITIAL_SNAPSHOT: GrowthSnapshot = {
+  summary: null,
+  achievements: [],
+  campaigns: [],
+  loading: false,
+  error: null,
+  source: null,
+};
+
+let growthSnapshot: GrowthSnapshot = INITIAL_SNAPSHOT;
+let lastLoadedAt = 0;
+let inflightLoad: Promise<void> | null = null;
+const listeners = new Set<(next: GrowthSnapshot) => void>();
+
 function toNumber(value: unknown, fallback = 0) {
   const n = Number(value);
   return Number.isFinite(n) ? n : fallback;
@@ -200,6 +225,28 @@ function normalizeCampaigns(input: unknown): GrowthCampaign[] {
   return Array.isArray(input) ? input.map(normalizeCampaign) : [];
 }
 
+function publishSnapshot(next: GrowthSnapshot) {
+  growthSnapshot = next;
+  listeners.forEach((listener) => listener(growthSnapshot));
+}
+
+function hasGrowthData(snapshot: GrowthSnapshot) {
+  if (snapshot.summary) return true;
+  if (snapshot.achievements.length > 0) return true;
+  if (snapshot.campaigns.length > 0) return true;
+  return false;
+}
+
+function shouldUseCache(force: boolean) {
+  if (force) return false;
+  if (growthSnapshot.loading) return true;
+
+  const hasData = hasGrowthData(growthSnapshot);
+  if (!hasData) return false;
+
+  return Date.now() - lastLoadedAt < CACHE_TTL_MS;
+}
+
 async function fetchDashboard() {
   const res = await apiGet<DashboardResponse>("/api/growth/dashboard");
   if (!res?.ok) throw new Error(res?.message || "성장 대시보드를 불러오지 못했어요.");
@@ -235,24 +282,35 @@ async function fetchFallback() {
   };
 }
 
-export function useGrowthData(): UseGrowthDataResult {
-  const [summary, setSummary] = useState<GrowthSummary | null>(null);
-  const [achievements, setAchievements] = useState<GrowthAchievement[]>([]);
-  const [campaigns, setCampaigns] = useState<GrowthCampaign[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<AppErrorModel | null>(null);
-  const [source, setSource] = useState<GrowthLoadSource>(null);
+async function loadGrowth(force = false) {
+  if (inflightLoad) {
+    await inflightLoad;
+    return;
+  }
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+  if (shouldUseCache(force)) {
+    return;
+  }
+
+  inflightLoad = (async () => {
+    publishSnapshot({
+      ...growthSnapshot,
+      loading: true,
+      error: null,
+    });
 
     try {
       const dashboard = await fetchDashboard();
-      setSummary(dashboard.summary);
-      setAchievements(dashboard.achievements);
-      setCampaigns(dashboard.campaigns);
-      setSource("dashboard");
+      publishSnapshot({
+        ...growthSnapshot,
+        summary: dashboard.summary,
+        achievements: dashboard.achievements,
+        campaigns: dashboard.campaigns,
+        source: "dashboard",
+        error: null,
+        loading: false,
+      });
+      lastLoadedAt = Date.now();
       return;
     } catch (dashboardError) {
       if (__DEV__) {
@@ -262,32 +320,61 @@ export function useGrowthData(): UseGrowthDataResult {
 
     try {
       const fallback = await fetchFallback();
-      setSummary(fallback.summary);
-      setAchievements(fallback.achievements);
-      setCampaigns(fallback.campaigns);
-      setSource("fallback");
+      publishSnapshot({
+        ...growthSnapshot,
+        summary: fallback.summary,
+        achievements: fallback.achievements,
+        campaigns: fallback.campaigns,
+        source: "fallback",
+        error: null,
+        loading: false,
+      });
+      lastLoadedAt = Date.now();
     } catch (fallbackError) {
-      setError(normalizeApiError(fallbackError));
-      setSource(null);
-      setSummary(null);
-      setAchievements([]);
-      setCampaigns([]);
-    } finally {
-      setLoading(false);
+      publishSnapshot({
+        ...growthSnapshot,
+        summary: null,
+        achievements: [],
+        campaigns: [],
+        source: null,
+        error: normalizeApiError(fallbackError),
+        loading: false,
+      });
     }
-  }, []);
+  })().finally(() => {
+    inflightLoad = null;
+  });
+
+  await inflightLoad;
+}
+
+export function useGrowthData(): UseGrowthDataResult {
+  const [snapshot, setSnapshot] = useState<GrowthSnapshot>(growthSnapshot);
 
   useEffect(() => {
-    load();
-  }, [load]);
+    setSnapshot(growthSnapshot);
+
+    const listener = (next: GrowthSnapshot) => {
+      setSnapshot(next);
+    };
+    listeners.add(listener);
+
+    void loadGrowth(false);
+
+    return () => {
+      listeners.delete(listener);
+    };
+  }, []);
+
+  const refetch = useCallback(() => loadGrowth(true), []);
 
   return {
-    summary,
-    achievements,
-    campaigns,
-    loading,
-    error,
-    source,
-    refetch: load,
+    summary: snapshot.summary,
+    achievements: snapshot.achievements,
+    campaigns: snapshot.campaigns,
+    loading: snapshot.loading,
+    error: snapshot.error,
+    source: snapshot.source,
+    refetch,
   };
 }
