@@ -32,6 +32,7 @@ async function activateByTestId(page: Page, testId: string) {
 
 type GrowthMockOptions = {
   dashboardShouldFail?: boolean;
+  fallbackShouldFail?: boolean;
   topPostsEmpty?: boolean;
 };
 
@@ -150,6 +151,7 @@ function growthDashboardFixture(options: GrowthMockOptions = {}) {
 async function mockGrowthApis(page: Page, options: GrowthMockOptions = {}) {
   const dashboardFixture = growthDashboardFixture(options);
   const dashboardShouldFail = options.dashboardShouldFail ?? false;
+  const fallbackShouldFail = options.fallbackShouldFail ?? false;
   await page.route("**/api/**", async (route) => {
     if (isApiRequest(route, "/api/me")) {
       await route.fulfill({
@@ -177,7 +179,11 @@ async function mockGrowthApis(page: Page, options: GrowthMockOptions = {}) {
       await route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify({ ok: true, message: "fallback summary", summary: dashboardFixture.summary }),
+        body: JSON.stringify(
+          fallbackShouldFail
+            ? { ok: false, message: "성장 요약을 불러오지 못했어요." }
+            : { ok: true, message: "fallback summary", summary: dashboardFixture.summary }
+        ),
       });
       return;
     }
@@ -186,11 +192,15 @@ async function mockGrowthApis(page: Page, options: GrowthMockOptions = {}) {
       await route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify({
-          ok: true,
-          message: "fallback achievements",
-          achievements: dashboardFixture.achievements,
-        }),
+        body: JSON.stringify(
+          fallbackShouldFail
+            ? { ok: false, message: "업적 정보를 불러오지 못했어요." }
+            : {
+                ok: true,
+                message: "fallback achievements",
+                achievements: dashboardFixture.achievements,
+              }
+        ),
       });
       return;
     }
@@ -199,7 +209,11 @@ async function mockGrowthApis(page: Page, options: GrowthMockOptions = {}) {
       await route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify({ ok: true, message: "fallback quests", campaigns: dashboardFixture.campaigns }),
+        body: JSON.stringify(
+          fallbackShouldFail
+            ? { ok: false, message: "퀘스트 정보를 불러오지 못했어요." }
+            : { ok: true, message: "fallback quests", campaigns: dashboardFixture.campaigns }
+        ),
       });
       return;
     }
@@ -315,6 +329,17 @@ test.describe("Growth 플로우", () => {
     await expect(page.getByLabel("데이터 소스: 대체 데이터")).toBeVisible();
     await expect(page.getByTestId("top-posts-pending")).toBeVisible();
     await expect(page.getByText("인기 글 추천 기능을 준비 중이에요. 잠시만 기다려 주세요.")).toBeVisible();
+  });
+
+  test("dashboard와 fallback이 모두 실패하면 오류 UI를 노출한다", async ({ page }) => {
+    await mockGrowthApis(page, { dashboardShouldFail: true, fallbackShouldFail: true });
+    await setAuthToken(page, "mock-token-for-growth");
+
+    await page.goto("/growth");
+
+    await expect(page.getByTestId("growth-screen")).toBeVisible();
+    await expect(page.getByText("문제가 발생했어요")).toBeVisible();
+    await expect(page.getByText("성장 요약을 불러오지 못했어요.")).toBeVisible();
   });
 
   test("dashboard top_posts가 빈 배열이면 준비중이 아닌 empty UI를 보여준다", async ({ page }) => {
