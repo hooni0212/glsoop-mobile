@@ -199,7 +199,7 @@ export default function Home() {
 
   return (
     <SafeAreaView style={homeScreenStyles.safe}>
-      <HomeHeader onPressSearch={() => {}} />
+      <HomeHeader onPressSearch={() => router.push("/search")} />
 
       <CategoryChips
         categories={CATEGORIES}

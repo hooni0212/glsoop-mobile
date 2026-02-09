@@ -14,7 +14,7 @@ async function setAuthToken(page: Page, token: string) {
 }
 
 test.describe("홈 화면", () => {
-  test("기본 요소가 렌더링된다", async ({ page }) => {
+  test.beforeEach(async ({ page }) => {
     await page.route("**/api/me", async (route) => {
       await route.fulfill({
         status: 200,
@@ -31,11 +31,21 @@ test.describe("홈 화면", () => {
     });
 
     await setAuthToken(page, "mock-token-for-home");
+  });
+
+  test("기본 요소가 렌더링된다", async ({ page }) => {
     await page.goto("/");
 
     await expect(page.getByText("글숲")).toBeVisible();
     await expect(page.getByRole("button", { name: "검색" })).toBeVisible();
     await expect(page.getByRole("button", { name: "추천" })).toBeVisible();
     await expect(page.getByText("오늘의 추천")).toBeVisible();
+  });
+
+  test("검색 버튼을 누르면 검색 화면으로 이동한다", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("button", { name: "검색" }).click();
+    await expect(page.getByTestId("search-screen")).toBeVisible();
+    await expect(page.getByTestId("search-input")).toBeVisible();
   });
 });
