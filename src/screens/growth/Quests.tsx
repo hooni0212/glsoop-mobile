@@ -72,7 +72,7 @@ export default function QuestsScreen() {
       setClaimPendingByStateId((prev) => ({ ...prev, [stateId]: true }));
       try {
         const result = await claimQuestReward(stateId);
-        Alert.alert("보상 수령 완료", `+${result.gainedXp} XP를 획득했어요.`);
+        Alert.alert("보상 수령 완료", `+${result.gainedXp} XP를 얻었어요.`);
       } catch (claimError) {
         const normalized = normalizeApiError(claimError);
 
@@ -102,7 +102,7 @@ export default function QuestsScreen() {
         <View style={styles.center}>
           <AppEmpty
             title="로그인이 필요해요"
-            description="퀘스트를 확인하려면 로그인해 주세요."
+            description="퀘스트 정보를 보려면 로그인해 주세요."
             primaryAction={{ label: "로그인 하러가기", onPress: () => router.push("/(auth)") }}
           />
         </View>
@@ -146,7 +146,7 @@ export default function QuestsScreen() {
         {showError ? (
           <AppError
             error={{
-              title: error?.title || "퀘스트를 불러오지 못했어요",
+              title: error?.title || "퀘스트 정보를 불러오지 못했어요",
               description: error?.description,
             }}
           />
@@ -154,8 +154,8 @@ export default function QuestsScreen() {
 
         {showEmpty ? (
           <AppEmpty
-            title="활성 퀘스트가 없어요"
-            description="지금은 표시할 퀘스트가 없습니다. 아래로 당겨 다시 확인해 보세요."
+            title="진행 가능한 퀘스트가 없어요"
+            description="지금은 표시할 퀘스트가 없어요. 새 캠페인이 열리면 자동으로 표시돼요."
           />
         ) : null}
 
@@ -164,7 +164,7 @@ export default function QuestsScreen() {
             {error ? (
               <View style={styles.notice}>
                 <Text style={styles.noticeText}>
-                  일부 데이터가 최신이 아닐 수 있어요. 화면을 아래로 당겨 새로고침해 주세요.
+                  일부 데이터가 최신 상태가 아닐 수 있어요. 화면을 아래로 당겨 갱신해 주세요.
                 </Text>
               </View>
             ) : null}
@@ -241,12 +241,12 @@ function QuestItem({
           ]}
           testID={`quest-claim-btn-${quest.stateId}`}
         >
-          <Text style={styles.claimBtnText}>{claimPending ? "수령 처리 중..." : "보상 받기"}</Text>
+          <Text style={styles.claimBtnText}>{claimPending ? "수령 처리 중..." : "보상 수령"}</Text>
         </Pressable>
       ) : null}
 
       {!canClaim && quest.rewardClaimedAt ? (
-        <Text style={styles.claimedText}>보상 수령 완료</Text>
+        <Text style={styles.claimedText}>보상 수령됨</Text>
       ) : null}
     </View>
   );

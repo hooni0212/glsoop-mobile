@@ -76,7 +76,7 @@ export default function AchievementsScreen() {
         <View style={styles.center}>
           <AppEmpty
             title="로그인이 필요해요"
-            description="업적을 확인하려면 로그인해 주세요."
+            description="업적 정보를 보려면 로그인해 주세요."
             primaryAction={{ label: "로그인 하러가기", onPress: () => router.push("/(auth)") }}
           />
         </View>
@@ -120,7 +120,7 @@ export default function AchievementsScreen() {
         {showError ? (
           <AppError
             error={{
-              title: error?.title || "업적을 불러오지 못했어요",
+              title: error?.title || "업적 정보를 불러오지 못했어요",
               description: error?.description,
             }}
           />
@@ -128,8 +128,8 @@ export default function AchievementsScreen() {
 
         {showEmpty ? (
           <AppEmpty
-            title="업적이 아직 없어요"
-            description="글쓰기와 상호작용을 시작하면 업적이 열려요. 아래로 당겨 다시 확인해 보세요."
+            title="진행 중인 업적이 없어요"
+            description="글 작성이나 반응 활동을 시작하면 업적이 자동으로 표시돼요."
           />
         ) : null}
 
@@ -138,7 +138,7 @@ export default function AchievementsScreen() {
             {error ? (
               <View style={styles.notice}>
                 <Text style={styles.noticeText}>
-                  일부 데이터가 최신이 아닐 수 있어요. 화면을 아래로 당겨 새로고침해 주세요.
+                  일부 데이터가 최신 상태가 아닐 수 있어요. 화면을 아래로 당겨 갱신해 주세요.
                 </Text>
               </View>
             ) : null}
@@ -163,7 +163,7 @@ export default function AchievementsScreen() {
 function AchievementCard({ item }: { item: GrowthAchievement }) {
   const statusMeta = getStatusMeta(item.status);
   const percent = item.target > 0 ? clampPercent((item.progress / item.target) * 100) : 0;
-  const unlockedLabel = item.unlockedAt ? `달성일 ${formatDateLabel(item.unlockedAt)}` : "아직 달성 전";
+  const unlockedLabel = item.unlockedAt ? `달성일 ${formatDateLabel(item.unlockedAt)}` : "미달성";
 
   return (
     <View style={styles.card}>

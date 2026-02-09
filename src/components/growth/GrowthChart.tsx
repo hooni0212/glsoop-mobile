@@ -20,8 +20,8 @@ function clampPercent(value: number) {
 }
 
 function getSourceLabel(source?: GrowthLoadSource) {
-  if (source === "dashboard") return "Dashboard";
-  if (source === "fallback") return "Fallback";
+  if (source === "dashboard") return "기본 데이터";
+  if (source === "fallback") return "대체 데이터";
   return "";
 }
 
@@ -43,7 +43,7 @@ export function GrowthChart({
     return (
       <AppEmpty
         title="아직 성장 데이터가 없어요"
-        description="글을 작성하거나 상호작용을 시작하면 기록이 쌓여요."
+        description="활동을 시작하면 레벨과 XP가 이곳에 표시돼요."
       />
     );
   }
@@ -59,8 +59,8 @@ export function GrowthChart({
     <View style={styles.card}>
       <View style={styles.headerRow}>
         <View>
-          <Text style={styles.headerTitle}>성장 요약</Text>
-          <Text style={styles.headerMeta}>현재 레벨과 진행도를 확인해요.</Text>
+          <Text style={styles.headerTitle}>레벨 진행 현황</Text>
+          <Text style={styles.headerMeta}>XP와 스트릭을 기준으로 오늘의 성장을 보여줘요.</Text>
         </View>
         {sourceLabel ? (
           <Text style={styles.sourceBadge} accessibilityLabel={`데이터 소스: ${sourceLabel}`}>
@@ -106,7 +106,7 @@ export function GrowthChart({
 
       {error ? (
         <View style={styles.noticeRow}>
-          <Text style={styles.noticeText}>일부 데이터가 최신이 아닐 수 있어요. 화면을 아래로 당겨 새로고침해 주세요.</Text>
+          <Text style={styles.noticeText}>일부 데이터가 최신 상태가 아닐 수 있어요. 화면을 아래로 당겨 갱신해 주세요.</Text>
         </View>
       ) : null}
     </View>
