@@ -144,6 +144,9 @@ export function createPostDetailStyles(actionBarHeight: number) {
       fontWeight: "700",
       color: tokens.colors.textMuted,
     },
+    actionLabelActive: {
+      color: tokens.colors.green700,
+    },
 
     // --- States ---
     center: {
@@ -154,5 +157,104 @@ export function createPostDetailStyles(actionBarHeight: number) {
       gap: tokens.space.sm as any,
     },
 
+    // --- Bookmark modal ---
+    bookmarkModalOverlay: {
+      flex: 1,
+      backgroundColor: tokens.colors.overlay,
+      justifyContent: "center",
+      alignItems: "center",
+      padding: 18,
+    },
+    bookmarkModalCard: {
+      width: "100%",
+      maxWidth: 420,
+      backgroundColor: tokens.colors.white,
+      borderRadius: tokens.radius.lg,
+      borderWidth: 1,
+      borderColor: tokens.colors.borderStrong,
+      padding: tokens.space.lg,
+    },
+    bookmarkModalTitle: {
+      fontSize: 16,
+      fontWeight: "900",
+      color: tokens.colors.text,
+    },
+    bookmarkModalDescription: {
+      marginTop: 8,
+      fontSize: tokens.font.small,
+      color: tokens.colors.textMuted,
+      fontWeight: "700",
+    },
+    bookmarkModalLoadingWrap: {
+      marginTop: 14,
+    },
+    bookmarkModalLoadingText: {
+      fontSize: 13,
+      color: tokens.colors.textMuted,
+      fontWeight: "700",
+    },
+    bookmarkModalEmptyWrap: {
+      marginTop: 14,
+      gap: tokens.space.sm as any,
+    },
+    bookmarkModalEmptyText: {
+      fontSize: 13,
+      color: tokens.colors.textMuted,
+      fontWeight: "700",
+    },
+    bookmarkModalCreateBtn: {
+      borderRadius: 12,
+      backgroundColor: tokens.colors.green900,
+      alignItems: "center",
+      paddingVertical: 11,
+    },
+    bookmarkModalCreateBtnText: {
+      color: tokens.colors.textInverse,
+      fontSize: 13,
+      fontWeight: "900",
+    },
+    bookmarkModalList: {
+      marginTop: 14,
+      gap: 8,
+    },
+    bookmarkModalListItem: {
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: tokens.colors.borderStrong,
+      backgroundColor: tokens.colors.white,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    bookmarkModalListItemActive: {
+      borderColor: tokens.colors.green900,
+      backgroundColor: tokens.colors.green100,
+    },
+    bookmarkModalListItemName: {
+      color: tokens.colors.text,
+      fontSize: 13,
+      fontWeight: "800",
+    },
+    bookmarkModalListItemStatus: {
+      color: tokens.colors.textMuted,
+      fontSize: tokens.font.small,
+      fontWeight: "700",
+    },
+    bookmarkModalCloseBtn: {
+      marginTop: 14,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: tokens.colors.borderStrong,
+      alignItems: "center",
+      paddingVertical: 10,
+      backgroundColor: tokens.colors.bgMuted,
+    },
+    bookmarkModalCloseBtnText: {
+      color: tokens.colors.text,
+      fontSize: 13,
+      fontWeight: "900",
+    },
   });
 }

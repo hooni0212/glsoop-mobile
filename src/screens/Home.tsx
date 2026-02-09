@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Alert, Animated, SafeAreaView, Text } from "react-native";
+import React, { useMemo, useState } from "react";
+import { Alert, SafeAreaView } from "react-native";
 
 import { CategoryChips } from "@/components/home/CategoryChips";
 import { FeedSection } from "@/components/home/FeedSection";
@@ -12,6 +12,7 @@ import { useAuth } from "@/auth/AuthContext";
 import { togglePostLike } from "@/services/likeService";
 import { ApiError } from "@/lib/errors";
 import { router } from "expo-router";
+import { useToast } from "@/feedback/ToastProvider";
 import {
   addPostToBookmarkList,
   createBookmarkList,
@@ -26,9 +27,7 @@ type Category = (typeof CATEGORIES)[number];
 
 export default function Home() {
   const [active, setActive] = useState<Category>("추천");
-  const [bookmarkToastMessage, setBookmarkToastMessage] = useState<string | null>(null);
-  const bookmarkToastOpacity = useRef(new Animated.Value(0)).current;
-  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { showToast } = useToast();
 
   const query = useMemo(() => {
     if (active === "인기") return { limit: 10, sort: "popular" as const };
@@ -54,36 +53,6 @@ export default function Home() {
   const setBookmarkPendingState = (postId: string, pending: boolean) => {
     setBookmarkPending((prev) => ({ ...prev, [postId]: pending }));
   };
-
-  const showBookmarkToast = (message: string) => {
-    if (toastTimerRef.current) {
-      clearTimeout(toastTimerRef.current);
-      toastTimerRef.current = null;
-    }
-
-    setBookmarkToastMessage(message);
-    bookmarkToastOpacity.stopAnimation();
-    bookmarkToastOpacity.setValue(1);
-
-    toastTimerRef.current = setTimeout(() => {
-      Animated.timing(bookmarkToastOpacity, {
-        toValue: 0,
-        duration: 240,
-        useNativeDriver: true,
-      }).start(({ finished }) => {
-        if (finished) setBookmarkToastMessage(null);
-      });
-      toastTimerRef.current = null;
-    }, 1000);
-  };
-
-  useEffect(() => {
-    return () => {
-      if (toastTimerRef.current) {
-        clearTimeout(toastTimerRef.current);
-      }
-    };
-  }, []);
 
   const handleAuthError = async () => {
     await signOut();
@@ -130,7 +99,7 @@ export default function Home() {
       if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
         await handleAuthError();
       } else {
-        Alert.alert("좋아요 실패", "잠시 후 다시 시도해주세요.");
+        showToast("좋아요 처리에 실패했어요. 잠시 후 다시 시도해주세요.", { tone: "error" });
       }
     } finally {
       setPending(postId, false);
@@ -195,7 +164,7 @@ export default function Home() {
 
         await addPostToBookmarkList({ listId: targetList.id, postId });
         setBookmark(postId, true);
-        showBookmarkToast(`'${targetList.name}' 폴더에 저장했어요.`);
+        showToast(`'${targetList.name}' 폴더에 저장했어요.`, { tone: "success" });
       } else {
         const postLists = await listPostBookmarkLists(postId);
         const contains = postLists.filter((l) => Boolean(l.contains));
@@ -205,7 +174,7 @@ export default function Home() {
           );
         }
         setBookmark(postId, false);
-        showBookmarkToast("북마크에서 삭제했어요.");
+        showToast("북마크에서 삭제했어요.", { tone: "success" });
       }
     } catch (err) {
       patchItem(postId, (prev) => ({
@@ -218,7 +187,10 @@ export default function Home() {
       if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
         await handleAuthError();
       } else {
-        Alert.alert("북마크 실패", err instanceof Error ? err.message : "잠시 후 다시 시도해주세요.");
+        showToast(
+          err instanceof Error ? err.message : "북마크 처리에 실패했어요. 잠시 후 다시 시도해주세요.",
+          { tone: "error" }
+        );
       }
     } finally {
       setBookmarkPendingState(postId, false);
@@ -251,15 +223,6 @@ export default function Home() {
         onBookmarkPress={(id) => handleBookmark(String(id))}
         getLikeDisabled={(id) => Boolean(likePending[String(id)])}
       />
-
-      {bookmarkToastMessage ? (
-        <Animated.View
-          pointerEvents="none"
-          style={[homeScreenStyles.bookmarkToastWrap, { opacity: bookmarkToastOpacity }]}
-        >
-          <Text style={homeScreenStyles.bookmarkToastText}>{bookmarkToastMessage}</Text>
-        </Animated.View>
-      ) : null}
     </SafeAreaView>
   );
 }

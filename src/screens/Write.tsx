@@ -323,38 +323,19 @@ export default function Write() {
         </Modal>
 
         <Modal visible={submitSuccess} transparent animationType="fade">
-          <View
-            style={{
-              flex: 1,
-              backgroundColor: "rgba(0,0,0,0.25)",
-              justifyContent: "center",
-              alignItems: "center",
-            }}
-          >
-            <View
-              style={{
-                padding: 20,
-                borderRadius: 14,
-                backgroundColor: "#fff",
-                alignItems: "center",
-                width: 260,
-              }}
-            >
-              <Text style={{ fontWeight: "900", fontSize: 16, color: "#2B2B2B" }}>
-                완료되었어요
-              </Text>
-              <Text style={{ marginTop: 8, fontWeight: "700", color: "#444", textAlign: "center" }}>
-                어디로 이동할까요?
-              </Text>
-              <View style={{ width: "100%", marginTop: 14, gap: 8 }}>
+          <View style={styles.successOverlay}>
+            <View style={styles.successCard}>
+              <Text style={styles.successTitle}>완료되었어요</Text>
+              <Text style={styles.successMessage}>어디로 이동할까요?</Text>
+              <View style={styles.successActions}>
                 <Pressable
                   onPress={onSuccessViewPost}
-                  style={[styles.modalBtn, { backgroundColor: "#2E5A3D", borderColor: "#2E5A3D" }]}
+                  style={[styles.modalBtn, styles.modalBtnPrimary]}
                   accessibilityRole="button"
                   accessibilityLabel="방금 작성한 글 보기"
                   testID="write-success-view-post"
                 >
-                  <Text style={[styles.modalBtnText, { color: "#FFFFFF" }]}>방금 글 보기</Text>
+                  <Text style={[styles.modalBtnText, styles.modalBtnTextPrimary]}>방금 글 보기</Text>
                 </Pressable>
                 <Pressable
                   onPress={onSuccessGoHome}
@@ -371,36 +352,17 @@ export default function Write() {
         </Modal>
 
         {__DEV__ && (
-          <View style={{ padding: 12 }}>
-            <View
-              style={{
-                borderWidth: 1,
-                borderStyle: "dashed",
-                borderColor: "rgba(0,0,0,0.2)",
-                borderRadius: 10,
-                padding: 10,
-                backgroundColor: "rgba(0,0,0,0.03)",
-              }}
-            >
-              <View
-                style={{
-                  flexDirection: "row",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                }}
-              >
+          <View style={styles.devWrap}>
+            <View style={styles.devCard}>
+              <View style={styles.devRow}>
                 <View>
-                  <Text style={{ fontWeight: "800", color: "#333" }}>
-                    DEV: Draft helpers
-                  </Text>
-                  <Text style={{ color: "#444", marginTop: 4, fontSize: 12 }}>
-                    테스트 전 임시저장 비우기
-                  </Text>
+                  <Text style={styles.devTitle}>DEV: Draft helpers</Text>
+                  <Text style={styles.devDescription}>테스트 전 임시저장 비우기</Text>
                 </View>
                 <Pressable
                   onPress={clearDraftsForDev}
                   hitSlop={8}
-                  style={[styles.chip, { paddingHorizontal: 10 }]}
+                  style={[styles.chip, styles.chipCompact]}
                   accessibilityRole="button"
                   accessibilityLabel="임시저장 초기화"
                   testID="dev-clear-write-drafts"

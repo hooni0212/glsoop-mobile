@@ -1,5 +1,6 @@
 import React from "react";
 import { Text, TextInput, View } from "react-native";
+import { tokens } from "@/theme/tokens";
 
 type Props = {
   title: string;
@@ -23,7 +24,7 @@ export function WriteEditor({
         value={title}
         onChangeText={onChangeTitle}
         placeholder="제목을 입력해줘"
-        placeholderTextColor="#9AA0A6"
+        placeholderTextColor={tokens.colors.inputPlaceholder}
         style={styles.inputTitle}
         returnKeyType="next"
         accessibilityLabel="글쓰기 제목"
@@ -37,7 +38,7 @@ export function WriteEditor({
         value={body}
         onChangeText={onChangeBody}
         placeholder="오늘의 글을 남겨줘…"
-        placeholderTextColor="#9AA0A6"
+        placeholderTextColor={tokens.colors.inputPlaceholder}
         style={styles.inputBody}
         multiline
         accessibilityLabel="글쓰기 내용"

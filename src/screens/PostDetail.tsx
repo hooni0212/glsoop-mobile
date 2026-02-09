@@ -12,11 +12,12 @@ import { PostTopBar } from "@/components/post/PostTopBar";
 import { useAuth } from "@/auth/AuthContext";
 import { setBookmark, useBookmarkSnapshot } from "@/features/bookmarks/bookmarkStore";
 import { getLike, setLike, useLikeSnapshot } from "@/features/likes/likeStore";
+import { useToast } from "@/feedback/ToastProvider";
 import { togglePostLike } from "@/services/likeService";
 import { ApiError } from "@/lib/errors";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useMemo, useState } from "react";
-import { Alert, Modal, Pressable, SafeAreaView, ScrollView, Text, View } from "react-native";
+import { Alert, Modal, Pressable, SafeAreaView, ScrollView, Share, Text, View } from "react-native";
 import {
   addPostToBookmarkList,
   BookmarkList,
@@ -37,14 +38,16 @@ function formatKoreanDate(iso?: string) {
 
 export default function PostDetail() {
   // ✅ safe-area 계산은 navigation layer(BottomDockProvider)에서만 수행
+  // 상세 화면은 Tab 도크가 아닌 Action 도크 규격을 사용
   const dock = useBottomDock();
-  const styles = useMemo(() => createPostDetailStyles(dock.height), [dock.height]);
+  const styles = useMemo(() => createPostDetailStyles(dock.action.height), [dock.action.height]);
 
   const params = useLocalSearchParams<{ id: string }>();
   const id = params?.id ? String(params.id) : undefined;
 
   const { post, loading, error, refetch, mutatePost } = usePost(id);
   const { signOut } = useAuth();
+  const { showToast } = useToast();
   const [likePending, setLikePending] = useState(false);
   const [bookmarkModalVisible, setBookmarkModalVisible] = useState(false);
   const [bookmarkLoading, setBookmarkLoading] = useState(false);
@@ -111,7 +114,7 @@ export default function PostDetail() {
       if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
         await handleAuthError();
       } else {
-        Alert.alert("좋아요 실패", "잠시 후 다시 시도해주세요.");
+        showToast("좋아요 처리에 실패했어요. 잠시 후 다시 시도해주세요.", { tone: "error" });
       }
     } finally {
       setLikePending(false);
@@ -141,7 +144,10 @@ export default function PostDetail() {
         await handleAuthError();
         return;
       }
-      Alert.alert("북마크 불러오기 실패", err instanceof Error ? err.message : "잠시 후 다시 시도해주세요.");
+      showToast(
+        err instanceof Error ? err.message : "북마크 폴더를 불러오지 못했어요. 잠시 후 다시 시도해주세요.",
+        { tone: "error" }
+      );
     } finally {
       setBookmarkLoading(false);
     }
@@ -172,7 +178,10 @@ export default function PostDetail() {
         await handleAuthError();
         return;
       }
-      Alert.alert("북마크 처리 실패", err instanceof Error ? err.message : "잠시 후 다시 시도해주세요.");
+      showToast(
+        err instanceof Error ? err.message : "북마크 처리에 실패했어요. 잠시 후 다시 시도해주세요.",
+        { tone: "error" }
+      );
     } finally {
       setBookmarkPending((prev) => ({ ...prev, [listId]: false }));
     }
@@ -193,12 +202,29 @@ export default function PostDetail() {
         await handleAuthError();
         return;
       }
-      Alert.alert(
-        "폴더 생성 실패",
-        err instanceof Error ? err.message : "잠시 후 다시 시도해주세요."
+      showToast(
+        err instanceof Error ? err.message : "폴더 생성에 실패했어요. 잠시 후 다시 시도해주세요.",
+        { tone: "error" }
       );
     } finally {
       setBookmarkLoading(false);
+    }
+  };
+
+  const onPressShare = async () => {
+    if (!post) return;
+
+    const shareTitle = title || "글숲";
+    const shareContent = content.trim();
+    const shareMessage = shareContent ? `${shareTitle}\n\n${shareContent}` : shareTitle;
+
+    try {
+      await Share.share({
+        title: shareTitle,
+        message: shareMessage,
+      });
+    } catch {
+      showToast("공유에 실패했어요. 잠시 후 다시 시도해주세요.", { tone: "error" });
     }
   };
 
@@ -251,69 +277,40 @@ export default function PostDetail() {
             isBookmarked={isBookmarked}
             onPressLike={onPressLike}
             onPressBookmark={() => void openBookmarkModal()}
-            onPressShare={() => {}}
+            onPressShare={() => void onPressShare()}
             likeDisabled={likePending}
             likeTestID="post-like-btn"
-            height={dock.height}
-            paddingBottom={dock.paddingBottom}
+            height={dock.action.height}
+            paddingBottom={dock.action.paddingBottom}
             styles={styles}
           />
         </>
       )}
 
       <Modal visible={bookmarkModalVisible} transparent animationType="fade">
-        <View
-          style={{
-            flex: 1,
-            backgroundColor: "rgba(0,0,0,0.35)",
-            justifyContent: "center",
-            alignItems: "center",
-            padding: 18,
-          }}
-        >
-          <View
-            style={{
-              width: "100%",
-              maxWidth: 420,
-              backgroundColor: "#fff",
-              borderRadius: 16,
-              borderWidth: 1,
-              borderColor: "rgba(0,0,0,0.08)",
-              padding: 16,
-            }}
-          >
-            <Text style={{ fontSize: 16, fontWeight: "900", color: "#1F1F1F" }}>북마크 폴더 선택</Text>
-            <Text style={{ marginTop: 8, fontSize: 12, color: "#666", fontWeight: "700" }}>
+        <View style={styles.bookmarkModalOverlay}>
+          <View style={styles.bookmarkModalCard}>
+            <Text style={styles.bookmarkModalTitle}>북마크 폴더 선택</Text>
+            <Text style={styles.bookmarkModalDescription}>
               저장할 폴더를 선택하면 토글됩니다.
             </Text>
 
             {bookmarkLoading ? (
-              <View style={{ marginTop: 14 }}>
-                <Text style={{ fontSize: 13, color: "#444", fontWeight: "700" }}>
-                  불러오는 중...
-                </Text>
+              <View style={styles.bookmarkModalLoadingWrap}>
+                <Text style={styles.bookmarkModalLoadingText}>불러오는 중...</Text>
               </View>
             ) : bookmarkLists.length === 0 ? (
-              <View style={{ marginTop: 14, gap: 10 }}>
-                <Text style={{ fontSize: 13, color: "#444", fontWeight: "700" }}>
-                  북마크 폴더가 없어요.
-                </Text>
+              <View style={styles.bookmarkModalEmptyWrap}>
+                <Text style={styles.bookmarkModalEmptyText}>북마크 폴더가 없어요.</Text>
                 <Pressable
                   onPress={() => void createDefaultBookmarkList()}
-                  style={{
-                    borderRadius: 12,
-                    backgroundColor: "#2E5A3D",
-                    alignItems: "center",
-                    paddingVertical: 11,
-                  }}
+                  style={styles.bookmarkModalCreateBtn}
                 >
-                  <Text style={{ color: "#fff", fontSize: 13, fontWeight: "900" }}>
-                    기본 폴더 만들고 저장
-                  </Text>
+                  <Text style={styles.bookmarkModalCreateBtnText}>기본 폴더 만들고 저장</Text>
                 </Pressable>
               </View>
             ) : (
-              <View style={{ marginTop: 14, gap: 8 }}>
+              <View style={styles.bookmarkModalList}>
                 {bookmarkLists.map((list) => {
                   const pending = Boolean(bookmarkPending[list.id]);
                   return (
@@ -321,22 +318,13 @@ export default function PostDetail() {
                       key={list.id}
                       onPress={() => void toggleBookmarkInList(list.id)}
                       disabled={pending}
-                      style={{
-                        borderRadius: 12,
-                        borderWidth: 1,
-                        borderColor: list.contains ? "#2E5A3D" : "rgba(0,0,0,0.12)",
-                        backgroundColor: list.contains ? "rgba(46,90,61,0.1)" : "#fff",
-                        paddingHorizontal: 12,
-                        paddingVertical: 10,
-                        flexDirection: "row",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                      }}
+                      style={[
+                        styles.bookmarkModalListItem,
+                        list.contains && styles.bookmarkModalListItemActive,
+                      ]}
                     >
-                      <Text style={{ color: "#222", fontSize: 13, fontWeight: "800" }}>
-                        {list.name}
-                      </Text>
-                      <Text style={{ color: "#555", fontSize: 12, fontWeight: "700" }}>
+                      <Text style={styles.bookmarkModalListItemName}>{list.name}</Text>
+                      <Text style={styles.bookmarkModalListItemStatus}>
                         {pending ? "처리중..." : list.contains ? "저장됨" : "저장"}
                       </Text>
                     </Pressable>
@@ -347,17 +335,9 @@ export default function PostDetail() {
 
             <Pressable
               onPress={() => setBookmarkModalVisible(false)}
-              style={{
-                marginTop: 14,
-                borderRadius: 12,
-                borderWidth: 1,
-                borderColor: "rgba(0,0,0,0.12)",
-                alignItems: "center",
-                paddingVertical: 10,
-                backgroundColor: "#F7F7F7",
-              }}
+              style={styles.bookmarkModalCloseBtn}
             >
-              <Text style={{ color: "#2B2B2B", fontSize: 13, fontWeight: "900" }}>닫기</Text>
+              <Text style={styles.bookmarkModalCloseBtnText}>닫기</Text>
             </Pressable>
           </View>
         </View>

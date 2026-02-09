@@ -1,14 +1,21 @@
 export const tokens = {
   colors: {
     bg: '#fefdfb',
+    bgMuted: '#f6f6f4',
     surface: 'rgba(255,255,255,0.82)',
     surfaceStrong: 'rgba(255,255,255,0.92)',
+    white: '#ffffff',
     border: 'rgba(0,0,0,0.06)',
     borderStrong: 'rgba(0,0,0,0.10)',
+    overlay: 'rgba(0,0,0,0.35)',
+    overlaySoft: 'rgba(0,0,0,0.25)',
 
     text: '#17221b',
     textMuted: 'rgba(23,34,27,0.62)',
     textFaint: 'rgba(23,34,27,0.45)',
+    textInverse: '#ffffff',
+    textInverseMuted: 'rgba(255,255,255,0.9)',
+    inputPlaceholder: '#9aa0a6',
 
     green900: '#2d5a3d',
     green700: '#5a8a68',
@@ -17,6 +24,8 @@ export const tokens = {
     green050: '#f0f7f3',
 
     danger: '#b00020',
+    dangerSoft: 'rgba(176,0,32,0.06)',
+    dangerBorder: 'rgba(176,0,32,0.25)',
   },
 
   radius: {

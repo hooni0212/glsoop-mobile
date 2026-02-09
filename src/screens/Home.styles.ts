@@ -16,23 +16,6 @@ export const homeScreenStyles = StyleSheet.create({
     flex: 1,
     backgroundColor: tokens.colors.bg,
   },
-  bookmarkToastWrap: {
-    position: "absolute",
-    left: 16,
-    right: 16,
-    bottom: 96,
-    borderRadius: 12,
-    paddingVertical: 11,
-    paddingHorizontal: 14,
-    backgroundColor: "rgba(35,35,35,0.92)",
-    alignItems: "center",
-  },
-  bookmarkToastText: {
-    color: "#fff",
-    fontSize: 13,
-    fontWeight: "800",
-    letterSpacing: -0.2,
-  },
 });
 
 export const homeHeaderStyles = StyleSheet.create({

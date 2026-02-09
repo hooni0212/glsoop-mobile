@@ -20,6 +20,12 @@ export const TAB_BAR_BASE_HEIGHT = 74;
 export const TAB_BAR_PADDING_TOP = 10;
 export const TAB_BAR_PADDING_BOTTOM = 10;
 
+/** 글 상세/행동 영역 하단 액션바의 베이스 높이 */
+export const ACTION_BAR_BASE_HEIGHT = 62;
+
+/** 액션바 하단 패딩(디자인값). safe-area는 paddingBottom에 더해진다. */
+export const ACTION_BAR_PADDING_BOTTOM = 10;
+
 /** 가운데 FAB 자리를 위한 탭 간격 */
 export const TAB_BAR_CENTER_GAP = 74;
 
@@ -45,6 +51,16 @@ export function getTabBarTotalHeight(insetBottom?: number) {
 /** 탭바의 하단 패딩(= 디자인 패딩 + safe-area bottom) */
 export function getTabBarPaddingBottom(insetBottom?: number) {
   return TAB_BAR_PADDING_BOTTOM + normalizeInsetBottom(insetBottom);
+}
+
+/** 최종 액션바 높이(= 베이스 + safe-area bottom) */
+export function getActionBarTotalHeight(insetBottom?: number) {
+  return ACTION_BAR_BASE_HEIGHT + normalizeInsetBottom(insetBottom);
+}
+
+/** 액션바의 하단 패딩(= 디자인 패딩 + safe-area bottom) */
+export function getActionBarPaddingBottom(insetBottom?: number) {
+  return ACTION_BAR_PADDING_BOTTOM + normalizeInsetBottom(insetBottom);
 }
 
 /**

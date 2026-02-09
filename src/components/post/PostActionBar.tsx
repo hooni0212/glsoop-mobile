@@ -18,6 +18,7 @@ export type PostActionBarProps = {
     actionsBar: any;
     actionBtn: any;
     actionLabel: any;
+    actionLabelActive?: any;
   };
 };
 
@@ -35,7 +36,7 @@ export function PostActionBar({
   styles,
 }: PostActionBarProps) {
   return (
-    <View style={[styles.actionsBar, { height, paddingBottom }]}> 
+    <View style={[styles.actionsBar, { height, paddingBottom }]}>
       <Pressable
         onPress={onPressLike}
         style={styles.actionBtn}
@@ -46,9 +47,9 @@ export function PostActionBar({
         <Ionicons
           name={isLiked ? "heart" : "heart-outline"}
           size={22}
-          color={isLiked ? "#D64242" : tokens.colors.textMuted}
+          color={isLiked ? tokens.colors.green700 : tokens.colors.textMuted}
         />
-        <Text style={styles.actionLabel}>{likeCount}</Text>
+        <Text style={[styles.actionLabel, isLiked && styles.actionLabelActive]}>{likeCount}</Text>
       </Pressable>
 
       <Pressable onPress={onPressBookmark} style={styles.actionBtn} hitSlop={10}>
