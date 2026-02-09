@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 
-import { apiGet } from "@/lib/api";
+import { apiGet, apiPost } from "@/lib/api";
 import { normalizeApiError, type AppErrorModel } from "@/lib/errors";
 
 export type GrowthLoadSource = "dashboard" | "fallback" | null;
@@ -71,6 +71,7 @@ export type UseGrowthDataResult = {
   error: AppErrorModel | null;
   source: GrowthLoadSource;
   refetch: () => Promise<void>;
+  claimQuestReward: (stateId: number) => Promise<ClaimQuestResult>;
 };
 
 type DashboardResponse = {
@@ -99,6 +100,14 @@ type ActiveQuestsResponse = {
   campaigns?: unknown;
 };
 
+type ClaimQuestResponse = {
+  ok?: boolean;
+  message?: string;
+  reward_claimed_at?: unknown;
+  gained_xp?: unknown;
+  new_xp?: unknown;
+};
+
 type GrowthSnapshot = {
   summary: GrowthSummary | null;
   achievements: GrowthAchievement[];
@@ -106,6 +115,12 @@ type GrowthSnapshot = {
   loading: boolean;
   error: AppErrorModel | null;
   source: GrowthLoadSource;
+};
+
+export type ClaimQuestResult = {
+  rewardClaimedAt: string | null;
+  gainedXp: number;
+  newXp: number;
 };
 
 const CACHE_TTL_MS = 60_000;
@@ -247,6 +262,40 @@ function shouldUseCache(force: boolean) {
   return Date.now() - lastLoadedAt < CACHE_TTL_MS;
 }
 
+function applyQuestClaim(snapshot: GrowthSnapshot, result: ClaimQuestResult, stateId: number) {
+  let patched = false;
+
+  const campaigns = snapshot.campaigns.map((campaign) => {
+    const quests = campaign.quests.map((quest) => {
+      if (quest.stateId !== stateId) return quest;
+      patched = true;
+      return {
+        ...quest,
+        rewardClaimedAt: result.rewardClaimedAt,
+      };
+    });
+
+    return { ...campaign, quests };
+  });
+
+  const summary = snapshot.summary
+    ? {
+        ...snapshot.summary,
+        currentXp: result.newXp > 0 ? result.newXp : snapshot.summary.currentXp,
+      }
+    : snapshot.summary;
+
+  if (!patched && summary === snapshot.summary) {
+    return snapshot;
+  }
+
+  return {
+    ...snapshot,
+    summary,
+    campaigns,
+  };
+}
+
 async function fetchDashboard() {
   const res = await apiGet<DashboardResponse>("/api/growth/dashboard");
   if (!res?.ok) throw new Error(res?.message || "성장 대시보드를 불러오지 못했어요.");
@@ -348,6 +397,29 @@ async function loadGrowth(force = false) {
   await inflightLoad;
 }
 
+async function claimQuestRewardRequest(stateId: number): Promise<ClaimQuestResult> {
+  const res = await apiPost<ClaimQuestResponse>(`/api/quests/${encodeURIComponent(String(stateId))}/claim`);
+  if (!res?.ok) {
+    throw new Error(res?.message || "퀘스트 보상 수령에 실패했어요.");
+  }
+
+  const result: ClaimQuestResult = {
+    rewardClaimedAt: toNullableText(res.reward_claimed_at),
+    gainedXp: toNumber(res.gained_xp),
+    newXp: toNumber(res.new_xp),
+  };
+
+  publishSnapshot({
+    ...applyQuestClaim(growthSnapshot, result, stateId),
+    error: null,
+  });
+
+  // 서버 계산값(레벨/XP/요약)을 동기화하기 위해 1회 재조회
+  void loadGrowth(true);
+
+  return result;
+}
+
 export function useGrowthData(): UseGrowthDataResult {
   const [snapshot, setSnapshot] = useState<GrowthSnapshot>(growthSnapshot);
 
@@ -367,6 +439,7 @@ export function useGrowthData(): UseGrowthDataResult {
   }, []);
 
   const refetch = useCallback(() => loadGrowth(true), []);
+  const claimQuestReward = useCallback((stateId: number) => claimQuestRewardRequest(stateId), []);
 
   return {
     summary: snapshot.summary,
@@ -376,5 +449,6 @@ export function useGrowthData(): UseGrowthDataResult {
     error: snapshot.error,
     source: snapshot.source,
     refetch,
+    claimQuestReward,
   };
 }
