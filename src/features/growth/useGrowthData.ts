@@ -113,12 +113,6 @@ type ActiveQuestsResponse = {
   campaigns?: unknown;
 };
 
-type TopPostsResponse = {
-  ok?: boolean;
-  message?: string;
-  top_posts?: unknown;
-};
-
 type ClaimQuestResponse = {
   ok?: boolean;
   message?: string;
@@ -386,25 +380,6 @@ async function fetchFallback() {
   };
 }
 
-async function fetchTopPostsOptional(): Promise<{
-  topPosts: GrowthTopPost[];
-  topPostsMode: GrowthTopPostsMode;
-}> {
-  try {
-    const res = await apiGet<TopPostsResponse>("/api/growth/top-posts");
-    if (!res?.ok || !Object.prototype.hasOwnProperty.call(res, "top_posts")) {
-      return { topPosts: [], topPostsMode: "pending" };
-    }
-
-    return {
-      topPosts: normalizeTopPosts(res.top_posts),
-      topPostsMode: "ready",
-    };
-  } catch {
-    return { topPosts: [], topPostsMode: "pending" };
-  }
-}
-
 async function loadGrowth(force = false) {
   if (inflightLoad) {
     await inflightLoad;
@@ -424,22 +399,14 @@ async function loadGrowth(force = false) {
 
     try {
       const dashboard = await fetchDashboard();
-      let topPosts = dashboard.topPosts;
-      let topPostsMode = dashboard.topPostsMode;
-
-      if (topPostsMode === "pending") {
-        const optionalTopPosts = await fetchTopPostsOptional();
-        topPosts = optionalTopPosts.topPosts;
-        topPostsMode = optionalTopPosts.topPostsMode;
-      }
 
       publishSnapshot({
         ...growthSnapshot,
         summary: dashboard.summary,
         achievements: dashboard.achievements,
         campaigns: dashboard.campaigns,
-        topPosts,
-        topPostsMode,
+        topPosts: dashboard.topPosts,
+        topPostsMode: dashboard.topPostsMode,
         source: "dashboard",
         error: null,
         loading: false,
@@ -454,14 +421,13 @@ async function loadGrowth(force = false) {
 
     try {
       const fallback = await fetchFallback();
-      const optionalTopPosts = await fetchTopPostsOptional();
       publishSnapshot({
         ...growthSnapshot,
         summary: fallback.summary,
         achievements: fallback.achievements,
         campaigns: fallback.campaigns,
-        topPosts: optionalTopPosts.topPosts,
-        topPostsMode: optionalTopPosts.topPostsMode,
+        topPosts: [],
+        topPostsMode: "pending",
         source: "fallback",
         error: null,
         loading: false,

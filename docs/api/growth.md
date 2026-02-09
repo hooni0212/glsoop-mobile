@@ -83,7 +83,7 @@
 }
 ```
 
-### 1.5 TopPost (optional)
+### 1.5 TopPost
 ```json
 {
   "id": 1203,
@@ -125,7 +125,7 @@
 }
 ```
 
-- `top_posts`는 서버 적용 단계에 따라 생략될 수 있다(미포함 시 모바일은 pending UI 사용).
+- `top_posts`는 대시보드 응답에 항상 포함된다(데이터가 없으면 `[]`).
 
 #### Response (500)
 ```json
@@ -185,24 +185,6 @@
   "message": "활성 퀘스트를 불러왔습니다.",
   "campaigns": [
     /* Campaign[] */
-  ]
-}
-```
-
-### 3.4 GET `/growth/top-posts` (optional)
-
-> 서버 배포 시점에 따라 미지원일 수 있다. 미지원/실패 시 모바일은 pending UI를 유지한다.
-
-#### Auth
-- 🔒 Private
-
-#### Response (200)
-```json
-{
-  "ok": true,
-  "message": "인기 글 정보를 불러왔습니다.",
-  "top_posts": [
-    /* TopPost[] */
   ]
 }
 ```
@@ -275,7 +257,6 @@
 
 - 성장 탭 초기 진입은 `/growth/dashboard` 1회 호출 기준으로 구현한다.
 - fallback은 네트워크/서버 오류 시에만 사용한다.
-- `top_posts`는 optional 계약으로 취급한다.
-  - 대시보드(`top_posts`)가 있으면 우선 사용
-  - 미포함이면 `/growth/top-posts`를 best-effort로 조회
-  - 둘 다 미지원이면 `TopPostsList`는 pending UI 유지
+- `top_posts`는 `/growth/dashboard` 응답의 canonical 필드다.
+  - 값이 비어 있으면 `TopPostsList`는 empty UI를 표시
+  - dashboard 자체가 실패해 fallback 모드가 되면 `TopPostsList`는 pending UI 유지
