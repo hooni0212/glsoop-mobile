@@ -1,5 +1,5 @@
-import React, { useMemo } from "react";
-import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
+import React, { useCallback, useMemo, useState } from "react";
+import { RefreshControl, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 
 import { GrowthDetailTopBar } from "@/components/growth/GrowthDetailTopBar";
@@ -30,6 +30,17 @@ function getStatusMeta(status: GrowthAchievement["status"]) {
 export default function AchievementsScreen() {
   const router = useRouter();
   const { achievements, loading, error, refetch } = useGrowthData();
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = useCallback(async () => {
+    if (refreshing || loading) return;
+    setRefreshing(true);
+    try {
+      await refetch();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refreshing, loading, refetch]);
 
   const sections = useMemo(() => {
     const inProgress = achievements
@@ -56,11 +67,7 @@ export default function AchievementsScreen() {
   if (error?.kind === "auth") {
     return (
       <SafeAreaView style={styles.safe}>
-        <GrowthDetailTopBar
-          title="업적 상세"
-          subtitle="로그인이 필요해요"
-          onPressBack={() => router.back()}
-        />
+        <GrowthDetailTopBar title="업적 상세" subtitle="로그인이 필요해요" onPressBack={() => router.back()} />
         <View style={styles.center}>
           <AppEmpty
             title="로그인이 필요해요"
@@ -72,57 +79,9 @@ export default function AchievementsScreen() {
     );
   }
 
-  if (loading && achievements.length === 0) {
-    return (
-      <SafeAreaView style={styles.safe}>
-        <GrowthDetailTopBar
-          title="업적 상세"
-          subtitle="성장 기록"
-          onPressBack={() => router.back()}
-          onPressRefresh={refetch}
-        />
-        <View style={styles.center}>
-          <AppLoading message="업적 목록을 불러오는 중..." />
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  if (error && achievements.length === 0) {
-    return (
-      <SafeAreaView style={styles.safe}>
-        <GrowthDetailTopBar
-          title="업적 상세"
-          subtitle="성장 기록"
-          onPressBack={() => router.back()}
-          onPressRefresh={refetch}
-        />
-        <View style={styles.center}>
-          <AppError error={error} onRetry={error.canRetry ? refetch : undefined} />
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  if (achievements.length === 0) {
-    return (
-      <SafeAreaView style={styles.safe}>
-        <GrowthDetailTopBar
-          title="업적 상세"
-          subtitle="성장 기록"
-          onPressBack={() => router.back()}
-          onPressRefresh={refetch}
-        />
-        <View style={styles.center}>
-          <AppEmpty
-            title="업적이 아직 없어요"
-            description="글쓰기와 상호작용을 시작하면 업적이 열립니다."
-            primaryAction={{ label: "새로고침", onPress: refetch }}
-          />
-        </View>
-      </SafeAreaView>
-    );
-  }
+  const showLoading = loading && achievements.length === 0;
+  const showError = Boolean(error && achievements.length === 0);
+  const showEmpty = !showLoading && !showError && achievements.length === 0;
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -130,29 +89,65 @@ export default function AchievementsScreen() {
         title="업적 상세"
         subtitle={`전체 ${achievements.length}개`}
         onPressBack={() => router.back()}
-        onPressRefresh={refetch}
       />
 
-      <ScrollView contentContainerStyle={styles.content}>
-        {error ? (
-          <View style={styles.notice}>
-            <Text style={styles.noticeText}>일부 데이터를 다시 가져오는 중이에요. 최신 상태가 아닐 수 있어요.</Text>
-            <Pressable onPress={refetch} style={styles.noticeBtn}>
-              <Text style={styles.noticeBtnText}>다시 시도</Text>
-            </Pressable>
-          </View>
+      <ScrollView
+        contentContainerStyle={[
+          styles.content,
+          (showLoading || showError || showEmpty) && styles.contentCentered,
+        ]}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={tokens.colors.green700}
+            colors={[tokens.colors.green700]}
+            progressBackgroundColor={tokens.colors.surfaceStrong}
+            title={refreshing ? "새로고침 중..." : "아래로 당겨 새로고침"}
+            titleColor={tokens.colors.textMuted}
+          />
+        }
+      >
+        {showLoading ? <AppLoading message="업적 목록을 불러오는 중..." /> : null}
+
+        {showError ? (
+          <AppError
+            error={{
+              title: error?.title || "업적을 불러오지 못했어요",
+              description: error?.description,
+            }}
+          />
         ) : null}
 
-        {sections.map((section) => (
-          <View key={section.key} style={styles.section}>
-            <Text style={styles.sectionTitle}>{section.title}</Text>
-            <View style={styles.list}>
-              {section.items.map((item) => (
-                <AchievementCard key={item.id} item={item} />
-              ))}
-            </View>
-          </View>
-        ))}
+        {showEmpty ? (
+          <AppEmpty
+            title="업적이 아직 없어요"
+            description="글쓰기와 상호작용을 시작하면 업적이 열려요. 아래로 당겨 다시 확인해 보세요."
+          />
+        ) : null}
+
+        {!showLoading && !showError && !showEmpty ? (
+          <>
+            {error ? (
+              <View style={styles.notice}>
+                <Text style={styles.noticeText}>
+                  일부 데이터가 최신이 아닐 수 있어요. 화면을 아래로 당겨 새로고침해 주세요.
+                </Text>
+              </View>
+            ) : null}
+
+            {sections.map((section) => (
+              <View key={section.key} style={styles.section}>
+                <Text style={styles.sectionTitle}>{section.title}</Text>
+                <View style={styles.list}>
+                  {section.items.map((item) => (
+                    <AchievementCard key={item.id} item={item} />
+                  ))}
+                </View>
+              </View>
+            ))}
+          </>
+        ) : null}
       </ScrollView>
     </SafeAreaView>
   );
@@ -207,32 +202,21 @@ const styles = StyleSheet.create({
     paddingBottom: 120,
     gap: tokens.space.lg as any,
   },
+  contentCentered: {
+    flexGrow: 1,
+    justifyContent: "center",
+  },
   notice: {
     borderRadius: tokens.radius.lg,
     borderWidth: 1,
     borderColor: tokens.colors.borderStrong,
     backgroundColor: tokens.colors.surfaceStrong,
     padding: tokens.space.md,
-    gap: tokens.space.sm as any,
   },
   noticeText: {
     fontSize: tokens.font.small,
     color: tokens.colors.textMuted,
     lineHeight: 18,
-  },
-  noticeBtn: {
-    alignSelf: "flex-start",
-    paddingHorizontal: tokens.space.sm,
-    paddingVertical: 8,
-    borderRadius: tokens.radius.pill,
-    borderWidth: 1,
-    borderColor: tokens.colors.borderStrong,
-    backgroundColor: tokens.colors.green100,
-  },
-  noticeBtnText: {
-    fontSize: tokens.font.small,
-    fontWeight: "800",
-    color: tokens.colors.green900,
   },
   section: {
     gap: tokens.space.sm as any,

@@ -1,5 +1,5 @@
-import React, { useMemo } from "react";
-import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
+import React, { useCallback, useMemo, useState } from "react";
+import { RefreshControl, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 
 import { GrowthDetailTopBar } from "@/components/growth/GrowthDetailTopBar";
@@ -29,6 +29,17 @@ function getQuestStatusMeta(status: GrowthQuest["status"]) {
 export default function QuestsScreen() {
   const router = useRouter();
   const { campaigns, loading, error, refetch } = useGrowthData();
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = useCallback(async () => {
+    if (refreshing || loading) return;
+    setRefreshing(true);
+    try {
+      await refetch();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refreshing, loading, refetch]);
 
   const sortedCampaigns = useMemo(() => {
     return campaigns
@@ -55,11 +66,7 @@ export default function QuestsScreen() {
   if (error?.kind === "auth") {
     return (
       <SafeAreaView style={styles.safe}>
-        <GrowthDetailTopBar
-          title="퀘스트 상세"
-          subtitle="로그인이 필요해요"
-          onPressBack={() => router.back()}
-        />
+        <GrowthDetailTopBar title="퀘스트 상세" subtitle="로그인이 필요해요" onPressBack={() => router.back()} />
         <View style={styles.center}>
           <AppEmpty
             title="로그인이 필요해요"
@@ -71,57 +78,9 @@ export default function QuestsScreen() {
     );
   }
 
-  if (loading && questCount === 0) {
-    return (
-      <SafeAreaView style={styles.safe}>
-        <GrowthDetailTopBar
-          title="퀘스트 상세"
-          subtitle="캠페인 진행"
-          onPressBack={() => router.back()}
-          onPressRefresh={refetch}
-        />
-        <View style={styles.center}>
-          <AppLoading message="퀘스트 목록을 불러오는 중..." />
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  if (error && questCount === 0) {
-    return (
-      <SafeAreaView style={styles.safe}>
-        <GrowthDetailTopBar
-          title="퀘스트 상세"
-          subtitle="캠페인 진행"
-          onPressBack={() => router.back()}
-          onPressRefresh={refetch}
-        />
-        <View style={styles.center}>
-          <AppError error={error} onRetry={error.canRetry ? refetch : undefined} />
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  if (questCount === 0) {
-    return (
-      <SafeAreaView style={styles.safe}>
-        <GrowthDetailTopBar
-          title="퀘스트 상세"
-          subtitle="캠페인 진행"
-          onPressBack={() => router.back()}
-          onPressRefresh={refetch}
-        />
-        <View style={styles.center}>
-          <AppEmpty
-            title="활성 퀘스트가 없어요"
-            description="다음 캠페인이 열리면 여기에 자동으로 표시됩니다."
-            primaryAction={{ label: "새로고침", onPress: refetch }}
-          />
-        </View>
-      </SafeAreaView>
-    );
-  }
+  const showLoading = loading && questCount === 0;
+  const showError = Boolean(error && questCount === 0);
+  const showEmpty = !showLoading && !showError && questCount === 0;
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -129,34 +88,70 @@ export default function QuestsScreen() {
         title="퀘스트 상세"
         subtitle={`캠페인 ${campaigns.length}개 · 퀘스트 ${questCount}개`}
         onPressBack={() => router.back()}
-        onPressRefresh={refetch}
       />
 
-      <ScrollView contentContainerStyle={styles.content}>
-        {error ? (
-          <View style={styles.notice}>
-            <Text style={styles.noticeText}>일부 데이터가 오래된 상태일 수 있어요. 새로고침으로 동기화하세요.</Text>
-            <Pressable onPress={refetch} style={styles.noticeBtn}>
-              <Text style={styles.noticeBtnText}>다시 시도</Text>
-            </Pressable>
-          </View>
+      <ScrollView
+        contentContainerStyle={[
+          styles.content,
+          (showLoading || showError || showEmpty) && styles.contentCentered,
+        ]}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={tokens.colors.green700}
+            colors={[tokens.colors.green700]}
+            progressBackgroundColor={tokens.colors.surfaceStrong}
+            title={refreshing ? "새로고침 중..." : "아래로 당겨 새로고침"}
+            titleColor={tokens.colors.textMuted}
+          />
+        }
+      >
+        {showLoading ? <AppLoading message="퀘스트 목록을 불러오는 중..." /> : null}
+
+        {showError ? (
+          <AppError
+            error={{
+              title: error?.title || "퀘스트를 불러오지 못했어요",
+              description: error?.description,
+            }}
+          />
         ) : null}
 
-        {sortedCampaigns.map((campaign) => (
-          <View key={campaign.id} style={styles.campaignCard}>
-            <View style={styles.campaignHeader}>
-              <Text style={styles.campaignName}>{campaign.name}</Text>
-              <Text style={styles.campaignMeta}>{campaign.quests.length}개 퀘스트</Text>
-            </View>
-            {campaign.description ? <Text style={styles.campaignDesc}>{campaign.description}</Text> : null}
+        {showEmpty ? (
+          <AppEmpty
+            title="활성 퀘스트가 없어요"
+            description="지금은 표시할 퀘스트가 없습니다. 아래로 당겨 다시 확인해 보세요."
+          />
+        ) : null}
 
-            <View style={styles.questList}>
-              {campaign.quests.map((quest) => (
-                <QuestItem key={quest.id} quest={quest} />
-              ))}
-            </View>
-          </View>
-        ))}
+        {!showLoading && !showError && !showEmpty ? (
+          <>
+            {error ? (
+              <View style={styles.notice}>
+                <Text style={styles.noticeText}>
+                  일부 데이터가 최신이 아닐 수 있어요. 화면을 아래로 당겨 새로고침해 주세요.
+                </Text>
+              </View>
+            ) : null}
+
+            {sortedCampaigns.map((campaign) => (
+              <View key={campaign.id} style={styles.campaignCard}>
+                <View style={styles.campaignHeader}>
+                  <Text style={styles.campaignName}>{campaign.name}</Text>
+                  <Text style={styles.campaignMeta}>{campaign.quests.length}개 퀘스트</Text>
+                </View>
+                {campaign.description ? <Text style={styles.campaignDesc}>{campaign.description}</Text> : null}
+
+                <View style={styles.questList}>
+                  {campaign.quests.map((quest) => (
+                    <QuestItem key={quest.id} quest={quest} />
+                  ))}
+                </View>
+              </View>
+            ))}
+          </>
+        ) : null}
       </ScrollView>
     </SafeAreaView>
   );
@@ -207,32 +202,21 @@ const styles = StyleSheet.create({
     paddingBottom: 120,
     gap: tokens.space.lg as any,
   },
+  contentCentered: {
+    flexGrow: 1,
+    justifyContent: "center",
+  },
   notice: {
     borderRadius: tokens.radius.lg,
     borderWidth: 1,
     borderColor: tokens.colors.borderStrong,
     backgroundColor: tokens.colors.surfaceStrong,
     padding: tokens.space.md,
-    gap: tokens.space.sm as any,
   },
   noticeText: {
     fontSize: tokens.font.small,
     color: tokens.colors.textMuted,
     lineHeight: 18,
-  },
-  noticeBtn: {
-    alignSelf: "flex-start",
-    paddingHorizontal: tokens.space.sm,
-    paddingVertical: 8,
-    borderRadius: tokens.radius.pill,
-    borderWidth: 1,
-    borderColor: tokens.colors.borderStrong,
-    backgroundColor: tokens.colors.green100,
-  },
-  noticeBtnText: {
-    fontSize: tokens.font.small,
-    fontWeight: "800",
-    color: tokens.colors.green900,
   },
   campaignCard: {
     borderRadius: tokens.radius.xl,

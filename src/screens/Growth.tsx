@@ -1,6 +1,14 @@
 import { Ionicons } from "@expo/vector-icons";
-import React, { useMemo } from "react";
-import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
+import React, { useCallback, useMemo, useState } from "react";
+import {
+  Pressable,
+  RefreshControl,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { useRouter } from "expo-router";
 
 import { GrowthChart } from "@/components/growth/GrowthChart";
@@ -25,6 +33,7 @@ function getStatusMeta(status: ProgressItem["status"]) {
 export default function GrowthScreen() {
   const router = useRouter();
   const { summary, achievements, campaigns, loading, error, source, refetch } = useGrowthData();
+  const [refreshing, setRefreshing] = useState(false);
 
   const questSummary = useMemo(() => {
     const all = campaigns.flatMap((campaign) => campaign.quests);
@@ -91,6 +100,16 @@ export default function GrowthScreen() {
 
   const sourceLabel = source === "dashboard" ? "Dashboard" : source === "fallback" ? "Fallback" : "";
 
+  const onRefresh = useCallback(async () => {
+    if (refreshing || loading) return;
+    setRefreshing(true);
+    try {
+      await refetch();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refreshing, loading, refetch]);
+
   if (error?.kind === "auth") {
     return (
       <SafeAreaView style={styles.safe}>
@@ -110,7 +129,21 @@ export default function GrowthScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={tokens.colors.green700}
+            colors={[tokens.colors.green700]}
+            progressBackgroundColor={tokens.colors.surfaceStrong}
+            title={refreshing ? "새로고침 중..." : "아래로 당겨 새로고침"}
+            titleColor={tokens.colors.textMuted}
+          />
+        }
+      >
         <View style={styles.heroCard}>
           <View style={styles.heroHeaderRow}>
             <View style={styles.heroTitleBlock}>
@@ -132,7 +165,6 @@ export default function GrowthScreen() {
           loading={loading}
           error={error}
           source={source}
-          onRetry={refetch}
         />
 
         <View style={styles.actionRow}>
@@ -170,16 +202,10 @@ export default function GrowthScreen() {
           items={[]}
           loading={false}
           error={null}
-          onRetry={refetch}
           title="인기 글"
           description="좋아요/저장 반응이 높은 글을 보여주는 영역이에요."
           emptyDescription="현재 서버 응답에는 top_posts가 없어 준비 중 상태로 표시됩니다."
         />
-
-        <Pressable onPress={refetch} style={styles.refreshBtn}>
-          <Ionicons name="refresh" size={16} color={tokens.colors.green900} />
-          <Text style={styles.refreshBtnText}>성장 데이터 새로고침</Text>
-        </Pressable>
       </ScrollView>
     </SafeAreaView>
   );
@@ -466,22 +492,5 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     paddingHorizontal: 8,
     paddingVertical: 4,
-  },
-  refreshBtn: {
-    alignSelf: "center",
-    paddingHorizontal: tokens.space.lg,
-    paddingVertical: tokens.space.sm,
-    borderRadius: tokens.radius.pill,
-    borderWidth: 1,
-    borderColor: tokens.colors.borderStrong,
-    backgroundColor: tokens.colors.green100,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  refreshBtnText: {
-    fontSize: tokens.font.small,
-    fontWeight: "800",
-    color: tokens.colors.green900,
   },
 });

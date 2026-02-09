@@ -8,10 +8,9 @@ type Props = {
   title: string;
   subtitle?: string;
   onPressBack: () => void;
-  onPressRefresh?: () => void;
 };
 
-export function GrowthDetailTopBar({ title, subtitle, onPressBack, onPressRefresh }: Props) {
+export function GrowthDetailTopBar({ title, subtitle, onPressBack }: Props) {
   return (
     <View style={styles.wrap}>
       <View style={styles.headerRow}>
@@ -30,20 +29,7 @@ export function GrowthDetailTopBar({ title, subtitle, onPressBack, onPressRefres
           {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
         </View>
 
-        <Pressable
-          onPress={onPressRefresh}
-          hitSlop={12}
-          style={styles.iconBtn}
-          accessibilityRole="button"
-          accessibilityLabel="새로고침"
-          disabled={!onPressRefresh}
-        >
-          <Ionicons
-            name="refresh"
-            size={20}
-            color={onPressRefresh ? tokens.colors.textMuted : "transparent"}
-          />
-        </Pressable>
+        <View style={styles.trailingSpacer} />
       </View>
     </View>
   );
@@ -85,5 +71,9 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: tokens.font.small,
     color: tokens.colors.textMuted,
+  },
+  trailingSpacer: {
+    width: 36,
+    height: 36,
   },
 });
