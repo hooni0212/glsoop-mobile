@@ -38,6 +38,7 @@ export default function SearchScreen() {
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [activeTab, setActiveTab] = useState<SearchTabKey>("posts");
+  const [manualTabSelection, setManualTabSelection] = useState(false);
   const [postSort, setPostSort] = useState<PostSortKey>("popular");
   const [authorSort, setAuthorSort] = useState<AuthorSortKey>("activity");
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
@@ -73,6 +74,7 @@ export default function SearchScreen() {
     setQuery(normalized);
     setDebouncedQuery(normalized);
     setActiveTab("posts");
+    setManualTabSelection(false);
     void commitRecentQuery(normalized);
   }, [commitRecentQuery, query]);
 
@@ -80,6 +82,7 @@ export default function SearchScreen() {
     setQuery(value);
     setDebouncedQuery(value);
     setActiveTab("posts");
+    setManualTabSelection(false);
   }, []);
 
   const handleClearRecent = useCallback(async () => {
@@ -149,6 +152,23 @@ export default function SearchScreen() {
   const activeCount = activeTab === "posts" ? displayPosts.length : displayAuthors.length;
   const activeHasMore = activeTab === "posts" ? hasMorePosts : hasMoreAuthors;
 
+  useEffect(() => {
+    if (!hasQuery || loading || error || manualTabSelection) return;
+
+    if (activeTab === "posts" && displayPosts.length === 0 && displayAuthors.length > 0) {
+      setActiveTab("authors");
+      return;
+    }
+
+    if (activeTab === "authors" && displayAuthors.length === 0 && displayPosts.length > 0) {
+      setActiveTab("posts");
+    }
+  }, [activeTab, displayAuthors.length, displayPosts.length, error, hasQuery, loading, manualTabSelection]);
+
+  useEffect(() => {
+    setManualTabSelection(false);
+  }, [debouncedQuery]);
+
   const showRecent = !hasQuery && !loading && recentSearches.length > 0;
   const showPrompt = !hasQuery && !loading && recentSearches.length === 0;
   const showLoading = hasQuery && loading;
@@ -205,13 +225,19 @@ export default function SearchScreen() {
         <SearchTabButton
           label={`글 ${posts.length}`}
           active={activeTab === "posts"}
-          onPress={() => setActiveTab("posts")}
+          onPress={() => {
+            setManualTabSelection(true);
+            setActiveTab("posts");
+          }}
           testID="search-tab-posts"
         />
         <SearchTabButton
           label={`작가 ${authors.length}`}
           active={activeTab === "authors"}
-          onPress={() => setActiveTab("authors")}
+          onPress={() => {
+            setManualTabSelection(true);
+            setActiveTab("authors");
+          }}
           testID="search-tab-authors"
         />
       </View>
