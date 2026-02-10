@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Pressable,
   SafeAreaView,
@@ -15,36 +15,44 @@ import { FeedCard } from "@/components/FeedCard";
 import { AppEmpty } from "@/components/state/AppEmpty";
 import { AppError } from "@/components/state/AppError";
 import { AppLoading } from "@/components/state/AppLoading";
-import { useFeed } from "@/features/feed/useFeed";
+import { useSearch, type SearchAuthor } from "@/features/search/useSearch";
 import { tokens } from "@/theme/tokens";
 
-function normalizeText(value?: string | null) {
-  return (value || "").toLowerCase().trim();
+type SearchTabKey = "posts" | "authors";
+
+function formatDateLabel(iso?: string | null) {
+  if (!iso) return "최근 글 없음";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "최근 글 없음";
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}.${m}.${day}`;
 }
 
 export default function SearchScreen() {
   const [query, setQuery] = useState("");
-  const { items, loading, error, refresh } = useFeed({ limit: 40, sort: "latest" });
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+  const [activeTab, setActiveTab] = useState<SearchTabKey>("posts");
 
-  const normalizedQuery = normalizeText(query);
-  const filteredItems = useMemo(() => {
-    if (!normalizedQuery) return items;
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedQuery(query.trim());
+    }, 250);
 
-    return items.filter((post) => {
-      const title = normalizeText(post.title);
-      const excerpt = normalizeText(post.excerpt);
-      const author = normalizeText(post.author?.name);
-      return (
-        title.includes(normalizedQuery) ||
-        excerpt.includes(normalizedQuery) ||
-        author.includes(normalizedQuery)
-      );
-    });
-  }, [items, normalizedQuery]);
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [query]);
 
-  const showLoading = loading && items.length === 0;
-  const showError = Boolean(error && items.length === 0);
-  const showEmpty = !showLoading && !showError && filteredItems.length === 0;
+  const { posts, authors, loading, error, refetch } = useSearch(debouncedQuery);
+  const hasQuery = debouncedQuery.length > 0;
+  const activeCount = activeTab === "posts" ? posts.length : authors.length;
+
+  const showPrompt = !hasQuery && !loading;
+  const showLoading = hasQuery && loading;
+  const showError = hasQuery && Boolean(error);
+  const showEmpty = hasQuery && !loading && !error && activeCount === 0;
 
   return (
     <SafeAreaView style={styles.safe} testID="search-screen">
@@ -76,7 +84,10 @@ export default function SearchScreen() {
           />
           {query.trim().length > 0 ? (
             <Pressable
-              onPress={() => setQuery("")}
+              onPress={() => {
+                setQuery("");
+                setDebouncedQuery("");
+              }}
               hitSlop={10}
               accessibilityRole="button"
               accessibilityLabel="검색어 지우기"
@@ -88,21 +99,41 @@ export default function SearchScreen() {
         </View>
       </View>
 
+      <View style={styles.tabRow}>
+        <SearchTabButton
+          label={`글 ${posts.length}`}
+          active={activeTab === "posts"}
+          onPress={() => setActiveTab("posts")}
+          testID="search-tab-posts"
+        />
+        <SearchTabButton
+          label={`작가 ${authors.length}`}
+          active={activeTab === "authors"}
+          onPress={() => setActiveTab("authors")}
+          testID="search-tab-authors"
+        />
+      </View>
+
       <ScrollView contentContainerStyle={styles.content}>
-        {showLoading ? <AppLoading message="검색 데이터를 불러오는 중..." /> : null}
+        {showPrompt ? (
+          <AppEmpty
+            title="검색어를 입력해보세요"
+            description="글과 작가를 분리해서 찾아볼 수 있어요."
+          />
+        ) : null}
+
+        {showLoading ? <AppLoading message="검색 결과를 불러오는 중..." /> : null}
 
         {showError ? (
           <AppError
             error={error!}
-            onRetry={error?.canRetry ? refresh : undefined}
+            onRetry={error?.canRetry ? refetch : undefined}
           />
         ) : null}
 
-        {!showLoading && !showError ? (
+        {hasQuery && !showLoading && !showError ? (
           <Text style={styles.countLabel}>
-            {normalizedQuery
-              ? `'${query.trim()}' 검색 결과 ${filteredItems.length}개`
-              : `전체 ${filteredItems.length}개`}
+            {`'${debouncedQuery}' 검색 결과 ${activeCount}개`}
           </Text>
         ) : null}
 
@@ -113,8 +144,8 @@ export default function SearchScreen() {
           />
         ) : null}
 
-        {!showLoading && !showError && filteredItems.length > 0
-          ? filteredItems.map((post) => (
+        {hasQuery && !showLoading && !showError && activeTab === "posts" && posts.length > 0
+          ? posts.map((post) => (
               <View key={post.id} style={styles.itemWrap}>
                 <FeedCard
                   post={post}
@@ -124,8 +155,61 @@ export default function SearchScreen() {
               </View>
             ))
           : null}
+
+        {hasQuery && !showLoading && !showError && activeTab === "authors" && authors.length > 0
+          ? authors.map((author) => (
+              <AuthorResultCard key={author.id} author={author} />
+            ))
+          : null}
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+function SearchTabButton({
+  label,
+  active,
+  onPress,
+  testID,
+}: {
+  label: string;
+  active: boolean;
+  onPress: () => void;
+  testID: string;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={[styles.tabButton, active && styles.tabButtonActive]}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      testID={testID}
+    >
+      <Text style={[styles.tabButtonLabel, active && styles.tabButtonLabelActive]}>
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
+function AuthorResultCard({ author }: { author: SearchAuthor }) {
+  return (
+    <Pressable
+      style={styles.authorCard}
+      onPress={() => router.push(`/users/${author.id}`)}
+      testID={`search-author-card-${author.id}`}
+    >
+      <Text style={styles.authorName}>{author.name}</Text>
+      {author.nickname ? <Text style={styles.authorNickname}>@{author.nickname}</Text> : null}
+      <View style={styles.authorMetaRow}>
+        <Text style={styles.authorMetaText}>글 {author.postCount}</Text>
+        <Text style={styles.authorMetaDot}>·</Text>
+        <Text style={styles.authorMetaText}>팔로워 {author.followerCount}</Text>
+      </View>
+      <Text style={styles.authorLatestLabel}>
+        최근 글 {formatDateLabel(author.latestPostAt)}
+      </Text>
+    </Pressable>
   );
 }
 
@@ -161,6 +245,35 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingHorizontal: 12,
   },
+  tabRow: {
+    flexDirection: "row",
+    gap: tokens.space.sm,
+    paddingHorizontal: tokens.space.lg,
+    paddingBottom: tokens.space.sm,
+  },
+  tabButton: {
+    flex: 1,
+    minHeight: 38,
+    borderRadius: tokens.radius.pill,
+    borderWidth: 1,
+    borderColor: tokens.colors.borderStrong,
+    backgroundColor: tokens.colors.surfaceStrong,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: tokens.space.md,
+  },
+  tabButtonActive: {
+    borderColor: tokens.colors.green700,
+    backgroundColor: tokens.colors.green100,
+  },
+  tabButtonLabel: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: tokens.colors.textMuted,
+  },
+  tabButtonLabelActive: {
+    color: tokens.colors.green900,
+  },
   searchInput: {
     flex: 1,
     fontSize: 14,
@@ -181,5 +294,46 @@ const styles = StyleSheet.create({
   },
   itemWrap: {
     marginBottom: tokens.space.md,
+  },
+  authorCard: {
+    marginBottom: tokens.space.md,
+    borderRadius: tokens.radius.xl,
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+    backgroundColor: tokens.colors.surfaceStrong,
+    paddingVertical: tokens.space.md,
+    paddingHorizontal: tokens.space.lg,
+    gap: 8,
+  },
+  authorName: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: tokens.colors.text,
+  },
+  authorNickname: {
+    marginTop: -4,
+    fontSize: 12,
+    fontWeight: "600",
+    color: tokens.colors.textMuted,
+  },
+  authorMetaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  authorMetaText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: tokens.colors.textMuted,
+  },
+  authorMetaDot: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: tokens.colors.textFaint,
+  },
+  authorLatestLabel: {
+    fontSize: 12,
+    color: tokens.colors.textFaint,
+    fontWeight: "600",
   },
 });
