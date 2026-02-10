@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -21,6 +21,8 @@ import { clearRecentSearches, listRecentSearches, saveRecentSearch } from "@/ser
 import { tokens } from "@/theme/tokens";
 
 type SearchTabKey = "posts" | "authors";
+type PostSortKey = "popular" | "latest";
+type AuthorSortKey = "activity" | "recent";
 
 function formatDateLabel(iso?: string | null) {
   if (!iso) return "최근 글 없음";
@@ -36,6 +38,8 @@ export default function SearchScreen() {
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [activeTab, setActiveTab] = useState<SearchTabKey>("posts");
+  const [postSort, setPostSort] = useState<PostSortKey>("popular");
+  const [authorSort, setAuthorSort] = useState<AuthorSortKey>("activity");
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
 
   useEffect(() => {
@@ -95,7 +99,54 @@ export default function SearchScreen() {
     loadMore,
   } = useSearch(debouncedQuery);
   const hasQuery = debouncedQuery.length > 0;
-  const activeCount = activeTab === "posts" ? posts.length : authors.length;
+
+  const displayPosts = useMemo(() => {
+    const next = [...posts];
+    if (postSort === "latest") {
+      next.sort((a, b) => {
+        const at = new Date(a.createdAt || 0).getTime();
+        const bt = new Date(b.createdAt || 0).getTime();
+        return bt - at;
+      });
+      return next;
+    }
+
+    next.sort((a, b) => {
+      const likeDiff = (b.stats?.likeCount ?? 0) - (a.stats?.likeCount ?? 0);
+      if (likeDiff !== 0) return likeDiff;
+      const bookmarkDiff = (b.stats?.bookmarkCount ?? 0) - (a.stats?.bookmarkCount ?? 0);
+      if (bookmarkDiff !== 0) return bookmarkDiff;
+      const at = new Date(a.createdAt || 0).getTime();
+      const bt = new Date(b.createdAt || 0).getTime();
+      return bt - at;
+    });
+    return next;
+  }, [posts, postSort]);
+
+  const displayAuthors = useMemo(() => {
+    const next = [...authors];
+    if (authorSort === "recent") {
+      next.sort((a, b) => {
+        const at = new Date(a.latestPostAt || 0).getTime();
+        const bt = new Date(b.latestPostAt || 0).getTime();
+        return bt - at;
+      });
+      return next;
+    }
+
+    next.sort((a, b) => {
+      const postDiff = b.postCount - a.postCount;
+      if (postDiff !== 0) return postDiff;
+      const followerDiff = b.followerCount - a.followerCount;
+      if (followerDiff !== 0) return followerDiff;
+      const at = new Date(a.latestPostAt || 0).getTime();
+      const bt = new Date(b.latestPostAt || 0).getTime();
+      return bt - at;
+    });
+    return next;
+  }, [authors, authorSort]);
+
+  const activeCount = activeTab === "posts" ? displayPosts.length : displayAuthors.length;
   const activeHasMore = activeTab === "posts" ? hasMorePosts : hasMoreAuthors;
 
   const showRecent = !hasQuery && !loading && recentSearches.length > 0;
@@ -215,6 +266,42 @@ export default function SearchScreen() {
           </Text>
         ) : null}
 
+        {hasQuery && !showLoading && !showError ? (
+          <View style={styles.sortRow}>
+            {activeTab === "posts" ? (
+              <>
+                <SortChip
+                  label="추천순"
+                  active={postSort === "popular"}
+                  onPress={() => setPostSort("popular")}
+                  testID="search-sort-posts-popular"
+                />
+                <SortChip
+                  label="최신순"
+                  active={postSort === "latest"}
+                  onPress={() => setPostSort("latest")}
+                  testID="search-sort-posts-latest"
+                />
+              </>
+            ) : (
+              <>
+                <SortChip
+                  label="활동순"
+                  active={authorSort === "activity"}
+                  onPress={() => setAuthorSort("activity")}
+                  testID="search-sort-authors-activity"
+                />
+                <SortChip
+                  label="최근순"
+                  active={authorSort === "recent"}
+                  onPress={() => setAuthorSort("recent")}
+                  testID="search-sort-authors-recent"
+                />
+              </>
+            )}
+          </View>
+        ) : null}
+
         {showEmpty ? (
           <AppEmpty
             title="검색 결과가 없어요"
@@ -222,8 +309,8 @@ export default function SearchScreen() {
           />
         ) : null}
 
-        {hasQuery && !showLoading && !showError && activeTab === "posts" && posts.length > 0
-          ? posts.map((post) => (
+        {hasQuery && !showLoading && !showError && activeTab === "posts" && displayPosts.length > 0
+          ? displayPosts.map((post) => (
               <View key={post.id} style={styles.itemWrap}>
                 <FeedCard
                   post={post}
@@ -237,8 +324,8 @@ export default function SearchScreen() {
             ))
           : null}
 
-        {hasQuery && !showLoading && !showError && activeTab === "authors" && authors.length > 0
-          ? authors.map((author) => (
+        {hasQuery && !showLoading && !showError && activeTab === "authors" && displayAuthors.length > 0
+          ? displayAuthors.map((author) => (
               <AuthorResultCard
                 key={author.id}
                 author={author}
@@ -289,6 +376,30 @@ function SearchTabButton({
       testID={testID}
     >
       <Text style={[styles.tabButtonLabel, active && styles.tabButtonLabelActive]}>
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
+function SortChip({
+  label,
+  active,
+  onPress,
+  testID,
+}: {
+  label: string;
+  active: boolean;
+  onPress: () => void;
+  testID: string;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={[styles.sortChip, active && styles.sortChipActive]}
+      testID={testID}
+    >
+      <Text style={[styles.sortChipText, active && styles.sortChipTextActive]}>
         {label}
       </Text>
     </Pressable>
@@ -448,6 +559,34 @@ const styles = StyleSheet.create({
     marginBottom: tokens.space.sm,
     marginLeft: 4,
     letterSpacing: -0.2,
+  },
+  sortRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: tokens.space.sm,
+    marginLeft: 2,
+  },
+  sortChip: {
+    minHeight: 30,
+    borderRadius: tokens.radius.pill,
+    borderWidth: 1,
+    borderColor: tokens.colors.borderStrong,
+    backgroundColor: tokens.colors.surfaceStrong,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 10,
+  },
+  sortChipActive: {
+    borderColor: tokens.colors.green700,
+    backgroundColor: tokens.colors.green100,
+  },
+  sortChipText: {
+    fontSize: 12,
+    color: tokens.colors.textMuted,
+    fontWeight: "700",
+  },
+  sortChipTextActive: {
+    color: tokens.colors.green900,
   },
   itemWrap: {
     marginBottom: tokens.space.md,
