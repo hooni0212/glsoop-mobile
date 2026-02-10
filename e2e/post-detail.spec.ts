@@ -60,8 +60,16 @@ async function setAuthToken(page: Page, token: string) {
   );
 }
 
-async function setupApiRoutes(page: Page, options?: { recentShouldFail?: boolean }) {
+type SetupApiRoutesOptions = {
+  recentShouldFail?: boolean;
+  shareEventStatus?: number;
+  shareEventRequests?: Array<Record<string, unknown>>;
+};
+
+async function setupApiRoutes(page: Page, options?: SetupApiRoutesOptions) {
   const recentShouldFail = Boolean(options?.recentShouldFail);
+  const shareEventStatus = options?.shareEventStatus ?? 201;
+  const shareEventRequests = options?.shareEventRequests;
 
   await page.route("**/api/me", async (route) => {
     await route.fulfill({
@@ -128,6 +136,38 @@ async function setupApiRoutes(page: Page, options?: { recentShouldFail?: boolean
       }),
     });
   });
+
+  await page.route("**/api/share-events", async (route) => {
+    let payload: Record<string, unknown> = {};
+    try {
+      payload = route.request().postDataJSON() as Record<string, unknown>;
+    } catch {
+      payload = {};
+    }
+    shareEventRequests?.push(payload);
+
+    if (shareEventStatus >= 400) {
+      await route.fulfill({
+        status: shareEventStatus,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: false,
+          code: "INTERNAL_ERROR",
+          message: "공유 이벤트 저장 실패",
+        }),
+      });
+      return;
+    }
+
+    await route.fulfill({
+      status: shareEventStatus,
+      contentType: "application/json",
+      body: JSON.stringify({
+        ok: true,
+        event: { id: 301, created_at: "2026-02-10T00:00:00.000Z" },
+      }),
+    });
+  });
 }
 
 async function openPostDetailFromHome(page: Page) {
@@ -155,17 +195,62 @@ test.describe("글 상세 화면", () => {
   });
 
   test("공유 성공 시 성공 토스트를 표시한다", async ({ page }) => {
+    const shareEventRequests: Array<Record<string, unknown>> = [];
     await page.addInitScript(() => {
       Object.defineProperty(window.navigator, "share", {
         configurable: true,
         value: async () => ({ action: "sharedAction" }),
       });
     });
-    await setupApiRoutes(page);
+    await setupApiRoutes(page, { shareEventRequests });
     await setAuthToken(page, "mock-token-post-detail-share");
     await openPostDetailFromHome(page);
 
     await page.getByTestId("post-share-btn").click();
     await expect(page.getByText("공유가 완료되었어요.")).toBeVisible();
+    await expect.poll(() => shareEventRequests.length).toBe(1);
+    await expect.poll(() => shareEventRequests[0]?.result).toBe("shared");
+    await expect.poll(() => shareEventRequests[0]?.surface).toBe("post_detail");
+    await expect.poll(() => shareEventRequests[0]?.channel).toBe("system_share_sheet");
+    await expect.poll(() => typeof shareEventRequests[0]?.request_id).toBe("string");
+  });
+
+  test("공유 취소 시 dismissed 이벤트를 기록한다", async ({ page }) => {
+    const shareEventRequests: Array<Record<string, unknown>> = [];
+    await page.addInitScript(() => {
+      Object.defineProperty(window.navigator, "share", {
+        configurable: true,
+        value: async () => ({ action: "dismissedAction" }),
+      });
+    });
+    await setupApiRoutes(page, { shareEventRequests });
+    await setAuthToken(page, "mock-token-post-detail-dismissed");
+    await openPostDetailFromHome(page);
+
+    await page.getByTestId("post-share-btn").click();
+    await expect.poll(() => shareEventRequests.length).toBe(1);
+    await expect.poll(() => shareEventRequests[0]?.result).toBe("dismissed");
+    await expect(page.getByText("공유가 완료되었어요.")).toHaveCount(0);
+    await expect(page.getByText("공유에 실패했어요. 잠시 후 다시 시도해주세요.")).toHaveCount(0);
+  });
+
+  test("공유 실패 시 에러 토스트를 표시하고 failed 이벤트를 기록한다", async ({ page }) => {
+    const shareEventRequests: Array<Record<string, unknown>> = [];
+    await page.addInitScript(() => {
+      Object.defineProperty(window.navigator, "share", {
+        configurable: true,
+        value: async () => {
+          throw new Error("share failed");
+        },
+      });
+    });
+    await setupApiRoutes(page, { shareEventRequests });
+    await setAuthToken(page, "mock-token-post-detail-failed");
+    await openPostDetailFromHome(page);
+
+    await page.getByTestId("post-share-btn").click();
+    await expect(page.getByText("공유에 실패했어요. 잠시 후 다시 시도해주세요.")).toBeVisible();
+    await expect.poll(() => shareEventRequests.length).toBe(1);
+    await expect.poll(() => shareEventRequests[0]?.result).toBe("failed");
   });
 });

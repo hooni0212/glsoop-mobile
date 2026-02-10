@@ -14,10 +14,21 @@ import { setBookmark, useBookmarkSnapshot } from "@/features/bookmarks/bookmarkS
 import { getLike, setLike, useLikeSnapshot } from "@/features/likes/likeStore";
 import { useToast } from "@/feedback/ToastProvider";
 import { togglePostLike } from "@/services/likeService";
+import { logShareEvent } from "@/services/shareService";
 import { ApiError } from "@/lib/errors";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useMemo, useState } from "react";
-import { Alert, Modal, Pressable, SafeAreaView, ScrollView, Share, Text, View } from "react-native";
+import {
+  Alert,
+  Modal,
+  Platform,
+  Pressable,
+  SafeAreaView,
+  ScrollView,
+  Share,
+  Text,
+  View,
+} from "react-native";
 import {
   addPostToBookmarkList,
   BookmarkList,
@@ -60,6 +71,11 @@ function mergeRecentAndAllLists(recentLists: BookmarkList[], allLists: BookmarkL
   }
 
   return ordered;
+}
+
+function createShareRequestId(postId: string) {
+  const randomPart = Math.random().toString(36).slice(2, 8);
+  return `share_${postId}_${Date.now()}_${randomPart}`.slice(0, 120);
 }
 
 export default function PostDetail() {
@@ -263,16 +279,65 @@ export default function PostDetail() {
     const shareTitle = title || "글숲";
     const shareContent = content.trim();
     const shareMessage = shareContent ? `${shareTitle}\n\n${shareContent}` : shareTitle;
+    const requestId = createShareRequestId(post.id);
+    const platform = Platform.OS === "web" ? "web" : "mobile";
+    const dismissedAction =
+      (Share as { dismissedAction?: string }).dismissedAction ?? "dismissedAction";
+
+    const logShareEventSafely = (result: "shared" | "dismissed" | "failed", meta?: Record<string, unknown>) => {
+      void logShareEvent({
+        postId: post.id,
+        platform,
+        surface: "post_detail",
+        channel: "system_share_sheet",
+        result,
+        requestId,
+        meta,
+      }).catch((eventError) => {
+        if (__DEV__) {
+          console.warn("[share] event log failed", eventError);
+        }
+      });
+    };
 
     try {
       const result = await Share.share({
         title: shareTitle,
         message: shareMessage,
       });
+
       if (result.action === Share.sharedAction) {
+        logShareEventSafely("shared", {
+          action: result.action,
+          activity_type: result.activityType || null,
+          title_length: shareTitle.length,
+          content_length: shareContent.length,
+        });
         showToast("공유가 완료되었어요.", { tone: "success" });
+        return;
       }
+
+      if (result.action === dismissedAction) {
+        logShareEventSafely("dismissed", {
+          action: result.action,
+          activity_type: result.activityType || null,
+          title_length: shareTitle.length,
+          content_length: shareContent.length,
+        });
+        return;
+      }
+
+      logShareEventSafely("dismissed", {
+        action: result.action || "unknown",
+        activity_type: result.activityType || null,
+        title_length: shareTitle.length,
+        content_length: shareContent.length,
+      });
     } catch {
+      logShareEventSafely("failed", {
+        title_length: shareTitle.length,
+        content_length: shareContent.length,
+      });
       showToast("공유에 실패했어요. 잠시 후 다시 시도해주세요.", { tone: "error" });
     }
   };
