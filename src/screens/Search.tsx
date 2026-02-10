@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -82,14 +83,25 @@ export default function SearchScreen() {
     setRecentSearches([]);
   }, []);
 
-  const { posts, authors, loading, error, refetch } = useSearch(debouncedQuery);
+  const {
+    posts,
+    authors,
+    loading,
+    loadingMore,
+    hasMorePosts,
+    hasMoreAuthors,
+    error,
+    refetch,
+    loadMore,
+  } = useSearch(debouncedQuery);
   const hasQuery = debouncedQuery.length > 0;
   const activeCount = activeTab === "posts" ? posts.length : authors.length;
+  const activeHasMore = activeTab === "posts" ? hasMorePosts : hasMoreAuthors;
 
   const showRecent = !hasQuery && !loading && recentSearches.length > 0;
   const showPrompt = !hasQuery && !loading && recentSearches.length === 0;
   const showLoading = hasQuery && loading;
-  const showError = hasQuery && Boolean(error);
+  const showError = hasQuery && Boolean(error) && posts.length === 0 && authors.length === 0;
   const showEmpty = hasQuery && !loading && !error && activeCount === 0;
 
   return (
@@ -215,7 +227,10 @@ export default function SearchScreen() {
               <View key={post.id} style={styles.itemWrap}>
                 <FeedCard
                   post={post}
-                  onPress={() => router.push(`/posts/${post.id}`)}
+                  onPress={() => {
+                    void commitRecentQuery(debouncedQuery);
+                    router.push(`/posts/${post.id}`);
+                  }}
                   testID={`search-post-card-${post.id}`}
                 />
               </View>
@@ -224,9 +239,31 @@ export default function SearchScreen() {
 
         {hasQuery && !showLoading && !showError && activeTab === "authors" && authors.length > 0
           ? authors.map((author) => (
-              <AuthorResultCard key={author.id} author={author} />
+              <AuthorResultCard
+                key={author.id}
+                author={author}
+                onPress={() => {
+                  void commitRecentQuery(debouncedQuery);
+                  router.push(`/users/${author.id}`);
+                }}
+              />
             ))
           : null}
+
+        {hasQuery && !showLoading && !showError && activeCount > 0 && activeHasMore ? (
+          <Pressable
+            onPress={() => void loadMore(activeTab)}
+            disabled={loadingMore}
+            style={[styles.loadMoreButton, loadingMore && styles.loadMoreButtonDisabled]}
+            testID="search-load-more-btn"
+          >
+            {loadingMore ? (
+              <ActivityIndicator size="small" color={tokens.colors.textMuted} />
+            ) : (
+              <Text style={styles.loadMoreText}>더 보기</Text>
+            )}
+          </Pressable>
+        ) : null}
       </ScrollView>
     </SafeAreaView>
   );
@@ -258,11 +295,17 @@ function SearchTabButton({
   );
 }
 
-function AuthorResultCard({ author }: { author: SearchAuthor }) {
+function AuthorResultCard({
+  author,
+  onPress,
+}: {
+  author: SearchAuthor;
+  onPress: () => void;
+}) {
   return (
     <Pressable
       style={styles.authorCard}
-      onPress={() => router.push(`/users/${author.id}`)}
+      onPress={onPress}
       testID={`search-author-card-${author.id}`}
     >
       <Text style={styles.authorName}>{author.name}</Text>
@@ -449,5 +492,24 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: tokens.colors.textFaint,
     fontWeight: "600",
+  },
+  loadMoreButton: {
+    minHeight: 40,
+    marginTop: tokens.space.sm,
+    marginBottom: tokens.space.md,
+    borderRadius: tokens.radius.pill,
+    borderWidth: 1,
+    borderColor: tokens.colors.borderStrong,
+    backgroundColor: tokens.colors.surfaceStrong,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  loadMoreButtonDisabled: {
+    opacity: 0.7,
+  },
+  loadMoreText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: tokens.colors.textMuted,
   },
 });

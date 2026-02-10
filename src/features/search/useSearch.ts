@@ -20,6 +20,9 @@ type SearchResponse = {
   authors?: unknown[];
 };
 
+type SearchType = "all" | "posts" | "authors";
+const PAGE_SIZE = 20;
+
 function toText(value: unknown) {
   return typeof value === "string" ? value : "";
 }
@@ -108,8 +111,12 @@ export type UseSearchResult = {
   posts: Post[];
   authors: SearchAuthor[];
   loading: boolean;
+  loadingMore: boolean;
+  hasMorePosts: boolean;
+  hasMoreAuthors: boolean;
   error: AppErrorModel | null;
   refetch: () => Promise<void>;
+  loadMore: (type: "posts" | "authors") => Promise<void>;
 };
 
 export function useSearch(query: string): UseSearchResult {
@@ -119,7 +126,19 @@ export function useSearch(query: string): UseSearchResult {
   const [posts, setPosts] = useState<Post[]>([]);
   const [authors, setAuthors] = useState<SearchAuthor[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMorePosts, setHasMorePosts] = useState(false);
+  const [hasMoreAuthors, setHasMoreAuthors] = useState(false);
   const [error, setError] = useState<AppErrorModel | null>(null);
+
+  const requestSearch = useCallback(async (type: SearchType, offset: number) => {
+    const params = new URLSearchParams();
+    params.set("q", normalizedQuery);
+    params.set("type", type);
+    params.set("limit", String(PAGE_SIZE));
+    params.set("offset", String(offset));
+    return apiGet<SearchResponse>(`/api/search?${params.toString()}`);
+  }, [normalizedQuery]);
 
   const fetchSearch = useCallback(async () => {
     const currentQuery = normalizedQuery;
@@ -129,43 +148,111 @@ export function useSearch(query: string): UseSearchResult {
     if (!currentQuery) {
       setPosts([]);
       setAuthors([]);
+      setHasMorePosts(false);
+      setHasMoreAuthors(false);
       setError(null);
       setLoading(false);
+      setLoadingMore(false);
       return;
     }
 
     setLoading(true);
+    setLoadingMore(false);
     setError(null);
 
     try {
-      const params = new URLSearchParams();
-      params.set("q", currentQuery);
-      params.set("type", "all");
-      params.set("limit", "20");
-      params.set("offset", "0");
-
-      const response = await apiGet<SearchResponse>(`/api/search?${params.toString()}`);
+      const response = await requestSearch("all", 0);
       if (!response?.ok) {
         throw new Error(response?.message || "검색 결과를 불러오지 못했어요.");
       }
 
       if (seq !== requestSeqRef.current) return;
-      setPosts(normalizeSearchPosts(response.posts));
-      setAuthors(normalizeSearchAuthors(response.authors));
+      const nextPosts = normalizeSearchPosts(response.posts);
+      const nextAuthors = normalizeSearchAuthors(response.authors);
+      setPosts(nextPosts);
+      setAuthors(nextAuthors);
+      setHasMorePosts(nextPosts.length === PAGE_SIZE);
+      setHasMoreAuthors(nextAuthors.length === PAGE_SIZE);
+      setError(null);
     } catch (e) {
       if (seq !== requestSeqRef.current) return;
       setPosts([]);
       setAuthors([]);
+      setHasMorePosts(false);
+      setHasMoreAuthors(false);
       setError(normalizeApiError(e));
     } finally {
       if (seq !== requestSeqRef.current) return;
       setLoading(false);
     }
-  }, [normalizedQuery]);
+  }, [normalizedQuery, requestSearch]);
+
+  const loadMore = useCallback(async (type: "posts" | "authors") => {
+    if (!normalizedQuery) return;
+    if (loading || loadingMore) return;
+    if (type === "posts" && !hasMorePosts) return;
+    if (type === "authors" && !hasMoreAuthors) return;
+
+    const seq = requestSeqRef.current;
+    const currentOffset = type === "posts" ? posts.length : authors.length;
+    setLoadingMore(true);
+
+    try {
+      const response = await requestSearch(type, currentOffset);
+      if (!response?.ok) {
+        throw new Error(response?.message || "검색 결과를 추가로 불러오지 못했어요.");
+      }
+
+      if (seq !== requestSeqRef.current) return;
+      if (type === "posts") {
+        const next = normalizeSearchPosts(response.posts);
+        setPosts((prev) => {
+          const prevIds = new Set(prev.map((item) => item.id));
+          const append = next.filter((item) => !prevIds.has(item.id));
+          return [...prev, ...append];
+        });
+        setHasMorePosts(next.length === PAGE_SIZE);
+      } else {
+        const next = normalizeSearchAuthors(response.authors);
+        setAuthors((prev) => {
+          const prevIds = new Set(prev.map((item) => item.id));
+          const append = next.filter((item) => !prevIds.has(item.id));
+          return [...prev, ...append];
+        });
+        setHasMoreAuthors(next.length === PAGE_SIZE);
+      }
+      setError(null);
+    } catch (e) {
+      if (seq !== requestSeqRef.current) return;
+      setError(normalizeApiError(e));
+    } finally {
+      if (seq !== requestSeqRef.current) return;
+      setLoadingMore(false);
+    }
+  }, [
+    normalizedQuery,
+    loading,
+    loadingMore,
+    hasMorePosts,
+    hasMoreAuthors,
+    posts.length,
+    authors.length,
+    requestSearch,
+  ]);
 
   useEffect(() => {
     fetchSearch();
   }, [fetchSearch]);
 
-  return { posts, authors, loading, error, refetch: fetchSearch };
+  return {
+    posts,
+    authors,
+    loading,
+    loadingMore,
+    hasMorePosts,
+    hasMoreAuthors,
+    error,
+    refetch: fetchSearch,
+    loadMore,
+  };
 }
