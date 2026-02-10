@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { Pressable, Text, View } from "react-native";
+import { tokens } from "@/theme/tokens";
 
 type Props = {
   title: string;
@@ -29,12 +30,12 @@ export function WriteTopBar({
         accessibilityLabel="글쓰기 닫기"
         testID="write-close-btn"
       >
-        <Ionicons name="close" size={22} color="#2B2B2B" />
+        <Ionicons name="close" size={22} color={tokens.colors.text} />
       </Pressable>
 
       <Text style={styles.screenTitle}>{title}</Text>
 
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+      <View style={styles.topBarActions}>
         {!!onPressDrafts && (
           <Pressable
             onPress={onPressDrafts}
@@ -44,7 +45,7 @@ export function WriteTopBar({
             accessibilityLabel="임시저장 목록 열기"
             testID="write-drafts-btn"
           >
-            <Ionicons name="file-tray-outline" size={20} color="#2B2B2B" />
+            <Ionicons name="file-tray-outline" size={20} color={tokens.colors.text} />
           </Pressable>
         )}
 

@@ -1,15 +1,33 @@
 import React, { createContext, useContext, useMemo } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { getTabBarPaddingBottom, getTabBarTotalHeight } from "@/navigation/tabs.styles";
+import {
+  getActionBarPaddingBottom,
+  getActionBarTotalHeight,
+  getTabBarPaddingBottom,
+  getTabBarTotalHeight,
+} from "@/navigation/tabs.styles";
 
 export type BottomDockMetrics = {
-  /** 탭바/하단 UI가 차지하는 총 높이(= base + safe-area bottom) */
-  height: number;
-  /** 하단 패딩(= 디자인 패딩 + safe-area bottom) */
-  paddingBottom: number;
   /** 디바이스 safe-area bottom 값(참고용) */
   insetBottom: number;
+
+  /** 탭 도크 메트릭 */
+  tab: {
+    height: number;
+    paddingBottom: number;
+  };
+
+  /** 상세/액션 도크 메트릭 */
+  action: {
+    height: number;
+    paddingBottom: number;
+  };
+
+  /** @deprecated tab.height 사용 */
+  height: number;
+  /** @deprecated tab.paddingBottom 사용 */
+  paddingBottom: number;
 };
 
 const BottomDockContext = createContext<BottomDockMetrics | null>(null);
@@ -24,10 +42,24 @@ export function BottomDockProvider({ children }: { children: React.ReactNode }) 
 
   const value = useMemo<BottomDockMetrics>(() => {
     const insetBottom = Math.max(0, Number(insets.bottom) || 0);
+    const tabHeight = getTabBarTotalHeight(insetBottom);
+    const tabPaddingBottom = getTabBarPaddingBottom(insetBottom);
+    const actionHeight = getActionBarTotalHeight(insetBottom);
+    const actionPaddingBottom = getActionBarPaddingBottom(insetBottom);
+
     return {
       insetBottom,
-      height: getTabBarTotalHeight(insetBottom),
-      paddingBottom: getTabBarPaddingBottom(insetBottom),
+      tab: {
+        height: tabHeight,
+        paddingBottom: tabPaddingBottom,
+      },
+      action: {
+        height: actionHeight,
+        paddingBottom: actionPaddingBottom,
+      },
+      // Backward compatibility
+      height: tabHeight,
+      paddingBottom: tabPaddingBottom,
     };
   }, [insets.bottom]);
 

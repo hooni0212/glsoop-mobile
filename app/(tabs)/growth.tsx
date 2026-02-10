@@ -1,10 +1,3 @@
-import React from "react";
-import { SafeAreaView, Text } from "react-native";
+import GrowthScreen from "@/screens/Growth";
 
-export default function Growth() {
-  return (
-    <SafeAreaView style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-      <Text>성장</Text>
-    </SafeAreaView>
-  );
-}
+export default GrowthScreen;

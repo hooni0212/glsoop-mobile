@@ -3,6 +3,7 @@ import { Alert, FlatList, SafeAreaView, Text, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 
 import { FeedCard } from "@/components/FeedCard";
+import { useBookmarkSnapshot } from "@/features/bookmarks/bookmarkStore";
 import { PostTopBar } from "@/components/post/PostTopBar";
 import { AppEmpty } from "@/components/state/AppEmpty";
 import { AppError } from "@/components/state/AppError";
@@ -11,6 +12,7 @@ import { useAuthorPosts } from "@/features/users/useAuthorPosts";
 import { useAuthorProfile } from "@/features/users/useAuthorProfile";
 import { authorScreenStyles } from "@/screens/Author.styles";
 import { getLike, setLike, useLikeSnapshot } from "@/features/likes/likeStore";
+import { useToast } from "@/feedback/ToastProvider";
 import { useAuth } from "@/auth/AuthContext";
 import { togglePostLike } from "@/services/likeService";
 import { ApiError } from "@/lib/errors";
@@ -46,6 +48,7 @@ export default function Author() {
     patchItem,
   } = useAuthorPosts(userId);
   const { signOut } = useAuth();
+  const { showToast } = useToast();
   const [likePending, setLikePending] = useState<Record<string, boolean>>({});
 
   const name = user?.name || "익명";
@@ -105,7 +108,7 @@ export default function Author() {
       if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
         await handleAuthError();
       } else {
-        Alert.alert("좋아요 실패", "잠시 후 다시 시도해주세요.");
+        showToast("좋아요 처리에 실패했어요. 잠시 후 다시 시도해주세요.", { tone: "error" });
       }
     } finally {
       setPending(postId, false);
@@ -236,6 +239,8 @@ function AuthorFeedItem({
   const fallbackLiked = Boolean(item.viewer?.isLiked);
   const fallbackCount = item.stats?.likeCount ?? 0;
   const { liked, likeCount } = useLikeSnapshot(item.id, fallbackLiked, fallbackCount);
+  const fallbackBookmarked = Boolean(item.viewer?.isBookmarked);
+  const { bookmarked } = useBookmarkSnapshot(item.id, fallbackBookmarked);
   const postSnapshot = {
     ...item,
     stats: { ...item.stats, likeCount },
@@ -250,7 +255,7 @@ function AuthorFeedItem({
       likeDisabled={Boolean(likePending[item.id])}
       likeTestID={`feed-like-btn-${item.id}`}
       liked={liked}
-      bookmarked={Boolean(item.viewer?.isBookmarked)}
+      bookmarked={bookmarked}
     />
   );
 }

@@ -44,3 +44,7 @@ app-example
 
 # local environment variables
 .env
+
+# local work notes (Notion sync source)
+docs/work-notes/
+tools/notion-sync/sync.mjs

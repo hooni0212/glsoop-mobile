@@ -1,9 +1,11 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import type { PostType } from "@/types/post";
 
 export type WriteDraft = {
   id: string;
   title: string;
   body: string;
+  category?: PostType;
   updatedAt: number; // epoch ms
 };
 
@@ -29,10 +31,14 @@ function normalizeDraft(input: any): WriteDraft | null {
 
   const title = typeof input.title === "string" ? input.title : "";
   const body = typeof input.body === "string" ? input.body : "";
+  const category =
+    input.category === "poem" || input.category === "essay" || input.category === "short"
+      ? input.category
+      : undefined;
   const updatedAt =
     typeof input.updatedAt === "number" ? input.updatedAt : Date.now();
 
-  return { id, title, body, updatedAt };
+  return { id, title, body, category, updatedAt };
 }
 
 function uuidLike(): string {
@@ -101,12 +107,14 @@ export async function upsertWriteDraft(input: {
   id?: string | null;
   title: string;
   body: string;
+  category?: PostType;
 }): Promise<string> {
   const id = input.id ?? uuidLike();
   const payload: WriteDraft = {
     id,
     title: input.title ?? "",
     body: input.body ?? "",
+    category: input.category,
     updatedAt: Date.now(),
   };
 

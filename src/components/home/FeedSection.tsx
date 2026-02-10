@@ -7,6 +7,7 @@ import {
 } from "react-native";
 
 import { FeedCard } from "@/components/FeedCard";
+import { useBookmarkSnapshot } from "@/features/bookmarks/bookmarkStore";
 import { AppEmpty } from "@/components/state/AppEmpty";
 import { AppError } from "@/components/state/AppError";
 import { AppLoading } from "@/components/state/AppLoading";
@@ -25,6 +26,7 @@ type Props<Item extends { id: string | number }> = {
   onEndReached: () => void;
   onPressItem: (id: Item["id"]) => void;
   onLikePress?: (id: Item["id"]) => void;
+  onBookmarkPress?: (id: Item["id"]) => void;
   getLikeDisabled?: (id: Item["id"]) => boolean;
 };
 
@@ -39,6 +41,7 @@ export function FeedSection<Item extends { id: string | number }>({
   onEndReached,
   onPressItem,
   onLikePress,
+  onBookmarkPress,
   getLikeDisabled,
 }: Props<Item>) {
   return (
@@ -84,6 +87,7 @@ export function FeedSection<Item extends { id: string | number }>({
           item={item}
           onPressItem={onPressItem}
           onLikePress={onLikePress}
+          onBookmarkPress={onBookmarkPress}
           getLikeDisabled={getLikeDisabled}
         />
       )}
@@ -95,16 +99,20 @@ function FeedSectionItem<Item extends { id: string | number }>({
   item,
   onPressItem,
   onLikePress,
+  onBookmarkPress,
   getLikeDisabled,
 }: {
   item: Item;
   onPressItem: (id: Item["id"]) => void;
   onLikePress?: (id: Item["id"]) => void;
+  onBookmarkPress?: (id: Item["id"]) => void;
   getLikeDisabled?: (id: Item["id"]) => boolean;
 }) {
   const fallbackLiked = Boolean((item as any).viewer?.isLiked);
   const fallbackCount = (item as any).stats?.likeCount ?? 0;
+  const fallbackBookmarked = Boolean((item as any).viewer?.isBookmarked);
   const { liked, likeCount } = useLikeSnapshot(item.id, fallbackLiked, fallbackCount);
+  const { bookmarked } = useBookmarkSnapshot(item.id, fallbackBookmarked);
   const postSnapshot = {
     ...(item as any),
     stats: { ...(item as any).stats, likeCount },
@@ -114,10 +122,10 @@ function FeedSectionItem<Item extends { id: string | number }>({
     <FeedCard
       post={postSnapshot}
       liked={liked}
-      bookmarked={Boolean((item as any).viewer?.isBookmarked)}
+      bookmarked={bookmarked}
       onPress={() => onPressItem(item.id)}
       onLikePress={() => onLikePress?.(item.id)}
-      onBookmarkPress={() => {}}
+      onBookmarkPress={() => onBookmarkPress?.(item.id)}
       likeTestID={`feed-like-btn-${item.id}`}
       likeDisabled={getLikeDisabled ? getLikeDisabled(item.id) : false}
     />

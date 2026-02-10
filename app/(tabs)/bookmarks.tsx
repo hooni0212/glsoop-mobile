@@ -1,10 +1,3 @@
-import React from "react";
-import { SafeAreaView, Text } from "react-native";
+import BookmarksScreen from "@/screens/Bookmarks";
 
-export default function Bookmarks() {
-  return (
-    <SafeAreaView style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-      <Text>북마크</Text>
-    </SafeAreaView>
-  );
-}
+export default BookmarksScreen;

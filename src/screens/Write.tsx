@@ -1,5 +1,6 @@
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigation } from "@react-navigation/native";
 import {
   Keyboard,
   KeyboardAvoidingView,
@@ -26,6 +27,8 @@ import {
   upsertWriteDraft,
   clearAllWriteDrafts,
 } from "@/services/draftStorage";
+import { createPost } from "@/services/postService";
+import type { PostType } from "@/types/post";
 import { ConfirmState, useConfirmBeforeLeave } from "@/hooks/useConfirmBeforeLeave";
 
 import { createWriteStyles } from "./Write.styles";
@@ -33,21 +36,25 @@ import { createWriteStyles } from "./Write.styles";
 export default function Write() {
   const styles = useMemo(() => createWriteStyles(), []);
   const params = useLocalSearchParams();
+  const navigation = useNavigation();
 
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [draftId, setDraftId] = useState<string | null>(null);
+  const [selectedType, setSelectedType] = useState<PostType | null>(null);
 
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const [draftPrompt, setDraftPrompt] = useState<ConfirmState>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [createdPostId, setCreatedPostId] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<AppErrorModel | null>(null);
 
   const hasShownRestorePromptRef = useRef(false);
 
-  const hasChanges = title.trim().length > 0 || body.trim().length > 0;
-  const canSubmit = title.trim().length > 0 && body.trim().length > 0;
+  const hasChanges = title.trim().length > 0 || body.trim().length > 0 || selectedType !== null;
+  const canSubmit =
+    title.trim().length > 0 && body.trim().length > 0 && selectedType !== null;
 
   const closeDraftPrompt = useCallback(() => setDraftPrompt(null), []);
 
@@ -65,15 +72,27 @@ export default function Write() {
       draftId,
       titleLen: trimmedTitle.length,
       bodyLen: trimmedBody.length,
+      category: selectedType,
     });
 
-    const id = await upsertWriteDraft({ id: draftId, title: trimmedTitle, body: trimmedBody });
+    const id = await upsertWriteDraft({
+      id: draftId,
+      title: trimmedTitle,
+      body: trimmedBody,
+      category: selectedType ?? undefined,
+    });
     if (!draftId) setDraftId(id);
-  }, [title, body, draftId]);
+  }, [title, body, draftId, selectedType]);
 
   const { confirm: leaveConfirm, requestLeave, allowNextLeave } = useConfirmBeforeLeave({
     hasChanges,
-    onLeave: () => router.replace("/(tabs)"),
+    onLeave: () => {
+      if (navigation.canGoBack()) {
+        navigation.goBack();
+        return;
+      }
+      router.replace("/(tabs)");
+    },
     buildConfirm: ({ action, proceed, dismiss }) => ({
       title: "작성중인 내용이 있어요.",
       message: "닫으면 입력 내용이 사라질 수 있어요.\n어떻게 할까요?",
@@ -127,38 +146,64 @@ export default function Write() {
     setDraftId(null);
     setTitle("");
     setBody("");
+    setSelectedType(null);
   }, []);
 
   const onPressSubmit = useCallback(async () => {
+    if (!selectedType) return;
+
     console.log("[WRITE] submit", { draftId, titleLen: title.length, bodyLen: body.length });
 
-    const payload = { title, body };
+    const trimmedTitle = title.trim();
+    const trimmedBody = body.trim();
+    const payload = {
+      type: selectedType,
+      category: selectedType,
+      title: trimmedTitle,
+      content: trimmedBody,
+    };
     console.log("[WRITE] submit payload", payload);
 
     setSubmitError(null);
+    setCreatedPostId(null);
     setIsSubmitting(true);
     try {
-      // TODO: 실제 전송 API 연결 필요 (예: fetch/axios)
-      // await fetch("/api/write", { method: "POST", body: JSON.stringify(payload) });
+      const created = await createPost({
+        type: selectedType,
+        category: selectedType,
+        title: trimmedTitle || undefined,
+        content: trimmedBody,
+        contentFormat: "plain",
+      });
 
       // ✅ 게시 성공(가정) 시 해당 draft 삭제
       if (draftId) {
         await deleteWriteDraft(draftId);
         setDraftId(null);
       }
-      console.log("[WRITE] submit success -> show success and go home");
+      setCreatedPostId(created.postId);
+      console.log("[WRITE] submit success -> show success actions", { postId: created.postId });
       setSubmitSuccess(true);
-      setTimeout(() => {
-        allowNextLeave();
-        router.replace("/(tabs)");
-      }, 600);
     } catch (err) {
       console.log("[WRITE] submit error", err);
       setSubmitError(normalizeApiError(err));
     } finally {
       setIsSubmitting(false);
     }
-  }, [draftId, title, body, allowNextLeave]);
+  }, [selectedType, draftId, title, body]);
+
+  const onSuccessGoHome = useCallback(() => {
+    setSubmitSuccess(false);
+    allowNextLeave();
+    router.replace("/(tabs)");
+  }, [allowNextLeave]);
+
+  const onSuccessViewPost = useCallback(() => {
+    if (!createdPostId) return;
+    setSubmitSuccess(false);
+    allowNextLeave();
+    router.replace(`/posts/${createdPostId}`);
+  }, [createdPostId, allowNextLeave]);
 
   // 1) 키보드 상태 감지
   useEffect(() => {
@@ -191,6 +236,7 @@ export default function Write() {
           setDraftId(d.id);
           setTitle(d.title);
           setBody(d.body);
+          setSelectedType(d.category ?? null);
         }
         return;
       }
@@ -256,7 +302,11 @@ export default function Write() {
             styles={styles}
           />
 
-          <WriteMetaSection styles={styles} />
+          <WriteMetaSection
+            styles={styles}
+            selectedType={selectedType}
+            onSelectType={setSelectedType}
+          />
 
           <WriteStates styles={styles} confirm={activeConfirm} />
         </View>
@@ -273,64 +323,46 @@ export default function Write() {
         </Modal>
 
         <Modal visible={submitSuccess} transparent animationType="fade">
-          <View
-            style={{
-              flex: 1,
-              backgroundColor: "rgba(0,0,0,0.25)",
-              justifyContent: "center",
-              alignItems: "center",
-            }}
-          >
-            <View
-              style={{
-                padding: 20,
-                borderRadius: 14,
-                backgroundColor: "#fff",
-                alignItems: "center",
-                width: 220,
-              }}
-            >
-              <Text style={{ fontWeight: "900", fontSize: 16, color: "#2B2B2B" }}>
-                완료되었어요
-              </Text>
-              <Text style={{ marginTop: 8, fontWeight: "700", color: "#444", textAlign: "center" }}>
-                홈으로 이동합니다
-              </Text>
+          <View style={styles.successOverlay}>
+            <View style={styles.successCard}>
+              <Text style={styles.successTitle}>완료되었어요</Text>
+              <Text style={styles.successMessage}>어디로 이동할까요?</Text>
+              <View style={styles.successActions}>
+                <Pressable
+                  onPress={onSuccessViewPost}
+                  style={[styles.modalBtn, styles.modalBtnPrimary]}
+                  accessibilityRole="button"
+                  accessibilityLabel="방금 작성한 글 보기"
+                  testID="write-success-view-post"
+                >
+                  <Text style={[styles.modalBtnText, styles.modalBtnTextPrimary]}>방금 글 보기</Text>
+                </Pressable>
+                <Pressable
+                  onPress={onSuccessGoHome}
+                  style={styles.modalBtn}
+                  accessibilityRole="button"
+                  accessibilityLabel="홈으로 이동"
+                  testID="write-success-go-home"
+                >
+                  <Text style={styles.modalBtnText}>홈으로</Text>
+                </Pressable>
+              </View>
             </View>
           </View>
         </Modal>
 
         {__DEV__ && (
-          <View style={{ padding: 12 }}>
-            <View
-              style={{
-                borderWidth: 1,
-                borderStyle: "dashed",
-                borderColor: "rgba(0,0,0,0.2)",
-                borderRadius: 10,
-                padding: 10,
-                backgroundColor: "rgba(0,0,0,0.03)",
-              }}
-            >
-              <View
-                style={{
-                  flexDirection: "row",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                }}
-              >
+          <View style={styles.devWrap}>
+            <View style={styles.devCard}>
+              <View style={styles.devRow}>
                 <View>
-                  <Text style={{ fontWeight: "800", color: "#333" }}>
-                    DEV: Draft helpers
-                  </Text>
-                  <Text style={{ color: "#444", marginTop: 4, fontSize: 12 }}>
-                    테스트 전 임시저장 비우기
-                  </Text>
+                  <Text style={styles.devTitle}>DEV: Draft helpers</Text>
+                  <Text style={styles.devDescription}>테스트 전 임시저장 비우기</Text>
                 </View>
                 <Pressable
                   onPress={clearDraftsForDev}
                   hitSlop={8}
-                  style={[styles.chip, { paddingHorizontal: 10 }]}
+                  style={[styles.chip, styles.chipCompact]}
                   accessibilityRole="button"
                   accessibilityLabel="임시저장 초기화"
                   testID="dev-clear-write-drafts"
