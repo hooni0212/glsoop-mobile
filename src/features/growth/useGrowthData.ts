@@ -53,6 +53,17 @@ export type GrowthQuest = {
   uiJson: string;
   completedAt: string | null;
   rewardClaimedAt: string | null;
+  isLocked: boolean;
+  requiredEntitlement: string | null;
+  lockReason: string | null;
+};
+
+export type GrowthCosmeticReward = {
+  key: string;
+  name: string;
+  iconEmoji: string | null;
+  rarity: string;
+  season: string | null;
 };
 
 export type GrowthCampaign = {
@@ -122,6 +133,7 @@ type ClaimQuestResponse = {
   reward_claimed_at?: unknown;
   gained_xp?: unknown;
   new_xp?: unknown;
+  gained_cosmetics?: unknown;
 };
 
 type GrowthSnapshot = {
@@ -139,6 +151,7 @@ export type ClaimQuestResult = {
   rewardClaimedAt: string | null;
   gainedXp: number;
   newXp: number;
+  gainedCosmetics: GrowthCosmeticReward[];
 };
 
 const CACHE_TTL_MS = 60_000;
@@ -170,6 +183,16 @@ function toText(value: unknown, fallback = "") {
 
 function toNullableText(value: unknown) {
   return typeof value === "string" && value.length > 0 ? value : null;
+}
+
+function toBoolean(value: unknown) {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return value === 1;
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    return normalized === "1" || normalized === "true";
+  }
+  return false;
 }
 
 function toIdText(value: unknown) {
@@ -225,6 +248,9 @@ function normalizeAchievements(input: unknown): GrowthAchievement[] {
 
 function normalizeQuest(input: unknown): GrowthQuest {
   const row = toRecord(input);
+  const serverStatus = normalizeStatus(row.status);
+  const isLocked = toBoolean(row.is_locked) || serverStatus === "locked";
+
   return {
     id: toNumber(row.id),
     stateId: toNumber(row.state_id),
@@ -234,7 +260,7 @@ function normalizeQuest(input: unknown): GrowthQuest {
     category: toText(row.category),
     target: toNumber(row.target),
     rewardXp: toNumber(row.reward_xp),
-    status: normalizeStatus(row.status),
+    status: isLocked ? "locked" : serverStatus,
     progress: toNumber(row.progress),
     positionIndex: toNumber(row.position_index),
     campaignId: toNumber(row.campaign_id),
@@ -244,6 +270,9 @@ function normalizeQuest(input: unknown): GrowthQuest {
     uiJson: toText(row.ui_json),
     completedAt: toNullableText(row.completed_at),
     rewardClaimedAt: toNullableText(row.reward_claimed_at),
+    isLocked,
+    requiredEntitlement: toNullableText(row.required_entitlement),
+    lockReason: toNullableText(row.lock_reason),
   };
 }
 
@@ -289,6 +318,28 @@ function normalizeTopPosts(input: unknown): GrowthTopPost[] {
   return input
     .map(normalizeTopPost)
     .filter((item): item is GrowthTopPost => item !== null);
+}
+
+function normalizeClaimCosmetic(input: unknown): GrowthCosmeticReward | null {
+  const row = toRecord(input);
+  const key = toText(row.key);
+  const name = toText(row.name);
+  if (!key || !name) return null;
+
+  return {
+    key,
+    name,
+    iconEmoji: toNullableText(row.icon_emoji),
+    rarity: toText(row.rarity, "common"),
+    season: toNullableText(row.season),
+  };
+}
+
+function normalizeClaimCosmetics(input: unknown): GrowthCosmeticReward[] {
+  if (!Array.isArray(input)) return [];
+  return input
+    .map(normalizeClaimCosmetic)
+    .filter((item): item is GrowthCosmeticReward => item !== null);
 }
 
 function publishSnapshot(next: GrowthSnapshot) {
@@ -496,6 +547,7 @@ async function claimQuestRewardRequest(stateId: number): Promise<ClaimQuestResul
       rewardClaimedAt: toNullableText(res.reward_claimed_at),
       gainedXp: toNumber(res.gained_xp),
       newXp: toNumber(res.new_xp),
+      gainedCosmetics: normalizeClaimCosmetics(res.gained_cosmetics),
     };
 
     publishSnapshot({
@@ -510,6 +562,7 @@ async function claimQuestRewardRequest(stateId: number): Promise<ClaimQuestResul
       stateId,
       gainedXp: result.gainedXp,
       newXp: result.newXp,
+      gainedCosmeticsCount: result.gainedCosmetics.length,
     });
 
     return result;

@@ -66,9 +66,16 @@
   "code": "daily_write_once",
   "ui_json": null,
   "completed_at": null,
-  "reward_claimed_at": null
+  "reward_claimed_at": null,
+  "is_locked": false,
+  "required_entitlement": null,
+  "lock_reason": null
 }
 ```
+
+- `is_locked`: 유료 잠금 여부 (`true`면 클레임 불가)
+- `required_entitlement`: 필요 권한 키 (예: `pass:2026_spring`)
+- `lock_reason`: 잠금 사유 (예: `SEASON_PASS_REQUIRED`)
 
 ### 1.4 Campaign
 ```json
@@ -210,12 +217,22 @@
   "ok": true,
   "reward_claimed_at": "2026-02-09T13:10:20.000Z",
   "gained_xp": 20,
-  "new_xp": 200
+  "new_xp": 200,
+  "gained_cosmetics": [
+    {
+      "key": "sticker_star",
+      "name": "스타 스티커",
+      "icon_emoji": "✨",
+      "rarity": "common",
+      "season": null
+    }
+  ]
 }
 ```
 
 #### Errors
 - `400`: `올바르지 않은 stateId입니다.` / `아직 완료되지 않은 퀘스트입니다.`
+- `403`: `ENTITLEMENT_REQUIRED` (`시즌 패스가 필요합니다.`)
 - `404`: `퀘스트 상태를 찾을 수 없습니다.`
 - `409`: `이미 보상을 받았습니다.`
 - `500`: `보상 지급 중 오류가 발생했습니다.`
@@ -239,6 +256,9 @@
 - `ui_json` -> `uiJson`
 - `completed_at` -> `completedAt`
 - `reward_claimed_at` -> `rewardClaimedAt`
+- `is_locked` -> `isLocked`
+- `required_entitlement` -> `requiredEntitlement`
+- `lock_reason` -> `lockReason`
 - `author_name` -> `authorName`
 - `created_at` -> `createdAt`
 - `like_count` -> `likeCount`

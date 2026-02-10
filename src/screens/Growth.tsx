@@ -67,9 +67,11 @@ export default function GrowthScreen() {
         campaign.quests.map((quest) => ({
           id: `${campaign.id}-${quest.id}`,
           title: quest.name,
-          subtitle: `${campaign.name} · ${Math.min(quest.progress, quest.target)}/${quest.target} · +${quest.rewardXp} XP`,
-          status: quest.status,
-          order: quest.status === "in_progress" ? 0 : quest.status === "completed" ? 1 : 2,
+          subtitle: quest.isLocked
+            ? `${campaign.name} · 시즌 패스 필요 · +${quest.rewardXp} XP`
+            : `${campaign.name} · ${Math.min(quest.progress, quest.target)}/${quest.target} · +${quest.rewardXp} XP`,
+          status: quest.isLocked ? "locked" : quest.status,
+          order: quest.isLocked ? 2 : quest.status === "in_progress" ? 0 : quest.status === "completed" ? 1 : 2,
           progress: quest.progress,
         }))
       )

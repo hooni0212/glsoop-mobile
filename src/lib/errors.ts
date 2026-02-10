@@ -76,6 +76,43 @@ function normalizeFromStatus(status?: number): AppErrorModel | null {
   };
 }
 
+function normalizeCode(rawCode?: string) {
+  if (typeof rawCode !== "string") return "";
+  return rawCode.trim().toUpperCase();
+}
+
+function normalizeFromApiCode(
+  code?: string,
+  message?: string,
+  status?: number
+): AppErrorModel | null {
+  const normalizedCode = normalizeCode(code);
+  if (!normalizedCode) return null;
+
+  if (normalizedCode === "ENTITLEMENT_REQUIRED") {
+    return {
+      kind: "unknown",
+      title: "시즌 패스가 필요해요",
+      description:
+        message || "프리미엄 퀘스트를 진행하려면 시즌 패스가 필요해요.",
+      canRetry: false,
+      status,
+    };
+  }
+
+  if (normalizedCode === "NOT_OWNED") {
+    return {
+      kind: "unknown",
+      title: "보유하지 않은 아이템이에요",
+      description: message || "보유한 아이템만 사용할 수 있어요.",
+      canRetry: false,
+      status,
+    };
+  }
+
+  return null;
+}
+
 const NETWORK_ERROR_MESSAGES = [
   "Failed to fetch",
   "Network request failed",
@@ -127,6 +164,9 @@ export function normalizeApiError(error: unknown): AppErrorModel {
   }
 
   if (error instanceof ApiError) {
+    const fromCode = normalizeFromApiCode(error.code, error.message, error.status);
+    if (fromCode) return fromCode;
+
     if (error.status === 429) {
       return {
         kind: "unknown",
@@ -147,6 +187,16 @@ export function normalizeApiError(error: unknown): AppErrorModel {
         kind: "unknown",
         title: "요청을 처리할 수 없어요",
         description: error.message || "잠시 후 다시 시도해주세요.",
+        canRetry: false,
+        status: error.status,
+      };
+    }
+
+    if (error.status === 403 && normalizeCode(error.code) && !normalizeCode(error.code).startsWith("AUTH_")) {
+      return {
+        kind: "unknown",
+        title: "요청을 처리할 수 없어요",
+        description: error.message || "접근 권한이 없습니다.",
         canRetry: false,
         status: error.status,
       };

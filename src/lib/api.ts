@@ -131,10 +131,14 @@ async function apiRequest<T>(path: string, options: RequestOptions): Promise<T> 
         );
       }
       // 서버가 { ok:false, message } 같은 경우
-      throw new ApiError(parsed?.message || parsed?.error?.message || `HTTP ${res.status}`, {
-        status: res.status,
-        payload: parsed,
-      });
+      throw new ApiError(
+        parsed?.message || parsed?.error?.message || `HTTP ${res.status}`,
+        {
+          status: res.status,
+          code: parsed?.code || parsed?.error?.code,
+          payload: parsed,
+        }
+      );
     }
 
     // ✅ (A) 공통 포맷: { success:true, data:T }
