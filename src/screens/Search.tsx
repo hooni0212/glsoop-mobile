@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   Pressable,
   SafeAreaView,
@@ -16,6 +16,7 @@ import { AppEmpty } from "@/components/state/AppEmpty";
 import { AppError } from "@/components/state/AppError";
 import { AppLoading } from "@/components/state/AppLoading";
 import { useSearch, type SearchAuthor } from "@/features/search/useSearch";
+import { clearRecentSearches, listRecentSearches, saveRecentSearch } from "@/services/searchHistory";
 import { tokens } from "@/theme/tokens";
 
 type SearchTabKey = "posts" | "authors";
@@ -34,6 +35,7 @@ export default function SearchScreen() {
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [activeTab, setActiveTab] = useState<SearchTabKey>("posts");
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -45,11 +47,47 @@ export default function SearchScreen() {
     };
   }, [query]);
 
+  const loadRecentSearches = useCallback(async () => {
+    const history = await listRecentSearches();
+    setRecentSearches(history);
+  }, []);
+
+  useEffect(() => {
+    loadRecentSearches();
+  }, [loadRecentSearches]);
+
+  const commitRecentQuery = useCallback(async (value: string) => {
+    const history = await saveRecentSearch(value);
+    setRecentSearches(history);
+  }, []);
+
+  const handleSubmitQuery = useCallback(() => {
+    const normalized = query.trim();
+    if (!normalized) return;
+
+    setQuery(normalized);
+    setDebouncedQuery(normalized);
+    setActiveTab("posts");
+    void commitRecentQuery(normalized);
+  }, [commitRecentQuery, query]);
+
+  const handlePressRecent = useCallback((value: string) => {
+    setQuery(value);
+    setDebouncedQuery(value);
+    setActiveTab("posts");
+  }, []);
+
+  const handleClearRecent = useCallback(async () => {
+    await clearRecentSearches();
+    setRecentSearches([]);
+  }, []);
+
   const { posts, authors, loading, error, refetch } = useSearch(debouncedQuery);
   const hasQuery = debouncedQuery.length > 0;
   const activeCount = activeTab === "posts" ? posts.length : authors.length;
 
-  const showPrompt = !hasQuery && !loading;
+  const showRecent = !hasQuery && !loading && recentSearches.length > 0;
+  const showPrompt = !hasQuery && !loading && recentSearches.length === 0;
   const showLoading = hasQuery && loading;
   const showError = hasQuery && Boolean(error);
   const showEmpty = hasQuery && !loading && !error && activeCount === 0;
@@ -79,6 +117,7 @@ export default function SearchScreen() {
             autoCapitalize="none"
             autoCorrect={false}
             returnKeyType="search"
+            onSubmitEditing={handleSubmitQuery}
             accessibilityLabel="글 검색어"
             testID="search-input"
           />
@@ -115,6 +154,33 @@ export default function SearchScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
+        {showRecent ? (
+          <View style={styles.recentSection}>
+            <View style={styles.recentHeader}>
+              <Text style={styles.recentTitle}>최근 검색어</Text>
+              <Pressable onPress={handleClearRecent} hitSlop={10} testID="search-clear-history-btn">
+                <Text style={styles.recentClearText}>전체 삭제</Text>
+              </Pressable>
+            </View>
+
+            <View style={styles.recentChipWrap}>
+              {recentSearches.map((keyword) => (
+                <Pressable
+                  key={keyword}
+                  style={styles.recentChip}
+                  onPress={() => handlePressRecent(keyword)}
+                  testID={`search-recent-chip-${keyword}`}
+                >
+                  <Ionicons name="time-outline" size={14} color={tokens.colors.textMuted} />
+                  <Text style={styles.recentChipText} numberOfLines={1}>
+                    {keyword}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+        ) : null}
+
         {showPrompt ? (
           <AppEmpty
             title="검색어를 입력해보세요"
@@ -283,6 +349,54 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: tokens.space.lg,
     paddingBottom: tokens.space.lg,
+  },
+  recentSection: {
+    marginBottom: tokens.space.md,
+    borderRadius: tokens.radius.xl,
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+    backgroundColor: tokens.colors.surfaceStrong,
+    paddingVertical: tokens.space.md,
+    paddingHorizontal: tokens.space.md,
+  },
+  recentHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: tokens.space.sm,
+  },
+  recentTitle: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: tokens.colors.text,
+  },
+  recentClearText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: tokens.colors.textMuted,
+  },
+  recentChipWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: tokens.space.sm,
+  },
+  recentChip: {
+    maxWidth: "100%",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    borderRadius: tokens.radius.pill,
+    borderWidth: 1,
+    borderColor: tokens.colors.borderStrong,
+    backgroundColor: tokens.colors.white,
+    paddingVertical: 7,
+    paddingHorizontal: 10,
+  },
+  recentChipText: {
+    maxWidth: 180,
+    fontSize: 12,
+    color: tokens.colors.textMuted,
+    fontWeight: "700",
   },
   countLabel: {
     fontSize: tokens.font.small,
