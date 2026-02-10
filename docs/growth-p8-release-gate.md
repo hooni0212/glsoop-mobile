@@ -26,7 +26,12 @@
 - [ ] 접근성 라벨(업적/퀘스트 이동, top posts 항목)이 스크린 리더에서 의미 전달
 
 ## 릴리스 판단 기준
-- [ ] 자동 검증 100% green
+- [x] 자동 검증 100% green
 - [ ] 치명도 High 버그 0건
 - [ ] 수동 QA 게이트 전부 체크 완료
 - [ ] 서버 계약 문서(`docs/api/growth.md`)와 실제 응답 스키마 일치
+
+## 검증 로그 (2026-02-10)
+- `npx playwright test e2e/growth-flow.spec.ts` 통과 (6 passed)
+- `npx playwright test e2e/home.spec.ts` 통과 (2 passed)
+- `npm run lint` 통과
