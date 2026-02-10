@@ -265,10 +265,13 @@ export default function PostDetail() {
     const shareMessage = shareContent ? `${shareTitle}\n\n${shareContent}` : shareTitle;
 
     try {
-      await Share.share({
+      const result = await Share.share({
         title: shareTitle,
         message: shareMessage,
       });
+      if (result.action === Share.sharedAction) {
+        showToast("공유가 완료되었어요.", { tone: "success" });
+      }
     } catch {
       showToast("공유에 실패했어요. 잠시 후 다시 시도해주세요.", { tone: "error" });
     }
