@@ -22,6 +22,7 @@ import {
   addPostToBookmarkList,
   BookmarkList,
   createBookmarkList,
+  listRecentBookmarkLists,
   listPostBookmarkLists,
   removePostFromBookmarkList,
 } from "@/services/bookmarkService";
@@ -34,6 +35,31 @@ function formatKoreanDate(iso?: string) {
   const m = d.getMonth() + 1;
   const day = d.getDate();
   return `${y}년 ${m}월 ${day}일`;
+}
+
+function mergeRecentAndAllLists(recentLists: BookmarkList[], allLists: BookmarkList[]) {
+  if (recentLists.length === 0) return allLists;
+
+  const allById = new Map(allLists.map((item) => [item.id, item]));
+  const ordered: BookmarkList[] = [];
+
+  for (const recent of recentLists) {
+    const matched = allById.get(recent.id);
+    if (matched) {
+      ordered.push(matched);
+      allById.delete(recent.id);
+      continue;
+    }
+    ordered.push(recent);
+  }
+
+  for (const item of allLists) {
+    if (!allById.has(item.id)) continue;
+    ordered.push(item);
+    allById.delete(item.id);
+  }
+
+  return ordered;
 }
 
 export default function PostDetail() {
@@ -134,10 +160,30 @@ export default function PostDetail() {
     if (!post) return;
     setBookmarkModalVisible(true);
     setBookmarkLoading(true);
+
+    let recentLists: BookmarkList[] = [];
+    let recentFailed = false;
+
     try {
+      try {
+        recentLists = await listRecentBookmarkLists({ postId: post.id, limit: 6 });
+      } catch (recentErr) {
+        if (recentErr instanceof ApiError && (recentErr.status === 401 || recentErr.status === 403)) {
+          setBookmarkModalVisible(false);
+          await handleAuthError();
+          return;
+        }
+        recentFailed = true;
+      }
+
       const lists = await listPostBookmarkLists(post.id);
-      setBookmarkLists(lists);
-      syncBookmarkSnapshot(lists);
+      const merged = mergeRecentAndAllLists(recentLists, lists);
+      setBookmarkLists(merged);
+      syncBookmarkSnapshot(merged);
+
+      if (recentFailed) {
+        showToast("최근 사용 폴더 정렬을 불러오지 못해 기본 목록으로 표시했어요.");
+      }
     } catch (err) {
       if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
         setBookmarkModalVisible(false);
