@@ -180,4 +180,25 @@ test.describe("검색 화면", () => {
     await expect(page.getByText("검색어를 입력해보세요")).toBeVisible();
     await expect(page.getByText("글과 작가를 분리해서 찾아볼 수 있어요.")).toBeVisible();
   });
+
+  test("자동 탭 전환은 쿼리 변경 시에만 동작하고 수동 탭 선택은 유지된다", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("button", { name: "검색" }).click();
+
+    await expect(page.getByTestId("search-screen")).toBeVisible();
+    await expect(page.getByTestId("search-input")).toBeVisible();
+
+    await page.getByTestId("search-input").fill("haram");
+    await expect(page.getByText(/검색 결과 1개/)).toBeVisible();
+    await expect(page.getByTestId("search-author-card-12")).toBeVisible();
+
+    await page.getByTestId("search-input").fill("새벽");
+    await expect(page.getByText(/검색 결과 1개/)).toBeVisible();
+    await expect(page.getByTestId("search-post-card-101")).toBeVisible();
+
+    await page.getByTestId("search-tab-authors").click();
+    await expect(page.getByText(/검색 결과 0개/)).toBeVisible();
+    await expect(page.getByText("검색 결과가 없어요")).toBeVisible();
+    await expect(page.locator('[data-testid^="search-post-card-"]')).toHaveCount(0);
+  });
 });

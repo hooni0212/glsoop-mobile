@@ -329,6 +329,8 @@ export default function PostDetail() {
             onPressShare={() => void onPressShare()}
             likeDisabled={likePending}
             likeTestID="post-like-btn"
+            bookmarkTestID="post-bookmark-btn"
+            shareTestID="post-share-btn"
             height={dock.action.height}
             paddingBottom={dock.action.paddingBottom}
             styles={styles}

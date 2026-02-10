@@ -12,6 +12,8 @@ export type PostActionBarProps = {
   onPressShare: () => void;
   likeDisabled?: boolean;
   likeTestID?: string;
+  bookmarkTestID?: string;
+  shareTestID?: string;
   height: number;
   paddingBottom: number;
   styles: {
@@ -31,6 +33,8 @@ export function PostActionBar({
   onPressShare,
   likeDisabled,
   likeTestID,
+  bookmarkTestID,
+  shareTestID,
   height,
   paddingBottom,
   styles,
@@ -52,7 +56,12 @@ export function PostActionBar({
         <Text style={[styles.actionLabel, isLiked && styles.actionLabelActive]}>{likeCount}</Text>
       </Pressable>
 
-      <Pressable onPress={onPressBookmark} style={styles.actionBtn} hitSlop={10}>
+      <Pressable
+        onPress={onPressBookmark}
+        style={styles.actionBtn}
+        hitSlop={10}
+        testID={bookmarkTestID}
+      >
         <Ionicons
           name={isBookmarked ? "bookmark" : "bookmark-outline"}
           size={22}
@@ -61,7 +70,7 @@ export function PostActionBar({
         <Text style={styles.actionLabel}>저장</Text>
       </Pressable>
 
-      <Pressable onPress={onPressShare} style={styles.actionBtn} hitSlop={10}>
+      <Pressable onPress={onPressShare} style={styles.actionBtn} hitSlop={10} testID={shareTestID}>
         <Ionicons name="share-social-outline" size={22} color={tokens.colors.textMuted} />
         <Text style={styles.actionLabel}>공유</Text>
       </Pressable>
