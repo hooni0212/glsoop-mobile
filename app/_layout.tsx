@@ -28,6 +28,7 @@ export default function RootLayout() {
             />
 
             <Stack.Screen name="search" options={{ headerShown: false }} />
+            <Stack.Screen name="profile-customize" options={{ headerShown: false }} />
             <Stack.Screen name="ui-kit" options={{ headerShown: false }} />
           </Stack>
         </ToastProvider>
