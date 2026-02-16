@@ -45,7 +45,9 @@ export function AuthGate() {
         await apiGet("/api/me");
         if (cancelled) return;
         lastValidatedTokenRef.current = token;
-        router.replace("/(tabs)");
+        if (inAuthGroup) {
+          router.replace("/(tabs)");
+        }
       } catch (error) {
         if (cancelled) return;
         if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
