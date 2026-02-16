@@ -56,6 +56,8 @@
   - 개발 환경 API 요청/응답 로그 활성화
 - `EXPO_PUBLIC_GROWTH_TELEMETRY=true`
   - Growth 텔레메트리 로그 활성화(개발/운영 선택)
+- `EXPO_PUBLIC_ENABLE_PAPER_TEXTURE=false`
+  - 종이 텍스처 렌더링 전역 비활성화(운영 kill-switch). 기본값은 `true`
 
 참고: API helper(`src/lib/api.ts`)가 `/api` prefix 중복을 자동 정리합니다.
 
