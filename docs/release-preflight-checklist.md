@@ -19,28 +19,26 @@ Go/No-Go 결정을 체크리스트 기반으로 수행한다.
 ## 2) P0 (출시 차단 항목)
 
 ### 2-1. 타입/정적 검증
-- [ ] `npx tsc --noEmit` 통과
-- 현재 확인된 실패:
-  - `src/screens/Bookmarks.tsx:563`
-  - `src/screens/Bookmarks.tsx:573`
-  - `src/screens/Bookmarks.tsx:606`
-  - `src/screens/Bookmarks.tsx:646`
-  - `e2e/write-draft.spec.ts:19` (implicit any)
+- [x] `npx tsc --noEmit` 통과
+- 해결 메모 (2026-02-16):
+  - `tokens.radius.md/sm` 추가
+  - Write E2E 타입 정리
 
 ### 2-2. 작성(Write) E2E 안정화
-- [ ] Write 관련 E2E 모두 통과
-- 현재 확인된 실패:
-  - `e2e/write-draft.spec.ts` (S1/S2/S3)
-  - `e2e/write-ux.spec.ts` (S0/S1/S2...)
-- 대표 실패 지점:
-  - `e2e/write-draft.spec.ts:47` (`write-title-input` fill 중 DOM detached / timeout)
+- 정책: `A` (Write/Write Drafts는 로그인 필수)
+- [x] Write 관련 E2E 모두 통과
+- 결과 (2026-02-16):
+  - `npx playwright test e2e/write-draft.spec.ts e2e/write-ux.spec.ts`
+  - 10 passed
+- 조치 원칙:
+  - E2E는 인증 토큰을 세팅한 상태에서 실행
+  - `/api/me` mock을 고정해 AuthGate 리다이렉트를 제거
 
 ### 2-3. 민감 로그 제거
-- [ ] 본문/payload/상태를 직접 출력하는 로그 제거 또는 개발 전용 가드
-- 현재 확인된 주요 로그:
-  - `src/screens/Write.tsx:155`
-  - `src/screens/Write.tsx:165`
-  - `src/screens/Write.tsx:188`
+- [x] 본문/payload/상태를 직접 출력하는 로그 제거 또는 개발 전용 가드
+- 적용:
+  - `src/lib/logger.ts` 도입 (민감값 마스킹 + dev/release 레벨 분리)
+  - `eslint`에 `no-console` 적용 (`src/lib/logger.ts`만 예외)
 
 ### 2-4. Expo 버전 정합성
 - [ ] `npx expo install --check` 통과
@@ -116,11 +114,11 @@ Go/No-Go 결정을 체크리스트 기반으로 수행한다.
 
 ## 6) 현재 스냅샷 (2026-02-16)
 - `npm run lint`: 통과
-- `npx tsc --noEmit`: 실패
+- `npx tsc --noEmit`: 통과
 - `npx expo install --check`: 실패 (버전 mismatch)
 - `npm audit --omit=dev`: High 2 / Moderate 1
-- Non-Write E2E(`--grep-invert`): 15 passed
-- Write E2E: 실패 (timeout/DOM detach)
+- Non-Write E2E(`--grep-invert`): 미재검증(이번 패스 기준)
+- Write E2E(`write-draft` + `write-ux`): 10 passed
 
 ---
 
