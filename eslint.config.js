@@ -7,4 +7,16 @@ module.exports = defineConfig([
   {
     ignores: ['dist/*'],
   },
+  {
+    files: ['src/**/*.{ts,tsx}', 'app/**/*.{ts,tsx}'],
+    rules: {
+      'no-console': 'error',
+    },
+  },
+  {
+    files: ['src/lib/logger.ts'],
+    rules: {
+      'no-console': 'off',
+    },
+  },
 ]);

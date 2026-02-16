@@ -16,6 +16,7 @@ import { useToast } from "@/feedback/ToastProvider";
 import { togglePostLike } from "@/services/likeService";
 import { logShareEvent } from "@/services/shareService";
 import { ApiError } from "@/lib/errors";
+import { logger } from "@/lib/logger";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useMemo, useState } from "react";
 import {
@@ -295,7 +296,7 @@ export default function PostDetail() {
         meta,
       }).catch((eventError) => {
         if (__DEV__) {
-          console.warn("[share] event log failed", eventError);
+          logger.warn("[share] event log failed", eventError);
         }
       });
     };

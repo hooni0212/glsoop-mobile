@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { trackGrowthTelemetry, toGrowthTelemetryError } from "@/features/growth/growthTelemetry";
 import { apiGet, apiPost } from "@/lib/api";
 import { normalizeApiError, type AppErrorModel } from "@/lib/errors";
+import { logger } from "@/lib/logger";
 
 export type GrowthLoadSource = "dashboard" | "fallback" | null;
 export type GrowthTopPostsMode = "pending" | "ready";
@@ -484,7 +485,7 @@ async function loadGrowth(force = false) {
         force,
       });
       if (__DEV__) {
-        console.warn("[growth] dashboard failed, fallback to legacy endpoints", dashboardError);
+        logger.warn("[growth] dashboard failed; fallback to legacy endpoints", dashboardError);
       }
     }
 
