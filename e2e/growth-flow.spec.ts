@@ -34,6 +34,7 @@ type GrowthMockOptions = {
   dashboardShouldFail?: boolean;
   fallbackShouldFail?: boolean;
   topPostsEmpty?: boolean;
+  claimEntitlementRequired?: boolean;
 };
 
 function growthDashboardFixture(options: GrowthMockOptions = {}) {
@@ -107,26 +108,32 @@ function growthDashboardFixture(options: GrowthMockOptions = {}) {
             ui_json: "",
             completed_at: "2026-02-10T08:20:00.000Z",
             reward_claimed_at: null,
+            is_locked: false,
+            required_entitlement: null,
+            lock_reason: null,
           },
           {
-            id: 502,
-            state_id: 9002,
-            name: "좋아요 3개 받기",
-            description: "오늘 받은 좋아요를 모아보세요",
-            condition_type: "RECEIVED_LIKE_COUNT",
+            id: 503,
+            state_id: 9003,
+            name: "봄 시즌 패스 퀘스트",
+            description: "시즌 패스 보유 시 보상을 받을 수 있어요",
+            condition_type: "POST_COUNT_TOTAL",
             category: "daily",
-            target: 3,
-            reward_xp: 15,
-            status: "in_progress",
+            target: 1,
+            reward_xp: 30,
+            status: "completed",
             progress: 1,
             position_index: 2,
             campaign_id: 201,
             campaign_type: "daily",
             template_kind: "normal",
-            code: "daily_like_three",
-            ui_json: "",
-            completed_at: null,
+            code: "premium_pass_quest",
+            ui_json: "{\"required_entitlement\":\"pass:2026_spring\"}",
+            completed_at: "2026-02-10T08:35:00.000Z",
             reward_claimed_at: null,
+            is_locked: true,
+            required_entitlement: "pass:2026_spring",
+            lock_reason: "SEASON_PASS_REQUIRED",
           },
         ],
       },
@@ -152,6 +159,7 @@ async function mockGrowthApis(page: Page, options: GrowthMockOptions = {}) {
   const dashboardFixture = growthDashboardFixture(options);
   const dashboardShouldFail = options.dashboardShouldFail ?? false;
   const fallbackShouldFail = options.fallbackShouldFail ?? false;
+  const claimEntitlementRequired = options.claimEntitlementRequired ?? false;
   await page.route("**/api/**", async (route) => {
     if (isApiRequest(route, "/api/me")) {
       await route.fulfill({
@@ -219,6 +227,19 @@ async function mockGrowthApis(page: Page, options: GrowthMockOptions = {}) {
     }
 
     if (isApiRequest(route, "/api/quests/9001/claim")) {
+      if (claimEntitlementRequired) {
+        await route.fulfill({
+          status: 403,
+          contentType: "application/json",
+          body: JSON.stringify({
+            ok: false,
+            code: "ENTITLEMENT_REQUIRED",
+            message: "시즌 패스가 필요합니다.",
+          }),
+        });
+        return;
+      }
+
       const claimRewardedAt = "2026-02-10T12:10:20.000Z";
       const campaigns = Array.isArray(dashboardFixture.campaigns)
         ? (dashboardFixture.campaigns as Record<string, unknown>[])
@@ -240,6 +261,15 @@ async function mockGrowthApis(page: Page, options: GrowthMockOptions = {}) {
           reward_claimed_at: claimRewardedAt,
           gained_xp: 20,
           new_xp: 230,
+          gained_cosmetics: [
+            {
+              key: "sticker_star",
+              name: "스타 스티커",
+              icon_emoji: "✨",
+              rarity: "common",
+              season: null,
+            },
+          ],
         }),
       });
       return;
@@ -298,6 +328,9 @@ test.describe("Growth 플로우", () => {
 
     await activateByTestId(page, "growth-action-quests");
     await expect(page.getByTestId("growth-quests-screen")).toBeVisible();
+    await expect(page.getByText("프리미엄 잠금")).toBeVisible();
+    await expect(page.getByTestId("quest-lock-hint-9003")).toBeVisible();
+    await expect(page.getByTestId("quest-claim-btn-9003")).toHaveCount(0);
 
     const claimButton = page.getByTestId("quest-claim-btn-9001");
     await expect(claimButton).toBeVisible();

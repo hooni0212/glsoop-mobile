@@ -31,6 +31,8 @@ export const tokens = {
   radius: {
     xl: 20,
     lg: 16,
+    md: 12,
+    sm: 10,
     pill: 999,
   },
 

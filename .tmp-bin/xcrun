@@ -1,0 +1,6 @@
+#!/bin/zsh
+if [[ "$1" == "simctl" ]]; then
+  exec /usr/bin/xcrun simctl --profiles "/Library/Developer/CoreSimulator/Volumes/iOS_23C54/Library/Developer/CoreSimulator/Profiles" "${@:2}"
+else
+  exec /usr/bin/xcrun "$@"
+fi

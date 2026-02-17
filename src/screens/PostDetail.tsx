@@ -14,14 +14,27 @@ import { setBookmark, useBookmarkSnapshot } from "@/features/bookmarks/bookmarkS
 import { getLike, setLike, useLikeSnapshot } from "@/features/likes/likeStore";
 import { useToast } from "@/feedback/ToastProvider";
 import { togglePostLike } from "@/services/likeService";
+import { logShareEvent } from "@/services/shareService";
 import { ApiError } from "@/lib/errors";
+import { logger } from "@/lib/logger";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useMemo, useState } from "react";
-import { Alert, Modal, Pressable, SafeAreaView, ScrollView, Share, Text, View } from "react-native";
+import {
+  Alert,
+  Modal,
+  Platform,
+  Pressable,
+  SafeAreaView,
+  ScrollView,
+  Share,
+  Text,
+  View,
+} from "react-native";
 import {
   addPostToBookmarkList,
   BookmarkList,
   createBookmarkList,
+  listRecentBookmarkLists,
   listPostBookmarkLists,
   removePostFromBookmarkList,
 } from "@/services/bookmarkService";
@@ -34,6 +47,36 @@ function formatKoreanDate(iso?: string) {
   const m = d.getMonth() + 1;
   const day = d.getDate();
   return `${y}년 ${m}월 ${day}일`;
+}
+
+function mergeRecentAndAllLists(recentLists: BookmarkList[], allLists: BookmarkList[]) {
+  if (recentLists.length === 0) return allLists;
+
+  const allById = new Map(allLists.map((item) => [item.id, item]));
+  const ordered: BookmarkList[] = [];
+
+  for (const recent of recentLists) {
+    const matched = allById.get(recent.id);
+    if (matched) {
+      ordered.push(matched);
+      allById.delete(recent.id);
+      continue;
+    }
+    ordered.push(recent);
+  }
+
+  for (const item of allLists) {
+    if (!allById.has(item.id)) continue;
+    ordered.push(item);
+    allById.delete(item.id);
+  }
+
+  return ordered;
+}
+
+function createShareRequestId(postId: string) {
+  const randomPart = Math.random().toString(36).slice(2, 8);
+  return `share_${postId}_${Date.now()}_${randomPart}`.slice(0, 120);
 }
 
 export default function PostDetail() {
@@ -134,10 +177,30 @@ export default function PostDetail() {
     if (!post) return;
     setBookmarkModalVisible(true);
     setBookmarkLoading(true);
+
+    let recentLists: BookmarkList[] = [];
+    let recentFailed = false;
+
     try {
+      try {
+        recentLists = await listRecentBookmarkLists({ postId: post.id, limit: 6 });
+      } catch (recentErr) {
+        if (recentErr instanceof ApiError && (recentErr.status === 401 || recentErr.status === 403)) {
+          setBookmarkModalVisible(false);
+          await handleAuthError();
+          return;
+        }
+        recentFailed = true;
+      }
+
       const lists = await listPostBookmarkLists(post.id);
-      setBookmarkLists(lists);
-      syncBookmarkSnapshot(lists);
+      const merged = mergeRecentAndAllLists(recentLists, lists);
+      setBookmarkLists(merged);
+      syncBookmarkSnapshot(merged);
+
+      if (recentFailed) {
+        showToast("최근 사용 폴더 정렬을 불러오지 못해 기본 목록으로 표시했어요.");
+      }
     } catch (err) {
       if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
         setBookmarkModalVisible(false);
@@ -217,13 +280,65 @@ export default function PostDetail() {
     const shareTitle = title || "글숲";
     const shareContent = content.trim();
     const shareMessage = shareContent ? `${shareTitle}\n\n${shareContent}` : shareTitle;
+    const requestId = createShareRequestId(post.id);
+    const platform = Platform.OS === "web" ? "web" : "mobile";
+    const dismissedAction =
+      (Share as { dismissedAction?: string }).dismissedAction ?? "dismissedAction";
+
+    const logShareEventSafely = (result: "shared" | "dismissed" | "failed", meta?: Record<string, unknown>) => {
+      void logShareEvent({
+        postId: post.id,
+        platform,
+        surface: "post_detail",
+        channel: "system_share_sheet",
+        result,
+        requestId,
+        meta,
+      }).catch((eventError) => {
+        if (__DEV__) {
+          logger.warn("[share] event log failed", eventError);
+        }
+      });
+    };
 
     try {
-      await Share.share({
+      const result = await Share.share({
         title: shareTitle,
         message: shareMessage,
       });
+
+      if (result.action === Share.sharedAction) {
+        logShareEventSafely("shared", {
+          action: result.action,
+          activity_type: result.activityType || null,
+          title_length: shareTitle.length,
+          content_length: shareContent.length,
+        });
+        showToast("공유가 완료되었어요.", { tone: "success" });
+        return;
+      }
+
+      if (result.action === dismissedAction) {
+        logShareEventSafely("dismissed", {
+          action: result.action,
+          activity_type: result.activityType || null,
+          title_length: shareTitle.length,
+          content_length: shareContent.length,
+        });
+        return;
+      }
+
+      logShareEventSafely("dismissed", {
+        action: result.action || "unknown",
+        activity_type: result.activityType || null,
+        title_length: shareTitle.length,
+        content_length: shareContent.length,
+      });
     } catch {
+      logShareEventSafely("failed", {
+        title_length: shareTitle.length,
+        content_length: shareContent.length,
+      });
       showToast("공유에 실패했어요. 잠시 후 다시 시도해주세요.", { tone: "error" });
     }
   };
@@ -280,6 +395,8 @@ export default function PostDetail() {
             onPressShare={() => void onPressShare()}
             likeDisabled={likePending}
             likeTestID="post-like-btn"
+            bookmarkTestID="post-bookmark-btn"
+            shareTestID="post-share-btn"
             height={dock.action.height}
             paddingBottom={dock.action.paddingBottom}
             styles={styles}

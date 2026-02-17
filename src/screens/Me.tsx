@@ -131,6 +131,14 @@ export default function MeScreen() {
           </View>
         </View>
 
+        <Pressable
+          onPress={() => router.push("/profile-customize")}
+          style={styles.primaryBtn}
+          testID="me-profile-customize-btn"
+        >
+          <Text style={styles.primaryBtnText}>프로필 꾸미기</Text>
+        </Pressable>
+
         <Pressable onPress={onLogout} style={styles.secondaryBtn}>
           <Text style={styles.secondaryBtnText}>로그아웃</Text>
         </Pressable>
@@ -177,6 +185,17 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: tokens.radius.pill,
     overflow: "hidden",
+  },
+  primaryBtn: {
+    backgroundColor: tokens.colors.green900,
+    borderRadius: tokens.radius.lg,
+    paddingVertical: 14,
+    alignItems: "center",
+  },
+  primaryBtnText: {
+    color: tokens.colors.textInverse,
+    fontSize: 15,
+    fontWeight: "800",
   },
   secondaryBtn: {
     backgroundColor: tokens.colors.surfaceStrong,

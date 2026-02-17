@@ -1,6 +1,7 @@
-import React, { useMemo, useState } from "react";
-import { Alert, FlatList, SafeAreaView, Text, View } from "react-native";
+import React, { useCallback, useMemo, useState } from "react";
+import { Alert, FlatList, Pressable, SafeAreaView, Text, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
+import { useFocusEffect } from "@react-navigation/native";
 
 import { FeedCard } from "@/components/FeedCard";
 import { useBookmarkSnapshot } from "@/features/bookmarks/bookmarkStore";
@@ -16,6 +17,10 @@ import { useToast } from "@/feedback/ToastProvider";
 import { useAuth } from "@/auth/AuthContext";
 import { togglePostLike } from "@/services/likeService";
 import { ApiError } from "@/lib/errors";
+import {
+  normalizeProfileCosmeticsExpanded,
+  type CosmeticStickerSlot,
+} from "@/types/cosmetics";
 import type { Post } from "@/types/post";
 
 function formatJoinedDate(iso?: string) {
@@ -25,6 +30,54 @@ function formatJoinedDate(iso?: string) {
   return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일 가입`;
 }
 
+function toRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+}
+
+function toBooleanFlag(value: unknown): boolean | null {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return value === 1;
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === "true" || normalized === "1") return true;
+    if (normalized === "false" || normalized === "0") return false;
+  }
+  return null;
+}
+
+function toIdText(value: unknown): string {
+  if (typeof value === "string" && value.trim()) return value.trim();
+  if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  return "";
+}
+
+function isOwnProfile(viewer: unknown, user: unknown): boolean {
+  const viewerRow = toRecord(viewer);
+  const explicit = toBooleanFlag(
+    viewerRow.is_own_profile ??
+      viewerRow.isOwnProfile ??
+      viewerRow.is_me ??
+      viewerRow.isMe
+  );
+  if (explicit !== null) return explicit;
+
+  const viewerId = toIdText(viewerRow.id);
+  const userId = toIdText(toRecord(user).id);
+  return Boolean(viewerId && userId && viewerId === userId);
+}
+
+function emojiOrFallback(value: unknown, fallback: string): string {
+  if (typeof value !== "string") return fallback;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : fallback;
+}
+
+function getStickerAnchorStyle(slot: CosmeticStickerSlot) {
+  if (slot === "tl") return authorScreenStyles.stickerTL;
+  if (slot === "tr") return authorScreenStyles.stickerTR;
+  return authorScreenStyles.stickerBR;
+}
+
 export default function Author() {
   const params = useLocalSearchParams<{ id: string }>();
   const userId = params?.id ? String(params.id) : undefined;
@@ -32,6 +85,7 @@ export default function Author() {
   const {
     user,
     stats,
+    viewer,
     loading: profileLoading,
     error: profileError,
     refetch: refetchProfile,
@@ -56,12 +110,24 @@ export default function Author() {
   const postCount = stats?.postCount ?? user?.postCount ?? user?.post_count ?? 0;
   const totalLikes = stats?.totalLikes ?? user?.totalLikes ?? user?.total_likes ?? 0;
   const joinedAtLabel = formatJoinedDate(user?.joinedAt);
+  const showProfileCustomize = isOwnProfile(viewer, user);
+  const profileCosmetics = useMemo(
+    () => normalizeProfileCosmeticsExpanded(user?.profile_cosmetics ?? null),
+    [user?.profile_cosmetics]
+  );
 
   const showInitialLoading = profileLoading && !user;
 
   const setPending = (postId: string, pending: boolean) => {
     setLikePending((prev) => ({ ...prev, [postId]: pending }));
   };
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!userId) return;
+      void refetchProfile();
+    }, [refetchProfile, userId])
+  );
 
   const handleAuthError = async () => {
     await signOut();
@@ -116,24 +182,99 @@ export default function Author() {
   };
 
   const listHeader = useMemo(
-    () => (
-      <View>
-        <View style={authorScreenStyles.profileCard}>
-          <Text style={authorScreenStyles.name}>{name}</Text>
-          <Text style={authorScreenStyles.bio}>{bio}</Text>
-          <View style={authorScreenStyles.statsRow}>
-            <Text style={authorScreenStyles.statText}>글 {postCount}</Text>
-            <Text style={authorScreenStyles.statText}>좋아요 {totalLikes}</Text>
-          </View>
-          {joinedAtLabel ? (
-            <Text style={authorScreenStyles.joinedAt}>{joinedAtLabel}</Text>
-          ) : null}
-        </View>
+    () => {
+      const primaryBadge = profileCosmetics.primary_badge;
+      const showcaseBadges = profileCosmetics.showcase_badges.slice(0, 6);
+      const headerStickers = profileCosmetics.header_stickers;
 
-        <Text style={authorScreenStyles.sectionLabel}>작성한 글</Text>
-      </View>
-    ),
-    [bio, joinedAtLabel, name, postCount, totalLikes]
+      return (
+        <View>
+          <View style={authorScreenStyles.profileCard}>
+            {headerStickers.map(({ slot, sticker }) => (
+              <View
+                key={`${slot}-${sticker.key}`}
+                pointerEvents="none"
+                style={[
+                  authorScreenStyles.stickerOverlay,
+                  getStickerAnchorStyle(slot),
+                ]}
+              >
+                <Text style={authorScreenStyles.stickerText}>
+                  {emojiOrFallback(sticker.icon_emoji, "✨")}
+                </Text>
+              </View>
+            ))}
+
+            <View style={authorScreenStyles.nameRow}>
+              <Text style={authorScreenStyles.name}>{name}</Text>
+              {primaryBadge ? (
+                <Text
+                  style={authorScreenStyles.badgeEmoji}
+                  accessibilityLabel={`대표 뱃지 ${primaryBadge.name}`}
+                >
+                  {emojiOrFallback(primaryBadge.icon_emoji, "🏅")}
+                </Text>
+              ) : null}
+            </View>
+
+            <Text style={authorScreenStyles.bio}>{bio}</Text>
+
+            {showcaseBadges.length > 0 ? (
+              <View style={authorScreenStyles.showcaseRow}>
+                {showcaseBadges.map((badge) => (
+                  <View
+                    key={badge.key}
+                    style={authorScreenStyles.showcaseChip}
+                  >
+                    <Text style={authorScreenStyles.showcaseEmoji}>
+                      {emojiOrFallback(badge.icon_emoji, "🏅")}
+                    </Text>
+                    <Text
+                      style={authorScreenStyles.showcaseText}
+                      numberOfLines={1}
+                    >
+                      {badge.name}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            ) : null}
+
+            <View style={authorScreenStyles.statsRow}>
+              <Text style={authorScreenStyles.statText}>글 {postCount}</Text>
+              <Text style={authorScreenStyles.statText}>좋아요 {totalLikes}</Text>
+            </View>
+
+            {joinedAtLabel ? (
+              <Text style={authorScreenStyles.joinedAt}>{joinedAtLabel}</Text>
+            ) : null}
+
+            {showProfileCustomize ? (
+              <Pressable
+                onPress={() => router.push("/profile-customize")}
+                style={authorScreenStyles.profileCustomizeBtn}
+                testID="author-profile-customize-btn"
+              >
+                <Text style={authorScreenStyles.profileCustomizeBtnText}>
+                  프로필 꾸미기
+                </Text>
+              </Pressable>
+            ) : null}
+          </View>
+
+          <Text style={authorScreenStyles.sectionLabel}>작성한 글</Text>
+        </View>
+      );
+    },
+    [
+      bio,
+      joinedAtLabel,
+      name,
+      postCount,
+      profileCosmetics,
+      showProfileCustomize,
+      totalLikes,
+    ]
   );
 
   if (showInitialLoading) {

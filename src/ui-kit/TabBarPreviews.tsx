@@ -2,6 +2,8 @@ import { Ionicons } from "@expo/vector-icons";
 import React, { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
+import { logger } from "@/lib/logger";
+
 type TabKey = "home" | "bookmarks" | "growth" | "me";
 
 export function Preview_RectBar_RaisedFab() {
@@ -54,7 +56,7 @@ export function Preview_RectBar_RaisedFab() {
         <View style={styles.fabShadow} pointerEvents="box-none">
           <Pressable
             onPress={() => {
-              console.log("[FAB] pressed");
+              logger.debug("[ui-kit] preview fab pressed");
             }}
             style={styles.fab}
             hitSlop={12}

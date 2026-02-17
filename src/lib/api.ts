@@ -2,6 +2,7 @@ import { Platform } from "react-native";
 
 import { getAuthToken } from "@/lib/authToken";
 import { ApiError } from "@/lib/errors";
+import { logger } from "@/lib/logger";
 
 type ApiOk<T> = { success: true; data: T };
 
@@ -13,17 +14,22 @@ const API_DEBUG =
 // EXPO_PUBLIC_API_DEBUG=true (dev)로 API 로그 활성화
 function apiLog(...args: unknown[]) {
   if (!__DEV__ || !API_DEBUG) return;
-  console.log(...args);
+  if (args.length === 0) return;
+  if (typeof args[0] === "string") {
+    logger.debug(args[0], args.length > 1 ? { args: args.slice(1) } : undefined);
+    return;
+  }
+  logger.debug("[api]", { args });
 }
 
 if (__DEV__ && (RAW_BASE === undefined || RAW_BASE === null)) {
-  console.warn("[api] EXPO_PUBLIC_API_BASE_URL is not set. Using same-origin paths.");
+  logger.warn("[api] EXPO_PUBLIC_API_BASE_URL is not set. Using same-origin paths.");
 }
 
 let didLogJoin = false;
 
 if (__DEV__ && API_DEBUG) {
-  console.log("[api] base url =", API_BASE || "(same-origin)");
+  logger.debug("[api] base url resolved", { base: API_BASE || "(same-origin)" });
 }
 
 // 간단 타임아웃 유틸
@@ -57,7 +63,7 @@ function joinUrl(path: string) {
 
   // dev에서 1회만 조합 결과 출력(옵션)
   if (__DEV__ && API_DEBUG && !didLogJoin) {
-    console.debug("[api] join", { base: API_BASE || "(same-origin)", path: normalizedPath, url });
+    logger.debug("[api] join", { base: API_BASE || "(same-origin)", path: normalizedPath, url });
     didLogJoin = true;
   }
 
@@ -90,11 +96,11 @@ async function apiRequest<T>(path: string, options: RequestOptions): Promise<T> 
     // ✅ Bearer 토큰 인증(권장)
     if (token) headers["Authorization"] = `Bearer ${token}`;
 
-    apiLog(
-      `[api] ${options.method}`,
+    apiLog("[api] request", {
+      method: options.method,
       url,
-      `token=${token ? token.slice(0, 12) + "…" : "null"}`
-    );
+      hasToken: Boolean(token),
+    });
 
     const res = await fetch(url, {
       method: options.method,
@@ -115,7 +121,11 @@ async function apiRequest<T>(path: string, options: RequestOptions): Promise<T> 
       });
     }
 
-    apiLog(`[api] ${options.method}`, url, "status=", res.status, "json=", parsed);
+    apiLog("[api] response", {
+      method: options.method,
+      url,
+      status: res.status,
+    });
 
     // ✅ HTTP 에러 처리
     if (!res.ok) {
@@ -131,10 +141,14 @@ async function apiRequest<T>(path: string, options: RequestOptions): Promise<T> 
         );
       }
       // 서버가 { ok:false, message } 같은 경우
-      throw new ApiError(parsed?.message || parsed?.error?.message || `HTTP ${res.status}`, {
-        status: res.status,
-        payload: parsed,
-      });
+      throw new ApiError(
+        parsed?.message || parsed?.error?.message || `HTTP ${res.status}`,
+        {
+          status: res.status,
+          code: parsed?.code || parsed?.error?.code,
+          payload: parsed,
+        }
+      );
     }
 
     // ✅ (A) 공통 포맷: { success:true, data:T }
@@ -163,6 +177,10 @@ export function apiGet<T>(path: string): Promise<T> {
 
 export function apiPost<T>(path: string, body?: unknown): Promise<T> {
   return apiRequest<T>(path, { method: "POST", body });
+}
+
+export function apiPut<T>(path: string, body?: unknown): Promise<T> {
+  return apiRequest<T>(path, { method: "PUT", body });
 }
 
 export function apiPatch<T>(path: string, body?: unknown): Promise<T> {

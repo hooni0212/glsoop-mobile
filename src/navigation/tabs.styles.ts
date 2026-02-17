@@ -14,11 +14,11 @@ import { COLORS } from "./tabs.meta";
 // =========================
 
 /** 탭바의 시각적(디자인) 베이스 높이. safe-area는 별도 합산한다. */
-export const TAB_BAR_BASE_HEIGHT = 74;
+export const TAB_BAR_BASE_HEIGHT = 64;
 
 /** 탭바 내부 상단/하단 패딩(디자인값). safe-area는 paddingBottom에 더해진다. */
-export const TAB_BAR_PADDING_TOP = 10;
-export const TAB_BAR_PADDING_BOTTOM = 10;
+export const TAB_BAR_PADDING_TOP = 6;
+export const TAB_BAR_PADDING_BOTTOM = 8;
 
 /** 글 상세/행동 영역 하단 액션바의 베이스 높이 */
 export const ACTION_BAR_BASE_HEIGHT = 62;
@@ -30,10 +30,10 @@ export const ACTION_BAR_PADDING_BOTTOM = 10;
 export const TAB_BAR_CENTER_GAP = 74;
 
 /** FAB 크기(지름) */
-export const TAB_BAR_FAB_SIZE = 68;
+export const TAB_BAR_FAB_SIZE = 64;
 
 /** FAB가 바 위로 떠 있는 정도(기존 디자인 유지) */
-export const TAB_BAR_FAB_LIFT = 22;
+export const TAB_BAR_FAB_LIFT = 14;
 
 // =========================
 // Helpers
@@ -102,7 +102,7 @@ export function createTabsStyles(insetBottom?: number) {
       fontSize: 12,
       fontWeight: "700",
       letterSpacing: -0.2,
-      marginTop: 6,
+      marginTop: 4,
     },
 
     activeLine: {

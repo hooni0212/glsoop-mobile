@@ -1,6 +1,18 @@
 import { expect, test, type Page } from "@playwright/test";
 
+const AUTH_TOKEN_KEY = "glsoop:auth:token:v1";
 const DRAFTS_KEY = "glsoop:write:drafts:v1";
+
+async function setAuthToken(page: Page, token: string) {
+  await page.goto("/");
+  await page.waitForLoadState("domcontentloaded");
+  await page.evaluate(
+    ({ key, value }) => {
+      localStorage.setItem(key, value);
+    },
+    { key: AUTH_TOKEN_KEY, value: token }
+  );
+}
 
 async function clearDrafts(page: Page) {
   await page.goto("/");
@@ -42,6 +54,34 @@ async function getDrafts(page: Page) {
 }
 
 test.describe("Write 임시저장 UX", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.route("**/api/me", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ ok: true, id: 1, nickname: "tester", name: "tester" }),
+      });
+    });
+    await page.route("**/api/posts**", async (route) => {
+      if (route.request().method() === "POST") {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ ok: true, post_id: "post-e2e-write-ux" }),
+        });
+        return;
+      }
+
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ ok: true, posts: [], hasMore: false }),
+      });
+    });
+
+    await setAuthToken(page, "mock-token-for-write-ux");
+  });
+
   test("S0: 임시저장 없음 → 선택 알림 없이 빈 Write 진입", async ({ page }) => {
     await clearDrafts(page);
 
@@ -69,11 +109,14 @@ test.describe("Write 임시저장 UX", () => {
     await page.keyboard.type("제목 A");
     await page.getByTestId("write-body-input").click();
     await page.keyboard.type("내용 A");
+    await page.getByTestId("write-category-short").click();
+
     const submitBtn = page.getByTestId("write-submit-btn");
     await expect(submitBtn).toBeEnabled();
     await submitBtn.click();
 
     await expect(page.getByText("완료되었어요")).toBeVisible();
+    await page.getByTestId("write-success-go-home").click();
     await expect(page).toHaveURL(/\/(\(tabs\))?\/?$/);
 
     await page.getByTestId("fab-write").click();

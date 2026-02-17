@@ -12,6 +12,7 @@ export type BookmarkList = {
   description?: string | null;
   itemCount?: number;
   contains?: boolean;
+  lastUsedAt?: string | null;
 };
 
 type BookmarkListsResponse = ApiResultBase & {
@@ -91,6 +92,7 @@ function normalizeBookmarkList(row: any): BookmarkList {
     description: typeof row?.description === "string" ? row.description : null,
     itemCount: pickFirstNumber(row?.item_count, row?.itemCount),
     contains: parseFlag(row?.contains, row?.isContained, row?.bookmarked),
+    lastUsedAt: pickFirstString(row?.last_used_at, row?.lastUsedAt) || null,
   };
 }
 
@@ -139,6 +141,20 @@ function normalizeBookmarkPost(row: any): Post {
 export async function listBookmarkLists(): Promise<BookmarkList[]> {
   const res = await apiGet<BookmarkListsResponse>("/api/bookmarks/lists");
   ensureOk(res, "북마크 폴더를 불러오지 못했어요.");
+  return Array.isArray(res?.lists) ? res.lists.map(normalizeBookmarkList) : [];
+}
+
+export async function listRecentBookmarkLists(params: {
+  postId: string;
+  limit?: number;
+}): Promise<BookmarkList[]> {
+  const q = new URLSearchParams();
+  q.set("post_id", params.postId);
+  q.set("limit", String(Math.max(1, Math.min(params.limit ?? 5, 20))));
+  const res = await apiGet<BookmarkListsResponse>(
+    `/api/bookmarks/lists/recent?${q.toString()}`
+  );
+  ensureOk(res, "최근 사용 북마크 폴더를 불러오지 못했어요.");
   return Array.isArray(res?.lists) ? res.lists.map(normalizeBookmarkList) : [];
 }
 

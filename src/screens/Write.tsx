@@ -20,6 +20,7 @@ import { WriteTopBar } from "@/components/write/WriteTopBar";
 import { AppError } from "@/components/state/AppError";
 import { AppLoading } from "@/components/state/AppLoading";
 import { normalizeApiError, type AppErrorModel } from "@/lib/errors";
+import { logger } from "@/lib/logger";
 import {
   deleteWriteDraft,
   listWriteDrafts,
@@ -59,7 +60,7 @@ export default function Write() {
   const closeDraftPrompt = useCallback(() => setDraftPrompt(null), []);
 
   const openDraftPrompt = useCallback((next: Omit<NonNullable<ConfirmState>, "visible">) => {
-    console.log("[WRITE][confirm] open:", next.title);
+    logger.debug("[write] confirm open", { title: next.title });
     setDraftPrompt({ visible: true, ...next });
   }, []);
 
@@ -68,7 +69,7 @@ export default function Write() {
     const trimmedBody = body.trim();
     if (!trimmedTitle && !trimmedBody) return;
 
-    console.log("[WRITE][draft] explicit save", {
+    logger.debug("[write] draft explicit save", {
       draftId,
       titleLen: trimmedTitle.length,
       bodyLen: trimmedBody.length,
@@ -131,12 +132,12 @@ export default function Write() {
   });
 
   const onPressClose = useCallback(() => {
-    console.log("[WRITE][ui] topbar close press");
+    logger.debug("[write] topbar close press");
     requestLeave();
   }, [requestLeave]);
 
   const onPressDrafts = useCallback(() => {
-    console.log("[WRITE][ui] open draft list");
+    logger.debug("[write] open draft list");
     router.push("/write-drafts");
   }, []);
 
@@ -152,17 +153,16 @@ export default function Write() {
   const onPressSubmit = useCallback(async () => {
     if (!selectedType) return;
 
-    console.log("[WRITE] submit", { draftId, titleLen: title.length, bodyLen: body.length });
+    logger.debug("[write] submit start", { draftId, titleLen: title.length, bodyLen: body.length });
 
     const trimmedTitle = title.trim();
     const trimmedBody = body.trim();
-    const payload = {
+    logger.debug("[write] submit payload", {
       type: selectedType,
       category: selectedType,
-      title: trimmedTitle,
-      content: trimmedBody,
-    };
-    console.log("[WRITE] submit payload", payload);
+      titleLen: trimmedTitle.length,
+      contentLen: trimmedBody.length,
+    });
 
     setSubmitError(null);
     setCreatedPostId(null);
@@ -182,10 +182,10 @@ export default function Write() {
         setDraftId(null);
       }
       setCreatedPostId(created.postId);
-      console.log("[WRITE] submit success -> show success actions", { postId: created.postId });
+      logger.debug("[write] submit success", { postId: created.postId });
       setSubmitSuccess(true);
     } catch (err) {
-      console.log("[WRITE] submit error", err);
+      logger.warn("[write] submit error", err);
       setSubmitError(normalizeApiError(err));
     } finally {
       setIsSubmitting(false);
@@ -232,7 +232,7 @@ export default function Write() {
       if (paramDraftId) {
         const d = await loadWriteDraftById(paramDraftId);
         if (d) {
-          console.log("[WRITE][draft] restore by param", { id: d.id });
+          logger.debug("[write] draft restored by param", { draftId: d.id });
           setDraftId(d.id);
           setTitle(d.title);
           setBody(d.body);

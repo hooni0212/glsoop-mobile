@@ -6,6 +6,7 @@ import { normalizeApiError, type AppErrorModel } from "@/lib/errors";
 export type AuthorProfile = {
   user: any | null;
   stats: any | null;
+  viewer: any | null;
 };
 
 type AuthorProfileResponse = {
@@ -14,6 +15,7 @@ type AuthorProfileResponse = {
   data?: any;
   user?: any;
   stats?: any;
+  viewer?: any;
 };
 
 function extractProfilePayload(res: AuthorProfileResponse) {
@@ -24,13 +26,15 @@ function extractProfilePayload(res: AuthorProfileResponse) {
   const base = res?.data && typeof res.data === "object" ? res.data : res;
   const user = base?.user ?? base?.profile ?? base?.author ?? base ?? null;
   const stats = base?.stats ?? base?.userStats ?? null;
+  const viewer = base?.viewer ?? res?.viewer ?? null;
 
-  return { user, stats };
+  return { user, stats, viewer };
 }
 
 export function useAuthorProfile(userId?: string) {
   const [user, setUser] = useState<any | null>(null);
   const [stats, setStats] = useState<any | null>(null);
+  const [viewer, setViewer] = useState<any | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<AppErrorModel | null>(null);
 
@@ -48,6 +52,7 @@ export function useAuthorProfile(userId?: string) {
 
       setUser(payload.user ?? null);
       setStats(payload.stats ?? null);
+      setViewer(payload.viewer ?? null);
     } catch (err) {
       setError(normalizeApiError(err));
     } finally {
@@ -60,5 +65,5 @@ export function useAuthorProfile(userId?: string) {
     fetchProfile();
   }, [fetchProfile, userId]);
 
-  return { user, stats, loading, error, refetch: fetchProfile };
+  return { user, stats, viewer, loading, error, refetch: fetchProfile };
 }

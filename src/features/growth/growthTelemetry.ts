@@ -1,3 +1,5 @@
+import { logger } from "@/lib/logger";
+
 type GrowthTelemetryValue = string | number | boolean | null | undefined;
 type GrowthTelemetryPayload = Record<string, GrowthTelemetryValue>;
 
@@ -24,5 +26,5 @@ export function trackGrowthTelemetry(event: string, payload: GrowthTelemetryPayl
 
   const timestamp = new Date().toISOString();
   const compact = compactPayload(payload);
-  console.info("[growth:telemetry]", event, { timestamp, ...compact });
+  logger.info("[growth:telemetry]", { event, timestamp, ...compact });
 }

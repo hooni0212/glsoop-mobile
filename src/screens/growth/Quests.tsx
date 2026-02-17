@@ -10,7 +10,7 @@ import { useToast } from "@/feedback/ToastProvider";
 import { trackGrowthTelemetry, toGrowthTelemetryError } from "@/features/growth/growthTelemetry";
 import type { GrowthQuest } from "@/features/growth/useGrowthData";
 import { useGrowthData } from "@/features/growth/useGrowthData";
-import { normalizeApiError } from "@/lib/errors";
+import { ApiError, normalizeApiError } from "@/lib/errors";
 import { tokens } from "@/theme/tokens";
 
 const STATUS_ORDER: Record<GrowthQuest["status"], number> = {
@@ -23,10 +23,19 @@ function clampPercent(value: number) {
   return Math.max(0, Math.min(100, Math.round(value)));
 }
 
-function getQuestStatusMeta(status: GrowthQuest["status"]) {
-  if (status === "completed") return { label: "완료", color: tokens.colors.green700 };
-  if (status === "in_progress") return { label: "진행 중", color: tokens.colors.green900 };
+function getQuestStatusMeta(quest: GrowthQuest) {
+  if (quest.isLocked) return { label: "프리미엄 잠금", color: tokens.colors.textMuted };
+  if (quest.status === "completed") return { label: "완료", color: tokens.colors.green700 };
+  if (quest.status === "in_progress") return { label: "진행 중", color: tokens.colors.green900 };
   return { label: "잠금", color: tokens.colors.textMuted };
+}
+
+function getQuestLockHint(quest: GrowthQuest) {
+  if (!quest.isLocked) return null;
+  if (quest.lockReason === "SEASON_PASS_REQUIRED") {
+    return "시즌 패스 구매 후 도전할 수 있어요.";
+  }
+  return "잠금 해제 조건을 충족하면 도전할 수 있어요.";
 }
 
 function formatCampaignType(value: string) {
@@ -100,8 +109,26 @@ export default function QuestsScreen() {
       setClaimPendingByStateId((prev) => ({ ...prev, [stateId]: true }));
       try {
         const result = await claimQuestReward(stateId);
-        showToast(`보상 수령 완료: +${result.gainedXp} XP`, { tone: "success" });
+        let message = `보상 수령 완료: +${result.gainedXp} XP`;
+        if (result.gainedCosmetics.length === 1) {
+          const item = result.gainedCosmetics[0];
+          const icon = item.iconEmoji ? `${item.iconEmoji} ` : "";
+          message = `${message} · ${icon}${item.name} 획득`;
+        } else if (result.gainedCosmetics.length > 1) {
+          message = `${message} · 코스메틱 ${result.gainedCosmetics.length}개 획득`;
+        }
+        showToast(message, { tone: "success" });
       } catch (claimError) {
+        if (claimError instanceof ApiError && claimError.code === "ENTITLEMENT_REQUIRED") {
+          showToast("시즌 패스가 필요한 퀘스트예요.", { tone: "error" });
+          return;
+        }
+        if (claimError instanceof ApiError && claimError.code === "CONFLICT") {
+          showToast("이미 보상을 받은 퀘스트예요.");
+          void refetch();
+          return;
+        }
+
         const normalized = normalizeApiError(claimError);
 
         if (normalized.kind === "auth") {
@@ -117,7 +144,7 @@ export default function QuestsScreen() {
         setClaimPendingByStateId((prev) => ({ ...prev, [stateId]: false }));
       }
     },
-    [claimPendingByStateId, claimQuestReward, router, showToast]
+    [claimPendingByStateId, claimQuestReward, refetch, router, showToast]
   );
 
   if (error?.kind === "auth") {
@@ -240,10 +267,11 @@ function QuestItem({
   claimPending: boolean;
   onClaim: (stateId: number) => void;
 }) {
-  const statusMeta = getQuestStatusMeta(quest.status);
+  const statusMeta = getQuestStatusMeta(quest);
+  const lockHint = getQuestLockHint(quest);
   const percent = quest.target > 0 ? clampPercent((quest.progress / quest.target) * 100) : 0;
   const progressCurrent = Math.min(quest.progress, quest.target);
-  const canClaim = quest.status === "completed" && !quest.rewardClaimedAt;
+  const canClaim = quest.status === "completed" && !quest.rewardClaimedAt && !quest.isLocked;
 
   return (
     <View style={styles.questItem}>
@@ -251,8 +279,15 @@ function QuestItem({
         <View style={styles.questTitleBlock}>
           <Text style={styles.questName}>{quest.name}</Text>
           {quest.description ? <Text style={styles.questDesc}>{quest.description}</Text> : null}
+          {lockHint ? (
+            <Text style={styles.lockHint} testID={`quest-lock-hint-${quest.stateId}`}>
+              {lockHint}
+            </Text>
+          ) : null}
         </View>
-        <Text style={[styles.statusChip, { color: statusMeta.color }]}>{statusMeta.label}</Text>
+        <Text style={[styles.statusChip, quest.isLocked && styles.statusChipLocked, { color: statusMeta.color }]}>
+          {statusMeta.label}
+        </Text>
       </View>
 
       <View style={styles.questMetaRow}>
@@ -262,7 +297,7 @@ function QuestItem({
         </Text>
       </View>
       <View style={styles.progressTrack}>
-        <View style={[styles.progressBar, { width: `${percent}%` }]} />
+        <View style={[styles.progressBar, quest.isLocked && styles.progressBarLocked, { width: `${percent}%` }]} />
       </View>
 
       {canClaim ? (
@@ -406,6 +441,12 @@ const styles = StyleSheet.create({
     color: tokens.colors.textMuted,
     lineHeight: 18,
   },
+  lockHint: {
+    fontSize: tokens.font.small,
+    color: tokens.colors.textFaint,
+    fontWeight: "700",
+    lineHeight: 18,
+  },
   statusChip: {
     fontSize: tokens.font.small,
     fontWeight: "900",
@@ -414,6 +455,11 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     paddingHorizontal: 8,
     paddingVertical: 4,
+  },
+  statusChipLocked: {
+    backgroundColor: tokens.colors.dangerSoft,
+    borderWidth: 1,
+    borderColor: tokens.colors.dangerBorder,
   },
   questMetaRow: {
     flexDirection: "row",
@@ -435,6 +481,9 @@ const styles = StyleSheet.create({
     height: "100%",
     borderRadius: tokens.radius.pill,
     backgroundColor: tokens.colors.green700,
+  },
+  progressBarLocked: {
+    backgroundColor: tokens.colors.textFaint,
   },
   claimBtn: {
     alignSelf: "flex-start",
