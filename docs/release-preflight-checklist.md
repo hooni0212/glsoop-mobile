@@ -41,19 +41,14 @@ Go/No-Go 결정을 체크리스트 기반으로 수행한다.
   - `eslint`에 `no-console` 적용 (`src/lib/logger.ts`만 예외)
 
 ### 2-4. Expo 버전 정합성
-- [ ] `npx expo install --check` 통과
-- 현재 mismatch:
-  - `expo@54.0.30 -> ~54.0.33`
-  - `expo-constants@18.0.12 -> ~18.0.13`
-  - `expo-font@14.0.10 -> ~14.0.11`
-  - `expo-router@6.0.21 -> ~6.0.23`
+- [x] `npx expo install --check` 통과
+- 결과 (2026-02-16):
+  - Dependencies are up to date
 
 ### 2-5. 보안 취약점(High) 해소
-- [ ] `npm audit --omit=dev`에서 High/critical = 0
-- 현재 확인된 이슈:
-  - `tar` (high)
-  - `@isaacs/brace-expansion` (high)
-  - `undici` (moderate)
+- [x] `npm audit --omit=dev`에서 High/critical = 0
+- 결과 (2026-02-16):
+  - found 0 vulnerabilities
 
 ---
 
@@ -115,9 +110,9 @@ Go/No-Go 결정을 체크리스트 기반으로 수행한다.
 ## 6) 현재 스냅샷 (2026-02-16)
 - `npm run lint`: 통과
 - `npx tsc --noEmit`: 통과
-- `npx expo install --check`: 실패 (버전 mismatch)
-- `npm audit --omit=dev`: High 2 / Moderate 1
-- Non-Write E2E(`--grep-invert`): 미재검증(이번 패스 기준)
+- `npx expo install --check`: 통과
+- `npm audit --omit=dev`: 0 vulnerabilities
+- Non-Write E2E(`--grep-invert "Write|글쓰기 임시저장"`): 15 passed
 - Write E2E(`write-draft` + `write-ux`): 10 passed
 
 ---
