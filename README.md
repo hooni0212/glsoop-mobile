@@ -51,7 +51,8 @@
 
 - `EXPO_PUBLIC_API_BASE_URL`
   - 운영(`m.glsoop.com`)에서는 비워두거나 `/` 권장 (same-origin + `/api` 프록시)
-  - 로컬 개발에서는 `http://localhost:3000`처럼 도메인 지정
+  - 웹 로컬 개발에서는 `http://localhost:3000`처럼 도메인 지정
+  - iOS/Android 개발 빌드에서는 `localhost`/`127.0.0.1`가 자동으로 Expo 호스트 IP로 치환됨
 - `EXPO_PUBLIC_API_DEBUG=true`
   - 개발 환경 API 요청/응답 로그 활성화
 - `EXPO_PUBLIC_GROWTH_TELEMETRY=true`

@@ -18,6 +18,7 @@ import {
   buildEmailVerificationNotice,
   isEmailVerificationRequired,
 } from "@/lib/authMessages";
+import { COOKIE_SESSION_TOKEN } from "@/lib/authToken";
 import { normalizeApiError } from "@/lib/errors";
 import { tokens } from "@/theme/tokens";
 
@@ -53,12 +54,14 @@ export default function AuthLogin() {
         }
         return;
       }
-      if (!res.token) {
-        setMessage("서버가 token을 응답하지 않았어요. (Bearer 계약 필요)");
+      const nextAuthToken =
+        res.token || (Platform.OS === "web" ? COOKIE_SESSION_TOKEN : null);
+      if (!nextAuthToken) {
+        setMessage("서버 인증 정보를 확인할 수 없어요. 로그인 응답을 점검해 주세요.");
         return;
       }
 
-      await signIn(res.token);
+      await signIn(nextAuthToken);
       router.replace("/(tabs)");
     } catch (e) {
       const rawMessage = e instanceof Error ? e.message : "";
