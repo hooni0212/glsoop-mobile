@@ -86,7 +86,7 @@
 | `AUTH-P0-01` | `진행 중` | `2026-03-21` | `src/screens/AuthSignup.tsx`에 runtime-config 연동, 필수 동의 UI, signup legal fields, field error 표시를 반영함. `npm run lint` 통과 | 실제 서버 호출 기준 signup 해피패스 검증, OTP까지 포함한 E2E 확인 필요 |
 | `AUTH-P0-02` | `정책 결정 필요` | `2026-03-21` | 서버는 로그인 응답에 `token`을 내려주지 않고, 모바일 네이티브는 token 기반 완료를 기대함 | 네이티브 인증을 쿠키 세션으로 갈지 Bearer로 갈지 결정 필요 |
 | `AUTH-P0-03` | `정책 결정 필요` | `2026-03-21` | 현재 모바일 저장소는 `AsyncStorage` 기반 | 인증 정책 확정 후 secure storage 전환 여부 결정 필요 |
-| `AUTHOR-P0-01` | `진행 중` | `2026-03-21` | `src/features/users/useAuthorPosts.ts`를 `offset/limit + has_more` 기준으로 재설계했고 중복 append 방지 merge를 추가했다. `npm run lint` 통과 | 실제 목록/더보기/새로고침 기준으로 중복 없는지 런타임 검증 필요 |
+| `AUTHOR-P0-01` | `진행 중` | `2026-03-21` | `src/features/users/useAuthorPosts.ts`를 `offset/limit + has_more`와 `sort` 기준으로 재설계했고, `src/screens/Author.tsx`에 팔로우/정렬/소개 토글/최신 글 CTA를 반영했다. `npm run lint` 통과 | 실제 목록/더보기/정렬 전환 기준 런타임 검증 필요 |
 | `DOCS-P1-01` | `반영됨` | `2026-03-21` | `docs/api/auth.md`, `docs/api/posts.md`를 현재 서버 라우트와 모바일 실제 호출 기준으로 재작성했다 | 나머지 API 문서도 같은 기준으로 순차 점검 필요 |
 
 아래 항목은 단순 기능 추가보다 먼저 정리되어야 하는 선행 게이트다.
@@ -107,7 +107,7 @@
 | --- | --- | --- |
 | 인증/계정 | 런타임 리스크를 포함한 부분 구현 | 로그인/OTP 화면은 있으나 가입 필수 동의/버전, 네이티브 인증 방식, 비밀번호 재설정, 세션 관리가 비어 있음 |
 | 마이페이지/내 활동 | 미구현에 가까운 부분 구현 | 모바일 `Me`는 조회 중심. 서버 웹 `mypage`의 수정/목록/세션/설정 흐름이 거의 없음 |
-| 작가 페이지/소셜 | 계약 갭을 동반한 부분 구현 | 작가 프로필/글 목록은 있으나 팔로우, 정렬, share/overflow, about 토글이 없고 posts 페이지네이션 계약도 재점검 필요 |
+| 작가 페이지/소셜 | 부분 구현 | 작가 프로필/글 목록, 팔로우, 정렬, 소개 토글, 최신 글 CTA는 반영했다. share/overflow와 추가 검증이 남아 있음 |
 | 게시글 상세/상호작용 | 부분 구현 | 좋아요, 북마크 모달, 공유 이벤트는 있음. 관련 글, 작성자 전용 관리 흐름은 없음 |
 | 작성/수정/드래프트 | 부분 구현 | 새 글 작성과 로컬 드래프트는 있음. 기존 글 편집, 레이아웃 편집, 해시태그 칩은 없음 |
 | 검색/탐색 | 부분 구현 | 검색, 일반 피드, `following` 피드 분기는 반영했다. 남은 갭은 세부 탐색 UX 쪽이 중심 |
@@ -192,10 +192,10 @@
 | 기능 | 서버 웹 구현 근거 | 서버 API 근거 | 모바일 현재 상태 | 차이 메모 | 우선순위 |
 | --- | --- | --- | --- | --- | --- |
 | 작가 프로필/작성 글 목록 | `../glsoop/public/html/author.html`, `../glsoop/public/js/author.js` | `GET /api/users/:id/profile`, `GET /api/users/:id/posts` | `부분 구현` | 모바일 `useAuthorPosts`를 서버 `offset/has_more` 패턴으로 맞췄다. 다만 실제 목록/더보기 기준 런타임 검증과 나머지 소셜 UX 보강이 남아 있다 | P0 |
-| 팔로우/언팔로우 | `../glsoop/public/js/author.js`, `../glsoop/tests/e2e/author-cta-flow.spec.js` | `POST /api/users/:id/follow` | `미구현` | 모바일 작가 화면에 follow 버튼 자체가 없음 | P1 |
-| 최신 글 CTA | `../glsoop/public/js/author.js`, `../glsoop/tests/e2e/author-cta-flow.spec.js` | `GET /api/users/:id/posts` | `미구현` | 모바일은 목록은 있지만 별도 최신 글 CTA는 없음 | P1 |
-| 소개문 접기/펼치기 | `../glsoop/public/js/author.js` | `GET /api/users/:id/profile` | `미구현` | 모바일 `Author.tsx`는 bio를 고정 출력 | P2 |
-| 정렬 전환 | `../glsoop/public/js/author.js` | `GET /api/users/:id/posts` 정렬 쿼리 사용 | `미구현` | 모바일 `useAuthorPosts`는 페이지네이션 중심이며 정렬 UI가 없고, 그 전에 목록 계약 정리가 선행돼야 한다 | P1 |
+| 팔로우/언팔로우 | `../glsoop/public/js/author.js`, `../glsoop/tests/e2e/author-cta-flow.spec.js` | `POST /api/users/:id/follow` | `구현됨` | 모바일 `src/screens/Author.tsx`, `src/services/userService.ts`에 follow 버튼과 토글 연결을 반영했다 | 유지 |
+| 최신 글 CTA | `../glsoop/public/js/author.js`, `../glsoop/tests/e2e/author-cta-flow.spec.js` | `GET /api/users/:id/posts` | `구현됨` | 모바일 `src/screens/Author.tsx`에서 최신 글 읽기 CTA를 추가했다 | 유지 |
+| 소개문 접기/펼치기 | `../glsoop/public/js/author.js` | `GET /api/users/:id/profile` | `구현됨` | 모바일 `src/screens/Author.tsx`에서 소개문 더보기/접기 토글을 반영했다 | 유지 |
+| 정렬 전환 | `../glsoop/public/js/author.js` | `GET /api/users/:id/posts` 정렬 쿼리 사용 | `구현됨` | 모바일 `src/screens/Author.tsx`, `src/features/users/useAuthorPosts.ts`에 `newest/likes/oldest` 정렬 전환을 반영했다 | 유지 |
 | overflow/share 동작 | `../glsoop/public/js/author.js`, `../glsoop/tests/e2e/author-overflow-actions.spec.js` | 공유는 클라이언트 중심 | `미구현` | 모바일 작가 화면에는 share/overflow가 없음 | P3 |
 | 내 프로필일 때 프로필 꾸미기 진입 | `../glsoop/public/js/author.js` | `GET /api/users/:id/profile` | `구현됨` | 모바일 `Author.tsx`에서 own profile이면 `profile-customize` 이동 가능 | 유지 |
 
@@ -412,3 +412,4 @@
 - `2026-03-21`: `DOCS-P1-01` 기준으로 `docs/api/auth.md`, `docs/api/posts.md`를 현재 서버 라우트와 모바일 실제 호출 기준으로 다시 정리했다. 예전 `PATCH /posts/:postId`, Bearer-only, signup legal fields 누락 같은 오래된 설명을 제거했다.
 - `2026-03-21`: 북마크 폴더 수정 UI를 `src/screens/Bookmarks.tsx`에 추가해 `renameBookmarkList` 서비스가 실제 화면에서 동작하도록 연결했다. `폴더 수정` 항목은 `구현됨`으로 상향했다.
 - `2026-03-21`: `src/screens/Home.tsx`, `src/features/feed/useFeed.ts`에 `팔로잉` 피드 분기를 추가하고 서버 `type=following`, `has_more` 계약을 반영했다.
+- `2026-03-21`: `src/screens/Author.tsx`, `src/features/users/useAuthorPosts.ts`, `src/services/userService.ts`에 팔로우/언팔로우, 소개문 토글, 최신 글 CTA, 정렬 전환을 반영했다.

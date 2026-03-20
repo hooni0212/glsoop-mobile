@@ -64,10 +64,20 @@ export const authorScreenStyles = StyleSheet.create({
     color: tokens.colors.textMuted,
     lineHeight: 22,
   },
+  inlineActionBtn: {
+    alignSelf: "flex-start",
+    marginTop: -2,
+  },
+  inlineActionText: {
+    fontSize: tokens.font.small,
+    color: tokens.colors.green900,
+    fontWeight: "800",
+  },
   statsRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: tokens.space.md as any,
+    flexWrap: "wrap",
   },
   statText: {
     fontSize: 13,
@@ -150,13 +160,77 @@ export const authorScreenStyles = StyleSheet.create({
     fontWeight: "800",
     color: tokens.colors.green900,
   },
-  sectionLabel: {
+  latestPostBtn: {
+    alignSelf: "flex-start",
+    borderRadius: tokens.radius.pill,
+    backgroundColor: tokens.colors.green700,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  latestPostBtnText: {
+    fontSize: tokens.font.small,
+    fontWeight: "800",
+    color: "#fff",
+  },
+  followBtn: {
+    alignSelf: "flex-start",
+    borderRadius: tokens.radius.pill,
+    borderWidth: 1,
+    borderColor: tokens.colors.borderStrong,
+    backgroundColor: tokens.colors.surface,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  followBtnActive: {
+    backgroundColor: tokens.colors.green050,
+    borderColor: tokens.colors.green700,
+  },
+  followBtnDisabled: {
+    opacity: 0.6,
+  },
+  followBtnText: {
+    fontSize: tokens.font.small,
+    fontWeight: "800",
+    color: tokens.colors.text,
+  },
+  followBtnTextActive: {
+    color: tokens.colors.green900,
+  },
+  sectionRow: {
     marginTop: tokens.space.lg,
     marginBottom: tokens.space.sm,
+    gap: tokens.space.sm as any,
+  },
+  sectionLabel: {
     fontSize: tokens.font.small,
     fontWeight: "800",
     color: tokens.colors.textFaint,
     letterSpacing: -0.2,
+  },
+  sortRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: tokens.space.xs as any,
+  },
+  sortChip: {
+    borderRadius: tokens.radius.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: tokens.colors.borderStrong,
+    backgroundColor: tokens.colors.surface,
+  },
+  sortChipActive: {
+    backgroundColor: tokens.colors.green050,
+    borderColor: tokens.colors.green700,
+  },
+  sortChipText: {
+    fontSize: tokens.font.small,
+    fontWeight: "700",
+    color: tokens.colors.textMuted,
+  },
+  sortChipTextActive: {
+    color: tokens.colors.green900,
   },
   listItemSpacer: {
     height: tokens.space.md,

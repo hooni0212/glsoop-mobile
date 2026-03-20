@@ -16,6 +16,7 @@ type AuthorPostsResponse = {
 };
 
 const PAGE_SIZE = 10;
+export type AuthorPostSort = "newest" | "oldest" | "likes";
 
 function stripHtml(s: string) {
   return s.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
@@ -170,7 +171,7 @@ function mergePosts(prev: Post[], next: Post[]) {
   return [...prev, ...dedupedNext];
 }
 
-export function useAuthorPosts(userId?: string) {
+export function useAuthorPosts(userId?: string, sort: AuthorPostSort = "newest") {
   const [items, setItems] = useState<Post[]>([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -201,6 +202,7 @@ export function useAuthorPosts(userId?: string) {
         const params = new URLSearchParams();
         params.set("limit", String(PAGE_SIZE));
         params.set("offset", String(requestedOffset));
+        params.set("sort", sort);
 
         const res = await apiGet<AuthorPostsResponse>(
           `/api/users/${encodeURIComponent(userId)}/posts?${params.toString()}`
@@ -219,7 +221,7 @@ export function useAuthorPosts(userId?: string) {
         inflightRef.current = false;
       }
     },
-    [userId]
+    [sort, userId]
   );
 
   const refresh = useCallback(async () => {
@@ -237,7 +239,7 @@ export function useAuthorPosts(userId?: string) {
     offsetRef.current = 0;
     setHasMore(true);
     refresh();
-  }, [refresh, userId]);
+  }, [refresh, sort, userId]);
 
   const patchItem = useCallback((postId: string, updater: (p: Post) => Post) => {
     setItems((prev) => prev.map((p) => (p.id === postId ? updater(p) : p)));

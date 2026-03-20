@@ -9,13 +9,14 @@ import { PostTopBar } from "@/components/post/PostTopBar";
 import { AppEmpty } from "@/components/state/AppEmpty";
 import { AppError } from "@/components/state/AppError";
 import { AppLoading } from "@/components/state/AppLoading";
-import { useAuthorPosts } from "@/features/users/useAuthorPosts";
+import { useAuthorPosts, type AuthorPostSort } from "@/features/users/useAuthorPosts";
 import { useAuthorProfile } from "@/features/users/useAuthorProfile";
 import { authorScreenStyles } from "@/screens/Author.styles";
 import { getLike, setLike, useLikeSnapshot } from "@/features/likes/likeStore";
 import { useToast } from "@/feedback/ToastProvider";
 import { useAuth } from "@/auth/AuthContext";
 import { togglePostLike } from "@/services/likeService";
+import { toggleFollowUser } from "@/services/userService";
 import { ApiError } from "@/lib/errors";
 import {
   normalizeProfileCosmeticsExpanded,
@@ -82,6 +83,7 @@ export default function Author() {
   const params = useLocalSearchParams<{ id: string }>();
   const userId = params?.id ? String(params.id) : undefined;
 
+  const [sort, setSort] = useState<AuthorPostSort>("newest");
   const {
     user,
     stats,
@@ -100,17 +102,25 @@ export default function Author() {
     refresh,
     loadMore,
     patchItem,
-  } = useAuthorPosts(userId);
+  } = useAuthorPosts(userId, sort);
   const { signOut } = useAuth();
   const { showToast } = useToast();
   const [likePending, setLikePending] = useState<Record<string, boolean>>({});
+  const [bioExpanded, setBioExpanded] = useState(false);
+  const [followBusy, setFollowBusy] = useState(false);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followerCount, setFollowerCount] = useState(0);
 
   const name = user?.name || "익명";
   const bio = user?.bio || "소개가 아직 없어요.";
   const postCount = stats?.postCount ?? user?.postCount ?? user?.post_count ?? 0;
   const totalLikes = stats?.totalLikes ?? user?.totalLikes ?? user?.total_likes ?? 0;
+  const about = user?.about || user?.bio || "";
+  const collapsedAbout =
+    about.length > 96 && !bioExpanded ? `${about.slice(0, 96).trim()}...` : about;
   const joinedAtLabel = formatJoinedDate(user?.joinedAt);
   const showProfileCustomize = isOwnProfile(viewer, user);
+  const showFollowButton = Boolean(userId && !showProfileCustomize);
   const profileCosmetics = useMemo(
     () => normalizeProfileCosmeticsExpanded(user?.profile_cosmetics ?? null),
     [user?.profile_cosmetics]
@@ -129,11 +139,19 @@ export default function Author() {
     }, [refetchProfile, userId])
   );
 
-  const handleAuthError = async () => {
+  React.useEffect(() => {
+    setIsFollowing(Boolean(viewer?.is_following ?? viewer?.isFollowing));
+  }, [viewer?.isFollowing, viewer?.is_following]);
+
+  React.useEffect(() => {
+    setFollowerCount(Number(user?.follower_count ?? user?.followerCount ?? 0));
+  }, [user?.followerCount, user?.follower_count]);
+
+  const handleAuthError = useCallback(async () => {
     await signOut();
     router.replace("/(auth)");
     Alert.alert("로그인이 필요해요", "다시 로그인해주세요.");
-  };
+  }, [signOut]);
 
   const handleLike = async (postId: string) => {
     if (likePending[postId]) return;
@@ -181,6 +199,45 @@ export default function Author() {
     }
   };
 
+  const handleFollowToggle = useCallback(async () => {
+    if (!userId || followBusy || showProfileCustomize) return;
+
+    setFollowBusy(true);
+    const prevFollowing = isFollowing;
+    const prevFollowerCount = followerCount;
+    const nextFollowing = !prevFollowing;
+    const nextFollowerCount = Math.max(0, prevFollowerCount + (nextFollowing ? 1 : -1));
+
+    setIsFollowing(nextFollowing);
+    setFollowerCount(nextFollowerCount);
+
+    try {
+      const res = await toggleFollowUser(userId);
+      setIsFollowing(res.following);
+      setFollowerCount(res.followerCount);
+      showToast(res.following ? "팔로우했어요." : "팔로우를 취소했어요.", { tone: "success" });
+    } catch (err) {
+      setIsFollowing(prevFollowing);
+      setFollowerCount(prevFollowerCount);
+
+      if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
+        await handleAuthError();
+      } else {
+        showToast("팔로우 처리에 실패했어요. 잠시 후 다시 시도해주세요.", { tone: "error" });
+      }
+    } finally {
+      setFollowBusy(false);
+    }
+  }, [
+    followerCount,
+    followBusy,
+    handleAuthError,
+    isFollowing,
+    showProfileCustomize,
+    showToast,
+    userId,
+  ]);
+
   const listHeader = useMemo(
     () => {
       const primaryBadge = profileCosmetics.primary_badge;
@@ -217,7 +274,17 @@ export default function Author() {
               ) : null}
             </View>
 
-            <Text style={authorScreenStyles.bio}>{bio}</Text>
+            <Text style={authorScreenStyles.bio}>{collapsedAbout || bio}</Text>
+            {about.length > 96 ? (
+              <Pressable
+                onPress={() => setBioExpanded((current) => !current)}
+                style={authorScreenStyles.inlineActionBtn}
+              >
+                <Text style={authorScreenStyles.inlineActionText}>
+                  {bioExpanded ? "소개 접기" : "소개 더보기"}
+                </Text>
+              </Pressable>
+            ) : null}
 
             {showcaseBadges.length > 0 ? (
               <View style={authorScreenStyles.showcaseRow}>
@@ -243,10 +310,42 @@ export default function Author() {
             <View style={authorScreenStyles.statsRow}>
               <Text style={authorScreenStyles.statText}>글 {postCount}</Text>
               <Text style={authorScreenStyles.statText}>좋아요 {totalLikes}</Text>
+              <Text style={authorScreenStyles.statText}>팔로워 {followerCount}</Text>
             </View>
 
             {joinedAtLabel ? (
               <Text style={authorScreenStyles.joinedAt}>{joinedAtLabel}</Text>
+            ) : null}
+
+            {items.length > 0 ? (
+              <Pressable
+                onPress={() => router.push(`/posts/${items[0].id}`)}
+                style={authorScreenStyles.latestPostBtn}
+              >
+                <Text style={authorScreenStyles.latestPostBtnText}>최신 글 읽기</Text>
+              </Pressable>
+            ) : null}
+
+            {showFollowButton ? (
+              <Pressable
+                onPress={() => void handleFollowToggle()}
+                disabled={followBusy}
+                style={[
+                  authorScreenStyles.followBtn,
+                  isFollowing && authorScreenStyles.followBtnActive,
+                  followBusy && authorScreenStyles.followBtnDisabled,
+                ]}
+                testID="author-follow-btn"
+              >
+                <Text
+                  style={[
+                    authorScreenStyles.followBtnText,
+                    isFollowing && authorScreenStyles.followBtnTextActive,
+                  ]}
+                >
+                  {followBusy ? "처리 중..." : isFollowing ? "팔로잉" : "팔로우"}
+                </Text>
+              </Pressable>
             ) : null}
 
             {showProfileCustomize ? (
@@ -262,17 +361,57 @@ export default function Author() {
             ) : null}
           </View>
 
-          <Text style={authorScreenStyles.sectionLabel}>작성한 글</Text>
+          <View style={authorScreenStyles.sectionRow}>
+            <Text style={authorScreenStyles.sectionLabel}>작성한 글</Text>
+            <View style={authorScreenStyles.sortRow}>
+              {([
+                ["newest", "최신순"],
+                ["likes", "좋아요순"],
+                ["oldest", "오래된순"],
+              ] as const).map(([value, label]) => {
+                const active = sort === value;
+                return (
+                  <Pressable
+                    key={value}
+                    onPress={() => setSort(value)}
+                    style={[
+                      authorScreenStyles.sortChip,
+                      active && authorScreenStyles.sortChipActive,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        authorScreenStyles.sortChipText,
+                        active && authorScreenStyles.sortChipTextActive,
+                      ]}
+                    >
+                      {label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
         </View>
       );
     },
     [
+      about.length,
       bio,
+      bioExpanded,
+      collapsedAbout,
+      followerCount,
+      followBusy,
+      handleFollowToggle,
+      isFollowing,
+      items,
       joinedAtLabel,
       name,
       postCount,
       profileCosmetics,
       showProfileCustomize,
+      showFollowButton,
+      sort,
       totalLikes,
     ]
   );
