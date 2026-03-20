@@ -87,7 +87,7 @@
 | `AUTH-P0-02` | `정책 결정 필요` | `2026-03-21` | 서버는 로그인 응답에 `token`을 내려주지 않고, 모바일 네이티브는 token 기반 완료를 기대함 | 네이티브 인증을 쿠키 세션으로 갈지 Bearer로 갈지 결정 필요 |
 | `AUTH-P0-03` | `정책 결정 필요` | `2026-03-21` | 현재 모바일 저장소는 `AsyncStorage` 기반 | 인증 정책 확정 후 secure storage 전환 여부 결정 필요 |
 | `AUTHOR-P0-01` | `진행 중` | `2026-03-21` | `src/features/users/useAuthorPosts.ts`를 `offset/limit + has_more` 기준으로 재설계했고 중복 append 방지 merge를 추가했다. `npm run lint` 통과 | 실제 목록/더보기/새로고침 기준으로 중복 없는지 런타임 검증 필요 |
-| `DOCS-P1-01` | `진행 중` | `2026-03-21` | 갭 노트에 문서 신뢰도/상태 기준을 추가함 | `docs/api/auth.md`, `docs/api/posts.md` 본문 정정 필요 |
+| `DOCS-P1-01` | `반영됨` | `2026-03-21` | `docs/api/auth.md`, `docs/api/posts.md`를 현재 서버 라우트와 모바일 실제 호출 기준으로 재작성했다 | 나머지 API 문서도 같은 기준으로 순차 점검 필요 |
 
 아래 항목은 단순 기능 추가보다 먼저 정리되어야 하는 선행 게이트다.
 
@@ -409,3 +409,4 @@
 - `2026-03-21`: [p0-gap-fix-agent-prompt.md](/Users/gimtaehun/2026/workspace/projects/glsoop-mobile/docs/prompts/p0-gap-fix-agent-prompt.md) 프롬프트를 추가해 P0 작업 시 코드 수정과 갭 노트 상태 업데이트를 함께 수행하도록 기준을 만들었다.
 - `2026-03-21`: `AUTH-P0-01` 기준으로 `src/screens/AuthSignup.tsx`에 runtime-config 연동, 필수 동의 UI, signup legal fields, field error 표시를 반영했고 `npm run lint`를 통과했다. 실제 서버 해피패스/OTP 종단 검증은 샌드박스 네트워크 제약으로 별도 확인이 남아 있다.
 - `2026-03-21`: `AUTHOR-P0-01` 기준으로 `src/features/users/useAuthorPosts.ts`를 `offset/limit + has_more` 계약으로 재정렬했고, loadMore 중복 append를 줄이기 위한 dedupe merge를 추가했다. 실제 기기/목록 기준 런타임 검증은 별도 확인이 남아 있다.
+- `2026-03-21`: `DOCS-P1-01` 기준으로 `docs/api/auth.md`, `docs/api/posts.md`를 현재 서버 라우트와 모바일 실제 호출 기준으로 다시 정리했다. 예전 `PATCH /posts/:postId`, Bearer-only, signup legal fields 누락 같은 오래된 설명을 제거했다.
