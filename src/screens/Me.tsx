@@ -582,15 +582,23 @@ export default function MeScreen() {
                 bookmarked={Boolean(item.viewer?.isBookmarked)}
               />
               {activeTab === "myPosts" ? (
-                <Pressable
-                  onPress={() => onDeleteMyPost(item.id)}
-                  style={styles.dangerBtn}
-                  disabled={deletingPostId === item.id}
-                >
-                  <Text style={styles.dangerBtnText}>
-                    {deletingPostId === item.id ? "삭제 중..." : "이 글 삭제"}
-                  </Text>
-                </Pressable>
+                <View style={styles.postActionRow}>
+                  <Pressable
+                    onPress={() => router.push({ pathname: "/write", params: { postId: item.id } })}
+                    style={styles.secondaryBtn}
+                  >
+                    <Text style={styles.secondaryBtnText}>수정</Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => onDeleteMyPost(item.id)}
+                    style={styles.dangerBtn}
+                    disabled={deletingPostId === item.id}
+                  >
+                    <Text style={styles.dangerBtnText}>
+                      {deletingPostId === item.id ? "삭제 중..." : "삭제"}
+                    </Text>
+                  </Pressable>
+                </View>
               ) : null}
             </View>
           ))}
@@ -944,6 +952,10 @@ const styles = StyleSheet.create({
   },
   postList: { gap: tokens.space.md as any },
   postItem: { gap: tokens.space.xs as any },
+  postActionRow: {
+    flexDirection: "row",
+    gap: tokens.space.xs as any,
+  },
   followingList: { gap: tokens.space.sm as any },
   followingCard: {
     borderWidth: 1,
@@ -980,6 +992,7 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
   secondaryBtn: {
+    flex: 1,
     backgroundColor: tokens.colors.surfaceStrong,
     borderWidth: 1,
     borderColor: tokens.colors.borderStrong,
@@ -992,6 +1005,7 @@ const styles = StyleSheet.create({
   },
   secondaryBtnText: { color: tokens.colors.text, fontSize: 15, fontWeight: "800" },
   dangerBtn: {
+    flex: 1,
     backgroundColor: tokens.colors.red100,
     borderWidth: 1,
     borderColor: tokens.colors.red300,

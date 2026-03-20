@@ -109,7 +109,7 @@
 | 마이페이지/내 활동 | 부분 구현 | 모바일 `Me`를 탭형 관리 화면으로 확장해 내 글/좋아요/팔로잉/세션/전체 로그아웃, 프로필 수정, 로그인 유지 설정, 작성 글 삭제까지 반영했다. 남은 갭은 성장 요약 카드 정도다 |
 | 작가 페이지/소셜 | 부분 구현 | 작가 프로필/글 목록, 팔로우, 정렬, 소개 토글, 최신 글 CTA는 반영했다. share/overflow와 추가 검증이 남아 있음 |
 | 게시글 상세/상호작용 | 부분 구현 | 좋아요, 북마크 모달, 공유 이벤트, 관련 글은 반영했다. 작성자 전용 관리 흐름이 남아 있음 |
-| 작성/수정/드래프트 | 부분 구현 | 새 글 작성과 로컬 드래프트는 있음. 기존 글 편집, 레이아웃 편집, 해시태그 칩은 없음 |
+| 작성/수정/드래프트 | 부분 구현 | 새 글 작성, 로컬 드래프트, 기존 글 편집 진입과 수정 저장까지 반영했다. 레이아웃 편집과 해시태그 칩은 남아 있음 |
 | 검색/탐색 | 부분 구현 | 검색, 일반 피드, `following` 피드 분기는 반영했다. 남은 갭은 세부 탐색 UX 쪽이 중심 |
 | 북마크 | 부분 구현 | 목록/생성/수정/삭제/아이템 조회는 있음. 나머지 개선은 폴더 UX 다듬기 수준 |
 | 성장/코스메틱 | 부분 구현 | 요약/업적/퀘스트/코스메틱은 있음. `top_posts`는 pending 성격이 남아 있음 |
@@ -208,7 +208,7 @@
 | 북마크 모달 | `../glsoop/public/js/post.js`, `../glsoop/public/js/bookmarkModal.js`, `../glsoop/tests/e2e/post-mobile-actions.spec.js` | `/api/bookmarks/*`, `GET /api/posts/:id/bookmarks` | `구현됨` | 모바일 `PostDetail.tsx`에 최근 폴더 + 생성 + 토글 포함 | 유지 |
 | 공유 모달/공유 이벤트 | `../glsoop/public/js/post.js` | `POST /api/share-events` | `부분 구현` | 모바일은 시스템 Share + `src/services/shareService.ts` 로그는 있음. 서버 웹의 전용 모달/내보내기 UI는 없음 | P2 |
 | 관련 글 노출 | `../glsoop/public/js/post.js`, `../glsoop/tests/e2e/post-mobile-actions.spec.js` | `GET /api/posts/:id/related` | `구현됨` | 모바일 `src/features/posts/useRelatedPosts.ts`, `src/screens/PostDetail.tsx`에 관련 글 섹션을 반영했다 | 유지 |
-| 작성자 전용 삭제/편집 진입 | `../glsoop/public/js/post.js`, `../glsoop/public/js/post3.js` | `GET /api/posts/:id/edit`, `DELETE /api/posts/:id` | `미구현` | 모바일 상세에 작성자 관리 액션이 없음 | P1 |
+| 작성자 전용 삭제/편집 진입 | `../glsoop/public/js/post.js`, `../glsoop/public/js/post3.js` | `GET /api/posts/:id/edit`, `DELETE /api/posts/:id` | `부분 구현` | 모바일 `src/screens/Me.tsx`에서 내 글 기준 수정/삭제 진입은 반영했다. 다만 상세 화면의 작성자 전용 관리 액션은 아직 없음 | P1 |
 | 모바일 액션 독 전환 | `../glsoop/public/js/post.js` | 클라이언트 UX | `범위 제외` | 모바일 앱은 네이티브 화면 구조가 달라 웹 전용 표현 최적화로 분류 | 제외 |
 
 ### 5.5 작성/수정/드래프트
@@ -217,8 +217,8 @@
 | --- | --- | --- | --- | --- | --- |
 | 새 글 작성 | `../glsoop/public/html/editor.html`, `../glsoop/public/html/editor2.html`, `../glsoop/public/js/editor.js`, `../glsoop/public/js/editor2.js` | `POST /api/posts` | `구현됨` | 모바일 `src/screens/Write.tsx`, `src/services/postService.ts` | 유지 |
 | 로컬 드래프트 저장/복구 | `../glsoop/public/js/editor2.js`, `../glsoop/docs/참고/API-레퍼런스.md` | 서버 draft API 없음, local draft 규칙만 존재 | `부분 구현` | 모바일 `src/services/draftStorage.ts`에 로컬 draft는 있으나 서버 웹처럼 create/edit 키 분리, TTL 정리, 사용자 토큰 기반 충돌 방지는 없음 | P1 |
-| 기존 글 편집 진입 | `../glsoop/public/js/editor2.js` | `GET /api/posts/:id/edit` | `미구현` | 모바일 write 화면은 생성 전용 | P1 |
-| 수정 저장 | `../glsoop/public/js/editor2.js` | `PUT /api/posts/:id` | `미구현` | 모바일 post update API 사용 코드가 없음 | P1 |
+| 기존 글 편집 진입 | `../glsoop/public/js/editor2.js` | `GET /api/posts/:id/edit` | `구현됨` | 모바일 `src/screens/Me.tsx`에서 내 글 수정 버튼으로 `src/screens/Write.tsx` 편집 모드에 진입할 수 있다 | 유지 |
+| 수정 저장 | `../glsoop/public/js/editor2.js` | `PUT /api/posts/:id` | `구현됨` | 모바일 `src/screens/Write.tsx`, `src/services/postService.ts`에서 `GET /api/posts/:id/edit` 조회 후 `PUT /api/posts/:id` 저장을 반영했다 | 유지 |
 | 드래프트 삭제 | `../glsoop/public/js/editor2.js` | local draft 규칙 | `구현됨` | 모바일 `deleteWriteDraft`, `clearAllWriteDrafts`, `WriteDrafts` 화면 존재 | 유지 |
 | 해시태그 칩 | `../glsoop/public/js/editor2.js` | `POST /api/posts` `tags` | `미구현` | 모바일 서비스는 `tags` 필드를 지원하지만 UI 입력이 없다. 서버/문서의 필드명 불일치도 함께 정리해야 한다 | P3 |
 | 레이아웃 편집/미리보기 | `../glsoop/public/js/editor2.js`, `../glsoop/public/js/editor2LayoutEditor.js` | `POST /api/posts`, `PUT /api/posts/:id` `layout_json` | `미구현` | 모바일 작성기는 plain text 중심이고 layout 편집이 없음 | P3 |
@@ -417,3 +417,4 @@
 - `2026-03-21`: `src/screens/Me.tsx`를 탭형 관리 화면으로 확장해 내 글, 좋아요한 글, 팔로잉, 세션 목록, 전체 로그아웃을 반영했다.
 - `2026-03-21`: `src/screens/Me.tsx`에 프로필 수정 폼과 `remember_login_enabled` 저장을 추가해 `PUT /api/me` 기반 마이페이지 관리 갭을 더 줄였다. `npm run lint`를 통과했다.
 - `2026-03-21`: `src/screens/Me.tsx`, `src/services/postService.ts`에 내 글 삭제 액션을 추가해 `DELETE /api/posts/:id` 기반 작성 글 관리 갭을 줄였다. `npm run lint`를 통과했다.
+- `2026-03-21`: `src/screens/Write.tsx`, `src/services/postService.ts`, `src/screens/Me.tsx`에 기존 글 편집 모드를 추가해 내 글 기준 수정 진입과 `PUT /api/posts/:id` 저장 흐름을 반영했다. `npm run lint`를 통과했다.

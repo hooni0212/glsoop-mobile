@@ -28,7 +28,7 @@ import {
   upsertWriteDraft,
   clearAllWriteDrafts,
 } from "@/services/draftStorage";
-import { createPost } from "@/services/postService";
+import { createPost, getEditablePost, updatePost } from "@/services/postService";
 import type { PostType } from "@/types/post";
 import { ConfirmState, useConfirmBeforeLeave } from "@/hooks/useConfirmBeforeLeave";
 
@@ -43,6 +43,10 @@ export default function Write() {
   const [body, setBody] = useState("");
   const [draftId, setDraftId] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState<PostType | null>(null);
+  const [editPostId, setEditPostId] = useState<string | null>(null);
+  const [editHashtags, setEditHashtags] = useState<string[]>([]);
+  const [editLoading, setEditLoading] = useState(false);
+  const [editError, setEditError] = useState<AppErrorModel | null>(null);
 
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const [draftPrompt, setDraftPrompt] = useState<ConfirmState>(null);
@@ -52,6 +56,7 @@ export default function Write() {
   const [submitError, setSubmitError] = useState<AppErrorModel | null>(null);
 
   const hasShownRestorePromptRef = useRef(false);
+  const isEditMode = Boolean(editPostId);
 
   const hasChanges = title.trim().length > 0 || body.trim().length > 0 || selectedType !== null;
   const canSubmit =
@@ -168,21 +173,32 @@ export default function Write() {
     setCreatedPostId(null);
     setIsSubmitting(true);
     try {
-      const created = await createPost({
-        type: selectedType,
-        category: selectedType,
-        title: trimmedTitle || undefined,
-        content: trimmedBody,
-        contentFormat: "plain",
-      });
+      if (editPostId) {
+        await updatePost({
+          postId: editPostId,
+          type: selectedType,
+          title: trimmedTitle || undefined,
+          content: trimmedBody,
+          hashtags: editHashtags,
+        });
+        setCreatedPostId(editPostId);
+        logger.debug("[write] update success", { postId: editPostId });
+      } else {
+        const created = await createPost({
+          type: selectedType,
+          category: selectedType,
+          title: trimmedTitle || undefined,
+          content: trimmedBody,
+          contentFormat: "plain",
+        });
 
-      // ✅ 게시 성공(가정) 시 해당 draft 삭제
-      if (draftId) {
-        await deleteWriteDraft(draftId);
-        setDraftId(null);
+        if (draftId) {
+          await deleteWriteDraft(draftId);
+          setDraftId(null);
+        }
+        setCreatedPostId(created.postId);
+        logger.debug("[write] submit success", { postId: created.postId });
       }
-      setCreatedPostId(created.postId);
-      logger.debug("[write] submit success", { postId: created.postId });
       setSubmitSuccess(true);
     } catch (err) {
       logger.warn("[write] submit error", err);
@@ -190,7 +206,7 @@ export default function Write() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [selectedType, draftId, title, body]);
+  }, [selectedType, draftId, editHashtags, editPostId, title, body]);
 
   const onSuccessGoHome = useCallback(() => {
     setSubmitSuccess(false);
@@ -226,6 +242,29 @@ export default function Write() {
     hasShownRestorePromptRef.current = true;
 
     void (async () => {
+      const paramPostId =
+        params && (params as any).postId ? String((params as any).postId) : null;
+
+      if (paramPostId) {
+        setEditLoading(true);
+        setEditError(null);
+        try {
+          const editable = await getEditablePost(paramPostId);
+          logger.debug("[write] edit post restored", { postId: editable.id });
+          setEditPostId(editable.id);
+          setTitle(editable.title);
+          setBody(editable.content);
+          setSelectedType(editable.category ?? null);
+          setEditHashtags(editable.hashtags);
+        } catch (err) {
+          logger.warn("[write] edit post load error", err);
+          setEditError(normalizeApiError(err));
+        } finally {
+          setEditLoading(false);
+        }
+        return;
+      }
+
       const paramDraftId =
         params && (params as any).draftId ? String((params as any).draftId) : null;
 
@@ -270,6 +309,26 @@ export default function Write() {
 
   const activeConfirm = draftPrompt ?? leaveConfirm;
 
+  if (editLoading) {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <View style={styles.center}>
+          <AppLoading message="편집할 글을 불러오는 중..." />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (editError) {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <View style={styles.center}>
+          <AppError error={editError} onRetry={editError.canRetry ? () => router.replace(`/write?postId=${params?.postId}`) : undefined} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.safe}>
       <KeyboardAvoidingView
@@ -277,7 +336,7 @@ export default function Write() {
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <WriteTopBar
-          title="글쓰기"
+          title={isEditMode ? "글 수정" : "글쓰기"}
           canSubmit={canSubmit}
           onPressClose={onPressClose}
           onPressSubmit={onPressSubmit}
@@ -326,7 +385,9 @@ export default function Write() {
           <View style={styles.successOverlay}>
             <View style={styles.successCard}>
               <Text style={styles.successTitle}>완료되었어요</Text>
-              <Text style={styles.successMessage}>어디로 이동할까요?</Text>
+              <Text style={styles.successMessage}>
+                {isEditMode ? "수정한 글을 확인할까요?" : "어디로 이동할까요?"}
+              </Text>
               <View style={styles.successActions}>
                 <Pressable
                   onPress={onSuccessViewPost}
