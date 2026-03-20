@@ -1,4 +1,5 @@
 import { usePost } from "@/features/posts/usePost";
+import { useRelatedPosts } from "@/features/posts/useRelatedPosts";
 import { useBottomDock } from "@/navigation/bottomDock";
 import { createPostDetailStyles } from "@/screens/PostDetail.styles";
 import { PostActionBar } from "@/components/post/PostActionBar";
@@ -89,6 +90,11 @@ export default function PostDetail() {
   const id = params?.id ? String(params.id) : undefined;
 
   const { post, loading, error, refetch, mutatePost } = usePost(id);
+  const {
+    items: relatedPosts,
+    loading: relatedLoading,
+    error: relatedError,
+  } = useRelatedPosts(id, 6);
   const { signOut } = useAuth();
   const { showToast } = useToast();
   const [likePending, setLikePending] = useState(false);
@@ -384,6 +390,39 @@ export default function PostDetail() {
             />
             <PostMetaBar type={post.type} tags={post.tags} styles={styles} />
             <PostBody content={content} styles={styles} />
+
+            <View style={styles.relatedSection}>
+              <Text style={styles.relatedTitle}>관련 글</Text>
+              {relatedLoading ? (
+                <Text style={styles.relatedHint}>불러오는 중...</Text>
+              ) : relatedError ? (
+                <Text style={styles.relatedHint}>
+                  관련 글을 불러오지 못했어요. 잠시 후 다시 시도해주세요.
+                </Text>
+              ) : relatedPosts.length === 0 ? (
+                <Text style={styles.relatedHint}>아직 함께 읽을 관련 글이 없어요.</Text>
+              ) : (
+                <View style={styles.relatedList}>
+                  {relatedPosts.map((item) => (
+                    <Pressable
+                      key={item.id}
+                      onPress={() => router.push(`/posts/${item.id}`)}
+                      style={styles.relatedCard}
+                    >
+                      <Text style={styles.relatedCardTitle}>
+                        {item.title || "제목 없는 글"}
+                      </Text>
+                      {item.excerpt ? (
+                        <Text style={styles.relatedCardExcerpt}>{item.excerpt}</Text>
+                      ) : null}
+                      <Text style={styles.relatedCardMeta}>
+                        {item.author?.name || "익명"} · 좋아요 {item.stats?.likeCount ?? 0}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              )}
+            </View>
           </ScrollView>
 
           <PostActionBar

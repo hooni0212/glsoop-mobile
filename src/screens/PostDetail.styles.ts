@@ -119,6 +119,46 @@ export function createPostDetailStyles(actionBarHeight: number) {
       letterSpacing: -0.2,
       opacity: 0.9,
     },
+    relatedSection: {
+      marginTop: tokens.space.xl,
+      gap: tokens.space.sm as any,
+    },
+    relatedTitle: {
+      fontSize: 15,
+      fontWeight: "900",
+      color: tokens.colors.text,
+    },
+    relatedHint: {
+      fontSize: tokens.font.small,
+      color: tokens.colors.textMuted,
+      fontWeight: "700",
+    },
+    relatedList: {
+      gap: tokens.space.sm as any,
+    },
+    relatedCard: {
+      borderWidth: 1,
+      borderColor: tokens.colors.border,
+      borderRadius: tokens.radius.lg,
+      backgroundColor: tokens.colors.surfaceStrong,
+      padding: tokens.space.md,
+      gap: 6,
+    },
+    relatedCardTitle: {
+      fontSize: 14,
+      fontWeight: "800",
+      color: tokens.colors.text,
+    },
+    relatedCardExcerpt: {
+      fontSize: tokens.font.small,
+      color: tokens.colors.textMuted,
+      lineHeight: 20,
+    },
+    relatedCardMeta: {
+      fontSize: tokens.font.small,
+      color: tokens.colors.textFaint,
+      fontWeight: "700",
+    },
 
     // --- Action bar (fixed) ---
     actionsBar: {
