@@ -128,6 +128,12 @@ type ActiveQuestsResponse = {
   campaigns?: unknown;
 };
 
+type TopPostsResponse = {
+  ok?: boolean;
+  message?: string;
+  top_posts?: unknown;
+};
+
 type ClaimQuestResponse = {
   ok?: boolean;
   message?: string;
@@ -413,10 +419,11 @@ async function fetchDashboard() {
 }
 
 async function fetchFallback() {
-  const [summaryRes, achievementsRes, campaignsRes] = await Promise.all([
+  const [summaryRes, achievementsRes, campaignsRes, topPostsRes] = await Promise.all([
     apiGet<SummaryResponse>("/api/growth/summary"),
     apiGet<AchievementsResponse>("/api/growth/achievements"),
     apiGet<ActiveQuestsResponse>("/api/quests/active"),
+    apiGet<TopPostsResponse>("/api/growth/top-posts").catch(() => null),
   ]);
 
   if (!summaryRes?.ok) {
@@ -433,6 +440,8 @@ async function fetchFallback() {
     summary: normalizeSummary(summaryRes.summary),
     achievements: normalizeAchievements(achievementsRes.achievements),
     campaigns: normalizeCampaigns(campaignsRes.campaigns),
+    topPosts: topPostsRes?.ok ? normalizeTopPosts(topPostsRes.top_posts) : [],
+    topPostsMode: "ready" as const,
   };
 }
 
@@ -496,8 +505,8 @@ async function loadGrowth(force = false) {
         summary: fallback.summary,
         achievements: fallback.achievements,
         campaigns: fallback.campaigns,
-        topPosts: [],
-        topPostsMode: "pending",
+        topPosts: fallback.topPosts,
+        topPostsMode: fallback.topPostsMode,
         source: "fallback",
         error: null,
         loading: false,
@@ -506,7 +515,7 @@ async function loadGrowth(force = false) {
         source: "fallback",
         achievementsCount: fallback.achievements.length,
         campaignsCount: fallback.campaigns.length,
-        topPostsCount: 0,
+        topPostsCount: fallback.topPosts.length,
         force,
       });
       lastLoadedAt = Date.now();

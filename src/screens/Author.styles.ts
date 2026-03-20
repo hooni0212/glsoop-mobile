@@ -213,6 +213,25 @@ export const authorScreenStyles = StyleSheet.create({
     fontWeight: "800",
     color: tokens.colors.text,
   },
+  overflowCard: {
+    alignSelf: "stretch",
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+    borderRadius: tokens.radius.lg,
+    backgroundColor: tokens.colors.surface,
+    overflow: "hidden",
+  },
+  overflowItem: {
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: tokens.colors.border,
+  },
+  overflowItemText: {
+    fontSize: tokens.font.small,
+    fontWeight: "800",
+    color: tokens.colors.text,
+  },
   sectionRow: {
     marginTop: tokens.space.lg,
     marginBottom: tokens.space.sm,

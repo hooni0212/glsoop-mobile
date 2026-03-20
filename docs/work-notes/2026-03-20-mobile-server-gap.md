@@ -107,12 +107,12 @@
 | --- | --- | --- |
 | 인증/계정 | 런타임 리스크를 포함한 부분 구현 | 로그인/OTP 화면과 비밀번호 재설정 요청/변경 화면은 붙였다. 다만 가입 해피패스 실검증, 네이티브 인증 방식, 실제 메일 링크-앱 복귀 검증이 남아 있음 |
 | 마이페이지/내 활동 | 구현됨에 가까운 부분 구현 | 모바일 `Me`를 탭형 관리 화면으로 확장해 내 글/좋아요/팔로잉/세션/전체 로그아웃, 프로필 수정, 로그인 유지 설정, 작성 글 삭제, 성장 요약 카드까지 반영했다. 남은 차이는 서버 웹의 세부 표현 수준이 중심이다 |
-| 작가 페이지/소셜 | 부분 구현 | 작가 프로필/글 목록, 팔로우, 정렬, 소개 토글, 최신 글 CTA, 공유는 반영했다. overflow와 추가 검증이 남아 있음 |
+| 작가 페이지/소셜 | 부분 구현 | 작가 프로필/글 목록, 팔로우, 정렬, 소개 토글, 최신 글 CTA, 공유, 간단한 overflow 메뉴까지 반영했다. 남은 차이는 웹 쪽 세부 액션과 검증이다 |
 | 게시글 상세/상호작용 | 부분 구현 | 좋아요, 북마크 모달, 공유 이벤트, 관련 글, 작성자 전용 수정/삭제 진입까지 반영했다. 남은 갭은 공유 모달 고도화 정도다 |
 | 작성/수정/드래프트 | 부분 구현 | 새 글 작성, 로컬 드래프트, 기존 글 편집 진입과 수정 저장, 해시태그 입력까지 반영했다. 레이아웃 편집/미리보기는 남아 있음 |
 | 검색/탐색 | 부분 구현 | 검색, 일반 피드, `following` 피드 분기는 반영했다. 남은 갭은 세부 탐색 UX 쪽이 중심 |
 | 북마크 | 부분 구현 | 목록/생성/수정/삭제/아이템 조회는 있음. 나머지 개선은 폴더 UX 다듬기 수준 |
-| 성장/코스메틱 | 부분 구현 | 요약/업적/퀘스트/코스메틱은 있음. `top_posts`는 pending 성격이 남아 있음 |
+| 성장/코스메틱 | 부분 구현 | 요약/업적/퀘스트/코스메틱은 있음. `top_posts`도 dashboard/fallback 모두 실제 데이터 연결을 반영했고, 남은 건 제품 정책과 실검증이다 |
 
 ### 4.2 P0 선행 게이트
 
@@ -196,7 +196,7 @@
 | 최신 글 CTA | `../glsoop/public/js/author.js`, `../glsoop/tests/e2e/author-cta-flow.spec.js` | `GET /api/users/:id/posts` | `구현됨` | 모바일 `src/screens/Author.tsx`에서 최신 글 읽기 CTA를 추가했다 | 유지 |
 | 소개문 접기/펼치기 | `../glsoop/public/js/author.js` | `GET /api/users/:id/profile` | `구현됨` | 모바일 `src/screens/Author.tsx`에서 소개문 더보기/접기 토글을 반영했다 | 유지 |
 | 정렬 전환 | `../glsoop/public/js/author.js` | `GET /api/users/:id/posts` 정렬 쿼리 사용 | `구현됨` | 모바일 `src/screens/Author.tsx`, `src/features/users/useAuthorPosts.ts`에 `newest/likes/oldest` 정렬 전환을 반영했다 | 유지 |
-| overflow/share 동작 | `../glsoop/public/js/author.js`, `../glsoop/tests/e2e/author-overflow-actions.spec.js` | 공유는 클라이언트 중심 | `부분 구현` | 모바일 `src/screens/Author.tsx`에 시스템 공유는 반영했다. overflow 메뉴 형태의 추가 액션은 아직 없음 | P3 |
+| overflow/share 동작 | `../glsoop/public/js/author.js`, `../glsoop/tests/e2e/author-overflow-actions.spec.js` | 공유는 클라이언트 중심 | `구현됨` | 모바일 `src/screens/Author.tsx`에 시스템 공유와 `더보기` 메뉴를 반영해 공유/최신 글 이동/프로필 꾸미기 액션을 제공한다 | 유지 |
 | 내 프로필일 때 프로필 꾸미기 진입 | `../glsoop/public/js/author.js` | `GET /api/users/:id/profile` | `구현됨` | 모바일 `Author.tsx`에서 own profile이면 `profile-customize` 이동 가능 | 유지 |
 
 ### 5.4 게시글 상세/상호작용
@@ -252,7 +252,7 @@
 | --- | --- | --- | --- | --- | --- |
 | 성장 대시보드/요약/업적/퀘스트 | `../glsoop/public/html/growth.html`, `../glsoop/public/js/growth-dashboard.js`, `../glsoop/tests/e2e/growth-dashboard.spec.js` | `/api/growth/dashboard`, `/api/growth/summary`, `/api/growth/achievements`, `/api/quests/active` | `구현됨` | 모바일 `src/features/growth/useGrowthData.ts`, `src/screens/Growth.tsx` 등 | 유지 |
 | 퀘스트 보상 수령 | `../glsoop/public/js/growth-dashboard.js` | `POST /api/quests/:stateId/claim` | `구현됨` | 모바일 reward claim 연결 완료 | 유지 |
-| `top_posts` 노출 | `../glsoop/public/js/growth-dashboard.js` | `GET /api/growth/top-posts`, dashboard 포함 응답 | `부분 구현` | 모바일은 `TopPostsList`가 있고 `useGrowthData`도 타입을 갖지만 pending/ready 성격이 섞여 있어 실제 제품 우선순위 재확인 필요 | P3 |
+| `top_posts` 노출 | `../glsoop/public/js/growth-dashboard.js` | `GET /api/growth/top-posts`, dashboard 포함 응답 | `부분 구현` | 모바일 `src/features/growth/useGrowthData.ts`에서 dashboard 실패 시에도 `GET /api/growth/top-posts`를 불러와 실제 데이터를 채운다. 남은 건 제품 노출 정책과 런타임 검증이다 | P3 |
 | 퀘스트 보상 코스메틱 반영 | `../glsoop/routes/growthRoutes.js`, `../glsoop/routes/cosmeticsRoutes.js` | claim + cosmetics API | `부분 구현` | 모바일 `src/screens/growth/Quests.tsx`에서 보상 수령 직후 `프로필 꾸미기` CTA를 제공한다. 인벤토리 즉시 동기화까지는 별도 검증이 남아 있다 | P2 |
 | 프로필 코스메틱 적용 | `../glsoop/routes/cosmeticsRoutes.js`, 서버 작가/마이페이지 카드 렌더링 | `GET /api/cosmetics/me`, `PUT /api/me/profile-cosmetics` | `구현됨` | 모바일 `src/screens/ProfileCustomize.tsx`, `src/features/cosmetics/useMyCosmetics.ts` | 유지 |
 
@@ -425,3 +425,5 @@
 - `2026-03-21`: `src/screens/growth/Quests.tsx`에서 코스메틱 보상 수령 직후 `프로필 꾸미기` CTA를 띄우도록 보강했다. 인벤토리 즉시 동기화 여부는 런타임 검증이 남아 있다.
 - `2026-03-21`: `src/screens/Me.tsx`에서 `GET /api/growth/summary`를 함께 불러와 요약 탭에 성장 카드와 성장 화면 이동 CTA를 반영했다. `npm run lint`를 통과했다.
 - `2026-03-21`: `src/lib/authRedirect.ts`, `src/auth/AuthGate.tsx`, 주요 auth/protected 화면들에 `redirect` 기반 로그인 후 복귀 흐름을 반영했다. `npm run lint`를 통과했고, 실사용 시나리오 기준 종단 검증은 별도 확인이 남아 있다.
+- `2026-03-21`: `src/features/growth/useGrowthData.ts`에서 fallback 경로에서도 `GET /api/growth/top-posts`를 불러와 `TopPostsList`가 pending placeholder 대신 실제 데이터를 표시할 수 있게 보강했다. `npm run lint`를 통과했다.
+- `2026-03-21`: `src/screens/Author.tsx`, `src/screens/Author.styles.ts`에 `더보기` 메뉴를 추가해 공유/최신 글 이동/프로필 꾸미기 액션을 한 곳에 묶었다. `npm run lint`를 통과했다.
