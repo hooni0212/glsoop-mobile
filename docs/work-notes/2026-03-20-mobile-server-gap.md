@@ -111,7 +111,7 @@
 | 게시글 상세/상호작용 | 부분 구현 | 좋아요, 북마크 모달, 공유 이벤트는 있음. 관련 글, 작성자 전용 관리 흐름은 없음 |
 | 작성/수정/드래프트 | 부분 구현 | 새 글 작성과 로컬 드래프트는 있음. 기존 글 편집, 레이아웃 편집, 해시태그 칩은 없음 |
 | 검색/탐색 | 부분 구현 | 검색과 일반 피드는 있음. 서버 웹 `following` 피드 분기가 없음 |
-| 북마크 | 부분 구현 | 목록/생성/삭제/아이템 조회는 있음. 폴더 수정 UI는 없음 |
+| 북마크 | 부분 구현 | 목록/생성/수정/삭제/아이템 조회는 있음. 나머지 개선은 폴더 UX 다듬기 수준 |
 | 성장/코스메틱 | 부분 구현 | 요약/업적/퀘스트/코스메틱은 있음. `top_posts`는 pending 성격이 남아 있음 |
 
 ### 4.2 P0 선행 게이트
@@ -240,7 +240,7 @@
 | --- | --- | --- | --- | --- | --- |
 | 폴더 목록 조회 | `../glsoop/public/html/bookmarks.html`, `../glsoop/public/js/bookmarks.js` | `GET /api/bookmarks/lists` | `구현됨` | 모바일 `src/screens/Bookmarks.tsx` | 유지 |
 | 폴더 생성 | `../glsoop/public/js/bookmarks.js` | `POST /api/bookmarks/lists` | `구현됨` | 모바일 생성 폼 있음 | 유지 |
-| 폴더 수정 | `../glsoop/public/js/bookmarks.js` | `PATCH /api/bookmarks/lists/:listId` | `부분 구현` | 모바일 서비스 `renameBookmarkList`는 존재하지만 화면 UI가 없음 | P2 |
+| 폴더 수정 | `../glsoop/public/js/bookmarks.js` | `PATCH /api/bookmarks/lists/:listId` | `구현됨` | 모바일 `src/screens/Bookmarks.tsx`에서 이름/설명 수정 UI와 `renameBookmarkList` 연결을 반영했다 | 유지 |
 | 폴더 삭제 | `../glsoop/public/js/bookmarks.js` | `DELETE /api/bookmarks/lists/:listId` | `구현됨` | 모바일 폴더 삭제 가능 | 유지 |
 | 폴더별 글 목록/더보기 | `../glsoop/public/js/bookmarks.js` | `GET /api/bookmarks/lists/:listId/items` | `구현됨` | 모바일 목록/페이지네이션 있음 | 유지 |
 | 글 추가/제거 | `../glsoop/public/js/bookmarkModal.js`, `../glsoop/public/js/bookmarks.js` | `POST/DELETE /api/bookmarks/lists/:listId/items*` | `구현됨` | 모바일 상세 모달과 북마크 화면 모두 지원 | 유지 |
@@ -410,3 +410,4 @@
 - `2026-03-21`: `AUTH-P0-01` 기준으로 `src/screens/AuthSignup.tsx`에 runtime-config 연동, 필수 동의 UI, signup legal fields, field error 표시를 반영했고 `npm run lint`를 통과했다. 실제 서버 해피패스/OTP 종단 검증은 샌드박스 네트워크 제약으로 별도 확인이 남아 있다.
 - `2026-03-21`: `AUTHOR-P0-01` 기준으로 `src/features/users/useAuthorPosts.ts`를 `offset/limit + has_more` 계약으로 재정렬했고, loadMore 중복 append를 줄이기 위한 dedupe merge를 추가했다. 실제 기기/목록 기준 런타임 검증은 별도 확인이 남아 있다.
 - `2026-03-21`: `DOCS-P1-01` 기준으로 `docs/api/auth.md`, `docs/api/posts.md`를 현재 서버 라우트와 모바일 실제 호출 기준으로 다시 정리했다. 예전 `PATCH /posts/:postId`, Bearer-only, signup legal fields 누락 같은 오래된 설명을 제거했다.
+- `2026-03-21`: 북마크 폴더 수정 UI를 `src/screens/Bookmarks.tsx`에 추가해 `renameBookmarkList` 서비스가 실제 화면에서 동작하도록 연결했다. `폴더 수정` 항목은 `구현됨`으로 상향했다.
