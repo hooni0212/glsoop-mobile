@@ -15,6 +15,7 @@ import { setBookmark, useBookmarkSnapshot } from "@/features/bookmarks/bookmarkS
 import { getLike, setLike, useLikeSnapshot } from "@/features/likes/likeStore";
 import { useToast } from "@/feedback/ToastProvider";
 import { togglePostLike } from "@/services/likeService";
+import { deletePost, getEditablePost } from "@/services/postService";
 import { logShareEvent } from "@/services/shareService";
 import { ApiError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
@@ -102,6 +103,8 @@ export default function PostDetail() {
   const [bookmarkLoading, setBookmarkLoading] = useState(false);
   const [bookmarkLists, setBookmarkLists] = useState<BookmarkList[]>([]);
   const [bookmarkPending, setBookmarkPending] = useState<Record<string, boolean>>({});
+  const [canManagePost, setCanManagePost] = useState(false);
+  const [manageBusy, setManageBusy] = useState(false);
 
   const title = post?.title || "";
   const authorName = post?.author?.name || "익명";
@@ -120,6 +123,28 @@ export default function PostDetail() {
 
   const onPressBack = () => router.back();
   const showNotFound = error?.kind === "not_found";
+
+  React.useEffect(() => {
+    let cancelled = false;
+
+    if (!post?.id) {
+      setCanManagePost(false);
+      return;
+    }
+
+    void (async () => {
+      try {
+        await getEditablePost(post.id);
+        if (!cancelled) setCanManagePost(true);
+      } catch {
+        if (!cancelled) setCanManagePost(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [post?.id]);
 
   const handleAuthError = async () => {
     await signOut();
@@ -349,6 +374,43 @@ export default function PostDetail() {
     }
   };
 
+  const onPressEdit = () => {
+    if (!post?.id) return;
+    router.push({ pathname: "/write", params: { postId: post.id } });
+  };
+
+  const onPressDelete = () => {
+    if (!post?.id || manageBusy) return;
+
+    Alert.alert("글 삭제", "정말 이 글을 삭제할까요?", [
+      { text: "취소", style: "cancel" },
+      {
+        text: "삭제",
+        style: "destructive",
+        onPress: () => {
+          void (async () => {
+            setManageBusy(true);
+            try {
+              await deletePost(post.id);
+              showToast("글을 삭제했어요.", { tone: "success" });
+              router.replace("/(tabs)");
+            } catch (err) {
+              if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
+                await handleAuthError();
+              } else {
+                showToast("글 삭제에 실패했어요. 잠시 후 다시 시도해주세요.", {
+                  tone: "error",
+                });
+              }
+            } finally {
+              setManageBusy(false);
+            }
+          })();
+        },
+      },
+    ]);
+  };
+
   return (
     <SafeAreaView style={styles.safe}>
       {/* ✅ 고정 TopBar (기존 UX 유지) */}
@@ -390,6 +452,26 @@ export default function PostDetail() {
             />
             <PostMetaBar type={post.type} tags={post.tags} styles={styles} />
             <PostBody content={content} styles={styles} />
+
+            {canManagePost ? (
+              <View style={styles.relatedSection}>
+                <Text style={styles.relatedTitle}>내 글 관리</Text>
+                <View style={styles.manageActionRow}>
+                  <Pressable onPress={onPressEdit} style={styles.manageEditBtn}>
+                    <Text style={styles.manageEditBtnText}>수정하기</Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={onPressDelete}
+                    style={styles.manageDeleteBtn}
+                    disabled={manageBusy}
+                  >
+                    <Text style={styles.manageDeleteBtnText}>
+                      {manageBusy ? "삭제 중..." : "삭제하기"}
+                    </Text>
+                  </Pressable>
+                </View>
+              </View>
+            ) : null}
 
             <View style={styles.relatedSection}>
               <Text style={styles.relatedTitle}>관련 글</Text>

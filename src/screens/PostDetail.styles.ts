@@ -128,6 +128,38 @@ export function createPostDetailStyles(actionBarHeight: number) {
       fontWeight: "900",
       color: tokens.colors.text,
     },
+    manageActionRow: {
+      flexDirection: "row",
+      gap: tokens.space.xs as any,
+    },
+    manageEditBtn: {
+      flex: 1,
+      borderWidth: 1,
+      borderColor: tokens.colors.borderStrong,
+      borderRadius: tokens.radius.lg,
+      backgroundColor: tokens.colors.surfaceStrong,
+      alignItems: "center",
+      paddingVertical: 12,
+    },
+    manageEditBtnText: {
+      fontSize: tokens.font.small,
+      fontWeight: "800",
+      color: tokens.colors.text,
+    },
+    manageDeleteBtn: {
+      flex: 1,
+      borderWidth: 1,
+      borderColor: tokens.colors.red300,
+      borderRadius: tokens.radius.lg,
+      backgroundColor: tokens.colors.red100,
+      alignItems: "center",
+      paddingVertical: 12,
+    },
+    manageDeleteBtnText: {
+      fontSize: tokens.font.small,
+      fontWeight: "800",
+      color: tokens.colors.red700,
+    },
     relatedHint: {
       fontSize: tokens.font.small,
       color: tokens.colors.textMuted,

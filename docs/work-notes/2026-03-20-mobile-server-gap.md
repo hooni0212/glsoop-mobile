@@ -108,7 +108,7 @@
 | 인증/계정 | 런타임 리스크를 포함한 부분 구현 | 로그인/OTP 화면은 있으나 가입 필수 동의/버전, 네이티브 인증 방식, 비밀번호 재설정, 세션 관리가 비어 있음 |
 | 마이페이지/내 활동 | 부분 구현 | 모바일 `Me`를 탭형 관리 화면으로 확장해 내 글/좋아요/팔로잉/세션/전체 로그아웃, 프로필 수정, 로그인 유지 설정, 작성 글 삭제까지 반영했다. 남은 갭은 성장 요약 카드 정도다 |
 | 작가 페이지/소셜 | 부분 구현 | 작가 프로필/글 목록, 팔로우, 정렬, 소개 토글, 최신 글 CTA는 반영했다. share/overflow와 추가 검증이 남아 있음 |
-| 게시글 상세/상호작용 | 부분 구현 | 좋아요, 북마크 모달, 공유 이벤트, 관련 글은 반영했다. 작성자 전용 관리 흐름이 남아 있음 |
+| 게시글 상세/상호작용 | 부분 구현 | 좋아요, 북마크 모달, 공유 이벤트, 관련 글, 작성자 전용 수정/삭제 진입까지 반영했다. 남은 갭은 공유 모달 고도화 정도다 |
 | 작성/수정/드래프트 | 부분 구현 | 새 글 작성, 로컬 드래프트, 기존 글 편집 진입과 수정 저장까지 반영했다. 레이아웃 편집과 해시태그 칩은 남아 있음 |
 | 검색/탐색 | 부분 구현 | 검색, 일반 피드, `following` 피드 분기는 반영했다. 남은 갭은 세부 탐색 UX 쪽이 중심 |
 | 북마크 | 부분 구현 | 목록/생성/수정/삭제/아이템 조회는 있음. 나머지 개선은 폴더 UX 다듬기 수준 |
@@ -208,7 +208,7 @@
 | 북마크 모달 | `../glsoop/public/js/post.js`, `../glsoop/public/js/bookmarkModal.js`, `../glsoop/tests/e2e/post-mobile-actions.spec.js` | `/api/bookmarks/*`, `GET /api/posts/:id/bookmarks` | `구현됨` | 모바일 `PostDetail.tsx`에 최근 폴더 + 생성 + 토글 포함 | 유지 |
 | 공유 모달/공유 이벤트 | `../glsoop/public/js/post.js` | `POST /api/share-events` | `부분 구현` | 모바일은 시스템 Share + `src/services/shareService.ts` 로그는 있음. 서버 웹의 전용 모달/내보내기 UI는 없음 | P2 |
 | 관련 글 노출 | `../glsoop/public/js/post.js`, `../glsoop/tests/e2e/post-mobile-actions.spec.js` | `GET /api/posts/:id/related` | `구현됨` | 모바일 `src/features/posts/useRelatedPosts.ts`, `src/screens/PostDetail.tsx`에 관련 글 섹션을 반영했다 | 유지 |
-| 작성자 전용 삭제/편집 진입 | `../glsoop/public/js/post.js`, `../glsoop/public/js/post3.js` | `GET /api/posts/:id/edit`, `DELETE /api/posts/:id` | `부분 구현` | 모바일 `src/screens/Me.tsx`에서 내 글 기준 수정/삭제 진입은 반영했다. 다만 상세 화면의 작성자 전용 관리 액션은 아직 없음 | P1 |
+| 작성자 전용 삭제/편집 진입 | `../glsoop/public/js/post.js`, `../glsoop/public/js/post3.js` | `GET /api/posts/:id/edit`, `DELETE /api/posts/:id` | `구현됨` | 모바일 `src/screens/PostDetail.tsx`, `src/screens/Write.tsx`, `src/services/postService.ts`에서 작성자 전용 수정/삭제 진입을 반영했다 | 유지 |
 | 모바일 액션 독 전환 | `../glsoop/public/js/post.js` | 클라이언트 UX | `범위 제외` | 모바일 앱은 네이티브 화면 구조가 달라 웹 전용 표현 최적화로 분류 | 제외 |
 
 ### 5.5 작성/수정/드래프트
@@ -418,3 +418,4 @@
 - `2026-03-21`: `src/screens/Me.tsx`에 프로필 수정 폼과 `remember_login_enabled` 저장을 추가해 `PUT /api/me` 기반 마이페이지 관리 갭을 더 줄였다. `npm run lint`를 통과했다.
 - `2026-03-21`: `src/screens/Me.tsx`, `src/services/postService.ts`에 내 글 삭제 액션을 추가해 `DELETE /api/posts/:id` 기반 작성 글 관리 갭을 줄였다. `npm run lint`를 통과했다.
 - `2026-03-21`: `src/screens/Write.tsx`, `src/services/postService.ts`, `src/screens/Me.tsx`에 기존 글 편집 모드를 추가해 내 글 기준 수정 진입과 `PUT /api/posts/:id` 저장 흐름을 반영했다. `npm run lint`를 통과했다.
+- `2026-03-21`: `src/screens/PostDetail.tsx`, `src/screens/PostDetail.styles.ts`에 작성자 전용 관리 섹션을 추가해 상세 화면에서도 수정/삭제 진입이 가능하도록 반영했다. `npm run lint`를 통과했다.
