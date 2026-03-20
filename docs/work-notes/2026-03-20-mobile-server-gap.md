@@ -84,8 +84,8 @@
 | Gap-ID | 현재 상태 | 마지막 반영일 | 근거 | 남은 이슈 |
 | --- | --- | --- | --- | --- |
 | `AUTH-P0-01` | `진행 중` | `2026-03-21` | `src/screens/AuthSignup.tsx`에 runtime-config 연동, 필수 동의 UI, signup legal fields, field error 표시를 반영함. `npm run lint` 통과 | 실제 서버 호출 기준 signup 해피패스 검증, OTP까지 포함한 E2E 확인 필요 |
-| `AUTH-P0-02` | `정책 결정 필요` | `2026-03-21` | 서버는 로그인 응답에 `token`을 내려주지 않고, 모바일 네이티브는 token 기반 완료를 기대함 | 네이티브 인증을 쿠키 세션으로 갈지 Bearer로 갈지 결정 필요 |
-| `AUTH-P0-03` | `정책 결정 필요` | `2026-03-21` | 현재 모바일 저장소는 `AsyncStorage` 기반 | 인증 정책 확정 후 secure storage 전환 여부 결정 필요 |
+| `AUTH-P0-02` | `반영됨` | `2026-03-21` | 서버 로그인 응답에 `token`을 포함하고, 모바일 `src/screens/AuthLogin.tsx`, `src/screens/AuthSignup.tsx`에서 `web`은 쿠키 세션, `ios/android`는 Bearer 토큰으로 분기하도록 반영함 | 실제 기기 기준 로그인 해피패스와 만료 시나리오 런타임 검증 필요 |
+| `AUTH-P0-03` | `반영됨` | `2026-03-21` | 모바일 `src/lib/authToken.ts`를 `expo-secure-store` 기반으로 전환하고 `web`만 AsyncStorage를 유지함 | secure storage 기반 앱 재기동/만료 복구 검증 필요 |
 | `AUTHOR-P0-01` | `진행 중` | `2026-03-21` | `src/features/users/useAuthorPosts.ts`를 `offset/limit + has_more`와 `sort` 기준으로 재설계했고, `src/screens/Author.tsx`에 팔로우/정렬/소개 토글/최신 글 CTA를 반영했다. `npm run lint` 통과 | 실제 목록/더보기/정렬 전환 기준 런타임 검증 필요 |
 | `DOCS-P1-01` | `반영됨` | `2026-03-21` | `docs/api/auth.md`, `docs/api/posts.md`를 현재 서버 라우트와 모바일 실제 호출 기준으로 재작성했다 | 나머지 API 문서도 같은 기준으로 순차 점검 필요 |
 
@@ -105,14 +105,14 @@
 
 | 기능군 | 현재 판단 | 메모 |
 | --- | --- | --- |
-| 인증/계정 | 런타임 리스크를 포함한 부분 구현 | 로그인/OTP 화면과 비밀번호 재설정 요청/변경 화면은 붙였다. 다만 가입 해피패스 실검증, 네이티브 인증 방식, 실제 메일 링크-앱 복귀 검증이 남아 있음 |
+| 인증/계정 | 부분 구현 | 로그인/OTP 화면과 비밀번호 재설정 요청/변경 화면은 붙였고, `web`은 쿠키 세션, `ios/android`는 Bearer 토큰 + secure storage로 정책과 구현을 정리했다. 남은 건 가입 해피패스 실검증과 실제 메일 링크-앱 복귀 검증이다 |
 | 마이페이지/내 활동 | 구현됨에 가까운 부분 구현 | 모바일 `Me`를 탭형 관리 화면으로 확장해 내 글/좋아요/팔로잉/세션/전체 로그아웃, 프로필 수정, 로그인 유지 설정, 작성 글 삭제, 성장 요약 카드까지 반영했다. 남은 차이는 서버 웹의 세부 표현 수준이 중심이다 |
 | 작가 페이지/소셜 | 부분 구현 | 작가 프로필/글 목록, 팔로우, 정렬, 소개 토글, 최신 글 CTA, 공유, 간단한 overflow 메뉴까지 반영했다. 남은 차이는 웹 쪽 세부 액션과 검증이다 |
 | 게시글 상세/상호작용 | 구현됨에 가까운 부분 구현 | 좋아요, 북마크 모달, 공유 이벤트, 관련 글, 작성자 전용 수정/삭제 진입, 모바일용 공유 옵션 모달까지 반영했다. 남은 차이는 웹의 세부 내보내기 표현 정도다 |
 | 작성/수정/드래프트 | 부분 구현 | 새 글 작성, 로컬 드래프트, 기존 글 편집 진입과 수정 저장, 해시태그 입력, 모바일용 레이아웃 설정과 미리보기까지 반영했다. 남은 차이는 웹의 드래그 수준 고도화다 |
 | 검색/탐색 | 부분 구현 | 검색, 일반 피드, `following` 피드 분기는 반영했다. 남은 갭은 세부 탐색 UX 쪽이 중심 |
 | 북마크 | 부분 구현 | 목록/생성/수정/삭제/아이템 조회는 있음. 나머지 개선은 폴더 UX 다듬기 수준 |
-| 성장/코스메틱 | 부분 구현 | 요약/업적/퀘스트/코스메틱은 있음. `top_posts`도 dashboard/fallback 모두 실제 데이터 연결을 반영했고, 남은 건 제품 정책과 실검증이다 |
+| 성장/코스메틱 | 구현됨에 가까운 부분 구현 | 요약/업적/퀘스트/코스메틱은 있고, `top_posts`도 dashboard/fallback 모두 실제 데이터와 동일한 노출 규칙으로 정리했다. 남은 건 제품 수준 런타임 검증이 중심이다 |
 
 ### 4.2 P0 선행 게이트
 
@@ -165,7 +165,7 @@
 
 | 기능 | 서버 웹 구현 근거 | 서버 API 근거 | 모바일 현재 상태 | 차이 메모 | 우선순위 |
 | --- | --- | --- | --- | --- | --- |
-| 로그인 | `../glsoop/public/html/login.html`, `../glsoop/public/js/login.js` | `../glsoop/routes/authRoutes.js` `POST /login` | `부분 구현` | 웹 쿠키 세션 기준으로는 동작 가능하지만, 네이티브 앱은 토큰 없는 로그인 응답 처리 전략이 확정되지 않았다 | P0 |
+| 로그인 | `../glsoop/public/html/login.html`, `../glsoop/public/js/login.js` | `../glsoop/routes/authRoutes.js` `POST /login` | `구현됨` | 서버는 쿠키 세션을 유지하면서 응답 `token`을 함께 반환하고, 모바일은 `web`은 쿠키 세션, `ios/android`는 Bearer 토큰으로 분기해 처리한다 | 유지 |
 | 로그인 후 guard/redirect | `../glsoop/routes/authPageRoutes.js`, `../glsoop/tests/e2e/auth-page-guard.spec.js` | `GET /api/me` | `부분 구현` | 모바일 `src/auth/AuthGate.tsx`와 auth 화면들에 `redirect` 기반 복귀를 반영했다. 다만 서버 웹의 모든 `next/from` 시나리오와 동일한 수준의 종단 검증은 남아 있다 | P2 |
 | 회원가입 + 이메일 인증 | `../glsoop/public/html/signup.html`, `../glsoop/public/js/signup.js`, `../glsoop/public/js/verify-email.js` | `POST /signup`, `POST /verify-email`, `POST /verify-email/resend` | `부분 구현` | OTP 단계 자체는 있으나, 현재 요청 바디가 서버 필수 동의/버전 검증을 통과하지 못해 가입 해피패스가 보장되지 않는다 | P0 |
 | 회원가입 시 법적 동의/버전 검증 | `../glsoop/tests/e2e/auth-signup-consent.spec.js` | `GET /api/runtime-config`, `POST /api/signup` | `부분 구현` | 모바일 가입 화면에 필수 동의와 version payload는 반영했다. 다만 실제 서버 기준 해피패스 검증과 OTP까지 포함한 종단 확인이 남아 있다 | P0 |
@@ -252,7 +252,7 @@
 | --- | --- | --- | --- | --- | --- |
 | 성장 대시보드/요약/업적/퀘스트 | `../glsoop/public/html/growth.html`, `../glsoop/public/js/growth-dashboard.js`, `../glsoop/tests/e2e/growth-dashboard.spec.js` | `/api/growth/dashboard`, `/api/growth/summary`, `/api/growth/achievements`, `/api/quests/active` | `구현됨` | 모바일 `src/features/growth/useGrowthData.ts`, `src/screens/Growth.tsx` 등 | 유지 |
 | 퀘스트 보상 수령 | `../glsoop/public/js/growth-dashboard.js` | `POST /api/quests/:stateId/claim` | `구현됨` | 모바일 reward claim 연결 완료 | 유지 |
-| `top_posts` 노출 | `../glsoop/public/js/growth-dashboard.js` | `GET /api/growth/top-posts`, dashboard 포함 응답 | `부분 구현` | 모바일 `src/features/growth/useGrowthData.ts`에서 dashboard 실패 시에도 `GET /api/growth/top-posts`를 불러와 실제 데이터를 채운다. 남은 건 제품 노출 정책과 런타임 검증이다 | P3 |
+| `top_posts` 노출 | `../glsoop/public/js/growth-dashboard.js` | `GET /api/growth/top-posts`, dashboard 포함 응답 | `구현됨` | 모바일 `src/features/growth/useGrowthData.ts`, `src/screens/Growth.tsx`, `src/components/growth/TopPostsList.tsx`에서 dashboard/fallback 모두 같은 노출 규칙을 쓰고, 데이터가 없을 때는 빈 상태 문구를 보여준다 | 유지 |
 | 퀘스트 보상 코스메틱 반영 | `../glsoop/routes/growthRoutes.js`, `../glsoop/routes/cosmeticsRoutes.js` | claim + cosmetics API | `부분 구현` | 모바일 `src/screens/growth/Quests.tsx`에서 보상 수령 직후 `프로필 꾸미기` CTA를 제공한다. 인벤토리 즉시 동기화까지는 별도 검증이 남아 있다 | P2 |
 | 프로필 코스메틱 적용 | `../glsoop/routes/cosmeticsRoutes.js`, 서버 작가/마이페이지 카드 렌더링 | `GET /api/cosmetics/me`, `PUT /api/me/profile-cosmetics` | `구현됨` | 모바일 `src/screens/ProfileCustomize.tsx`, `src/features/cosmetics/useMyCosmetics.ts` | 유지 |
 
@@ -431,3 +431,5 @@
 - `2026-03-21`: `src/services/draftStorage.ts`, `src/screens/Write.tsx`에서 로컬 드래프트를 create/edit 기준으로 분리하고 30일 TTL 정리를 반영했다. 사용자 토큰 기반 충돌 방지와 복구 UX 고도화는 후속 과제로 남겼다.
 - `2026-03-21`: `src/screens/PostDetail.tsx`에 공유 옵션 모달을 추가해 제목만 공유/본문까지 공유를 선택할 수 있게 하고, 모드별 share event 로그를 남기도록 보강했다. `npm run lint`를 통과했다.
 - `2026-03-21`: `src/auth/AuthGate.tsx`, `src/lib/authRedirect.ts`, auth 화면들 기준으로 작성기 `redirect` 복귀 흐름이 이미 구현돼 있음을 다시 확인해 `인증 리다이렉트` 항목 상태를 `구현됨`으로 올렸다.
+- `2026-03-21`: `src/lib/authToken.ts`를 `expo-secure-store` 기반으로 전환하고, `src/screens/AuthLogin.tsx`, `src/screens/AuthSignup.tsx`에서 `web`은 쿠키 세션, `ios/android`는 Bearer 토큰을 쓰도록 분기했다. 서버 `routes/authRoutes.js`도 로그인 응답에 `token`을 포함하도록 맞췄다.
+- `2026-03-21`: `src/features/growth/useGrowthData.ts`, `src/screens/Growth.tsx`, `src/components/growth/TopPostsList.tsx`에서 `top_posts`를 `ready/empty/error` 기준으로 단순화하고 pending placeholder를 제거했다.

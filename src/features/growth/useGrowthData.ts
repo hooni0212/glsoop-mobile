@@ -6,7 +6,7 @@ import { normalizeApiError, type AppErrorModel } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 export type GrowthLoadSource = "dashboard" | "fallback" | null;
-export type GrowthTopPostsMode = "pending" | "ready";
+export type GrowthTopPostsMode = "ready" | "empty" | "error";
 
 export type GrowthSummary = {
   level: number;
@@ -168,7 +168,7 @@ const INITIAL_SNAPSHOT: GrowthSnapshot = {
   achievements: [],
   campaigns: [],
   topPosts: [],
-  topPostsMode: "pending",
+  topPostsMode: "empty",
   loading: false,
   error: null,
   source: null,
@@ -409,12 +409,14 @@ async function fetchDashboard() {
   const res = await apiGet<DashboardResponse>("/api/growth/dashboard");
   if (!res?.ok) throw new Error(res?.message || "성장 대시보드를 불러오지 못했어요.");
 
+  const topPosts = normalizeTopPosts(res.top_posts);
+
   return {
     summary: normalizeSummary(res.summary),
     achievements: normalizeAchievements(res.achievements),
     campaigns: normalizeCampaigns(res.campaigns),
-    topPosts: normalizeTopPosts(res.top_posts),
-    topPostsMode: "ready" as const,
+    topPosts,
+    topPostsMode: (topPosts.length > 0 ? "ready" : "empty") as const,
   };
 }
 
@@ -436,12 +438,14 @@ async function fetchFallback() {
     throw new Error(campaignsRes?.message || "퀘스트 정보를 불러오지 못했어요.");
   }
 
+  const topPosts = topPostsRes?.ok ? normalizeTopPosts(topPostsRes.top_posts) : [];
+
   return {
     summary: normalizeSummary(summaryRes.summary),
     achievements: normalizeAchievements(achievementsRes.achievements),
     campaigns: normalizeCampaigns(campaignsRes.campaigns),
-    topPosts: topPostsRes?.ok ? normalizeTopPosts(topPostsRes.top_posts) : [],
-    topPostsMode: "ready" as const,
+    topPosts,
+    topPostsMode: (topPosts.length > 0 ? "ready" : "empty") as const,
   };
 }
 
@@ -531,7 +535,7 @@ async function loadGrowth(force = false) {
         achievements: [],
         campaigns: [],
         topPosts: [],
-        topPostsMode: "pending",
+        topPostsMode: "error",
         source: null,
         error: normalizeApiError(fallbackError),
         loading: false,

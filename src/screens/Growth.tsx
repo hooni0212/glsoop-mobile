@@ -101,12 +101,10 @@ export default function GrowthScreen() {
       .map(({ id, title, subtitle, status }) => ({ id, title, subtitle, status }));
   }, [achievements]);
 
-  const topPostsEmptyTitle =
-    topPostsMode === "ready" ? "아직 인기 글이 없어요" : "인기 글을 준비 중이에요";
+  const topPostsEmptyTitle = "아직 인기 글이 없어요";
   const topPostsEmptyDescription =
-    topPostsMode === "ready"
-      ? "활동이 더 쌓이면, 여기에서 주목받는 글을 추천해드릴게요."
-      : "인기 글 추천 기능을 준비 중이에요. 잠시만 기다려 주세요.";
+    "활동이 더 쌓이면, 여기에서 주목받는 글을 추천해드릴게요.";
+  const topPostsError = topPostsMode === "error" ? error : null;
 
   useEffect(() => {
     trackGrowthTelemetry("growth_screen_viewed", { screen: "home" });
@@ -247,9 +245,8 @@ export default function GrowthScreen() {
 
         <TopPostsList
           items={topPosts}
-          loading={loading && topPostsMode === "ready"}
-          error={topPostsMode === "ready" ? error : null}
-          mode={topPostsMode === "ready" ? "default" : "pending"}
+          loading={loading && topPosts.length === 0}
+          error={topPostsError}
           onPressItem={(id) => {
             trackGrowthTelemetry("growth_action_clicked", { action: "open_top_post", postId: id });
             router.push(`/posts/${id}`);

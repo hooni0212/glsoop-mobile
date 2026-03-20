@@ -2,10 +2,11 @@ import React from "react";
 
 import { clearBookmarks } from "@/features/bookmarks/bookmarkStore";
 import { clearLikes } from "@/features/likes/likeStore";
+import { apiPost } from "@/lib/api";
 import { clearAuthToken, getAuthToken, setAuthToken } from "@/lib/authToken";
 
 type AuthState = {
-  /** AsyncStorage 로드 완료 여부 */
+  /** persisted auth storage 로드 완료 여부 */
   ready: boolean;
   /** Bearer token (없으면 null) */
   token: string | null;
@@ -42,6 +43,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signOut = React.useCallback(async () => {
+    try {
+      await apiPost("/api/logout", {});
+    } catch {
+      // local token/session cleanup should still continue
+    }
     await clearAuthToken();
     setToken(null);
     clearLikes();

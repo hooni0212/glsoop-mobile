@@ -58,7 +58,7 @@ export default function AuthLogin() {
         return;
       }
       const nextAuthToken =
-        res.token || (Platform.OS === "web" ? COOKIE_SESSION_TOKEN : null);
+        Platform.OS === "web" ? COOKIE_SESSION_TOKEN : res.token ?? null;
       if (!nextAuthToken) {
         setMessage("서버 인증 정보를 확인할 수 없어요. 로그인 응답을 점검해 주세요.");
         return;
