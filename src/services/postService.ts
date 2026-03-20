@@ -1,5 +1,5 @@
 import type { PostType } from "@/types/post";
-import { apiPost } from "@/lib/api";
+import { apiDelete, apiPost } from "@/lib/api";
 
 export type CreatePostInput = {
   type: PostType;
@@ -14,6 +14,11 @@ type CreatePostResponse = {
   ok: boolean;
   message?: string;
   post_id?: string;
+};
+
+type DeletePostResponse = {
+  ok?: boolean;
+  message?: string;
 };
 
 export async function createPost(input: CreatePostInput): Promise<{ postId: string }> {
@@ -38,4 +43,12 @@ export async function createPost(input: CreatePostInput): Promise<{ postId: stri
   }
 
   return { postId: res.post_id };
+}
+
+export async function deletePost(postId: string): Promise<void> {
+  const res = await apiDelete<DeletePostResponse>(`/api/posts/${encodeURIComponent(postId)}`);
+
+  if (res?.ok === false) {
+    throw new Error(res.message || "글 삭제에 실패했어요.");
+  }
 }

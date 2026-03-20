@@ -1,5 +1,6 @@
 import React from "react";
 import {
+  Alert,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -17,6 +18,7 @@ import { AppError } from "@/components/state/AppError";
 import { AppLoading } from "@/components/state/AppLoading";
 import { apiGet, apiPost, apiPut } from "@/lib/api";
 import { normalizeApiError } from "@/lib/errors";
+import { deletePost } from "@/services/postService";
 import { tokens } from "@/theme/tokens";
 import type { Post } from "@/types/post";
 
@@ -225,6 +227,7 @@ export default function MeScreen() {
   const [tabLoading, setTabLoading] = React.useState(false);
   const [tabError, setTabError] = React.useState<ReturnType<typeof normalizeApiError> | null>(null);
   const [logoutAllBusy, setLogoutAllBusy] = React.useState(false);
+  const [deletingPostId, setDeletingPostId] = React.useState<string | null>(null);
   const [showEdit, setShowEdit] = React.useState(false);
   const [editNickname, setEditNickname] = React.useState("");
   const [editBio, setEditBio] = React.useState("");
@@ -352,6 +355,30 @@ export default function MeScreen() {
     } finally {
       setSavingProfile(false);
     }
+  }
+
+  function onDeleteMyPost(postId: string) {
+    Alert.alert("글 삭제", "정말 이 글을 삭제할까요?", [
+      { text: "취소", style: "cancel" },
+      {
+        text: "삭제",
+        style: "destructive",
+        onPress: () => {
+          void (async () => {
+            setDeletingPostId(postId);
+            setTabError(null);
+            try {
+              await deletePost(postId);
+              setMyPosts((prev) => prev.filter((item) => item.id !== postId));
+            } catch (e) {
+              setTabError(normalizeApiError(e));
+            } finally {
+              setDeletingPostId((current) => (current === postId ? null : current));
+            }
+          })();
+        },
+      },
+    ]);
   }
 
   const renderTabBody = () => {
@@ -547,13 +574,25 @@ export default function MeScreen() {
       return (
         <View style={styles.postList}>
           {items.map((item) => (
-            <FeedCard
-              key={item.id}
-              post={item}
-              onPress={() => router.push(`/posts/${item.id}`)}
-              liked={Boolean(item.viewer?.isLiked)}
-              bookmarked={Boolean(item.viewer?.isBookmarked)}
-            />
+            <View key={item.id} style={styles.postItem}>
+              <FeedCard
+                post={item}
+                onPress={() => router.push(`/posts/${item.id}`)}
+                liked={Boolean(item.viewer?.isLiked)}
+                bookmarked={Boolean(item.viewer?.isBookmarked)}
+              />
+              {activeTab === "myPosts" ? (
+                <Pressable
+                  onPress={() => onDeleteMyPost(item.id)}
+                  style={styles.dangerBtn}
+                  disabled={deletingPostId === item.id}
+                >
+                  <Text style={styles.dangerBtnText}>
+                    {deletingPostId === item.id ? "삭제 중..." : "이 글 삭제"}
+                  </Text>
+                </Pressable>
+              ) : null}
+            </View>
           ))}
         </View>
       );
@@ -904,6 +943,7 @@ const styles = StyleSheet.create({
     gap: tokens.space.sm as any,
   },
   postList: { gap: tokens.space.md as any },
+  postItem: { gap: tokens.space.xs as any },
   followingList: { gap: tokens.space.sm as any },
   followingCard: {
     borderWidth: 1,
@@ -951,6 +991,19 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   secondaryBtnText: { color: tokens.colors.text, fontSize: 15, fontWeight: "800" },
+  dangerBtn: {
+    backgroundColor: tokens.colors.red100,
+    borderWidth: 1,
+    borderColor: tokens.colors.red300,
+    borderRadius: tokens.radius.lg,
+    paddingVertical: 12,
+    alignItems: "center",
+  },
+  dangerBtnText: {
+    color: tokens.colors.red700,
+    fontSize: tokens.font.small,
+    fontWeight: "800",
+  },
   ghostBtn: { paddingVertical: 10, alignItems: "center" },
   ghostBtnText: { color: tokens.colors.textMuted, fontSize: tokens.font.small, fontWeight: "800" },
 });
