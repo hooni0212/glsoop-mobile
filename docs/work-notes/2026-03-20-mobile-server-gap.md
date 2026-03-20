@@ -110,7 +110,7 @@
 | 작가 페이지/소셜 | 계약 갭을 동반한 부분 구현 | 작가 프로필/글 목록은 있으나 팔로우, 정렬, share/overflow, about 토글이 없고 posts 페이지네이션 계약도 재점검 필요 |
 | 게시글 상세/상호작용 | 부분 구현 | 좋아요, 북마크 모달, 공유 이벤트는 있음. 관련 글, 작성자 전용 관리 흐름은 없음 |
 | 작성/수정/드래프트 | 부분 구현 | 새 글 작성과 로컬 드래프트는 있음. 기존 글 편집, 레이아웃 편집, 해시태그 칩은 없음 |
-| 검색/탐색 | 부분 구현 | 검색과 일반 피드는 있음. 서버 웹 `following` 피드 분기가 없음 |
+| 검색/탐색 | 부분 구현 | 검색, 일반 피드, `following` 피드 분기는 반영했다. 남은 갭은 세부 탐색 UX 쪽이 중심 |
 | 북마크 | 부분 구현 | 목록/생성/수정/삭제/아이템 조회는 있음. 나머지 개선은 폴더 UX 다듬기 수준 |
 | 성장/코스메틱 | 부분 구현 | 요약/업적/퀘스트/코스메틱은 있음. `top_posts`는 pending 성격이 남아 있음 |
 
@@ -229,7 +229,7 @@
 | 기능 | 서버 웹 구현 근거 | 서버 API 근거 | 모바일 현재 상태 | 차이 메모 | 우선순위 |
 | --- | --- | --- | --- | --- | --- |
 | 일반 피드 조회 | `../glsoop/public/explore.html`, `../glsoop/public/js/home.js`, `../glsoop/public/js/index.js` | `GET /api/posts`, `GET /api/posts/feed` | `구현됨` | 모바일 `src/features/feed/useFeed.ts`로 일반 피드 지원 | 유지 |
-| `following` 피드 분기 | `../glsoop/public/explore.html`, `../glsoop/routes/postRoutes.js` | `GET /api/posts?type=following` | `미구현` | 모바일 feed 훅에 `type=following` 지원이 없음 | P2 |
+| `following` 피드 분기 | `../glsoop/public/explore.html`, `../glsoop/routes/postRoutes.js` | `GET /api/posts?type=following` | `구현됨` | 모바일 `src/screens/Home.tsx`, `src/features/feed/useFeed.ts`에 `팔로잉` 탭과 `type=following`, `has_more` 처리를 반영했다 | 유지 |
 | 검색 결과 조회 | `../glsoop/routes/searchRoutes.js`, `../glsoop/tests/e2e/search-api.spec.js` | `GET /api/search` | `구현됨` | 모바일 `src/features/search/useSearch.ts`, `src/screens/Search.tsx` | 유지 |
 | 검색 결과 정렬 | 서버 웹은 API/페이지 수준 정렬 조합, 모바일은 탭별 client sort | `GET /api/search` | `구현됨` | 모바일이 posts/authors 각각 정렬 제공 | 유지 |
 | 검색 결과에서 글/작가 이동 | 서버 검색/탐색 페이지 동작 | `GET /api/search` | `구현됨` | 모바일 `Search.tsx`에서 post detail / author 이동 가능 | 유지 |
@@ -411,3 +411,4 @@
 - `2026-03-21`: `AUTHOR-P0-01` 기준으로 `src/features/users/useAuthorPosts.ts`를 `offset/limit + has_more` 계약으로 재정렬했고, loadMore 중복 append를 줄이기 위한 dedupe merge를 추가했다. 실제 기기/목록 기준 런타임 검증은 별도 확인이 남아 있다.
 - `2026-03-21`: `DOCS-P1-01` 기준으로 `docs/api/auth.md`, `docs/api/posts.md`를 현재 서버 라우트와 모바일 실제 호출 기준으로 다시 정리했다. 예전 `PATCH /posts/:postId`, Bearer-only, signup legal fields 누락 같은 오래된 설명을 제거했다.
 - `2026-03-21`: 북마크 폴더 수정 UI를 `src/screens/Bookmarks.tsx`에 추가해 `renameBookmarkList` 서비스가 실제 화면에서 동작하도록 연결했다. `폴더 수정` 항목은 `구현됨`으로 상향했다.
+- `2026-03-21`: `src/screens/Home.tsx`, `src/features/feed/useFeed.ts`에 `팔로잉` 피드 분기를 추가하고 서버 `type=following`, `has_more` 계약을 반영했다.

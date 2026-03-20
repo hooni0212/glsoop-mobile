@@ -22,7 +22,7 @@ import {
   removePostFromBookmarkList,
 } from "@/services/bookmarkService";
 
-const CATEGORIES = ["추천", "인기", "힐링", "일상", "여행"] as const;
+const CATEGORIES = ["추천", "팔로잉", "인기", "힐링", "일상", "여행"] as const;
 type Category = (typeof CATEGORIES)[number];
 
 export default function Home() {
@@ -31,6 +31,7 @@ export default function Home() {
 
   const query = useMemo(() => {
     if (active === "인기") return { limit: 10, sort: "popular" as const };
+    if (active === "팔로잉") return { limit: 10, sort: "latest" as const, type: "following" as const };
     if (active === "추천") return { limit: 10, sort: "latest" as const };
     return { limit: 10, sort: "latest" as const, tag: active };
   }, [active]);
@@ -43,6 +44,7 @@ export default function Home() {
 
   const sectionLabel = useMemo(() => {
     if (active === "인기") return "지금 인기";
+    if (active === "팔로잉") return "팔로잉 피드";
     if (active === "추천") return "오늘의 추천";
     return `${active} 피드`;
   }, [active]);

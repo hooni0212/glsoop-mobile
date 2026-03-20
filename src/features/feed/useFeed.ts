@@ -4,10 +4,12 @@ import type { Post } from "@/types/post";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 type Sort = "latest" | "popular";
+type FeedType = "all" | "following";
 
 export type FeedQuery = {
   limit?: number;
   sort?: Sort;
+  type?: FeedType;
   category?: string;
   tag?: string;
 };
@@ -15,6 +17,7 @@ export type FeedQuery = {
 type FeedResponse = {
   ok: boolean;
   posts?: any[];
+  has_more?: boolean;
   hasMore?: boolean;
   message?: string;
 };
@@ -122,6 +125,7 @@ function normalizePost(row: any): Post {
 export function useFeed(query: FeedQuery = {}) {
   const limit = query.limit ?? 10;
   const sort = query.sort ?? "latest";
+  const type = query.type ?? "all";
 
   const [items, setItems] = useState<Post[]>([]);
   const [loading, setLoading] = useState(false);
@@ -136,10 +140,11 @@ export function useFeed(query: FeedQuery = {}) {
     const p = new URLSearchParams();
     p.set("limit", String(limit));
     p.set("sort", sort);
+    if (type === "following") p.set("type", "following");
     if (query.category) p.set("category", query.category);
     if (query.tag) p.set("tag", query.tag);
     return p;
-  }, [limit, sort, query.category, query.tag]);
+  }, [limit, sort, type, query.category, query.tag]);
 
   const fetchPage = useCallback(
     async (opts: { reset?: boolean } = {}) => {
@@ -170,7 +175,11 @@ export function useFeed(query: FeedQuery = {}) {
         setItems((prev) => (reset ? next : [...prev, ...next]));
 
         const inferredHasMore =
-          typeof res.hasMore === "boolean" ? res.hasMore : next.length >= limit;
+          typeof res.has_more === "boolean"
+            ? res.has_more
+            : typeof res.hasMore === "boolean"
+              ? res.hasMore
+              : next.length >= limit;
 
         setHasMore(inferredHasMore);
         offsetRef.current += next.length;
