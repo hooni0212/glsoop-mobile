@@ -105,7 +105,7 @@
 
 | 기능군 | 현재 판단 | 메모 |
 | --- | --- | --- |
-| 인증/계정 | 런타임 리스크를 포함한 부분 구현 | 로그인/OTP 화면은 있으나 가입 필수 동의/버전, 네이티브 인증 방식, 비밀번호 재설정, 세션 관리가 비어 있음 |
+| 인증/계정 | 런타임 리스크를 포함한 부분 구현 | 로그인/OTP 화면과 비밀번호 재설정 요청/변경 화면은 붙였다. 다만 가입 해피패스 실검증, 네이티브 인증 방식, 실제 메일 링크-앱 복귀 검증이 남아 있음 |
 | 마이페이지/내 활동 | 부분 구현 | 모바일 `Me`를 탭형 관리 화면으로 확장해 내 글/좋아요/팔로잉/세션/전체 로그아웃, 프로필 수정, 로그인 유지 설정, 작성 글 삭제까지 반영했다. 남은 갭은 성장 요약 카드 정도다 |
 | 작가 페이지/소셜 | 부분 구현 | 작가 프로필/글 목록, 팔로우, 정렬, 소개 토글, 최신 글 CTA는 반영했다. share/overflow와 추가 검증이 남아 있음 |
 | 게시글 상세/상호작용 | 부분 구현 | 좋아요, 북마크 모달, 공유 이벤트, 관련 글, 작성자 전용 수정/삭제 진입까지 반영했다. 남은 갭은 공유 모달 고도화 정도다 |
@@ -169,8 +169,8 @@
 | 로그인 후 guard/redirect | `../glsoop/routes/authPageRoutes.js`, `../glsoop/tests/e2e/auth-page-guard.spec.js` | `GET /api/me` | `부분 구현` | 모바일은 `(auth)` vs `(tabs)` 전역 게이트는 있음. 서버 웹의 `next/from` 기반 세밀한 redirect UX는 없음 | P2 |
 | 회원가입 + 이메일 인증 | `../glsoop/public/html/signup.html`, `../glsoop/public/js/signup.js`, `../glsoop/public/js/verify-email.js` | `POST /signup`, `POST /verify-email`, `POST /verify-email/resend` | `부분 구현` | OTP 단계 자체는 있으나, 현재 요청 바디가 서버 필수 동의/버전 검증을 통과하지 못해 가입 해피패스가 보장되지 않는다 | P0 |
 | 회원가입 시 법적 동의/버전 검증 | `../glsoop/tests/e2e/auth-signup-consent.spec.js` | `GET /api/runtime-config`, `POST /api/signup` | `부분 구현` | 모바일 가입 화면에 필수 동의와 version payload는 반영했다. 다만 실제 서버 기준 해피패스 검증과 OTP까지 포함한 종단 확인이 남아 있다 | P0 |
-| 비밀번호 찾기/재설정 요청 | `../glsoop/public/html/forgot-password.html`, `../glsoop/public/js/forgot-password.js` | `POST /api/password-reset-request` | `미구현` | 모바일 auth 흐름에 진입점 자체가 없음 | P2 |
-| 재설정 토큰 검증/새 비밀번호 저장 | `../glsoop/public/html/reset-password.html`, `../glsoop/public/js/reset-password.js` | `POST /api/password-reset/validate`, `POST /api/password-reset` | `미구현` | 토큰 검증, 강도 체크, 완료 후 로그인 이동 흐름이 모두 없음 | P2 |
+| 비밀번호 찾기/재설정 요청 | `../glsoop/public/html/forgot-password.html`, `../glsoop/public/js/forgot-password.js` | `POST /api/password-reset-request` | `부분 구현` | 모바일 `src/screens/AuthLogin.tsx`, `src/screens/AuthForgotPassword.tsx`에 진입점과 요청 화면을 반영했다. 실제 메일 발송/딥링크 종단 검증은 남아 있다 | P2 |
+| 재설정 토큰 검증/새 비밀번호 저장 | `../glsoop/public/html/reset-password.html`, `../glsoop/public/js/reset-password.js` | `POST /api/password-reset/validate`, `POST /api/password-reset` | `부분 구현` | 모바일 `src/screens/AuthResetPassword.tsx`에서 토큰 검증과 새 비밀번호 저장 화면을 반영했다. 실제 메일 링크에서 앱으로 복귀하는 종단 흐름 검증은 남아 있다 | P2 |
 | 전체 로그아웃 | `../glsoop/public/js/mypage.js`, `../glsoop/tests/e2e/mypage-redesign.spec.js` | `POST /api/logout-all` | `구현됨` | 모바일 `src/screens/Me.tsx`에서 전체 로그아웃 버튼과 동작을 반영했다 | 유지 |
 | 세션 목록 조회 | `../glsoop/public/js/mypage.js`, `../glsoop/tests/e2e/mypage-redesign.spec.js` | `GET /api/me/sessions` | `구현됨` | 모바일 `src/screens/Me.tsx`에 세션 탭과 목록 노출을 반영했다 | 유지 |
 
@@ -419,3 +419,4 @@
 - `2026-03-21`: `src/screens/Me.tsx`, `src/services/postService.ts`에 내 글 삭제 액션을 추가해 `DELETE /api/posts/:id` 기반 작성 글 관리 갭을 줄였다. `npm run lint`를 통과했다.
 - `2026-03-21`: `src/screens/Write.tsx`, `src/services/postService.ts`, `src/screens/Me.tsx`에 기존 글 편집 모드를 추가해 내 글 기준 수정 진입과 `PUT /api/posts/:id` 저장 흐름을 반영했다. `npm run lint`를 통과했다.
 - `2026-03-21`: `src/screens/PostDetail.tsx`, `src/screens/PostDetail.styles.ts`에 작성자 전용 관리 섹션을 추가해 상세 화면에서도 수정/삭제 진입이 가능하도록 반영했다. `npm run lint`를 통과했다.
+- `2026-03-21`: `src/screens/AuthForgotPassword.tsx`, `src/screens/AuthResetPassword.tsx`, `src/screens/AuthLogin.tsx`, `app/(auth)/*`에 비밀번호 재설정 요청/검증/변경 화면을 추가했다. `npm run lint`를 통과했고, 실제 메일 링크 기반 종단 검증은 별도 확인이 남아 있다.

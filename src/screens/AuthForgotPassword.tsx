@@ -11,64 +11,33 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 
-import { useAuth } from "@/auth/AuthContext";
 import { AppError } from "@/components/state/AppError";
 import { apiPost } from "@/lib/api";
-import {
-  buildEmailVerificationNotice,
-  isEmailVerificationRequired,
-} from "@/lib/authMessages";
-import { COOKIE_SESSION_TOKEN } from "@/lib/authToken";
 import { normalizeApiError } from "@/lib/errors";
 import { tokens } from "@/theme/tokens";
 
-type LoginResponse = {
-  ok: boolean;
+type PasswordResetRequestResponse = {
+  ok?: boolean;
   message?: string;
-  token?: string;
 };
 
-export default function AuthLogin() {
+export default function AuthForgotPassword() {
   const router = useRouter();
-  const { signIn } = useAuth();
-
   const [email, setEmail] = React.useState("");
-  const [pw, setPw] = React.useState("");
   const [busy, setBusy] = React.useState(false);
   const [message, setMessage] = React.useState<string | null>(null);
   const [error, setError] = React.useState<ReturnType<typeof normalizeApiError> | null>(null);
 
-  async function onLogin() {
+  async function onSubmit() {
     setBusy(true);
     setMessage(null);
     setError(null);
-
     try {
-      const res = await apiPost<LoginResponse>("/api/login", { email, pw });
-      if (!res?.ok) {
-        const rawMessage = res?.message || "로그인에 실패했어요.";
-        if (isEmailVerificationRequired(rawMessage)) {
-          setMessage(buildEmailVerificationNotice(email));
-        } else {
-          setMessage(rawMessage);
-        }
-        return;
-      }
-      const nextAuthToken =
-        res.token || (Platform.OS === "web" ? COOKIE_SESSION_TOKEN : null);
-      if (!nextAuthToken) {
-        setMessage("서버 인증 정보를 확인할 수 없어요. 로그인 응답을 점검해 주세요.");
-        return;
-      }
-
-      await signIn(nextAuthToken);
-      router.replace("/(tabs)");
+      const res = await apiPost<PasswordResetRequestResponse>("/api/password-reset-request", {
+        email: email.trim(),
+      });
+      setMessage(res?.message || "입력하신 이메일이 등록되어 있다면 안내 메일이 발송됩니다.");
     } catch (e) {
-      const rawMessage = e instanceof Error ? e.message : "";
-      if (isEmailVerificationRequired(rawMessage)) {
-        setMessage(buildEmailVerificationNotice(email));
-        return;
-      }
       setError(normalizeApiError(e));
     } finally {
       setBusy(false);
@@ -86,11 +55,13 @@ export default function AuthLogin() {
             <Pressable onPress={() => router.back()} style={styles.backBtn}>
               <Text style={styles.backText}>←</Text>
             </Pressable>
-            <Text style={styles.h1}>로그인</Text>
-            <View style={{ width: 36 }} />
+            <Text style={styles.h1}>비밀번호 찾기</Text>
+            <View style={styles.headerSpacer} />
           </View>
 
-          <Text style={styles.sub}>이메일과 비밀번호로 로그인해요.</Text>
+          <Text style={styles.sub}>
+            가입한 이메일을 입력하면 비밀번호 재설정 안내를 보낼게요.
+          </Text>
 
           {error ? (
             <View style={styles.block}>
@@ -107,34 +78,24 @@ export default function AuthLogin() {
               keyboardType="email-address"
               style={styles.input}
             />
-            <TextInput
-              value={pw}
-              onChangeText={setPw}
-              placeholder="비밀번호"
-              secureTextEntry
-              style={styles.input}
-            />
 
             <Pressable
-              onPress={onLogin}
-              disabled={busy || !email || !pw}
-              style={({ pressed }) => [
+              onPress={onSubmit}
+              disabled={busy || !email.trim()}
+              style={[
                 styles.primaryBtn,
-                (busy || !email || !pw) && styles.primaryBtnDisabled,
-                pressed && !busy && styles.primaryBtnPressed,
+                (busy || !email.trim()) && styles.primaryBtnDisabled,
               ]}
             >
-              <Text style={styles.primaryBtnText}>{busy ? "로그인 중..." : "로그인"}</Text>
+              <Text style={styles.primaryBtnText}>
+                {busy ? "전송 중..." : "재설정 메일 보내기"}
+              </Text>
             </Pressable>
 
             {message ? <Text style={styles.helper}>{message}</Text> : null}
 
-            <Pressable onPress={() => router.push("/(auth)/forgot-password")}>
-              <Text style={styles.link}>비밀번호를 잊으셨나요?</Text>
-            </Pressable>
-
-            <Pressable onPress={() => router.push("/(auth)/signup")}>
-              <Text style={styles.link}>계정이 없나요? 회원가입</Text>
+            <Pressable onPress={() => router.replace("/(auth)/login")}>
+              <Text style={styles.link}>로그인으로 돌아가기</Text>
             </Pressable>
           </View>
         </View>
@@ -157,6 +118,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
   },
+  headerSpacer: { width: 36 },
   backBtn: {
     width: 36,
     height: 36,
@@ -169,7 +131,7 @@ const styles = StyleSheet.create({
   },
   backText: { fontSize: 18, fontWeight: "900", color: tokens.colors.text },
   h1: { fontSize: tokens.font.h1, fontWeight: "900", color: tokens.colors.text },
-  sub: { fontSize: tokens.font.body, color: tokens.colors.textMuted },
+  sub: { fontSize: tokens.font.body, color: tokens.colors.textMuted, lineHeight: 22 },
   block: { marginTop: tokens.space.sm },
   form: { gap: tokens.space.sm as any },
   input: {
@@ -189,10 +151,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: tokens.space.sm,
   },
-  primaryBtnPressed: { opacity: 0.92 },
   primaryBtnDisabled: { opacity: 0.5 },
   primaryBtnText: { color: "white", fontSize: 15, fontWeight: "800" },
-  helper: { fontSize: tokens.font.small, color: tokens.colors.textMuted, marginTop: 4 },
+  helper: { fontSize: tokens.font.small, color: tokens.colors.textMuted, lineHeight: 20 },
   link: {
     fontSize: tokens.font.small,
     color: tokens.colors.green900,
