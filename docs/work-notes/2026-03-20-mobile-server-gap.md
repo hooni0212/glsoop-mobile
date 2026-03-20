@@ -222,7 +222,7 @@
 | 드래프트 삭제 | `../glsoop/public/js/editor2.js` | local draft 규칙 | `구현됨` | 모바일 `deleteWriteDraft`, `clearAllWriteDrafts`, `WriteDrafts` 화면 존재 | 유지 |
 | 해시태그 칩 | `../glsoop/public/js/editor2.js` | `POST /api/posts` `hashtags` | `구현됨` | 모바일 `src/components/write/WriteMetaSection.tsx`, `src/screens/Write.tsx`, `src/services/postService.ts`에서 해시태그 입력 UI와 `hashtags` payload를 반영했다 | 유지 |
 | 레이아웃 편집/미리보기 | `../glsoop/public/js/editor2.js`, `../glsoop/public/js/editor2LayoutEditor.js` | `POST /api/posts`, `PUT /api/posts/:id` `layout_json` | `부분 구현` | 모바일 `src/screens/Write.tsx`, `src/components/write/WriteLayoutSection.tsx`, `src/components/write/WritePreviewCard.tsx`, `src/lib/postLayout.ts`에서 정렬/크기/푸터 표시 설정과 미리보기를 제공하고 `layout_json`을 저장한다. 웹처럼 드래그로 박스를 세밀하게 배치하는 단계는 아직 없음 | P3 |
-| 인증 리다이렉트 | `../glsoop/public/js/editor2.js` | `GET /api/me` | `부분 구현` | 모바일은 글로벌 auth gate가 있지만, editor 전용 `next/from` 리다이렉트 UX는 약함 | P2 |
+| 인증 리다이렉트 | `../glsoop/public/js/editor2.js` | `GET /api/me` | `구현됨` | 모바일 `src/auth/AuthGate.tsx`, `src/lib/authRedirect.ts`, auth 화면들에서 `redirect` 기반 복귀를 반영해 `/write` 진입 후 로그인/회원가입을 거쳐 원래 화면으로 돌아올 수 있다 | 유지 |
 
 ### 5.6 검색/탐색
 
@@ -430,3 +430,4 @@
 - `2026-03-21`: `src/screens/Write.tsx`, `src/components/write/WriteLayoutSection.tsx`, `src/components/write/WritePreviewCard.tsx`, `src/lib/postLayout.ts`, `src/services/postService.ts`에서 모바일용 레이아웃 설정과 미리보기를 추가하고 `layout_json` 저장을 연결했다. `npm run lint`를 통과했다.
 - `2026-03-21`: `src/services/draftStorage.ts`, `src/screens/Write.tsx`에서 로컬 드래프트를 create/edit 기준으로 분리하고 30일 TTL 정리를 반영했다. 사용자 토큰 기반 충돌 방지와 복구 UX 고도화는 후속 과제로 남겼다.
 - `2026-03-21`: `src/screens/PostDetail.tsx`에 공유 옵션 모달을 추가해 제목만 공유/본문까지 공유를 선택할 수 있게 하고, 모드별 share event 로그를 남기도록 보강했다. `npm run lint`를 통과했다.
+- `2026-03-21`: `src/auth/AuthGate.tsx`, `src/lib/authRedirect.ts`, auth 화면들 기준으로 작성기 `redirect` 복귀 흐름이 이미 구현돼 있음을 다시 확인해 `인증 리다이렉트` 항목 상태를 `구현됨`으로 올렸다.
