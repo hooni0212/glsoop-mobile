@@ -157,6 +157,40 @@ export function createWriteStyles() {
     metaChipTextActive: {
       color: tokens.colors.green900,
     },
+    metaDivider: {
+      height: 1,
+      backgroundColor: tokens.colors.border,
+      marginVertical: 12,
+    },
+    metaInput: {
+      borderWidth: 1,
+      borderColor: tokens.colors.borderStrong,
+      borderRadius: tokens.radius.lg,
+      backgroundColor: tokens.colors.white,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      fontSize: 14,
+      color: tokens.colors.text,
+    },
+    metaChipWrap: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 8,
+      marginTop: 10,
+    },
+    hashChip: {
+      borderRadius: tokens.radius.pill,
+      borderWidth: 1,
+      borderColor: tokens.colors.green700,
+      backgroundColor: tokens.colors.green100,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+    },
+    hashChipText: {
+      fontSize: tokens.font.small,
+      fontWeight: "800",
+      color: tokens.colors.green900,
+    },
 
     // --- Modal (cross-platform confirm UI) ---
     modalOverlay: {

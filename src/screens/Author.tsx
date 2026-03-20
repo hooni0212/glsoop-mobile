@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from "react";
-import { Alert, FlatList, Pressable, SafeAreaView, Text, View } from "react-native";
+import { Alert, FlatList, Pressable, SafeAreaView, Share, Text, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
 
@@ -238,6 +238,25 @@ export default function Author() {
     userId,
   ]);
 
+  const handleShareAuthor = useCallback(async () => {
+    if (!userId) return;
+
+    const shareTitle = `${name} 작가 페이지`;
+    const shareMessage = `${name}님의 글을 같이 읽어보세요.`;
+    const shareUrl = `glsoop://users/${userId}`;
+
+    try {
+      await Share.share({
+        title: shareTitle,
+        message: `${shareMessage}\n${shareUrl}`,
+        url: shareUrl,
+      });
+      showToast("작가 페이지를 공유했어요.");
+    } catch {
+      showToast("공유에 실패했어요. 잠시 후 다시 시도해주세요.", { tone: "error" });
+    }
+  }, [name, showToast, userId]);
+
   const listHeader = useMemo(
     () => {
       const primaryBadge = profileCosmetics.primary_badge;
@@ -327,25 +346,34 @@ export default function Author() {
             ) : null}
 
             {showFollowButton ? (
-              <Pressable
-                onPress={() => void handleFollowToggle()}
-                disabled={followBusy}
-                style={[
-                  authorScreenStyles.followBtn,
-                  isFollowing && authorScreenStyles.followBtnActive,
-                  followBusy && authorScreenStyles.followBtnDisabled,
-                ]}
-                testID="author-follow-btn"
-              >
-                <Text
+              <View style={authorScreenStyles.actionRow}>
+                <Pressable
+                  onPress={() => void handleFollowToggle()}
+                  disabled={followBusy}
                   style={[
-                    authorScreenStyles.followBtnText,
-                    isFollowing && authorScreenStyles.followBtnTextActive,
+                    authorScreenStyles.followBtn,
+                    isFollowing && authorScreenStyles.followBtnActive,
+                    followBusy && authorScreenStyles.followBtnDisabled,
                   ]}
+                  testID="author-follow-btn"
                 >
-                  {followBusy ? "처리 중..." : isFollowing ? "팔로잉" : "팔로우"}
-                </Text>
-              </Pressable>
+                  <Text
+                    style={[
+                      authorScreenStyles.followBtnText,
+                      isFollowing && authorScreenStyles.followBtnTextActive,
+                    ]}
+                  >
+                    {followBusy ? "처리 중..." : isFollowing ? "팔로잉" : "팔로우"}
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => void handleShareAuthor()}
+                  style={authorScreenStyles.shareBtn}
+                  testID="author-share-btn"
+                >
+                  <Text style={authorScreenStyles.shareBtnText}>공유</Text>
+                </Pressable>
+              </View>
             ) : null}
 
             {showProfileCustomize ? (
@@ -411,6 +439,7 @@ export default function Author() {
       profileCosmetics,
       showProfileCustomize,
       showFollowButton,
+      handleShareAuthor,
       sort,
       totalLikes,
     ]

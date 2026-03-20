@@ -43,8 +43,8 @@ export default function Write() {
   const [body, setBody] = useState("");
   const [draftId, setDraftId] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState<PostType | null>(null);
+  const [hashtagsInput, setHashtagsInput] = useState("");
   const [editPostId, setEditPostId] = useState<string | null>(null);
-  const [editHashtags, setEditHashtags] = useState<string[]>([]);
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState<AppErrorModel | null>(null);
 
@@ -57,6 +57,15 @@ export default function Write() {
 
   const hasShownRestorePromptRef = useRef(false);
   const isEditMode = Boolean(editPostId);
+
+  const hashtagChips = useMemo(() => {
+    return hashtagsInput
+      .split(/[\s,]+/)
+      .map((item) => item.trim().replace(/^#+/, "").toLowerCase())
+      .filter(Boolean)
+      .filter((item, index, arr) => arr.indexOf(item) === index)
+      .slice(0, 12);
+  }, [hashtagsInput]);
 
   const hasChanges = title.trim().length > 0 || body.trim().length > 0 || selectedType !== null;
   const canSubmit =
@@ -179,7 +188,7 @@ export default function Write() {
           type: selectedType,
           title: trimmedTitle || undefined,
           content: trimmedBody,
-          hashtags: editHashtags,
+          hashtags: hashtagChips,
         });
         setCreatedPostId(editPostId);
         logger.debug("[write] update success", { postId: editPostId });
@@ -190,6 +199,7 @@ export default function Write() {
           title: trimmedTitle || undefined,
           content: trimmedBody,
           contentFormat: "plain",
+          hashtags: hashtagChips,
         });
 
         if (draftId) {
@@ -206,7 +216,7 @@ export default function Write() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [selectedType, draftId, editHashtags, editPostId, title, body]);
+  }, [selectedType, draftId, editPostId, hashtagChips, title, body]);
 
   const onSuccessGoHome = useCallback(() => {
     setSubmitSuccess(false);
@@ -255,7 +265,7 @@ export default function Write() {
           setTitle(editable.title);
           setBody(editable.content);
           setSelectedType(editable.category ?? null);
-          setEditHashtags(editable.hashtags);
+          setHashtagsInput(editable.hashtags.join(", "));
         } catch (err) {
           logger.warn("[write] edit post load error", err);
           setEditError(normalizeApiError(err));
@@ -276,6 +286,7 @@ export default function Write() {
           setTitle(d.title);
           setBody(d.body);
           setSelectedType(d.category ?? null);
+          setHashtagsInput("");
         }
         return;
       }
@@ -365,6 +376,9 @@ export default function Write() {
             styles={styles}
             selectedType={selectedType}
             onSelectType={setSelectedType}
+            hashtagsInput={hashtagsInput}
+            hashtagChips={hashtagChips}
+            onChangeHashtagsInput={setHashtagsInput}
           />
 
           <WriteStates styles={styles} confirm={activeConfirm} />

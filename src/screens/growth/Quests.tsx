@@ -118,6 +118,20 @@ export default function QuestsScreen() {
           message = `${message} · 코스메틱 ${result.gainedCosmetics.length}개 획득`;
         }
         showToast(message, { tone: "success" });
+
+        if (result.gainedCosmetics.length > 0) {
+          Alert.alert(
+            "코스메틱 획득",
+            "방금 받은 코스메틱을 바로 프로필에 적용해볼까요?",
+            [
+              { text: "나중에", style: "cancel" },
+              {
+                text: "프로필 꾸미기",
+                onPress: () => router.push("/profile-customize"),
+              },
+            ]
+          );
+        }
       } catch (claimError) {
         if (claimError instanceof ApiError && claimError.code === "ENTITLEMENT_REQUIRED") {
           showToast("시즌 패스가 필요한 퀘스트예요.", { tone: "error" });

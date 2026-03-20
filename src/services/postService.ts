@@ -7,7 +7,7 @@ export type CreatePostInput = {
   title?: string;
   content: string;
   contentFormat?: "plain";
-  tags?: string[];
+  hashtags?: string[];
 };
 
 type CreatePostResponse = {
@@ -47,7 +47,7 @@ export async function createPost(input: CreatePostInput): Promise<{ postId: stri
   };
 
   if (input.title) payload.title = input.title;
-  if (input.tags && input.tags.length > 0) payload.tags = input.tags;
+  if (input.hashtags && input.hashtags.length > 0) payload.hashtags = input.hashtags;
 
   const res = await apiPost<CreatePostResponse>("/api/posts", payload);
 

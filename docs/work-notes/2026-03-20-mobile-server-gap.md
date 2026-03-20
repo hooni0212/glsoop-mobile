@@ -107,9 +107,9 @@
 | --- | --- | --- |
 | 인증/계정 | 런타임 리스크를 포함한 부분 구현 | 로그인/OTP 화면과 비밀번호 재설정 요청/변경 화면은 붙였다. 다만 가입 해피패스 실검증, 네이티브 인증 방식, 실제 메일 링크-앱 복귀 검증이 남아 있음 |
 | 마이페이지/내 활동 | 부분 구현 | 모바일 `Me`를 탭형 관리 화면으로 확장해 내 글/좋아요/팔로잉/세션/전체 로그아웃, 프로필 수정, 로그인 유지 설정, 작성 글 삭제까지 반영했다. 남은 갭은 성장 요약 카드 정도다 |
-| 작가 페이지/소셜 | 부분 구현 | 작가 프로필/글 목록, 팔로우, 정렬, 소개 토글, 최신 글 CTA는 반영했다. share/overflow와 추가 검증이 남아 있음 |
+| 작가 페이지/소셜 | 부분 구현 | 작가 프로필/글 목록, 팔로우, 정렬, 소개 토글, 최신 글 CTA, 공유는 반영했다. overflow와 추가 검증이 남아 있음 |
 | 게시글 상세/상호작용 | 부분 구현 | 좋아요, 북마크 모달, 공유 이벤트, 관련 글, 작성자 전용 수정/삭제 진입까지 반영했다. 남은 갭은 공유 모달 고도화 정도다 |
-| 작성/수정/드래프트 | 부분 구현 | 새 글 작성, 로컬 드래프트, 기존 글 편집 진입과 수정 저장까지 반영했다. 레이아웃 편집과 해시태그 칩은 남아 있음 |
+| 작성/수정/드래프트 | 부분 구현 | 새 글 작성, 로컬 드래프트, 기존 글 편집 진입과 수정 저장, 해시태그 입력까지 반영했다. 레이아웃 편집/미리보기는 남아 있음 |
 | 검색/탐색 | 부분 구현 | 검색, 일반 피드, `following` 피드 분기는 반영했다. 남은 갭은 세부 탐색 UX 쪽이 중심 |
 | 북마크 | 부분 구현 | 목록/생성/수정/삭제/아이템 조회는 있음. 나머지 개선은 폴더 UX 다듬기 수준 |
 | 성장/코스메틱 | 부분 구현 | 요약/업적/퀘스트/코스메틱은 있음. `top_posts`는 pending 성격이 남아 있음 |
@@ -155,8 +155,8 @@
 
 ### 4.5 P3 우선순위
 
-- 작가 페이지 overflow/share 보강
-- editor 레이아웃 편집/해시태그 칩/미리보기 강화
+- 작가 페이지 overflow 보강
+- editor 레이아웃 편집/미리보기 강화
 - 성장 `top_posts`를 실제 데이터 중심으로 고도화
 
 ## 5. 기능군별 상세 표
@@ -196,7 +196,7 @@
 | 최신 글 CTA | `../glsoop/public/js/author.js`, `../glsoop/tests/e2e/author-cta-flow.spec.js` | `GET /api/users/:id/posts` | `구현됨` | 모바일 `src/screens/Author.tsx`에서 최신 글 읽기 CTA를 추가했다 | 유지 |
 | 소개문 접기/펼치기 | `../glsoop/public/js/author.js` | `GET /api/users/:id/profile` | `구현됨` | 모바일 `src/screens/Author.tsx`에서 소개문 더보기/접기 토글을 반영했다 | 유지 |
 | 정렬 전환 | `../glsoop/public/js/author.js` | `GET /api/users/:id/posts` 정렬 쿼리 사용 | `구현됨` | 모바일 `src/screens/Author.tsx`, `src/features/users/useAuthorPosts.ts`에 `newest/likes/oldest` 정렬 전환을 반영했다 | 유지 |
-| overflow/share 동작 | `../glsoop/public/js/author.js`, `../glsoop/tests/e2e/author-overflow-actions.spec.js` | 공유는 클라이언트 중심 | `미구현` | 모바일 작가 화면에는 share/overflow가 없음 | P3 |
+| overflow/share 동작 | `../glsoop/public/js/author.js`, `../glsoop/tests/e2e/author-overflow-actions.spec.js` | 공유는 클라이언트 중심 | `부분 구현` | 모바일 `src/screens/Author.tsx`에 시스템 공유는 반영했다. overflow 메뉴 형태의 추가 액션은 아직 없음 | P3 |
 | 내 프로필일 때 프로필 꾸미기 진입 | `../glsoop/public/js/author.js` | `GET /api/users/:id/profile` | `구현됨` | 모바일 `Author.tsx`에서 own profile이면 `profile-customize` 이동 가능 | 유지 |
 
 ### 5.4 게시글 상세/상호작용
@@ -220,7 +220,7 @@
 | 기존 글 편집 진입 | `../glsoop/public/js/editor2.js` | `GET /api/posts/:id/edit` | `구현됨` | 모바일 `src/screens/Me.tsx`에서 내 글 수정 버튼으로 `src/screens/Write.tsx` 편집 모드에 진입할 수 있다 | 유지 |
 | 수정 저장 | `../glsoop/public/js/editor2.js` | `PUT /api/posts/:id` | `구현됨` | 모바일 `src/screens/Write.tsx`, `src/services/postService.ts`에서 `GET /api/posts/:id/edit` 조회 후 `PUT /api/posts/:id` 저장을 반영했다 | 유지 |
 | 드래프트 삭제 | `../glsoop/public/js/editor2.js` | local draft 규칙 | `구현됨` | 모바일 `deleteWriteDraft`, `clearAllWriteDrafts`, `WriteDrafts` 화면 존재 | 유지 |
-| 해시태그 칩 | `../glsoop/public/js/editor2.js` | `POST /api/posts` `tags` | `미구현` | 모바일 서비스는 `tags` 필드를 지원하지만 UI 입력이 없다. 서버/문서의 필드명 불일치도 함께 정리해야 한다 | P3 |
+| 해시태그 칩 | `../glsoop/public/js/editor2.js` | `POST /api/posts` `hashtags` | `구현됨` | 모바일 `src/components/write/WriteMetaSection.tsx`, `src/screens/Write.tsx`, `src/services/postService.ts`에서 해시태그 입력 UI와 `hashtags` payload를 반영했다 | 유지 |
 | 레이아웃 편집/미리보기 | `../glsoop/public/js/editor2.js`, `../glsoop/public/js/editor2LayoutEditor.js` | `POST /api/posts`, `PUT /api/posts/:id` `layout_json` | `미구현` | 모바일 작성기는 plain text 중심이고 layout 편집이 없음 | P3 |
 | 인증 리다이렉트 | `../glsoop/public/js/editor2.js` | `GET /api/me` | `부분 구현` | 모바일은 글로벌 auth gate가 있지만, editor 전용 `next/from` 리다이렉트 UX는 약함 | P2 |
 
@@ -253,7 +253,7 @@
 | 성장 대시보드/요약/업적/퀘스트 | `../glsoop/public/html/growth.html`, `../glsoop/public/js/growth-dashboard.js`, `../glsoop/tests/e2e/growth-dashboard.spec.js` | `/api/growth/dashboard`, `/api/growth/summary`, `/api/growth/achievements`, `/api/quests/active` | `구현됨` | 모바일 `src/features/growth/useGrowthData.ts`, `src/screens/Growth.tsx` 등 | 유지 |
 | 퀘스트 보상 수령 | `../glsoop/public/js/growth-dashboard.js` | `POST /api/quests/:stateId/claim` | `구현됨` | 모바일 reward claim 연결 완료 | 유지 |
 | `top_posts` 노출 | `../glsoop/public/js/growth-dashboard.js` | `GET /api/growth/top-posts`, dashboard 포함 응답 | `부분 구현` | 모바일은 `TopPostsList`가 있고 `useGrowthData`도 타입을 갖지만 pending/ready 성격이 섞여 있어 실제 제품 우선순위 재확인 필요 | P3 |
-| 퀘스트 보상 코스메틱 반영 | `../glsoop/routes/growthRoutes.js`, `../glsoop/routes/cosmeticsRoutes.js` | claim + cosmetics API | `부분 구현` | 모바일은 코스메틱 인벤토리/적용은 가능하지만 퀘스트 보상 획득 직후 인벤토리/프로필 반영 UX는 약함 | P2 |
+| 퀘스트 보상 코스메틱 반영 | `../glsoop/routes/growthRoutes.js`, `../glsoop/routes/cosmeticsRoutes.js` | claim + cosmetics API | `부분 구현` | 모바일 `src/screens/growth/Quests.tsx`에서 보상 수령 직후 `프로필 꾸미기` CTA를 제공한다. 인벤토리 즉시 동기화까지는 별도 검증이 남아 있다 | P2 |
 | 프로필 코스메틱 적용 | `../glsoop/routes/cosmeticsRoutes.js`, 서버 작가/마이페이지 카드 렌더링 | `GET /api/cosmetics/me`, `PUT /api/me/profile-cosmetics` | `구현됨` | 모바일 `src/screens/ProfileCustomize.tsx`, `src/features/cosmetics/useMyCosmetics.ts` | 유지 |
 
 ## 6. 우선순위 제안
@@ -292,8 +292,8 @@
 
 ### P3. 고도화/정책 확정이 필요한 영역
 
-- 작가 페이지 overflow/share
-- editor 해시태그 칩/레이아웃 편집
+- 작가 페이지 overflow
+- editor 레이아웃 편집
 - 성장 `top_posts`의 최종 노출 정책
 
 ## 7. 다음 구현 묶음 제안
@@ -420,3 +420,6 @@
 - `2026-03-21`: `src/screens/Write.tsx`, `src/services/postService.ts`, `src/screens/Me.tsx`에 기존 글 편집 모드를 추가해 내 글 기준 수정 진입과 `PUT /api/posts/:id` 저장 흐름을 반영했다. `npm run lint`를 통과했다.
 - `2026-03-21`: `src/screens/PostDetail.tsx`, `src/screens/PostDetail.styles.ts`에 작성자 전용 관리 섹션을 추가해 상세 화면에서도 수정/삭제 진입이 가능하도록 반영했다. `npm run lint`를 통과했다.
 - `2026-03-21`: `src/screens/AuthForgotPassword.tsx`, `src/screens/AuthResetPassword.tsx`, `src/screens/AuthLogin.tsx`, `app/(auth)/*`에 비밀번호 재설정 요청/검증/변경 화면을 추가했다. `npm run lint`를 통과했고, 실제 메일 링크 기반 종단 검증은 별도 확인이 남아 있다.
+- `2026-03-21`: `src/components/write/WriteMetaSection.tsx`, `src/screens/Write.tsx`, `src/services/postService.ts`에 해시태그 입력 UI와 `hashtags` payload를 반영해 작성기 태그 계약을 서버 기준으로 맞췄다. `npm run lint`를 통과했다.
+- `2026-03-21`: `src/screens/Author.tsx`, `src/screens/Author.styles.ts`에 작가 화면 공유 버튼을 추가해 시스템 공유 흐름을 반영했다. overflow 메뉴는 아직 남아 있다.
+- `2026-03-21`: `src/screens/growth/Quests.tsx`에서 코스메틱 보상 수령 직후 `프로필 꾸미기` CTA를 띄우도록 보강했다. 인벤토리 즉시 동기화 여부는 런타임 검증이 남아 있다.

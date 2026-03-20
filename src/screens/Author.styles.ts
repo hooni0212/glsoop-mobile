@@ -160,6 +160,11 @@ export const authorScreenStyles = StyleSheet.create({
     fontWeight: "800",
     color: tokens.colors.green900,
   },
+  actionRow: {
+    flexDirection: "row",
+    gap: tokens.space.xs as any,
+    alignSelf: "flex-start",
+  },
   latestPostBtn: {
     alignSelf: "flex-start",
     borderRadius: tokens.radius.pill,
@@ -173,7 +178,6 @@ export const authorScreenStyles = StyleSheet.create({
     color: "#fff",
   },
   followBtn: {
-    alignSelf: "flex-start",
     borderRadius: tokens.radius.pill,
     borderWidth: 1,
     borderColor: tokens.colors.borderStrong,
@@ -195,6 +199,19 @@ export const authorScreenStyles = StyleSheet.create({
   },
   followBtnTextActive: {
     color: tokens.colors.green900,
+  },
+  shareBtn: {
+    borderRadius: tokens.radius.pill,
+    borderWidth: 1,
+    borderColor: tokens.colors.borderStrong,
+    backgroundColor: tokens.colors.surface,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  shareBtnText: {
+    fontSize: tokens.font.small,
+    fontWeight: "800",
+    color: tokens.colors.text,
   },
   sectionRow: {
     marginTop: tokens.space.lg,
