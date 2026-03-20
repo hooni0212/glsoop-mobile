@@ -1,5 +1,13 @@
 import React from "react";
-import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  Pressable,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import { useRouter } from "expo-router";
 
 import { useAuth } from "@/auth/AuthContext";
@@ -7,7 +15,7 @@ import { FeedCard } from "@/components/FeedCard";
 import { AppEmpty } from "@/components/state/AppEmpty";
 import { AppError } from "@/components/state/AppError";
 import { AppLoading } from "@/components/state/AppLoading";
-import { apiGet, apiPost } from "@/lib/api";
+import { apiGet, apiPost, apiPut } from "@/lib/api";
 import { normalizeApiError } from "@/lib/errors";
 import { tokens } from "@/theme/tokens";
 import type { Post } from "@/types/post";
@@ -47,6 +55,11 @@ type FollowingsResponse = {
 type SessionsResponse = {
   ok?: boolean;
   sessions?: any[];
+  message?: string;
+};
+
+type UpdateMeResponse = {
+  ok?: boolean;
   message?: string;
 };
 
@@ -212,6 +225,14 @@ export default function MeScreen() {
   const [tabLoading, setTabLoading] = React.useState(false);
   const [tabError, setTabError] = React.useState<ReturnType<typeof normalizeApiError> | null>(null);
   const [logoutAllBusy, setLogoutAllBusy] = React.useState(false);
+  const [showEdit, setShowEdit] = React.useState(false);
+  const [editNickname, setEditNickname] = React.useState("");
+  const [editBio, setEditBio] = React.useState("");
+  const [editAbout, setEditAbout] = React.useState("");
+  const [rememberLoginEnabled, setRememberLoginEnabled] = React.useState(false);
+  const [savingProfile, setSavingProfile] = React.useState(false);
+  const [saveMessage, setSaveMessage] = React.useState<string | null>(null);
+  const [saveError, setSaveError] = React.useState<ReturnType<typeof normalizeApiError> | null>(null);
 
   const loadMe = React.useCallback(async () => {
     setLoading(true);
@@ -273,6 +294,14 @@ export default function MeScreen() {
   }, [loadMe]);
 
   React.useEffect(() => {
+    if (!me) return;
+    setEditNickname(me.nickname ?? "");
+    setEditBio(me.bio ?? "");
+    setEditAbout(me.about ?? "");
+    setRememberLoginEnabled(parseFlag(me.remember_login_enabled));
+  }, [me]);
+
+  React.useEffect(() => {
     void loadActiveTab();
   }, [loadActiveTab]);
 
@@ -294,10 +323,170 @@ export default function MeScreen() {
     }
   }
 
+  async function onSaveProfile() {
+    const nickname = editNickname.trim();
+    if (!nickname) {
+      setSaveMessage(null);
+      setSaveError(normalizeApiError(new Error("닉네임을 입력해주세요.")));
+      return;
+    }
+
+    setSavingProfile(true);
+    setSaveMessage(null);
+    setSaveError(null);
+    try {
+      const res = await apiPut<UpdateMeResponse>("/api/me", {
+        nickname,
+        bio: editBio.trim(),
+        about: editAbout.trim(),
+        remember_login_enabled: rememberLoginEnabled,
+      });
+      if (res?.ok === false) {
+        throw new Error(res.message || "프로필 수정에 실패했어요.");
+      }
+      setSaveMessage(res?.message || "프로필을 저장했어요.");
+      setShowEdit(false);
+      await loadMe();
+    } catch (e) {
+      setSaveError(normalizeApiError(e));
+    } finally {
+      setSavingProfile(false);
+    }
+  }
+
   const renderTabBody = () => {
     if (activeTab === "summary") {
       return (
         <View style={styles.summaryActions}>
+          <View style={styles.editCard}>
+            <View style={styles.editHeaderRow}>
+              <View style={styles.editHeaderCopy}>
+                <Text style={styles.editTitle}>프로필 관리</Text>
+                <Text style={styles.editDescription}>
+                  닉네임, 소개, 로그인 유지 설정을 바로 수정할 수 있어요.
+                </Text>
+              </View>
+              <Pressable
+                onPress={() => {
+                  setShowEdit((prev) => !prev);
+                  setSaveMessage(null);
+                  setSaveError(null);
+                }}
+                style={styles.editToggleBtn}
+              >
+                <Text style={styles.editToggleBtnText}>{showEdit ? "닫기" : "수정"}</Text>
+              </Pressable>
+            </View>
+
+            {showEdit ? (
+              <View style={styles.editForm}>
+                <View style={styles.fieldGroup}>
+                  <Text style={styles.fieldLabel}>닉네임</Text>
+                  <TextInput
+                    value={editNickname}
+                    onChangeText={setEditNickname}
+                    placeholder="닉네임"
+                    autoCapitalize="none"
+                    style={styles.input}
+                  />
+                </View>
+
+                <View style={styles.fieldGroup}>
+                  <Text style={styles.fieldLabel}>한 줄 소개</Text>
+                  <TextInput
+                    value={editBio}
+                    onChangeText={setEditBio}
+                    placeholder="한 줄 소개"
+                    style={styles.input}
+                  />
+                </View>
+
+                <View style={styles.fieldGroup}>
+                  <Text style={styles.fieldLabel}>자기소개</Text>
+                  <TextInput
+                    value={editAbout}
+                    onChangeText={setEditAbout}
+                    placeholder="자기소개"
+                    multiline
+                    textAlignVertical="top"
+                    style={[styles.input, styles.textArea]}
+                  />
+                </View>
+
+                <View style={styles.fieldGroup}>
+                  <Text style={styles.fieldLabel}>로그인 유지</Text>
+                  <View style={styles.toggleRow}>
+                    <Pressable
+                      onPress={() => setRememberLoginEnabled(true)}
+                      style={[
+                        styles.toggleChip,
+                        rememberLoginEnabled && styles.toggleChipActive,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.toggleChipText,
+                          rememberLoginEnabled && styles.toggleChipTextActive,
+                        ]}
+                      >
+                        켜기
+                      </Text>
+                    </Pressable>
+                    <Pressable
+                      onPress={() => setRememberLoginEnabled(false)}
+                      style={[
+                        styles.toggleChip,
+                        !rememberLoginEnabled && styles.toggleChipActive,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.toggleChipText,
+                          !rememberLoginEnabled && styles.toggleChipTextActive,
+                        ]}
+                      >
+                        끄기
+                      </Text>
+                    </Pressable>
+                  </View>
+                </View>
+
+                {saveError ? (
+                  <Text style={styles.formErrorText}>{saveError.message}</Text>
+                ) : null}
+                {saveMessage ? <Text style={styles.formSuccessText}>{saveMessage}</Text> : null}
+
+                <View style={styles.editActionRow}>
+                  <Pressable
+                    onPress={() => void onSaveProfile()}
+                    style={[styles.primaryBtn, savingProfile && styles.disabledBtn]}
+                    disabled={savingProfile}
+                  >
+                    <Text style={styles.primaryBtnText}>
+                      {savingProfile ? "저장 중..." : "저장하기"}
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => {
+                      if (!me) return;
+                      setEditNickname(me.nickname ?? "");
+                      setEditBio(me.bio ?? "");
+                      setEditAbout(me.about ?? "");
+                      setRememberLoginEnabled(parseFlag(me.remember_login_enabled));
+                      setSaveMessage(null);
+                      setSaveError(null);
+                      setShowEdit(false);
+                    }}
+                    style={styles.secondaryBtn}
+                    disabled={savingProfile}
+                  >
+                    <Text style={styles.secondaryBtnText}>취소</Text>
+                  </Pressable>
+                </View>
+              </View>
+            ) : null}
+          </View>
+
           <Pressable
             onPress={() => router.push("/profile-customize")}
             style={styles.primaryBtn}
@@ -612,6 +801,108 @@ const styles = StyleSheet.create({
     color: tokens.colors.green900,
   },
   summaryActions: { gap: tokens.space.sm as any },
+  editCard: {
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+    borderRadius: tokens.radius.xl,
+    backgroundColor: tokens.colors.surfaceStrong,
+    padding: tokens.space.md,
+    gap: tokens.space.md as any,
+  },
+  editHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: tokens.space.sm as any,
+  },
+  editHeaderCopy: {
+    flex: 1,
+    gap: 4,
+  },
+  editTitle: {
+    fontSize: 16,
+    fontWeight: "900",
+    color: tokens.colors.text,
+  },
+  editDescription: {
+    fontSize: tokens.font.small,
+    color: tokens.colors.textMuted,
+    lineHeight: 20,
+  },
+  editToggleBtn: {
+    borderWidth: 1,
+    borderColor: tokens.colors.borderStrong,
+    borderRadius: tokens.radius.pill,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: tokens.colors.surface,
+  },
+  editToggleBtnText: {
+    fontSize: tokens.font.small,
+    fontWeight: "800",
+    color: tokens.colors.text,
+  },
+  editForm: {
+    gap: tokens.space.md as any,
+  },
+  fieldGroup: {
+    gap: 8,
+  },
+  fieldLabel: {
+    fontSize: tokens.font.small,
+    fontWeight: "800",
+    color: tokens.colors.text,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: tokens.colors.borderStrong,
+    borderRadius: tokens.radius.lg,
+    backgroundColor: tokens.colors.surface,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
+    color: tokens.colors.text,
+  },
+  textArea: {
+    minHeight: 108,
+  },
+  toggleRow: {
+    flexDirection: "row",
+    gap: tokens.space.xs as any,
+  },
+  toggleChip: {
+    borderWidth: 1,
+    borderColor: tokens.colors.borderStrong,
+    borderRadius: tokens.radius.pill,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    backgroundColor: tokens.colors.surface,
+  },
+  toggleChipActive: {
+    backgroundColor: tokens.colors.green100,
+    borderColor: tokens.colors.green700,
+  },
+  toggleChipText: {
+    fontSize: tokens.font.small,
+    fontWeight: "800",
+    color: tokens.colors.textMuted,
+  },
+  toggleChipTextActive: {
+    color: tokens.colors.green900,
+  },
+  formErrorText: {
+    fontSize: tokens.font.small,
+    color: tokens.colors.red700,
+    lineHeight: 20,
+  },
+  formSuccessText: {
+    fontSize: tokens.font.small,
+    color: tokens.colors.green900,
+    lineHeight: 20,
+  },
+  editActionRow: {
+    gap: tokens.space.sm as any,
+  },
   postList: { gap: tokens.space.md as any },
   followingList: { gap: tokens.space.sm as any },
   followingCard: {
@@ -655,6 +946,9 @@ const styles = StyleSheet.create({
     borderRadius: tokens.radius.lg,
     paddingVertical: 14,
     alignItems: "center",
+  },
+  disabledBtn: {
+    opacity: 0.6,
   },
   secondaryBtnText: { color: tokens.colors.text, fontSize: 15, fontWeight: "800" },
   ghostBtn: { paddingVertical: 10, alignItems: "center" },

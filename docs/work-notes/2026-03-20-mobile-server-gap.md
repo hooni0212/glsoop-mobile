@@ -106,7 +106,7 @@
 | 기능군 | 현재 판단 | 메모 |
 | --- | --- | --- |
 | 인증/계정 | 런타임 리스크를 포함한 부분 구현 | 로그인/OTP 화면은 있으나 가입 필수 동의/버전, 네이티브 인증 방식, 비밀번호 재설정, 세션 관리가 비어 있음 |
-| 마이페이지/내 활동 | 부분 구현 | 모바일 `Me`를 탭형 관리 화면으로 확장해 내 글/좋아요/팔로잉/세션/전체 로그아웃까지 반영했다. 프로필 수정과 삭제 액션은 남아 있음 |
+| 마이페이지/내 활동 | 부분 구현 | 모바일 `Me`를 탭형 관리 화면으로 확장해 내 글/좋아요/팔로잉/세션/전체 로그아웃, 프로필 수정, 로그인 유지 설정까지 반영했다. 남은 큰 갭은 작성 글 삭제다 |
 | 작가 페이지/소셜 | 부분 구현 | 작가 프로필/글 목록, 팔로우, 정렬, 소개 토글, 최신 글 CTA는 반영했다. share/overflow와 추가 검증이 남아 있음 |
 | 게시글 상세/상호작용 | 부분 구현 | 좋아요, 북마크 모달, 공유 이벤트, 관련 글은 반영했다. 작성자 전용 관리 흐름이 남아 있음 |
 | 작성/수정/드래프트 | 부분 구현 | 새 글 작성과 로컬 드래프트는 있음. 기존 글 편집, 레이아웃 편집, 해시태그 칩은 없음 |
@@ -179,11 +179,11 @@
 | 기능 | 서버 웹 구현 근거 | 서버 API 근거 | 모바일 현재 상태 | 차이 메모 | 우선순위 |
 | --- | --- | --- | --- | --- | --- |
 | 내 정보 요약 조회 | `../glsoop/public/html/mypage.html`, `../glsoop/public/js/mypage.js` | `GET /api/me` | `구현됨` | 모바일 `src/screens/Me.tsx`에서 기본 프로필/레벨/팔로워 수 조회 | 유지 |
-| 프로필 수정 | `../glsoop/public/js/mypage.js`, `../glsoop/tests/e2e/mypage-redesign.spec.js` | `PUT /api/me` | `미구현` | 모바일 `Me`는 조회만 하고 수정 폼이 없음 | P1 |
+| 프로필 수정 | `../glsoop/public/js/mypage.js`, `../glsoop/tests/e2e/mypage-redesign.spec.js` | `PUT /api/me` | `구현됨` | 모바일 `src/screens/Me.tsx`에 닉네임, bio, about 수정 폼과 저장 동작을 반영했다 | 유지 |
 | 내 글 목록 | `../glsoop/public/js/mypage.js`, `../glsoop/tests/e2e/mypage-redesign.spec.js` | `GET /api/posts/my` | `구현됨` | 모바일 `src/screens/Me.tsx`에 내 글 탭을 추가했다 | 유지 |
 | 좋아요한 글 목록 | `../glsoop/public/js/mypage.js`, `../glsoop/tests/e2e/mypage-redesign.spec.js` | `GET /api/posts/liked` | `구현됨` | 모바일 `src/screens/Me.tsx`에 좋아요 탭을 추가했다 | 유지 |
 | 팔로잉 목록 | `../glsoop/public/js/mypage.js`, `../glsoop/tests/e2e/mypage-redesign.spec.js` | `GET /api/me/followings` | `구현됨` | 모바일 `src/screens/Me.tsx`에 팔로잉 탭과 작가 이동 리스트를 추가했다 | 유지 |
-| remember login 등 계정 설정 | `../glsoop/public/js/mypage.js`, `../glsoop/tests/e2e/mypage-redesign.spec.js` | `PUT /api/me` | `미구현` | 서버 웹은 `remember_login_enabled`를 편집한다. 모바일은 관련 UI가 없음 | P1 |
+| remember login 등 계정 설정 | `../glsoop/public/js/mypage.js`, `../glsoop/tests/e2e/mypage-redesign.spec.js` | `PUT /api/me` | `구현됨` | 모바일 `src/screens/Me.tsx`에서 `remember_login_enabled` 토글과 저장을 지원한다 | 유지 |
 | 성장 요약 카드 노출 | `../glsoop/public/js/mypage.js` | `GET /api/growth/summary` | `부분 구현` | 모바일은 `Me` 자체에서 별도 성장 요약 카드를 보여주지 않고, 성장 탭으로 분리되어 있음 | P2 |
 | 작성 글 삭제 | `../glsoop/public/js/mypage.js`, `../glsoop/tests/e2e/mypage-redesign.spec.js` | `DELETE /api/posts/:id` | `미구현` | 모바일에 내 글 관리/삭제 진입점이 없음 | P1 |
 
@@ -415,3 +415,4 @@
 - `2026-03-21`: `src/screens/Author.tsx`, `src/features/users/useAuthorPosts.ts`, `src/services/userService.ts`에 팔로우/언팔로우, 소개문 토글, 최신 글 CTA, 정렬 전환을 반영했다.
 - `2026-03-21`: `src/features/posts/useRelatedPosts.ts`, `src/screens/PostDetail.tsx`에 관련 글 섹션을 추가해 서버 `GET /api/posts/:id/related` 결과를 상세 화면에서 노출하도록 연결했다.
 - `2026-03-21`: `src/screens/Me.tsx`를 탭형 관리 화면으로 확장해 내 글, 좋아요한 글, 팔로잉, 세션 목록, 전체 로그아웃을 반영했다.
+- `2026-03-21`: `src/screens/Me.tsx`에 프로필 수정 폼과 `remember_login_enabled` 저장을 추가해 `PUT /api/me` 기반 마이페이지 관리 갭을 더 줄였다. `npm run lint`를 통과했다.
