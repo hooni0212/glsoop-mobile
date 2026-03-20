@@ -9,10 +9,11 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 
 import { useAuth } from "@/auth/AuthContext";
 import { AppError } from "@/components/state/AppError";
+import { buildAuthRoute, resolvePostAuthRedirect } from "@/lib/authRedirect";
 import { apiGet, apiPost } from "@/lib/api";
 import {
   buildEmailVerificationNotice,
@@ -79,7 +80,9 @@ type RuntimeConfigResponse = {
 
 export default function AuthSignup() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ redirect?: string }>();
   const { signIn } = useAuth();
+  const redirect = params?.redirect ? String(params.redirect) : undefined;
 
   const [step, setStep] = React.useState<"form" | "otp">("form");
   const [name, setName] = React.useState("");
@@ -274,7 +277,7 @@ export default function AuthSignup() {
       }
 
       await signIn(nextAuthToken);
-      router.replace("/(tabs)");
+      router.replace(resolvePostAuthRedirect(redirect));
     } catch (e) {
       handleApiError(e);
     } finally {
@@ -446,7 +449,7 @@ export default function AuthSignup() {
 
                 {message ? <Text style={styles.helper}>{message}</Text> : null}
 
-                <Pressable onPress={() => router.push("/(auth)/login")}>
+                <Pressable onPress={() => router.push(buildAuthRoute("/(auth)/login", redirect))}>
                   <Text style={styles.link}>이미 계정이 있나요? 로그인</Text>
                 </Pressable>
               </>

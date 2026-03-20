@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
-import { router } from "expo-router";
+import { router, usePathname } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
 
 import { useAuth } from "@/auth/AuthContext";
@@ -8,6 +8,7 @@ import { FeedCard } from "@/components/FeedCard";
 import { AppEmpty } from "@/components/state/AppEmpty";
 import { AppError } from "@/components/state/AppError";
 import { AppLoading } from "@/components/state/AppLoading";
+import { buildAuthRoute } from "@/lib/authRedirect";
 import { useToast } from "@/feedback/ToastProvider";
 import { getLike, setLike, useLikeSnapshot } from "@/features/likes/likeStore";
 import { ApiError, normalizeApiError, type AppErrorModel } from "@/lib/errors";
@@ -41,6 +42,7 @@ function initialFolderItemsState(): FolderItemsState {
 }
 
 export default function BookmarksScreen() {
+  const pathname = usePathname();
   const { signOut } = useAuth();
   const { showToast } = useToast();
   const [mode, setMode] = useState<ScreenMode>("lists");
@@ -159,8 +161,8 @@ export default function BookmarksScreen() {
 
   const handleAuthError = useCallback(async () => {
     await signOut();
-    router.replace("/(auth)");
-  }, [signOut]);
+    router.replace(buildAuthRoute("/(auth)", pathname));
+  }, [pathname, signOut]);
 
   const onPressCreateFolder = useCallback(async () => {
     const trimmedName = newFolderName.trim();

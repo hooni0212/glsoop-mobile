@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 
+import { buildAuthRoute } from "@/lib/authRedirect";
 import { AppEmpty } from "@/components/state/AppEmpty";
 import { AppError } from "@/components/state/AppError";
 import { AppLoading } from "@/components/state/AppLoading";
@@ -30,8 +31,9 @@ type PasswordResetResponse = {
 
 export default function AuthResetPassword() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ token?: string }>();
+  const params = useLocalSearchParams<{ token?: string; redirect?: string }>();
   const token = params?.token ? String(params.token) : "";
+  const redirect = params?.redirect ? String(params.redirect) : undefined;
 
   const [newPw, setNewPw] = React.useState("");
   const [busy, setBusy] = React.useState(false);
@@ -96,7 +98,7 @@ export default function AuthResetPassword() {
             description="메일에서 다시 진입하거나 새로 요청해주세요."
             primaryAction={{
               label: "비밀번호 찾기",
-              onPress: () => router.replace("/(auth)/forgot-password"),
+              onPress: () => router.replace(buildAuthRoute("/(auth)/forgot-password", redirect)),
             }}
           />
         </View>
@@ -176,7 +178,7 @@ export default function AuthResetPassword() {
             {message ? <Text style={styles.helper}>{message}</Text> : null}
 
             {message ? (
-              <Pressable onPress={() => router.replace("/(auth)/login")}>
+              <Pressable onPress={() => router.replace(buildAuthRoute("/(auth)/login", redirect))}>
                 <Text style={styles.link}>로그인 하러가기</Text>
               </Pressable>
             ) : null}

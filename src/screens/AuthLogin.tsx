@@ -9,10 +9,11 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 
 import { useAuth } from "@/auth/AuthContext";
 import { AppError } from "@/components/state/AppError";
+import { buildAuthRoute, resolvePostAuthRedirect } from "@/lib/authRedirect";
 import { apiPost } from "@/lib/api";
 import {
   buildEmailVerificationNotice,
@@ -30,7 +31,9 @@ type LoginResponse = {
 
 export default function AuthLogin() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ redirect?: string }>();
   const { signIn } = useAuth();
+  const redirect = params?.redirect ? String(params.redirect) : undefined;
 
   const [email, setEmail] = React.useState("");
   const [pw, setPw] = React.useState("");
@@ -62,7 +65,7 @@ export default function AuthLogin() {
       }
 
       await signIn(nextAuthToken);
-      router.replace("/(tabs)");
+      router.replace(resolvePostAuthRedirect(redirect));
     } catch (e) {
       const rawMessage = e instanceof Error ? e.message : "";
       if (isEmailVerificationRequired(rawMessage)) {
@@ -129,11 +132,11 @@ export default function AuthLogin() {
 
             {message ? <Text style={styles.helper}>{message}</Text> : null}
 
-            <Pressable onPress={() => router.push("/(auth)/forgot-password")}>
+            <Pressable onPress={() => router.push(buildAuthRoute("/(auth)/forgot-password", redirect))}>
               <Text style={styles.link}>비밀번호를 잊으셨나요?</Text>
             </Pressable>
 
-            <Pressable onPress={() => router.push("/(auth)/signup")}>
+            <Pressable onPress={() => router.push(buildAuthRoute("/(auth)/signup", redirect))}>
               <Text style={styles.link}>계정이 없나요? 회원가입</Text>
             </Pressable>
           </View>

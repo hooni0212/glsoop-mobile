@@ -1,8 +1,9 @@
 import React from "react";
-import { Redirect, useRouter, useSegments } from "expo-router";
+import { Redirect, usePathname, useRouter, useSegments } from "expo-router";
 import { Text, View } from "react-native";
 
 import { useAuth } from "@/auth/AuthContext";
+import { buildAuthRoute } from "@/lib/authRedirect";
 import { apiGet } from "@/lib/api";
 import { ApiError } from "@/lib/errors";
 
@@ -13,6 +14,7 @@ import { ApiError } from "@/lib/errors";
  */
 export function AuthGate() {
   const router = useRouter();
+  const pathname = usePathname();
   const segments = useSegments();
   const { ready, token, signOut } = useAuth();
   const [validating, setValidating] = React.useState(false);
@@ -26,7 +28,7 @@ export function AuthGate() {
     if (!token) {
       lastValidatedTokenRef.current = null;
       if (!inAuthGroup) {
-        router.replace("/(auth)");
+        router.replace(buildAuthRoute("/(auth)", pathname));
       }
       return;
     }
@@ -53,10 +55,10 @@ export function AuthGate() {
         if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
           await signOut();
           lastValidatedTokenRef.current = null;
-          router.replace("/(auth)");
+          router.replace(buildAuthRoute("/(auth)", pathname));
           return;
         }
-        router.replace("/(auth)");
+        router.replace(buildAuthRoute("/(auth)", pathname));
       } finally {
         if (!cancelled) {
           setValidating(false);
@@ -67,7 +69,7 @@ export function AuthGate() {
     return () => {
       cancelled = true;
     };
-  }, [ready, token, inAuthGroup, router, signOut]);
+  }, [ready, token, inAuthGroup, pathname, router, signOut]);
 
   // 최초 로딩 중에는 화면 전환을 막기 위해 아무것도 렌더링하지 않음
   if (!ready) {
@@ -84,7 +86,7 @@ export function AuthGate() {
 
   // 토큰이 없고 auth 그룹 밖이면 즉시 리다이렉트(깜빡임 최소화)
   if (!token && !inAuthGroup) {
-    return <Redirect href="/(auth)" />;
+    return <Redirect href={buildAuthRoute("/(auth)", pathname)} />;
   }
 
   return null;

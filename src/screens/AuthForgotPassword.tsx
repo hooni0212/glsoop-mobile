@@ -9,8 +9,9 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 
+import { buildAuthRoute } from "@/lib/authRedirect";
 import { AppError } from "@/components/state/AppError";
 import { apiPost } from "@/lib/api";
 import { normalizeApiError } from "@/lib/errors";
@@ -23,6 +24,8 @@ type PasswordResetRequestResponse = {
 
 export default function AuthForgotPassword() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ redirect?: string }>();
+  const redirect = params?.redirect ? String(params.redirect) : undefined;
   const [email, setEmail] = React.useState("");
   const [busy, setBusy] = React.useState(false);
   const [message, setMessage] = React.useState<string | null>(null);
@@ -94,7 +97,7 @@ export default function AuthForgotPassword() {
 
             {message ? <Text style={styles.helper}>{message}</Text> : null}
 
-            <Pressable onPress={() => router.replace("/(auth)/login")}>
+            <Pressable onPress={() => router.replace(buildAuthRoute("/(auth)/login", redirect))}>
               <Text style={styles.link}>로그인으로 돌아가기</Text>
             </Pressable>
           </View>

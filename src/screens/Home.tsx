@@ -9,9 +9,10 @@ import { useFeed } from "@/features/feed/useFeed";
 import { getBookmark, setBookmark } from "@/features/bookmarks/bookmarkStore";
 import { getLike, setLike } from "@/features/likes/likeStore";
 import { useAuth } from "@/auth/AuthContext";
+import { buildAuthRoute } from "@/lib/authRedirect";
 import { togglePostLike } from "@/services/likeService";
 import { ApiError } from "@/lib/errors";
-import { router } from "expo-router";
+import { router, usePathname } from "expo-router";
 import { useToast } from "@/feedback/ToastProvider";
 import {
   addPostToBookmarkList,
@@ -26,6 +27,7 @@ const CATEGORIES = ["추천", "팔로잉", "인기", "힐링", "일상", "여행
 type Category = (typeof CATEGORIES)[number];
 
 export default function Home() {
+  const pathname = usePathname();
   const [active, setActive] = useState<Category>("추천");
   const { showToast } = useToast();
 
@@ -58,7 +60,7 @@ export default function Home() {
 
   const handleAuthError = async () => {
     await signOut();
-    router.replace("/(auth)");
+    router.replace(buildAuthRoute("/(auth)", pathname));
     Alert.alert("로그인이 필요해요", "다시 로그인해주세요.");
   };
 

@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo, useState } from "react";
 import { Alert, FlatList, Pressable, SafeAreaView, Share, Text, View } from "react-native";
-import { router, useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams, usePathname } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
 
 import { FeedCard } from "@/components/FeedCard";
@@ -15,6 +15,7 @@ import { authorScreenStyles } from "@/screens/Author.styles";
 import { getLike, setLike, useLikeSnapshot } from "@/features/likes/likeStore";
 import { useToast } from "@/feedback/ToastProvider";
 import { useAuth } from "@/auth/AuthContext";
+import { buildAuthRoute } from "@/lib/authRedirect";
 import { togglePostLike } from "@/services/likeService";
 import { toggleFollowUser } from "@/services/userService";
 import { ApiError } from "@/lib/errors";
@@ -81,6 +82,7 @@ function getStickerAnchorStyle(slot: CosmeticStickerSlot) {
 
 export default function Author() {
   const params = useLocalSearchParams<{ id: string }>();
+  const pathname = usePathname();
   const userId = params?.id ? String(params.id) : undefined;
 
   const [sort, setSort] = useState<AuthorPostSort>("newest");
@@ -149,9 +151,9 @@ export default function Author() {
 
   const handleAuthError = useCallback(async () => {
     await signOut();
-    router.replace("/(auth)");
+    router.replace(buildAuthRoute("/(auth)", pathname));
     Alert.alert("로그인이 필요해요", "다시 로그인해주세요.");
-  }, [signOut]);
+  }, [pathname, signOut]);
 
   const handleLike = async (postId: string) => {
     if (likePending[postId]) return;

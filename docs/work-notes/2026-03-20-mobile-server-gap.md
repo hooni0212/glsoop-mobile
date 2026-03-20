@@ -166,7 +166,7 @@
 | 기능 | 서버 웹 구현 근거 | 서버 API 근거 | 모바일 현재 상태 | 차이 메모 | 우선순위 |
 | --- | --- | --- | --- | --- | --- |
 | 로그인 | `../glsoop/public/html/login.html`, `../glsoop/public/js/login.js` | `../glsoop/routes/authRoutes.js` `POST /login` | `부분 구현` | 웹 쿠키 세션 기준으로는 동작 가능하지만, 네이티브 앱은 토큰 없는 로그인 응답 처리 전략이 확정되지 않았다 | P0 |
-| 로그인 후 guard/redirect | `../glsoop/routes/authPageRoutes.js`, `../glsoop/tests/e2e/auth-page-guard.spec.js` | `GET /api/me` | `부분 구현` | 모바일은 `(auth)` vs `(tabs)` 전역 게이트는 있음. 서버 웹의 `next/from` 기반 세밀한 redirect UX는 없음 | P2 |
+| 로그인 후 guard/redirect | `../glsoop/routes/authPageRoutes.js`, `../glsoop/tests/e2e/auth-page-guard.spec.js` | `GET /api/me` | `부분 구현` | 모바일 `src/auth/AuthGate.tsx`와 auth 화면들에 `redirect` 기반 복귀를 반영했다. 다만 서버 웹의 모든 `next/from` 시나리오와 동일한 수준의 종단 검증은 남아 있다 | P2 |
 | 회원가입 + 이메일 인증 | `../glsoop/public/html/signup.html`, `../glsoop/public/js/signup.js`, `../glsoop/public/js/verify-email.js` | `POST /signup`, `POST /verify-email`, `POST /verify-email/resend` | `부분 구현` | OTP 단계 자체는 있으나, 현재 요청 바디가 서버 필수 동의/버전 검증을 통과하지 못해 가입 해피패스가 보장되지 않는다 | P0 |
 | 회원가입 시 법적 동의/버전 검증 | `../glsoop/tests/e2e/auth-signup-consent.spec.js` | `GET /api/runtime-config`, `POST /api/signup` | `부분 구현` | 모바일 가입 화면에 필수 동의와 version payload는 반영했다. 다만 실제 서버 기준 해피패스 검증과 OTP까지 포함한 종단 확인이 남아 있다 | P0 |
 | 비밀번호 찾기/재설정 요청 | `../glsoop/public/html/forgot-password.html`, `../glsoop/public/js/forgot-password.js` | `POST /api/password-reset-request` | `부분 구현` | 모바일 `src/screens/AuthLogin.tsx`, `src/screens/AuthForgotPassword.tsx`에 진입점과 요청 화면을 반영했다. 실제 메일 발송/딥링크 종단 검증은 남아 있다 | P2 |
@@ -424,3 +424,4 @@
 - `2026-03-21`: `src/screens/Author.tsx`, `src/screens/Author.styles.ts`에 작가 화면 공유 버튼을 추가해 시스템 공유 흐름을 반영했다. overflow 메뉴는 아직 남아 있다.
 - `2026-03-21`: `src/screens/growth/Quests.tsx`에서 코스메틱 보상 수령 직후 `프로필 꾸미기` CTA를 띄우도록 보강했다. 인벤토리 즉시 동기화 여부는 런타임 검증이 남아 있다.
 - `2026-03-21`: `src/screens/Me.tsx`에서 `GET /api/growth/summary`를 함께 불러와 요약 탭에 성장 카드와 성장 화면 이동 CTA를 반영했다. `npm run lint`를 통과했다.
+- `2026-03-21`: `src/lib/authRedirect.ts`, `src/auth/AuthGate.tsx`, 주요 auth/protected 화면들에 `redirect` 기반 로그인 후 복귀 흐름을 반영했다. `npm run lint`를 통과했고, 실사용 시나리오 기준 종단 검증은 별도 확인이 남아 있다.

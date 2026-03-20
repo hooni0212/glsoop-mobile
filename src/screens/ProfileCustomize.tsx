@@ -1,11 +1,12 @@
 import React from "react";
 import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
-import { router } from "expo-router";
+import { router, usePathname } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
 import { AppEmpty } from "@/components/state/AppEmpty";
 import { AppError } from "@/components/state/AppError";
 import { AppLoading } from "@/components/state/AppLoading";
+import { buildAuthRoute } from "@/lib/authRedirect";
 import { useToast } from "@/feedback/ToastProvider";
 import { useMyCosmetics } from "@/features/cosmetics/useMyCosmetics";
 import { normalizeApiError } from "@/lib/errors";
@@ -42,6 +43,7 @@ function buildSlotSelection(state: ProfileCosmeticsState) {
 }
 
 export default function ProfileCustomizeScreen() {
+  const pathname = usePathname();
   const { showToast } = useToast();
   const { inventory, profile, loading, error, refetch } = useMyCosmetics();
 
@@ -128,7 +130,7 @@ export default function ProfileCustomizeScreen() {
       const normalized = normalizeApiError(err);
       if (normalized.kind === "auth") {
         showToast("로그인이 필요해요", { tone: "error" });
-        router.replace("/(auth)");
+        router.replace(buildAuthRoute("/(auth)", pathname));
         return;
       }
 
@@ -138,7 +140,7 @@ export default function ProfileCustomizeScreen() {
     } finally {
       setSaving(false);
     }
-  }, [refetch, selection, showToast]);
+  }, [pathname, refetch, selection, showToast]);
 
   const showInitialLoading = loading && !hydratedRef.current;
 
@@ -161,7 +163,10 @@ export default function ProfileCustomizeScreen() {
           <AppEmpty
             title="로그인이 필요해요"
             description="프로필 꾸미기는 로그인 후 이용할 수 있어요."
-            primaryAction={{ label: "로그인 하러가기", onPress: () => router.replace("/(auth)") }}
+            primaryAction={{
+              label: "로그인 하러가기",
+              onPress: () => router.replace(buildAuthRoute("/(auth)", pathname)),
+            }}
           />
         </View>
       </SafeAreaView>

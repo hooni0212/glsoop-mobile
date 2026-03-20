@@ -17,9 +17,10 @@ import { useToast } from "@/feedback/ToastProvider";
 import { togglePostLike } from "@/services/likeService";
 import { deletePost, getEditablePost } from "@/services/postService";
 import { logShareEvent } from "@/services/shareService";
+import { buildAuthRoute } from "@/lib/authRedirect";
 import { ApiError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
-import { router, useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams, usePathname } from "expo-router";
 import React, { useMemo, useState } from "react";
 import {
   Alert,
@@ -88,6 +89,7 @@ export default function PostDetail() {
   const styles = useMemo(() => createPostDetailStyles(dock.action.height), [dock.action.height]);
 
   const params = useLocalSearchParams<{ id: string }>();
+  const pathname = usePathname();
   const id = params?.id ? String(params.id) : undefined;
 
   const { post, loading, error, refetch, mutatePost } = usePost(id);
@@ -148,7 +150,7 @@ export default function PostDetail() {
 
   const handleAuthError = async () => {
     await signOut();
-    router.replace("/(auth)");
+    router.replace(buildAuthRoute("/(auth)", pathname));
     Alert.alert("로그인이 필요해요", "다시 로그인해주세요.");
   };
 
