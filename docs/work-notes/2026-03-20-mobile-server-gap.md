@@ -216,7 +216,7 @@
 | 기능 | 서버 웹 구현 근거 | 서버 API 근거 | 모바일 현재 상태 | 차이 메모 | 우선순위 |
 | --- | --- | --- | --- | --- | --- |
 | 새 글 작성 | `../glsoop/public/html/editor.html`, `../glsoop/public/html/editor2.html`, `../glsoop/public/js/editor.js`, `../glsoop/public/js/editor2.js` | `POST /api/posts` | `구현됨` | 모바일 `src/screens/Write.tsx`, `src/services/postService.ts` | 유지 |
-| 로컬 드래프트 저장/복구 | `../glsoop/public/js/editor2.js`, `../glsoop/docs/참고/API-레퍼런스.md` | 서버 draft API 없음, local draft 규칙만 존재 | `부분 구현` | 모바일 `src/services/draftStorage.ts`에 로컬 draft는 있으나 서버 웹처럼 create/edit 키 분리, TTL 정리, 사용자 토큰 기반 충돌 방지는 없음 | P1 |
+| 로컬 드래프트 저장/복구 | `../glsoop/public/js/editor2.js`, `../glsoop/docs/참고/API-레퍼런스.md` | 서버 draft API 없음, local draft 규칙만 존재 | `부분 구현` | 모바일 `src/services/draftStorage.ts`에서 create/edit draft 분리와 TTL 정리를 반영했다. 남은 차이는 서버 웹의 사용자 토큰 기반 충돌 방지와 더 촘촘한 복구 UX다 | P1 |
 | 기존 글 편집 진입 | `../glsoop/public/js/editor2.js` | `GET /api/posts/:id/edit` | `구현됨` | 모바일 `src/screens/Me.tsx`에서 내 글 수정 버튼으로 `src/screens/Write.tsx` 편집 모드에 진입할 수 있다 | 유지 |
 | 수정 저장 | `../glsoop/public/js/editor2.js` | `PUT /api/posts/:id` | `구현됨` | 모바일 `src/screens/Write.tsx`, `src/services/postService.ts`에서 `GET /api/posts/:id/edit` 조회 후 `PUT /api/posts/:id` 저장을 반영했다 | 유지 |
 | 드래프트 삭제 | `../glsoop/public/js/editor2.js` | local draft 규칙 | `구현됨` | 모바일 `deleteWriteDraft`, `clearAllWriteDrafts`, `WriteDrafts` 화면 존재 | 유지 |
@@ -428,3 +428,4 @@
 - `2026-03-21`: `src/features/growth/useGrowthData.ts`에서 fallback 경로에서도 `GET /api/growth/top-posts`를 불러와 `TopPostsList`가 pending placeholder 대신 실제 데이터를 표시할 수 있게 보강했다. `npm run lint`를 통과했다.
 - `2026-03-21`: `src/screens/Author.tsx`, `src/screens/Author.styles.ts`에 `더보기` 메뉴를 추가해 공유/최신 글 이동/프로필 꾸미기 액션을 한 곳에 묶었다. `npm run lint`를 통과했다.
 - `2026-03-21`: `src/screens/Write.tsx`, `src/components/write/WriteLayoutSection.tsx`, `src/components/write/WritePreviewCard.tsx`, `src/lib/postLayout.ts`, `src/services/postService.ts`에서 모바일용 레이아웃 설정과 미리보기를 추가하고 `layout_json` 저장을 연결했다. `npm run lint`를 통과했다.
+- `2026-03-21`: `src/services/draftStorage.ts`, `src/screens/Write.tsx`에서 로컬 드래프트를 create/edit 기준으로 분리하고 30일 TTL 정리를 반영했다. 사용자 토큰 기반 충돌 방지와 복구 UX 고도화는 후속 과제로 남겼다.

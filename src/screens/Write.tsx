@@ -112,9 +112,11 @@ export default function Write() {
       title: trimmedTitle,
       body: trimmedBody,
       category: selectedType ?? undefined,
+      mode: editPostId ? "edit" : "create",
+      postId: editPostId,
     });
     if (!draftId) setDraftId(id);
-  }, [title, body, draftId, selectedType]);
+  }, [title, body, draftId, editPostId, selectedType]);
 
   const { confirm: leaveConfirm, requestLeave, allowNextLeave } = useConfirmBeforeLeave({
     hasChanges,
