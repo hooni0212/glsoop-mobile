@@ -106,7 +106,7 @@
 | 기능군 | 현재 판단 | 메모 |
 | --- | --- | --- |
 | 인증/계정 | 런타임 리스크를 포함한 부분 구현 | 로그인/OTP 화면과 비밀번호 재설정 요청/변경 화면은 붙였다. 다만 가입 해피패스 실검증, 네이티브 인증 방식, 실제 메일 링크-앱 복귀 검증이 남아 있음 |
-| 마이페이지/내 활동 | 부분 구현 | 모바일 `Me`를 탭형 관리 화면으로 확장해 내 글/좋아요/팔로잉/세션/전체 로그아웃, 프로필 수정, 로그인 유지 설정, 작성 글 삭제까지 반영했다. 남은 갭은 성장 요약 카드 정도다 |
+| 마이페이지/내 활동 | 구현됨에 가까운 부분 구현 | 모바일 `Me`를 탭형 관리 화면으로 확장해 내 글/좋아요/팔로잉/세션/전체 로그아웃, 프로필 수정, 로그인 유지 설정, 작성 글 삭제, 성장 요약 카드까지 반영했다. 남은 차이는 서버 웹의 세부 표현 수준이 중심이다 |
 | 작가 페이지/소셜 | 부분 구현 | 작가 프로필/글 목록, 팔로우, 정렬, 소개 토글, 최신 글 CTA, 공유는 반영했다. overflow와 추가 검증이 남아 있음 |
 | 게시글 상세/상호작용 | 부분 구현 | 좋아요, 북마크 모달, 공유 이벤트, 관련 글, 작성자 전용 수정/삭제 진입까지 반영했다. 남은 갭은 공유 모달 고도화 정도다 |
 | 작성/수정/드래프트 | 부분 구현 | 새 글 작성, 로컬 드래프트, 기존 글 편집 진입과 수정 저장, 해시태그 입력까지 반영했다. 레이아웃 편집/미리보기는 남아 있음 |
@@ -184,7 +184,7 @@
 | 좋아요한 글 목록 | `../glsoop/public/js/mypage.js`, `../glsoop/tests/e2e/mypage-redesign.spec.js` | `GET /api/posts/liked` | `구현됨` | 모바일 `src/screens/Me.tsx`에 좋아요 탭을 추가했다 | 유지 |
 | 팔로잉 목록 | `../glsoop/public/js/mypage.js`, `../glsoop/tests/e2e/mypage-redesign.spec.js` | `GET /api/me/followings` | `구현됨` | 모바일 `src/screens/Me.tsx`에 팔로잉 탭과 작가 이동 리스트를 추가했다 | 유지 |
 | remember login 등 계정 설정 | `../glsoop/public/js/mypage.js`, `../glsoop/tests/e2e/mypage-redesign.spec.js` | `PUT /api/me` | `구현됨` | 모바일 `src/screens/Me.tsx`에서 `remember_login_enabled` 토글과 저장을 지원한다 | 유지 |
-| 성장 요약 카드 노출 | `../glsoop/public/js/mypage.js` | `GET /api/growth/summary` | `부분 구현` | 모바일은 `Me` 자체에서 별도 성장 요약 카드를 보여주지 않고, 성장 탭으로 분리되어 있음 | P2 |
+| 성장 요약 카드 노출 | `../glsoop/public/js/mypage.js` | `GET /api/growth/summary` | `구현됨` | 모바일 `src/screens/Me.tsx`에서 `GET /api/growth/summary`를 불러와 요약 탭에 성장 카드와 `자세히` 진입을 반영했다 | 유지 |
 | 작성 글 삭제 | `../glsoop/public/js/mypage.js`, `../glsoop/tests/e2e/mypage-redesign.spec.js` | `DELETE /api/posts/:id` | `구현됨` | 모바일 `src/screens/Me.tsx`, `src/services/postService.ts`에서 내 글 탭 삭제 버튼과 `DELETE /api/posts/:id` 연결을 반영했다 | 유지 |
 
 ### 5.3 작가 페이지/소셜
@@ -423,3 +423,4 @@
 - `2026-03-21`: `src/components/write/WriteMetaSection.tsx`, `src/screens/Write.tsx`, `src/services/postService.ts`에 해시태그 입력 UI와 `hashtags` payload를 반영해 작성기 태그 계약을 서버 기준으로 맞췄다. `npm run lint`를 통과했다.
 - `2026-03-21`: `src/screens/Author.tsx`, `src/screens/Author.styles.ts`에 작가 화면 공유 버튼을 추가해 시스템 공유 흐름을 반영했다. overflow 메뉴는 아직 남아 있다.
 - `2026-03-21`: `src/screens/growth/Quests.tsx`에서 코스메틱 보상 수령 직후 `프로필 꾸미기` CTA를 띄우도록 보강했다. 인벤토리 즉시 동기화 여부는 런타임 검증이 남아 있다.
+- `2026-03-21`: `src/screens/Me.tsx`에서 `GET /api/growth/summary`를 함께 불러와 요약 탭에 성장 카드와 성장 화면 이동 CTA를 반영했다. `npm run lint`를 통과했다.

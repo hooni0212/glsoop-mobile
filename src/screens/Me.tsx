@@ -65,6 +65,21 @@ type UpdateMeResponse = {
   message?: string;
 };
 
+type GrowthSummaryResponse = {
+  ok?: boolean;
+  summary?: {
+    level?: number;
+    current_xp?: number;
+    next_level_xp?: number;
+    today_xp?: number;
+    weekly_posts?: number;
+    streak_days?: number;
+    max_streak_days?: number;
+    title?: string;
+  };
+  message?: string;
+};
+
 type FollowingUser = {
   id: string;
   name: string;
@@ -228,6 +243,7 @@ export default function MeScreen() {
   const [tabError, setTabError] = React.useState<ReturnType<typeof normalizeApiError> | null>(null);
   const [logoutAllBusy, setLogoutAllBusy] = React.useState(false);
   const [deletingPostId, setDeletingPostId] = React.useState<string | null>(null);
+  const [growthSummary, setGrowthSummary] = React.useState<GrowthSummaryResponse["summary"] | null>(null);
   const [showEdit, setShowEdit] = React.useState(false);
   const [editNickname, setEditNickname] = React.useState("");
   const [editBio, setEditBio] = React.useState("");
@@ -241,12 +257,17 @@ export default function MeScreen() {
     setLoading(true);
     setError(null);
     try {
-      const data = await apiGet<MeResponse>("/api/me");
+      const [data, growth] = await Promise.all([
+        apiGet<MeResponse>("/api/me"),
+        apiGet<GrowthSummaryResponse>("/api/growth/summary").catch(() => null),
+      ]);
       setMe(data);
+      setGrowthSummary(growth?.summary ?? null);
     } catch (e) {
       const normalized = normalizeApiError(e);
       setError(normalized);
       setMe(null);
+      setGrowthSummary(null);
     } finally {
       setLoading(false);
     }
@@ -513,6 +534,37 @@ export default function MeScreen() {
               </View>
             ) : null}
           </View>
+
+          {growthSummary ? (
+            <View style={styles.growthCard}>
+              <View style={styles.growthHeaderRow}>
+                <View style={styles.growthHeaderCopy}>
+                  <Text style={styles.growthTitle}>성장 요약</Text>
+                  <Text style={styles.growthDescription}>
+                    Lv.{pickFirstNumber(growthSummary.level)} {pickFirstString(growthSummary.title)}
+                  </Text>
+                </View>
+                <Pressable
+                  onPress={() => router.push("/growth")}
+                  style={styles.growthShortcutBtn}
+                >
+                  <Text style={styles.growthShortcutBtnText}>자세히</Text>
+                </Pressable>
+              </View>
+
+              <View style={styles.growthStatRow}>
+                <Text style={styles.growthStatChip}>
+                  오늘 +{pickFirstNumber(growthSummary.today_xp)} XP
+                </Text>
+                <Text style={styles.growthStatChip}>
+                  이번 주 {pickFirstNumber(growthSummary.weekly_posts)}개
+                </Text>
+                <Text style={styles.growthStatChip}>
+                  연속 {pickFirstNumber(growthSummary.streak_days)}일
+                </Text>
+              </View>
+            </View>
+          ) : null}
 
           <Pressable
             onPress={() => router.push("/profile-customize")}
@@ -949,6 +1001,61 @@ const styles = StyleSheet.create({
   },
   editActionRow: {
     gap: tokens.space.sm as any,
+  },
+  growthCard: {
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+    borderRadius: tokens.radius.xl,
+    backgroundColor: tokens.colors.green050,
+    padding: tokens.space.md,
+    gap: tokens.space.sm as any,
+  },
+  growthHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: tokens.space.sm as any,
+  },
+  growthHeaderCopy: {
+    flex: 1,
+    gap: 4,
+  },
+  growthTitle: {
+    fontSize: 16,
+    fontWeight: "900",
+    color: tokens.colors.text,
+  },
+  growthDescription: {
+    fontSize: tokens.font.small,
+    color: tokens.colors.textMuted,
+  },
+  growthShortcutBtn: {
+    borderWidth: 1,
+    borderColor: tokens.colors.green700,
+    borderRadius: tokens.radius.pill,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: tokens.colors.green100,
+  },
+  growthShortcutBtnText: {
+    fontSize: tokens.font.small,
+    fontWeight: "800",
+    color: tokens.colors.green900,
+  },
+  growthStatRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: tokens.space.xs as any,
+  },
+  growthStatChip: {
+    fontSize: tokens.font.small,
+    fontWeight: "800",
+    color: tokens.colors.green900,
+    backgroundColor: tokens.colors.white,
+    borderRadius: tokens.radius.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    overflow: "hidden",
   },
   postList: { gap: tokens.space.md as any },
   postItem: { gap: tokens.space.xs as any },
