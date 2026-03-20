@@ -102,6 +102,7 @@ export default function PostDetail() {
   const { showToast } = useToast();
   const [likePending, setLikePending] = useState(false);
   const [bookmarkModalVisible, setBookmarkModalVisible] = useState(false);
+  const [shareModalVisible, setShareModalVisible] = useState(false);
   const [bookmarkLoading, setBookmarkLoading] = useState(false);
   const [bookmarkLists, setBookmarkLists] = useState<BookmarkList[]>([]);
   const [bookmarkPending, setBookmarkPending] = useState<Record<string, boolean>>({});
@@ -307,23 +308,25 @@ export default function PostDetail() {
     }
   };
 
-  const onPressShare = async () => {
+  const sharePost = async (mode: "title" | "full") => {
     if (!post) return;
 
     const shareTitle = title || "글숲";
     const shareContent = content.trim();
-    const shareMessage = shareContent ? `${shareTitle}\n\n${shareContent}` : shareTitle;
+    const shareMessage =
+      mode === "full" && shareContent ? `${shareTitle}\n\n${shareContent}` : shareTitle;
     const requestId = createShareRequestId(post.id);
     const platform = Platform.OS === "web" ? "web" : "mobile";
     const dismissedAction =
       (Share as { dismissedAction?: string }).dismissedAction ?? "dismissedAction";
+    const channel = mode === "full" ? "share_modal_full" : "share_modal_title_only";
 
     const logShareEventSafely = (result: "shared" | "dismissed" | "failed", meta?: Record<string, unknown>) => {
       void logShareEvent({
         postId: post.id,
         platform,
         surface: "post_detail",
-        channel: "system_share_sheet",
+        channel,
         result,
         requestId,
         meta,
@@ -335,6 +338,7 @@ export default function PostDetail() {
     };
 
     try {
+      setShareModalVisible(false);
       const result = await Share.share({
         title: shareTitle,
         message: shareMessage,
@@ -346,6 +350,7 @@ export default function PostDetail() {
           activity_type: result.activityType || null,
           title_length: shareTitle.length,
           content_length: shareContent.length,
+          share_mode: mode,
         });
         showToast("공유가 완료되었어요.", { tone: "success" });
         return;
@@ -357,6 +362,7 @@ export default function PostDetail() {
           activity_type: result.activityType || null,
           title_length: shareTitle.length,
           content_length: shareContent.length,
+          share_mode: mode,
         });
         return;
       }
@@ -366,14 +372,21 @@ export default function PostDetail() {
         activity_type: result.activityType || null,
         title_length: shareTitle.length,
         content_length: shareContent.length,
+        share_mode: mode,
       });
     } catch {
       logShareEventSafely("failed", {
         title_length: shareTitle.length,
         content_length: shareContent.length,
+        share_mode: mode,
       });
       showToast("공유에 실패했어요. 잠시 후 다시 시도해주세요.", { tone: "error" });
     }
+  };
+
+  const onPressShare = () => {
+    if (!post) return;
+    setShareModalVisible(true);
   };
 
   const onPressEdit = () => {
@@ -575,6 +588,41 @@ export default function PostDetail() {
 
             <Pressable
               onPress={() => setBookmarkModalVisible(false)}
+              style={styles.bookmarkModalCloseBtn}
+            >
+              <Text style={styles.bookmarkModalCloseBtnText}>닫기</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={shareModalVisible} transparent animationType="fade">
+        <View style={styles.bookmarkModalOverlay}>
+          <View style={styles.bookmarkModalCard}>
+            <Text style={styles.bookmarkModalTitle}>공유 방식 선택</Text>
+            <Text style={styles.bookmarkModalDescription}>
+              제목만 보낼지, 본문까지 함께 보낼지 선택할 수 있어요.
+            </Text>
+
+            <View style={styles.bookmarkModalList}>
+              <Pressable
+                onPress={() => void sharePost("full")}
+                style={styles.bookmarkModalListItem}
+              >
+                <Text style={styles.bookmarkModalListItemName}>본문까지 공유</Text>
+                <Text style={styles.bookmarkModalListItemStatus}>추천</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => void sharePost("title")}
+                style={styles.bookmarkModalListItem}
+              >
+                <Text style={styles.bookmarkModalListItemName}>제목만 공유</Text>
+                <Text style={styles.bookmarkModalListItemStatus}>간단히</Text>
+              </Pressable>
+            </View>
+
+            <Pressable
+              onPress={() => setShareModalVisible(false)}
               style={styles.bookmarkModalCloseBtn}
             >
               <Text style={styles.bookmarkModalCloseBtnText}>닫기</Text>

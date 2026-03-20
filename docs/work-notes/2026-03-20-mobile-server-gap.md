@@ -108,7 +108,7 @@
 | 인증/계정 | 런타임 리스크를 포함한 부분 구현 | 로그인/OTP 화면과 비밀번호 재설정 요청/변경 화면은 붙였다. 다만 가입 해피패스 실검증, 네이티브 인증 방식, 실제 메일 링크-앱 복귀 검증이 남아 있음 |
 | 마이페이지/내 활동 | 구현됨에 가까운 부분 구현 | 모바일 `Me`를 탭형 관리 화면으로 확장해 내 글/좋아요/팔로잉/세션/전체 로그아웃, 프로필 수정, 로그인 유지 설정, 작성 글 삭제, 성장 요약 카드까지 반영했다. 남은 차이는 서버 웹의 세부 표현 수준이 중심이다 |
 | 작가 페이지/소셜 | 부분 구현 | 작가 프로필/글 목록, 팔로우, 정렬, 소개 토글, 최신 글 CTA, 공유, 간단한 overflow 메뉴까지 반영했다. 남은 차이는 웹 쪽 세부 액션과 검증이다 |
-| 게시글 상세/상호작용 | 부분 구현 | 좋아요, 북마크 모달, 공유 이벤트, 관련 글, 작성자 전용 수정/삭제 진입까지 반영했다. 남은 갭은 공유 모달 고도화 정도다 |
+| 게시글 상세/상호작용 | 구현됨에 가까운 부분 구현 | 좋아요, 북마크 모달, 공유 이벤트, 관련 글, 작성자 전용 수정/삭제 진입, 모바일용 공유 옵션 모달까지 반영했다. 남은 차이는 웹의 세부 내보내기 표현 정도다 |
 | 작성/수정/드래프트 | 부분 구현 | 새 글 작성, 로컬 드래프트, 기존 글 편집 진입과 수정 저장, 해시태그 입력, 모바일용 레이아웃 설정과 미리보기까지 반영했다. 남은 차이는 웹의 드래그 수준 고도화다 |
 | 검색/탐색 | 부분 구현 | 검색, 일반 피드, `following` 피드 분기는 반영했다. 남은 갭은 세부 탐색 UX 쪽이 중심 |
 | 북마크 | 부분 구현 | 목록/생성/수정/삭제/아이템 조회는 있음. 나머지 개선은 폴더 UX 다듬기 수준 |
@@ -206,7 +206,7 @@
 | 글 상세 조회 | `../glsoop/public/html/post.html`, `../glsoop/public/js/post.js` | `GET /api/posts/:id` | `구현됨` | 모바일 `src/features/posts/usePost.ts` + `src/screens/PostDetail.tsx` | 유지 |
 | 좋아요 | `../glsoop/public/js/post.js`, `../glsoop/tests/e2e/post-mobile-actions.spec.js` | `POST /api/posts/:id/toggle-like` | `구현됨` | 모바일 상세/작가/북마크 목록에서 반영 | 유지 |
 | 북마크 모달 | `../glsoop/public/js/post.js`, `../glsoop/public/js/bookmarkModal.js`, `../glsoop/tests/e2e/post-mobile-actions.spec.js` | `/api/bookmarks/*`, `GET /api/posts/:id/bookmarks` | `구현됨` | 모바일 `PostDetail.tsx`에 최근 폴더 + 생성 + 토글 포함 | 유지 |
-| 공유 모달/공유 이벤트 | `../glsoop/public/js/post.js` | `POST /api/share-events` | `부분 구현` | 모바일은 시스템 Share + `src/services/shareService.ts` 로그는 있음. 서버 웹의 전용 모달/내보내기 UI는 없음 | P2 |
+| 공유 모달/공유 이벤트 | `../glsoop/public/js/post.js` | `POST /api/share-events` | `부분 구현` | 모바일 `src/screens/PostDetail.tsx`에 공유 옵션 모달을 추가해 제목만 공유/본문까지 공유를 선택할 수 있게 했고, `src/services/shareService.ts`로 이벤트 로그를 남긴다. 남은 차이는 웹의 세부 내보내기 표현 수준이다 | P2 |
 | 관련 글 노출 | `../glsoop/public/js/post.js`, `../glsoop/tests/e2e/post-mobile-actions.spec.js` | `GET /api/posts/:id/related` | `구현됨` | 모바일 `src/features/posts/useRelatedPosts.ts`, `src/screens/PostDetail.tsx`에 관련 글 섹션을 반영했다 | 유지 |
 | 작성자 전용 삭제/편집 진입 | `../glsoop/public/js/post.js`, `../glsoop/public/js/post3.js` | `GET /api/posts/:id/edit`, `DELETE /api/posts/:id` | `구현됨` | 모바일 `src/screens/PostDetail.tsx`, `src/screens/Write.tsx`, `src/services/postService.ts`에서 작성자 전용 수정/삭제 진입을 반영했다 | 유지 |
 | 모바일 액션 독 전환 | `../glsoop/public/js/post.js` | 클라이언트 UX | `범위 제외` | 모바일 앱은 네이티브 화면 구조가 달라 웹 전용 표현 최적화로 분류 | 제외 |
@@ -429,3 +429,4 @@
 - `2026-03-21`: `src/screens/Author.tsx`, `src/screens/Author.styles.ts`에 `더보기` 메뉴를 추가해 공유/최신 글 이동/프로필 꾸미기 액션을 한 곳에 묶었다. `npm run lint`를 통과했다.
 - `2026-03-21`: `src/screens/Write.tsx`, `src/components/write/WriteLayoutSection.tsx`, `src/components/write/WritePreviewCard.tsx`, `src/lib/postLayout.ts`, `src/services/postService.ts`에서 모바일용 레이아웃 설정과 미리보기를 추가하고 `layout_json` 저장을 연결했다. `npm run lint`를 통과했다.
 - `2026-03-21`: `src/services/draftStorage.ts`, `src/screens/Write.tsx`에서 로컬 드래프트를 create/edit 기준으로 분리하고 30일 TTL 정리를 반영했다. 사용자 토큰 기반 충돌 방지와 복구 UX 고도화는 후속 과제로 남겼다.
+- `2026-03-21`: `src/screens/PostDetail.tsx`에 공유 옵션 모달을 추가해 제목만 공유/본문까지 공유를 선택할 수 있게 하고, 모드별 share event 로그를 남기도록 보강했다. `npm run lint`를 통과했다.
