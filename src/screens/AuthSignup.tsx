@@ -13,7 +13,7 @@ import { useRouter } from "expo-router";
 
 import { useAuth } from "@/auth/AuthContext";
 import { AppError } from "@/components/state/AppError";
-import { apiPost } from "@/lib/api";
+import { apiGet, apiPost } from "@/lib/api";
 import {
   buildEmailVerificationNotice,
   isEmailVerificationRequired,
@@ -52,6 +52,31 @@ type ResendResponse = {
   retry_after?: number;
 };
 
+type SignupFieldErrors = Partial<
+  Record<
+    | "name"
+    | "nickname"
+    | "email"
+    | "pw"
+    | "age_confirmed"
+    | "terms_agreed"
+    | "privacy_agreed"
+    | "terms_version"
+    | "privacy_version",
+    string
+  >
+>;
+
+type RuntimeConfigResponse = {
+  ok: boolean;
+  legal?: {
+    versions?: {
+      terms?: string;
+      privacy?: string;
+    };
+  };
+};
+
 export default function AuthSignup() {
   const router = useRouter();
   const { signIn } = useAuth();
@@ -61,6 +86,11 @@ export default function AuthSignup() {
   const [nickname, setNickname] = React.useState("");
   const [email, setEmail] = React.useState("");
   const [pw, setPw] = React.useState("");
+  const [ageConfirmed, setAgeConfirmed] = React.useState(false);
+  const [termsAgreed, setTermsAgreed] = React.useState(false);
+  const [privacyAgreed, setPrivacyAgreed] = React.useState(false);
+  const [termsVersion, setTermsVersion] = React.useState<string | null>(null);
+  const [privacyVersion, setPrivacyVersion] = React.useState<string | null>(null);
   const [otp, setOtp] = React.useState("");
   const [pendingId, setPendingId] = React.useState<string | null>(null);
   const [emailMasked, setEmailMasked] = React.useState<string | null>(null);
@@ -70,7 +100,29 @@ export default function AuthSignup() {
   const [busy, setBusy] = React.useState(false);
   const [resendBusy, setResendBusy] = React.useState(false);
   const [message, setMessage] = React.useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = React.useState<SignupFieldErrors>({});
   const [error, setError] = React.useState<ReturnType<typeof normalizeApiError> | null>(null);
+
+  React.useEffect(() => {
+    let active = true;
+
+    async function loadRuntimeConfig() {
+      try {
+        const res = await apiGet<RuntimeConfigResponse>("/api/runtime-config");
+        if (!active) return;
+        setTermsVersion(res?.legal?.versions?.terms ?? null);
+        setPrivacyVersion(res?.legal?.versions?.privacy ?? null);
+      } catch (runtimeError) {
+        if (!active) return;
+        setError(normalizeApiError(runtimeError));
+      }
+    }
+
+    void loadRuntimeConfig();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   React.useEffect(() => {
     setResendCountdown(resendAfter);
@@ -88,9 +140,15 @@ export default function AuthSignup() {
     (err: unknown) => {
       if (err instanceof ApiError) {
         if (err.status && [400, 409, 429].includes(err.status)) {
+          const nextFieldErrors = (err.payload?.error?.field_errors ??
+            err.payload?.field_errors ??
+            {}) as SignupFieldErrors;
+          setFieldErrors(nextFieldErrors);
           const rawMessage = err.message || "요청을 처리할 수 없어요.";
           if (isEmailVerificationRequired(rawMessage)) {
             setMessage(buildEmailVerificationNotice(email));
+          } else if (Object.keys(nextFieldErrors).length > 0) {
+            setMessage(Object.values(nextFieldErrors)[0] ?? rawMessage);
           } else {
             setMessage(rawMessage);
           }
@@ -132,6 +190,7 @@ export default function AuthSignup() {
     setBusy(true);
     setMessage(null);
     setError(null);
+    setFieldErrors({});
 
     try {
       const res = await apiPost<SignupResponse>("/api/signup", {
@@ -139,6 +198,11 @@ export default function AuthSignup() {
         nickname,
         email,
         pw,
+        age_confirmed: ageConfirmed,
+        terms_agreed: termsAgreed,
+        privacy_agreed: privacyAgreed,
+        terms_version: termsVersion,
+        privacy_version: privacyVersion,
       });
 
       if (!res?.ok) {
@@ -174,6 +238,7 @@ export default function AuthSignup() {
     setBusy(true);
     setMessage(null);
     setError(null);
+    setFieldErrors({});
 
     try {
       const res = await apiPost<VerifyEmailResponse>("/api/verify-email", {
@@ -222,6 +287,7 @@ export default function AuthSignup() {
     setResendBusy(true);
     setMessage(null);
     setError(null);
+    setFieldErrors({});
 
     try {
       const payload = pendingId ? { pending_id: pendingId } : { email };
@@ -244,7 +310,17 @@ export default function AuthSignup() {
     }
   }
 
-  const canSubmitForm = Boolean(name && nickname && email && pw);
+  const canSubmitForm = Boolean(
+    name &&
+      nickname &&
+      email &&
+      pw &&
+      ageConfirmed &&
+      termsAgreed &&
+      privacyAgreed &&
+      termsVersion &&
+      privacyVersion
+  );
   const canSubmitOtp = otp.length === 6;
 
   return (
@@ -281,12 +357,16 @@ export default function AuthSignup() {
                   placeholder="이름"
                   style={styles.input}
                 />
+                {fieldErrors.name ? <Text style={styles.fieldError}>{fieldErrors.name}</Text> : null}
                 <TextInput
                   value={nickname}
                   onChangeText={setNickname}
                   placeholder="닉네임"
                   style={styles.input}
                 />
+                {fieldErrors.nickname ? (
+                  <Text style={styles.fieldError}>{fieldErrors.nickname}</Text>
+                ) : null}
                 <TextInput
                   value={email}
                   onChangeText={setEmail}
@@ -295,6 +375,7 @@ export default function AuthSignup() {
                   keyboardType="email-address"
                   style={styles.input}
                 />
+                {fieldErrors.email ? <Text style={styles.fieldError}>{fieldErrors.email}</Text> : null}
                 <TextInput
                   value={pw}
                   onChangeText={setPw}
@@ -302,6 +383,54 @@ export default function AuthSignup() {
                   secureTextEntry
                   style={styles.input}
                 />
+                {fieldErrors.pw ? <Text style={styles.fieldError}>{fieldErrors.pw}</Text> : null}
+
+                <View style={styles.consentGroup}>
+                  <Pressable
+                    onPress={() => setAgeConfirmed((current) => !current)}
+                    style={styles.checkboxRow}
+                  >
+                    <View style={[styles.checkbox, ageConfirmed && styles.checkboxChecked]}>
+                      {ageConfirmed ? <Text style={styles.checkboxMark}>✓</Text> : null}
+                    </View>
+                    <Text style={styles.checkboxLabel}>만 14세 이상입니다.</Text>
+                  </Pressable>
+                  {fieldErrors.age_confirmed ? (
+                    <Text style={styles.fieldError}>{fieldErrors.age_confirmed}</Text>
+                  ) : null}
+
+                  <Pressable
+                    onPress={() => setTermsAgreed((current) => !current)}
+                    style={styles.checkboxRow}
+                  >
+                    <View style={[styles.checkbox, termsAgreed && styles.checkboxChecked]}>
+                      {termsAgreed ? <Text style={styles.checkboxMark}>✓</Text> : null}
+                    </View>
+                    <Text style={styles.checkboxLabel}>서비스 이용약관에 동의합니다.</Text>
+                  </Pressable>
+                  {fieldErrors.terms_agreed ? (
+                    <Text style={styles.fieldError}>{fieldErrors.terms_agreed}</Text>
+                  ) : null}
+                  {fieldErrors.terms_version ? (
+                    <Text style={styles.fieldError}>{fieldErrors.terms_version}</Text>
+                  ) : null}
+
+                  <Pressable
+                    onPress={() => setPrivacyAgreed((current) => !current)}
+                    style={styles.checkboxRow}
+                  >
+                    <View style={[styles.checkbox, privacyAgreed && styles.checkboxChecked]}>
+                      {privacyAgreed ? <Text style={styles.checkboxMark}>✓</Text> : null}
+                    </View>
+                    <Text style={styles.checkboxLabel}>개인정보 수집 및 이용에 동의합니다.</Text>
+                  </Pressable>
+                  {fieldErrors.privacy_agreed ? (
+                    <Text style={styles.fieldError}>{fieldErrors.privacy_agreed}</Text>
+                  ) : null}
+                  {fieldErrors.privacy_version ? (
+                    <Text style={styles.fieldError}>{fieldErrors.privacy_version}</Text>
+                  ) : null}
+                </View>
 
                 <Pressable
                   onPress={onSignup}
@@ -416,6 +545,44 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: tokens.font.body,
     color: tokens.colors.text,
+  },
+  consentGroup: {
+    gap: tokens.space.xs as any,
+    paddingVertical: tokens.space.xs,
+  },
+  checkboxRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: tokens.space.sm as any,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: tokens.colors.borderStrong,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: tokens.colors.surfaceStrong,
+  },
+  checkboxChecked: {
+    backgroundColor: tokens.colors.green700,
+    borderColor: tokens.colors.green700,
+  },
+  checkboxMark: {
+    color: "white",
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  checkboxLabel: {
+    flex: 1,
+    color: tokens.colors.text,
+    fontSize: tokens.font.small,
+  },
+  fieldError: {
+    fontSize: tokens.font.small,
+    color: tokens.colors.danger,
+    marginTop: -2,
   },
   primaryBtn: {
     backgroundColor: tokens.colors.green700,
