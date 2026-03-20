@@ -8,6 +8,7 @@ export type CreatePostInput = {
   content: string;
   contentFormat?: "plain";
   hashtags?: string[];
+  layoutJson?: unknown;
 };
 
 type CreatePostResponse = {
@@ -30,6 +31,7 @@ type EditablePostResponse = {
     content?: string;
     category?: PostType;
     hashtags?: string[];
+    layout_json?: unknown;
   };
 };
 
@@ -48,6 +50,7 @@ export async function createPost(input: CreatePostInput): Promise<{ postId: stri
 
   if (input.title) payload.title = input.title;
   if (input.hashtags && input.hashtags.length > 0) payload.hashtags = input.hashtags;
+  if (input.layoutJson) payload.layout_json = input.layoutJson;
 
   const res = await apiPost<CreatePostResponse>("/api/posts", payload);
 
@@ -76,6 +79,7 @@ export async function getEditablePost(postId: string): Promise<{
   content: string;
   category: PostType;
   hashtags: string[];
+  layoutJson: unknown;
 }> {
   const res = await apiGet<EditablePostResponse>(`/api/posts/${encodeURIComponent(postId)}/edit`);
 
@@ -91,6 +95,7 @@ export async function getEditablePost(postId: string): Promise<{
     hashtags: Array.isArray(res.post.hashtags)
       ? res.post.hashtags.map(String).filter(Boolean)
       : [],
+    layoutJson: res.post.layout_json ?? null,
   };
 }
 
@@ -100,12 +105,14 @@ export async function updatePost(input: {
   title?: string;
   content: string;
   hashtags?: string[];
+  layoutJson?: unknown;
 }): Promise<void> {
   const res = await apiPut<UpdatePostResponse>(`/api/posts/${encodeURIComponent(input.postId)}`, {
     title: input.title,
     content: input.content,
     category: input.type,
     hashtags: input.hashtags ?? [],
+    layout_json: input.layoutJson,
   });
 
   if (res?.ok === false) {

@@ -14,13 +14,22 @@ import {
 
 import { WriteActionBar } from "@/components/write/WriteActionBar";
 import { WriteEditor } from "@/components/write/WriteEditor";
+import { WriteLayoutSection } from "@/components/write/WriteLayoutSection";
 import { WriteMetaSection } from "@/components/write/WriteMetaSection";
+import { WritePreviewCard } from "@/components/write/WritePreviewCard";
 import { WriteStates } from "@/components/write/WriteStates";
 import { WriteTopBar } from "@/components/write/WriteTopBar";
 import { AppError } from "@/components/state/AppError";
 import { AppLoading } from "@/components/state/AppLoading";
 import { normalizeApiError, type AppErrorModel } from "@/lib/errors";
 import { logger } from "@/lib/logger";
+import {
+  DEFAULT_WRITE_LAYOUT,
+  buildLayoutPayload,
+  parseLayoutJson,
+  type LayoutAlign,
+  type WriteLayoutModel,
+} from "@/lib/postLayout";
 import {
   deleteWriteDraft,
   listWriteDrafts,
@@ -45,6 +54,8 @@ export default function Write() {
   const [selectedType, setSelectedType] = useState<PostType | null>(null);
   const [hashtagsInput, setHashtagsInput] = useState("");
   const [editPostId, setEditPostId] = useState<string | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [layout, setLayout] = useState<WriteLayoutModel>(DEFAULT_WRITE_LAYOUT);
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState<AppErrorModel | null>(null);
 
@@ -70,6 +81,12 @@ export default function Write() {
   const hasChanges = title.trim().length > 0 || body.trim().length > 0 || selectedType !== null;
   const canSubmit =
     title.trim().length > 0 && body.trim().length > 0 && selectedType !== null;
+
+  const categoryLabel = useMemo(() => {
+    if (selectedType === "poem") return "시";
+    if (selectedType === "essay") return "에세이";
+    return "짧은 구절";
+  }, [selectedType]);
 
   const closeDraftPrompt = useCallback(() => setDraftPrompt(null), []);
 
@@ -162,6 +179,42 @@ export default function Write() {
     setTitle("");
     setBody("");
     setSelectedType(null);
+    setLayout(DEFAULT_WRITE_LAYOUT);
+  }, []);
+
+  const updateTitleAlign = useCallback((value: LayoutAlign) => {
+    setLayout((current) => ({
+      ...current,
+      titleStyle: { ...current.titleStyle, align: value },
+    }));
+  }, []);
+
+  const updateBodyAlign = useCallback((value: LayoutAlign) => {
+    setLayout((current) => ({
+      ...current,
+      bodyStyle: { ...current.bodyStyle, align: value },
+    }));
+  }, []);
+
+  const updateTitleScale = useCallback((value: number) => {
+    setLayout((current) => ({
+      ...current,
+      titleStyle: { ...current.titleStyle, fontScale: value },
+    }));
+  }, []);
+
+  const updateBodyScale = useCallback((value: number) => {
+    setLayout((current) => ({
+      ...current,
+      bodyStyle: { ...current.bodyStyle, fontScale: value },
+    }));
+  }, []);
+
+  const toggleFooter = useCallback(() => {
+    setLayout((current) => ({
+      ...current,
+      showFooter: !current.showFooter,
+    }));
   }, []);
 
   const onPressSubmit = useCallback(async () => {
@@ -189,6 +242,7 @@ export default function Write() {
           title: trimmedTitle || undefined,
           content: trimmedBody,
           hashtags: hashtagChips,
+          layoutJson: buildLayoutPayload(layout),
         });
         setCreatedPostId(editPostId);
         logger.debug("[write] update success", { postId: editPostId });
@@ -200,6 +254,7 @@ export default function Write() {
           content: trimmedBody,
           contentFormat: "plain",
           hashtags: hashtagChips,
+          layoutJson: buildLayoutPayload(layout),
         });
 
         if (draftId) {
@@ -216,7 +271,7 @@ export default function Write() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [selectedType, draftId, editPostId, hashtagChips, title, body]);
+  }, [selectedType, draftId, editPostId, hashtagChips, layout, title, body]);
 
   const onSuccessGoHome = useCallback(() => {
     setSubmitSuccess(false);
@@ -266,6 +321,7 @@ export default function Write() {
           setBody(editable.content);
           setSelectedType(editable.category ?? null);
           setHashtagsInput(editable.hashtags.join(", "));
+          setLayout(parseLayoutJson(editable.layoutJson));
         } catch (err) {
           logger.warn("[write] edit post load error", err);
           setEditError(normalizeApiError(err));
@@ -352,6 +408,8 @@ export default function Write() {
           onPressClose={onPressClose}
           onPressSubmit={onPressSubmit}
           onPressDrafts={onPressDrafts}
+          previewOpen={previewOpen}
+          onPressPreview={() => setPreviewOpen((current) => !current)}
           styles={styles}
         />
 
@@ -364,13 +422,24 @@ export default function Write() {
               />
             </View>
           ) : null}
-          <WriteEditor
-            title={title}
-            body={body}
-            onChangeTitle={setTitle}
-            onChangeBody={setBody}
-            styles={styles}
-          />
+          {previewOpen ? (
+            <WritePreviewCard
+              styles={styles}
+              title={title}
+              body={body}
+              hashtags={hashtagChips}
+              categoryLabel={categoryLabel}
+              layout={layout}
+            />
+          ) : (
+            <WriteEditor
+              title={title}
+              body={body}
+              onChangeTitle={setTitle}
+              onChangeBody={setBody}
+              styles={styles}
+            />
+          )}
 
           <WriteMetaSection
             styles={styles}
@@ -379,6 +448,16 @@ export default function Write() {
             hashtagsInput={hashtagsInput}
             hashtagChips={hashtagChips}
             onChangeHashtagsInput={setHashtagsInput}
+          />
+
+          <WriteLayoutSection
+            styles={styles}
+            layout={layout}
+            onChangeTitleAlign={updateTitleAlign}
+            onChangeBodyAlign={updateBodyAlign}
+            onChangeTitleScale={updateTitleScale}
+            onChangeBodyScale={updateBodyScale}
+            onToggleFooter={toggleFooter}
           />
 
           <WriteStates styles={styles} confirm={activeConfirm} />

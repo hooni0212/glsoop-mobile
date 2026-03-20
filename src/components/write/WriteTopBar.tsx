@@ -9,6 +9,8 @@ type Props = {
   onPressClose: () => void;
   onPressSubmit: () => void;
   onPressDrafts?: () => void;
+  previewOpen?: boolean;
+  onPressPreview?: () => void;
   styles: any;
 };
 
@@ -18,6 +20,8 @@ export function WriteTopBar({
   onPressClose,
   onPressSubmit,
   onPressDrafts,
+  previewOpen,
+  onPressPreview,
   styles,
 }: Props) {
   return (
@@ -46,6 +50,23 @@ export function WriteTopBar({
             testID="write-drafts-btn"
           >
             <Ionicons name="file-tray-outline" size={20} color={tokens.colors.text} />
+          </Pressable>
+        )}
+
+        {!!onPressPreview && (
+          <Pressable
+            onPress={onPressPreview}
+            hitSlop={12}
+            style={styles.iconBtn}
+            accessibilityRole="button"
+            accessibilityLabel={previewOpen ? "편집 화면으로 전환" : "미리보기 열기"}
+            testID="write-preview-btn"
+          >
+            <Ionicons
+              name={previewOpen ? "create-outline" : "eye-outline"}
+              size={20}
+              color={tokens.colors.text}
+            />
           </Pressable>
         )}
 

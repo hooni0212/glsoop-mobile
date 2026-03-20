@@ -191,6 +191,66 @@ export function createWriteStyles() {
       fontWeight: "800",
       color: tokens.colors.green900,
     },
+    layoutBlock: {
+      marginTop: 10,
+    },
+    layoutOptionRow: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 8,
+      marginTop: 6,
+    },
+    layoutOption: {
+      borderRadius: tokens.radius.pill,
+      borderWidth: 1,
+      borderColor: tokens.colors.borderStrong,
+      backgroundColor: tokens.colors.white,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+    },
+    layoutOptionActive: {
+      borderColor: tokens.colors.green900,
+      backgroundColor: tokens.colors.green100,
+    },
+    layoutOptionText: {
+      fontSize: tokens.font.small,
+      fontWeight: "800",
+      color: tokens.colors.text,
+    },
+    layoutOptionTextActive: {
+      color: tokens.colors.green900,
+    },
+    previewCard: {
+      borderRadius: tokens.radius.lg,
+      padding: tokens.space.md,
+      backgroundColor: tokens.colors.white,
+      borderWidth: 1,
+      borderColor: tokens.colors.border,
+      marginBottom: 12,
+    },
+    previewPaper: {
+      minHeight: 280,
+      borderRadius: tokens.radius.lg,
+      backgroundColor: "#f7f1e7",
+      paddingHorizontal: 22,
+      paddingVertical: 26,
+      justifyContent: "space-between",
+      gap: 16,
+    },
+    previewTitle: {
+      color: tokens.colors.text,
+      fontWeight: "800",
+      letterSpacing: -0.3,
+    },
+    previewBody: {
+      flex: 1,
+      color: tokens.colors.text,
+      fontWeight: "600",
+    },
+    previewFooter: {
+      color: tokens.colors.textMuted,
+      fontWeight: "700",
+    },
 
     // --- Modal (cross-platform confirm UI) ---
     modalOverlay: {

@@ -109,7 +109,7 @@
 | 마이페이지/내 활동 | 구현됨에 가까운 부분 구현 | 모바일 `Me`를 탭형 관리 화면으로 확장해 내 글/좋아요/팔로잉/세션/전체 로그아웃, 프로필 수정, 로그인 유지 설정, 작성 글 삭제, 성장 요약 카드까지 반영했다. 남은 차이는 서버 웹의 세부 표현 수준이 중심이다 |
 | 작가 페이지/소셜 | 부분 구현 | 작가 프로필/글 목록, 팔로우, 정렬, 소개 토글, 최신 글 CTA, 공유, 간단한 overflow 메뉴까지 반영했다. 남은 차이는 웹 쪽 세부 액션과 검증이다 |
 | 게시글 상세/상호작용 | 부분 구현 | 좋아요, 북마크 모달, 공유 이벤트, 관련 글, 작성자 전용 수정/삭제 진입까지 반영했다. 남은 갭은 공유 모달 고도화 정도다 |
-| 작성/수정/드래프트 | 부분 구현 | 새 글 작성, 로컬 드래프트, 기존 글 편집 진입과 수정 저장, 해시태그 입력까지 반영했다. 레이아웃 편집/미리보기는 남아 있음 |
+| 작성/수정/드래프트 | 부분 구현 | 새 글 작성, 로컬 드래프트, 기존 글 편집 진입과 수정 저장, 해시태그 입력, 모바일용 레이아웃 설정과 미리보기까지 반영했다. 남은 차이는 웹의 드래그 수준 고도화다 |
 | 검색/탐색 | 부분 구현 | 검색, 일반 피드, `following` 피드 분기는 반영했다. 남은 갭은 세부 탐색 UX 쪽이 중심 |
 | 북마크 | 부분 구현 | 목록/생성/수정/삭제/아이템 조회는 있음. 나머지 개선은 폴더 UX 다듬기 수준 |
 | 성장/코스메틱 | 부분 구현 | 요약/업적/퀘스트/코스메틱은 있음. `top_posts`도 dashboard/fallback 모두 실제 데이터 연결을 반영했고, 남은 건 제품 정책과 실검증이다 |
@@ -221,7 +221,7 @@
 | 수정 저장 | `../glsoop/public/js/editor2.js` | `PUT /api/posts/:id` | `구현됨` | 모바일 `src/screens/Write.tsx`, `src/services/postService.ts`에서 `GET /api/posts/:id/edit` 조회 후 `PUT /api/posts/:id` 저장을 반영했다 | 유지 |
 | 드래프트 삭제 | `../glsoop/public/js/editor2.js` | local draft 규칙 | `구현됨` | 모바일 `deleteWriteDraft`, `clearAllWriteDrafts`, `WriteDrafts` 화면 존재 | 유지 |
 | 해시태그 칩 | `../glsoop/public/js/editor2.js` | `POST /api/posts` `hashtags` | `구현됨` | 모바일 `src/components/write/WriteMetaSection.tsx`, `src/screens/Write.tsx`, `src/services/postService.ts`에서 해시태그 입력 UI와 `hashtags` payload를 반영했다 | 유지 |
-| 레이아웃 편집/미리보기 | `../glsoop/public/js/editor2.js`, `../glsoop/public/js/editor2LayoutEditor.js` | `POST /api/posts`, `PUT /api/posts/:id` `layout_json` | `미구현` | 모바일 작성기는 plain text 중심이고 layout 편집이 없음 | P3 |
+| 레이아웃 편집/미리보기 | `../glsoop/public/js/editor2.js`, `../glsoop/public/js/editor2LayoutEditor.js` | `POST /api/posts`, `PUT /api/posts/:id` `layout_json` | `부분 구현` | 모바일 `src/screens/Write.tsx`, `src/components/write/WriteLayoutSection.tsx`, `src/components/write/WritePreviewCard.tsx`, `src/lib/postLayout.ts`에서 정렬/크기/푸터 표시 설정과 미리보기를 제공하고 `layout_json`을 저장한다. 웹처럼 드래그로 박스를 세밀하게 배치하는 단계는 아직 없음 | P3 |
 | 인증 리다이렉트 | `../glsoop/public/js/editor2.js` | `GET /api/me` | `부분 구현` | 모바일은 글로벌 auth gate가 있지만, editor 전용 `next/from` 리다이렉트 UX는 약함 | P2 |
 
 ### 5.6 검색/탐색
@@ -427,3 +427,4 @@
 - `2026-03-21`: `src/lib/authRedirect.ts`, `src/auth/AuthGate.tsx`, 주요 auth/protected 화면들에 `redirect` 기반 로그인 후 복귀 흐름을 반영했다. `npm run lint`를 통과했고, 실사용 시나리오 기준 종단 검증은 별도 확인이 남아 있다.
 - `2026-03-21`: `src/features/growth/useGrowthData.ts`에서 fallback 경로에서도 `GET /api/growth/top-posts`를 불러와 `TopPostsList`가 pending placeholder 대신 실제 데이터를 표시할 수 있게 보강했다. `npm run lint`를 통과했다.
 - `2026-03-21`: `src/screens/Author.tsx`, `src/screens/Author.styles.ts`에 `더보기` 메뉴를 추가해 공유/최신 글 이동/프로필 꾸미기 액션을 한 곳에 묶었다. `npm run lint`를 통과했다.
+- `2026-03-21`: `src/screens/Write.tsx`, `src/components/write/WriteLayoutSection.tsx`, `src/components/write/WritePreviewCard.tsx`, `src/lib/postLayout.ts`, `src/services/postService.ts`에서 모바일용 레이아웃 설정과 미리보기를 추가하고 `layout_json` 저장을 연결했다. `npm run lint`를 통과했다.
