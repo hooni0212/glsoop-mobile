@@ -86,7 +86,7 @@
 | `AUTH-P0-01` | `진행 중` | `2026-03-21` | `src/screens/AuthSignup.tsx`에 runtime-config 연동, 필수 동의 UI, signup legal fields, field error 표시를 반영함. `npm run lint` 통과 | 실제 서버 호출 기준 signup 해피패스 검증, OTP까지 포함한 E2E 확인 필요 |
 | `AUTH-P0-02` | `정책 결정 필요` | `2026-03-21` | 서버는 로그인 응답에 `token`을 내려주지 않고, 모바일 네이티브는 token 기반 완료를 기대함 | 네이티브 인증을 쿠키 세션으로 갈지 Bearer로 갈지 결정 필요 |
 | `AUTH-P0-03` | `정책 결정 필요` | `2026-03-21` | 현재 모바일 저장소는 `AsyncStorage` 기반 | 인증 정책 확정 후 secure storage 전환 여부 결정 필요 |
-| `AUTHOR-P0-01` | `미착수` | `2026-03-21` | `useAuthorPosts`는 cursor 계열 가정, 서버는 offset/has_more 패턴 | 훅 재설계와 loadMore 중복 검증 필요 |
+| `AUTHOR-P0-01` | `진행 중` | `2026-03-21` | `src/features/users/useAuthorPosts.ts`를 `offset/limit + has_more` 기준으로 재설계했고 중복 append 방지 merge를 추가했다. `npm run lint` 통과 | 실제 목록/더보기/새로고침 기준으로 중복 없는지 런타임 검증 필요 |
 | `DOCS-P1-01` | `진행 중` | `2026-03-21` | 갭 노트에 문서 신뢰도/상태 기준을 추가함 | `docs/api/auth.md`, `docs/api/posts.md` 본문 정정 필요 |
 
 아래 항목은 단순 기능 추가보다 먼저 정리되어야 하는 선행 게이트다.
@@ -191,7 +191,7 @@
 
 | 기능 | 서버 웹 구현 근거 | 서버 API 근거 | 모바일 현재 상태 | 차이 메모 | 우선순위 |
 | --- | --- | --- | --- | --- | --- |
-| 작가 프로필/작성 글 목록 | `../glsoop/public/html/author.html`, `../glsoop/public/js/author.js` | `GET /api/users/:id/profile`, `GET /api/users/:id/posts` | `부분 구현` | 기본 조회는 가능하지만 모바일 `useAuthorPosts`의 페이지네이션 모델이 서버 `offset/has_more` 패턴과 어긋날 가능성이 있다 | P0 |
+| 작가 프로필/작성 글 목록 | `../glsoop/public/html/author.html`, `../glsoop/public/js/author.js` | `GET /api/users/:id/profile`, `GET /api/users/:id/posts` | `부분 구현` | 모바일 `useAuthorPosts`를 서버 `offset/has_more` 패턴으로 맞췄다. 다만 실제 목록/더보기 기준 런타임 검증과 나머지 소셜 UX 보강이 남아 있다 | P0 |
 | 팔로우/언팔로우 | `../glsoop/public/js/author.js`, `../glsoop/tests/e2e/author-cta-flow.spec.js` | `POST /api/users/:id/follow` | `미구현` | 모바일 작가 화면에 follow 버튼 자체가 없음 | P1 |
 | 최신 글 CTA | `../glsoop/public/js/author.js`, `../glsoop/tests/e2e/author-cta-flow.spec.js` | `GET /api/users/:id/posts` | `미구현` | 모바일은 목록은 있지만 별도 최신 글 CTA는 없음 | P1 |
 | 소개문 접기/펼치기 | `../glsoop/public/js/author.js` | `GET /api/users/:id/profile` | `미구현` | 모바일 `Author.tsx`는 bio를 고정 출력 | P2 |
@@ -408,3 +408,4 @@
 - `2026-03-21`: `## 3.1 Gap-ID 상태 업데이트` 섹션을 추가해 P0/P1 핵심 항목의 현재 반영률을 기록할 수 있게 했다.
 - `2026-03-21`: [p0-gap-fix-agent-prompt.md](/Users/gimtaehun/2026/workspace/projects/glsoop-mobile/docs/prompts/p0-gap-fix-agent-prompt.md) 프롬프트를 추가해 P0 작업 시 코드 수정과 갭 노트 상태 업데이트를 함께 수행하도록 기준을 만들었다.
 - `2026-03-21`: `AUTH-P0-01` 기준으로 `src/screens/AuthSignup.tsx`에 runtime-config 연동, 필수 동의 UI, signup legal fields, field error 표시를 반영했고 `npm run lint`를 통과했다. 실제 서버 해피패스/OTP 종단 검증은 샌드박스 네트워크 제약으로 별도 확인이 남아 있다.
+- `2026-03-21`: `AUTHOR-P0-01` 기준으로 `src/features/users/useAuthorPosts.ts`를 `offset/limit + has_more` 계약으로 재정렬했고, loadMore 중복 append를 줄이기 위한 dedupe merge를 추가했다. 실제 기기/목록 기준 런타임 검증은 별도 확인이 남아 있다.

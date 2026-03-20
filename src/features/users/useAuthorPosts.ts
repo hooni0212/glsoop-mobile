@@ -10,7 +10,7 @@ type AuthorPostsResponse = {
   data?: any;
   items?: any[];
   posts?: any[];
-  nextCursor?: string | null;
+  has_more?: boolean;
   hasNext?: boolean;
   hasMore?: boolean;
 };
@@ -145,19 +145,29 @@ function extractPostsPayload(res: AuthorPostsResponse) {
       ? base.posts
       : [];
 
-  const nextCursorValue = base?.nextCursor ?? base?.next_cursor ?? base?.cursor ?? null;
-  const nextCursor = nextCursorValue ? String(nextCursorValue) : null;
-
-  const hasNext =
-    typeof base?.hasNext === "boolean"
-      ? base.hasNext
+  const hasMore =
+    typeof base?.has_more === "boolean"
+      ? base.has_more
       : typeof base?.hasMore === "boolean"
         ? base.hasMore
-        : nextCursor
-          ? true
+        : typeof base?.hasNext === "boolean"
+          ? base.hasNext
           : items.length >= PAGE_SIZE;
 
-  return { items, nextCursor, hasNext };
+  return { items, hasMore };
+}
+
+function mergePosts(prev: Post[], next: Post[]) {
+  if (prev.length === 0) return next;
+
+  const seen = new Set(prev.map((item) => item.id));
+  const dedupedNext = next.filter((item) => {
+    if (!item.id || seen.has(item.id)) return false;
+    seen.add(item.id);
+    return true;
+  });
+
+  return [...prev, ...dedupedNext];
 }
 
 export function useAuthorPosts(userId?: string) {
@@ -167,7 +177,7 @@ export function useAuthorPosts(userId?: string) {
   const [error, setError] = useState<AppErrorModel | null>(null);
   const [hasMore, setHasMore] = useState(true);
 
-  const cursorRef = useRef<string | null>(null);
+  const offsetRef = useRef(0);
   const inflightRef = useRef(false);
 
   const fetchPage = useCallback(
@@ -175,6 +185,7 @@ export function useAuthorPosts(userId?: string) {
       if (!userId || inflightRef.current) return;
 
       const reset = Boolean(opts.reset);
+      const requestedOffset = reset ? 0 : offsetRef.current;
       inflightRef.current = true;
 
       try {
@@ -182,14 +193,14 @@ export function useAuthorPosts(userId?: string) {
 
         if (reset) {
           setRefreshing(true);
-          cursorRef.current = null;
+          offsetRef.current = 0;
         } else {
           setLoading(true);
         }
 
         const params = new URLSearchParams();
         params.set("limit", String(PAGE_SIZE));
-        if (!reset && cursorRef.current) params.set("cursor", cursorRef.current);
+        params.set("offset", String(requestedOffset));
 
         const res = await apiGet<AuthorPostsResponse>(
           `/api/users/${encodeURIComponent(userId)}/posts?${params.toString()}`
@@ -197,9 +208,9 @@ export function useAuthorPosts(userId?: string) {
         const payload = extractPostsPayload(res);
         const nextItems = payload.items.map(normalizePost);
 
-        setItems((prev) => (reset ? nextItems : [...prev, ...nextItems]));
-        cursorRef.current = payload.nextCursor;
-        setHasMore(payload.hasNext);
+        setItems((prev) => (reset ? nextItems : mergePosts(prev, nextItems)));
+        offsetRef.current = requestedOffset + nextItems.length;
+        setHasMore(payload.hasMore);
       } catch (err) {
         setError(normalizeApiError(err));
       } finally {
@@ -223,7 +234,7 @@ export function useAuthorPosts(userId?: string) {
   useEffect(() => {
     if (!userId) return;
     setItems([]);
-    cursorRef.current = null;
+    offsetRef.current = 0;
     setHasMore(true);
     refresh();
   }, [refresh, userId]);
