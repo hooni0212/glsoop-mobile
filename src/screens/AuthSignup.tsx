@@ -327,7 +327,7 @@ export default function AuthSignup() {
   const canSubmitOtp = otp.length === 6;
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={styles.safe} testID="auth-signup-screen">
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -359,6 +359,7 @@ export default function AuthSignup() {
                   onChangeText={setName}
                   placeholder="이름"
                   style={styles.input}
+                  testID="signup-name-input"
                 />
                 {fieldErrors.name ? <Text style={styles.fieldError}>{fieldErrors.name}</Text> : null}
                 <TextInput
@@ -366,6 +367,7 @@ export default function AuthSignup() {
                   onChangeText={setNickname}
                   placeholder="닉네임"
                   style={styles.input}
+                  testID="signup-nickname-input"
                 />
                 {fieldErrors.nickname ? (
                   <Text style={styles.fieldError}>{fieldErrors.nickname}</Text>
@@ -377,6 +379,7 @@ export default function AuthSignup() {
                   autoCapitalize="none"
                   keyboardType="email-address"
                   style={styles.input}
+                  testID="signup-email-input"
                 />
                 {fieldErrors.email ? <Text style={styles.fieldError}>{fieldErrors.email}</Text> : null}
                 <TextInput
@@ -385,6 +388,7 @@ export default function AuthSignup() {
                   placeholder="비밀번호"
                   secureTextEntry
                   style={styles.input}
+                  testID="signup-password-input"
                 />
                 {fieldErrors.pw ? <Text style={styles.fieldError}>{fieldErrors.pw}</Text> : null}
 
@@ -392,6 +396,7 @@ export default function AuthSignup() {
                   <Pressable
                     onPress={() => setAgeConfirmed((current) => !current)}
                     style={styles.checkboxRow}
+                    testID="signup-age-checkbox"
                   >
                     <View style={[styles.checkbox, ageConfirmed && styles.checkboxChecked]}>
                       {ageConfirmed ? <Text style={styles.checkboxMark}>✓</Text> : null}
@@ -405,6 +410,7 @@ export default function AuthSignup() {
                   <Pressable
                     onPress={() => setTermsAgreed((current) => !current)}
                     style={styles.checkboxRow}
+                    testID="signup-terms-checkbox"
                   >
                     <View style={[styles.checkbox, termsAgreed && styles.checkboxChecked]}>
                       {termsAgreed ? <Text style={styles.checkboxMark}>✓</Text> : null}
@@ -421,6 +427,7 @@ export default function AuthSignup() {
                   <Pressable
                     onPress={() => setPrivacyAgreed((current) => !current)}
                     style={styles.checkboxRow}
+                    testID="signup-privacy-checkbox"
                   >
                     <View style={[styles.checkbox, privacyAgreed && styles.checkboxChecked]}>
                       {privacyAgreed ? <Text style={styles.checkboxMark}>✓</Text> : null}
@@ -438,6 +445,7 @@ export default function AuthSignup() {
                 <Pressable
                   onPress={onSignup}
                   disabled={busy || !canSubmitForm}
+                  testID="signup-submit-btn"
                   style={({ pressed }) => [
                     styles.primaryBtn,
                     (busy || !canSubmitForm) && styles.primaryBtnDisabled,
@@ -472,11 +480,13 @@ export default function AuthSignup() {
                   keyboardType="number-pad"
                   maxLength={6}
                   style={styles.input}
+                  testID="signup-otp-input"
                 />
 
                 <Pressable
                   onPress={onVerifyOtp}
                   disabled={busy || !canSubmitOtp}
+                  testID="signup-otp-submit-btn"
                   style={({ pressed }) => [
                     styles.primaryBtn,
                     (busy || !canSubmitOtp) && styles.primaryBtnDisabled,
@@ -489,6 +499,7 @@ export default function AuthSignup() {
                 <Pressable
                   onPress={onResendOtp}
                   disabled={resendCountdown > 0 || resendBusy}
+                  testID="signup-otp-resend-btn"
                   style={({ pressed }) => [
                     styles.secondaryBtn,
                     (resendCountdown > 0 || resendBusy) && styles.secondaryBtnDisabled,
