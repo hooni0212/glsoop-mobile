@@ -79,7 +79,7 @@ export default function AuthLogin() {
   }
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={styles.safe} testID="auth-login-screen">
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -109,6 +109,7 @@ export default function AuthLogin() {
               autoCapitalize="none"
               keyboardType="email-address"
               style={styles.input}
+              testID="login-email-input"
             />
             <TextInput
               value={pw}
@@ -116,11 +117,13 @@ export default function AuthLogin() {
               placeholder="비밀번호"
               secureTextEntry
               style={styles.input}
+              testID="login-password-input"
             />
 
             <Pressable
               onPress={onLogin}
               disabled={busy || !email || !pw}
+              testID="login-submit-btn"
               style={({ pressed }) => [
                 styles.primaryBtn,
                 (busy || !email || !pw) && styles.primaryBtnDisabled,

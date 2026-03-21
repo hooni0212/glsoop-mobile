@@ -84,8 +84,8 @@
 | Gap-ID | 현재 상태 | 마지막 반영일 | 근거 | 남은 이슈 |
 | --- | --- | --- | --- | --- |
 | `AUTH-P0-01` | `반영됨` | `2026-03-21` | `src/screens/AuthSignup.tsx`에 runtime-config 연동, 필수 동의 UI, signup legal fields, field error 표시를 반영했고 `tests/e2e/auth-signup-consent.spec.js`, `scripts/e2e_signup_outbox.js`, 모바일 `e2e/signup-flow.spec.ts`가 통과해 `signup -> OTP -> 자동 로그인`까지 검증했다 | 실기기에서 한 번 더 보는 QA는 남을 수 있지만 구현/자동 검증 기준으로는 완료 |
-| `AUTH-P0-02` | `반영됨` | `2026-03-21` | 서버 로그인 응답에 `token`을 포함하고, 모바일 `src/screens/AuthLogin.tsx`, `src/screens/AuthSignup.tsx`에서 `web`은 쿠키 세션, `ios/android`는 Bearer 토큰으로 분기하도록 반영했다. 서버 `tests/e2e/auth-security.spec.js`, `tests/e2e/auth-session-management.spec.js`도 최신 정책 기준으로 통과했다 | 실제 기기 기준 로그인 해피패스와 만료 시나리오 런타임 검증 필요 |
-| `AUTH-P0-03` | `반영됨` | `2026-03-21` | 모바일 `src/lib/authToken.ts`를 `expo-secure-store` 기반으로 전환하고 `web`만 AsyncStorage를 유지했다. 서버 인증/세션 E2E가 최신 정책 기준으로 통과했다 | secure storage 기반 앱 재기동/만료 복구 검증 필요 |
+| `AUTH-P0-02` | `반영됨` | `2026-03-21` | 서버 로그인 응답에 `token`을 포함하고, 모바일 `src/screens/AuthLogin.tsx`, `src/screens/AuthSignup.tsx`에서 `web`은 쿠키 세션, `ios/android`는 Bearer 토큰으로 분기하도록 반영했다. 서버 `tests/e2e/auth-security.spec.js`, `tests/e2e/auth-session-management.spec.js`와 모바일 `e2e/auth-session-web.spec.ts`도 통과했다 | 남은 건 네이티브 실기기 기준 로그인 해피패스와 만료 시나리오 검증 |
+| `AUTH-P0-03` | `반영됨` | `2026-03-21` | 모바일 `src/lib/authToken.ts`를 `expo-secure-store` 기반으로 전환하고 `web`만 AsyncStorage를 유지했다. 서버 인증/세션 E2E와 모바일 `e2e/auth-session-web.spec.ts` 기준으로 웹 저장/세션 복귀/401 토큰 정리까지 확인했다 | secure storage 기반 네이티브 앱 재기동/만료 복구 검증 필요 |
 | `AUTHOR-P0-01` | `진행 중` | `2026-03-21` | `src/features/users/useAuthorPosts.ts`를 `offset/limit + has_more`와 `sort` 기준으로 재설계했고, `src/screens/Author.tsx`에 팔로우/정렬/소개 토글/최신 글 CTA를 반영했다. 서버 `scripts/e2e_author_posts_contract.js` 기준으로 `newest/oldest/likes`, `offset`, `has_more` 계약도 통과했다 | 실제 모바일 화면 기준 `loadMore`, `정렬 전환`, `refresh` 체감 검증 필요 |
 | `DOCS-P1-01` | `반영됨` | `2026-03-21` | `docs/api/auth.md`, `docs/api/posts.md`를 현재 서버 라우트와 모바일 실제 호출 기준으로 재작성했다 | 나머지 API 문서도 같은 기준으로 순차 점검 필요 |
 
@@ -162,7 +162,7 @@
 ### 4.6 현재 남은 핵심 작업
 
 - `AUTH-P0-02`, `AUTH-P0-03`
-  - 서버 인증/세션 E2E는 통과했다. 남은 건 실제 기기 기준 `login -> 앱 재기동 -> /api/me 유지 -> 401/만료 시 auth 복귀` 검증
+  - 서버 인증/세션 E2E와 모바일 웹 `auth-session` E2E는 통과했다. 남은 건 네이티브 실기기 기준 `login -> 앱 재기동 -> /api/me 유지 -> 401/만료 시 auth 복귀` 검증
 - `AUTHOR-P0-01`
   - 서버 `newest/oldest/likes + offset/has_more` 계약 검증은 통과했다. 남은 건 실제 모바일 화면 기준 `loadMore`, `정렬 전환`, `refresh` 체감 검증
 - 비밀번호 재설정
@@ -458,3 +458,4 @@
 - `2026-03-21`: 서버 `services/mailer.js`, `routes/authRoutes.js`, `scripts/e2e_signup_outbox.js`를 정리해 signup OTP도 outbox 기반으로 검증 가능하게 만들었고, `signup -> verify-email -> login -> /api/me` 로컬 동등 흐름을 실제로 통과시켰다.
 - `2026-03-21`: 서버 `scripts/e2e_author_posts_contract.js`를 추가해 작가 글 목록의 `newest/oldest/likes`, `offset`, `has_more` 계약을 로컬 동등 환경에서 검증했고 실제로 통과시켰다.
 - `2026-03-21`: 모바일 `e2e/signup-flow.spec.ts`를 추가하고 `src/screens/AuthSignup.tsx`에 안정적인 `testID`를 보강해 `회원가입 -> OTP 입력 -> 자동 로그인 -> 홈 이동` 화면 흐름을 실제 웹 E2E로 통과시켰다.
+- `2026-03-21`: 모바일 `e2e/auth-session-web.spec.ts`를 추가하고 `src/screens/AuthLogin.tsx`에 안정적인 `testID`를 보강해 웹 기준 `로그인 -> 새로고침 후 세션 유지`와 `저장된 세션 401 -> 토큰 정리 -> auth 복귀` 흐름을 실제 E2E로 통과시켰다.
