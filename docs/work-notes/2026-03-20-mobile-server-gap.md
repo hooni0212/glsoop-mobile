@@ -453,3 +453,4 @@
 - `2026-03-21`: `src/features/cosmetics/useMyCosmetics.ts`, `src/screens/growth/Quests.tsx`, `src/screens/ProfileCustomize.tsx`에서 코스메틱 캐시/리프레시 흐름을 추가해 퀘스트 보상 직후 최신 인벤토리를 빠르게 반영하도록 보강했다.
 - `2026-03-21`: `src/services/draftStorage.ts`에서 write draft를 auth namespace 기준으로 분리해 로그인 상태나 사용자 변경 시 초안이 섞이는 위험을 줄였다.
 - `2026-03-21`: 서버 `routes/authRoutes.js`, `services/mailer.js`와 모바일 `docs/api/auth.md`를 함께 정리해 비밀번호 재설정 메일이 웹 fallback 링크와 앱 딥링크(`glsoopmobile://reset-password?token=...`)를 같이 제공하도록 맞췄다. 남은 건 실제 메일 클릭 종단 검증이다.
+- `2026-03-21`: `src/auth/AuthContext.tsx`, `src/features/cosmetics/useMyCosmetics.ts`에서 로그인/로그아웃 시 코스메틱 스냅샷을 즉시 초기화하도록 보강해 사용자 전환 직후 이전 인벤토리가 잠깐 남는 리스크를 줄였다.

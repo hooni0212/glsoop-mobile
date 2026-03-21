@@ -84,6 +84,11 @@ export async function refreshMyCosmetics(force = false): Promise<void> {
   await cosmeticsInflight;
 }
 
+export function resetMyCosmeticsSnapshot() {
+  cosmeticsInflight = null;
+  publishSnapshot(INITIAL_SNAPSHOT);
+}
+
 export function useMyCosmetics(): UseMyCosmeticsResult {
   const [snapshot, setSnapshot] = useState<CosmeticsSnapshot>(cosmeticsSnapshot);
 
