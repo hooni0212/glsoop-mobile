@@ -453,6 +453,7 @@ export default function Author() {
                   <Pressable
                     key={value}
                     onPress={() => setSort(value)}
+                    testID={`author-sort-${value}`}
                     style={[
                       authorScreenStyles.sortChip,
                       active && authorScreenStyles.sortChipActive,

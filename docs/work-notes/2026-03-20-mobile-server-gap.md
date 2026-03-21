@@ -86,7 +86,7 @@
 | `AUTH-P0-01` | `반영됨` | `2026-03-21` | `src/screens/AuthSignup.tsx`에 runtime-config 연동, 필수 동의 UI, signup legal fields, field error 표시를 반영했고 `tests/e2e/auth-signup-consent.spec.js`, `scripts/e2e_signup_outbox.js`, 모바일 `e2e/signup-flow.spec.ts`가 통과해 `signup -> OTP -> 자동 로그인`까지 검증했다 | 실기기에서 한 번 더 보는 QA는 남을 수 있지만 구현/자동 검증 기준으로는 완료 |
 | `AUTH-P0-02` | `반영됨` | `2026-03-21` | 서버 로그인 응답에 `token`을 포함하고, 모바일 `src/screens/AuthLogin.tsx`, `src/screens/AuthSignup.tsx`에서 `web`은 쿠키 세션, `ios/android`는 Bearer 토큰으로 분기하도록 반영했다. 서버 `tests/e2e/auth-security.spec.js`, `tests/e2e/auth-session-management.spec.js`와 모바일 `e2e/auth-session-web.spec.ts`도 통과했다 | 남은 건 네이티브 실기기 기준 로그인 해피패스와 만료 시나리오 검증 |
 | `AUTH-P0-03` | `반영됨` | `2026-03-21` | 모바일 `src/lib/authToken.ts`를 `expo-secure-store` 기반으로 전환하고 `web`만 AsyncStorage를 유지했다. 서버 인증/세션 E2E와 모바일 `e2e/auth-session-web.spec.ts` 기준으로 웹 저장/세션 복귀/401 토큰 정리까지 확인했다 | secure storage 기반 네이티브 앱 재기동/만료 복구 검증 필요 |
-| `AUTHOR-P0-01` | `진행 중` | `2026-03-21` | `src/features/users/useAuthorPosts.ts`를 `offset/limit + has_more`와 `sort` 기준으로 재설계했고, `src/screens/Author.tsx`에 팔로우/정렬/소개 토글/최신 글 CTA를 반영했다. 서버 `scripts/e2e_author_posts_contract.js` 기준으로 `newest/oldest/likes`, `offset`, `has_more` 계약도 통과했다 | 실제 모바일 화면 기준 `loadMore`, `정렬 전환`, `refresh` 체감 검증 필요 |
+| `AUTHOR-P0-01` | `반영됨` | `2026-03-21` | `src/features/users/useAuthorPosts.ts`를 `offset/limit + has_more`와 `sort` 기준으로 재설계했고, `src/screens/Author.tsx`에 팔로우/정렬/소개 토글/최신 글 CTA를 반영했다. 서버 `scripts/e2e_author_posts_contract.js`와 모바일 `e2e/author-flow.spec.ts` 기준으로 `정렬 전환 / 더보기 / 재진입 refetch`까지 확인했다 | 실기기에서 한 번 더 보는 QA는 남을 수 있지만 구현/자동 검증 기준으로는 완료 |
 | `DOCS-P1-01` | `반영됨` | `2026-03-21` | `docs/api/auth.md`, `docs/api/posts.md`를 현재 서버 라우트와 모바일 실제 호출 기준으로 재작성했다 | 나머지 API 문서도 같은 기준으로 순차 점검 필요 |
 
 아래 항목은 단순 기능 추가보다 먼저 정리되어야 하는 선행 게이트다.
@@ -107,7 +107,7 @@
 | --- | --- | --- |
 | 인증/계정 | 부분 구현 | 로그인/OTP 화면과 비밀번호 재설정 요청/변경 화면은 붙였고, `web`은 쿠키 세션, `ios/android`는 Bearer 토큰 + secure storage로 정책과 구현을 정리했다. 남은 건 가입 해피패스 실검증과 실제 메일 링크-앱 복귀 검증이다 |
 | 마이페이지/내 활동 | 구현됨에 가까운 부분 구현 | 모바일 `Me`를 탭형 관리 화면으로 확장해 내 글/좋아요/팔로잉/세션/전체 로그아웃, 프로필 수정, 로그인 유지 설정, 작성 글 삭제, 성장 요약 카드까지 반영했다. 남은 차이는 서버 웹의 세부 표현 수준이 중심이다 |
-| 작가 페이지/소셜 | 부분 구현 | 작가 프로필/글 목록, 팔로우, 정렬, 소개 토글, 최신 글 CTA, 공유, 간단한 overflow 메뉴까지 반영했다. 남은 차이는 웹 쪽 세부 액션과 검증이다 |
+| 작가 페이지/소셜 | 구현됨에 가까운 부분 구현 | 작가 프로필/글 목록, 팔로우, 정렬, 소개 토글, 최신 글 CTA, 공유, 간단한 overflow 메뉴까지 반영했고 서버/모바일 자동 검증도 확보했다. 남은 차이는 웹 쪽 세부 액션과 실기기 QA가 중심이다 |
 | 게시글 상세/상호작용 | 구현됨에 가까운 부분 구현 | 좋아요, 북마크 모달, 공유 이벤트, 관련 글, 작성자 전용 수정/삭제 진입, 모바일용 공유 옵션 모달까지 반영했다. 남은 차이는 웹의 세부 내보내기 표현 정도다 |
 | 작성/수정/드래프트 | 부분 구현 | 새 글 작성, 로컬 드래프트, 기존 글 편집 진입과 수정 저장, 해시태그 입력, 모바일용 레이아웃 설정과 미리보기까지 반영했다. 남은 차이는 웹의 드래그 수준 고도화다 |
 | 검색/탐색 | 부분 구현 | 검색, 일반 피드, `following` 피드 분기는 반영했다. 남은 갭은 세부 탐색 UX 쪽이 중심 |
@@ -163,8 +163,6 @@
 
 - `AUTH-P0-02`, `AUTH-P0-03`
   - 서버 인증/세션 E2E와 모바일 웹 `auth-session` E2E는 통과했다. 남은 건 네이티브 실기기 기준 `login -> 앱 재기동 -> /api/me 유지 -> 401/만료 시 auth 복귀` 검증
-- `AUTHOR-P0-01`
-  - 서버 `newest/oldest/likes + offset/has_more` 계약 검증은 통과했다. 남은 건 실제 모바일 화면 기준 `loadMore`, `정렬 전환`, `refresh` 체감 검증
 - 비밀번호 재설정
   - 웹 fallback + 앱 딥링크는 반영했고, `scripts/e2e_password_reset_outbox.js` 기준 로컬 동등 환경 E2E도 통과했다. 남은 건 실제 메일 클릭에서 앱 `reset-password` 화면으로 복귀하는 종단 검증이다
 - 게시글 공유
@@ -206,7 +204,7 @@
 
 | 기능 | 서버 웹 구현 근거 | 서버 API 근거 | 모바일 현재 상태 | 차이 메모 | 우선순위 |
 | --- | --- | --- | --- | --- | --- |
-| 작가 프로필/작성 글 목록 | `../glsoop/public/html/author.html`, `../glsoop/public/js/author.js` | `GET /api/users/:id/profile`, `GET /api/users/:id/posts` | `부분 구현` | 모바일 `useAuthorPosts`를 서버 `offset/has_more` 패턴으로 맞췄고, 서버 `scripts/e2e_author_posts_contract.js` 기준으로 `newest/oldest/likes + offset/has_more` 계약도 검증했다. 남은 건 실제 모바일 화면의 더보기/새로고침 체감 검증이다 | P0 |
+| 작가 프로필/작성 글 목록 | `../glsoop/public/html/author.html`, `../glsoop/public/js/author.js` | `GET /api/users/:id/profile`, `GET /api/users/:id/posts` | `구현됨` | 모바일 `useAuthorPosts`를 서버 `offset/has_more` 패턴으로 맞췄고, 서버 `scripts/e2e_author_posts_contract.js`, 모바일 `e2e/author-flow.spec.ts` 기준으로 `newest/oldest/likes + offset/has_more`, 정렬 전환, 더보기, 재진입 refetch까지 검증했다 | 유지 |
 | 팔로우/언팔로우 | `../glsoop/public/js/author.js`, `../glsoop/tests/e2e/author-cta-flow.spec.js` | `POST /api/users/:id/follow` | `구현됨` | 모바일 `src/screens/Author.tsx`, `src/services/userService.ts`에 follow 버튼과 토글 연결을 반영했다 | 유지 |
 | 최신 글 CTA | `../glsoop/public/js/author.js`, `../glsoop/tests/e2e/author-cta-flow.spec.js` | `GET /api/users/:id/posts` | `구현됨` | 모바일 `src/screens/Author.tsx`에서 최신 글 읽기 CTA를 추가했다 | 유지 |
 | 소개문 접기/펼치기 | `../glsoop/public/js/author.js` | `GET /api/users/:id/profile` | `구현됨` | 모바일 `src/screens/Author.tsx`에서 소개문 더보기/접기 토글을 반영했다 | 유지 |
@@ -459,3 +457,4 @@
 - `2026-03-21`: 서버 `scripts/e2e_author_posts_contract.js`를 추가해 작가 글 목록의 `newest/oldest/likes`, `offset`, `has_more` 계약을 로컬 동등 환경에서 검증했고 실제로 통과시켰다.
 - `2026-03-21`: 모바일 `e2e/signup-flow.spec.ts`를 추가하고 `src/screens/AuthSignup.tsx`에 안정적인 `testID`를 보강해 `회원가입 -> OTP 입력 -> 자동 로그인 -> 홈 이동` 화면 흐름을 실제 웹 E2E로 통과시켰다.
 - `2026-03-21`: 모바일 `e2e/auth-session-web.spec.ts`를 추가하고 `src/screens/AuthLogin.tsx`에 안정적인 `testID`를 보강해 웹 기준 `로그인 -> 새로고침 후 세션 유지`와 `저장된 세션 401 -> 토큰 정리 -> auth 복귀` 흐름을 실제 E2E로 통과시켰다.
+- `2026-03-21`: 모바일 `e2e/author-flow.spec.ts`를 추가하고 `src/screens/Author.tsx`에 정렬 칩 `testID`를 보강해 작가 화면의 `정렬 전환 -> 더보기 -> 재진입 refetch` 흐름을 실제 웹 E2E로 통과시켰다.
