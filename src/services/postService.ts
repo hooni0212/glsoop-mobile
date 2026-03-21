@@ -1,5 +1,6 @@
 import type { PostType } from "@/types/post";
 import { apiDelete, apiGet, apiPost, apiPut } from "@/lib/api";
+import { normalizePostEditorText } from "@/lib/postContent";
 
 export type CreatePostInput = {
   type: PostType;
@@ -90,7 +91,7 @@ export async function getEditablePost(postId: string): Promise<{
   return {
     id: String(res.post.id),
     title: typeof res.post.title === "string" ? res.post.title : "",
-    content: typeof res.post.content === "string" ? res.post.content : "",
+    content: normalizePostEditorText(res.post.content),
     category: (res.post.category ?? "short") as PostType,
     hashtags: Array.isArray(res.post.hashtags)
       ? res.post.hashtags.map(String).filter(Boolean)

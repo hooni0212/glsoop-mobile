@@ -25,7 +25,11 @@ export function WritePreviewCard({
   const footerText = hashtags.length > 0 ? hashtags.map((item) => `#${item}`).join(" ") : categoryLabel;
 
   return (
-    <View style={styles.previewCard}>
+    <View style={styles.previewStage}>
+      <View style={styles.previewStageHeader}>
+        <Text style={styles.previewStageEyebrow}>BOOK PREVIEW</Text>
+        <Text style={styles.previewStageHint}>모바일에서 보일 인쇄 분위기를 미리 확인해요.</Text>
+      </View>
       <View style={styles.previewPaper}>
         <Text
           style={[

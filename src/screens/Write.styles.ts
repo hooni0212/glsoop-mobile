@@ -1,13 +1,19 @@
-import { StyleSheet } from "react-native";
+import { Platform, StyleSheet } from "react-native";
 import { tokens } from "@/theme/tokens";
 
 export function createWriteStyles() {
+  const paperFont = Platform.select({
+    ios: "Georgia",
+    android: "serif",
+    default: "Georgia",
+  });
+
   return StyleSheet.create({
     flex: { flex: 1 },
 
     safe: {
       flex: 1,
-      backgroundColor: tokens.colors.bgMuted,
+      backgroundColor: "#ebe4d8",
     },
 
     topBar: {
@@ -17,8 +23,8 @@ export function createWriteStyles() {
       alignItems: "center",
       justifyContent: "space-between",
       borderBottomWidth: 1,
-      borderBottomColor: tokens.colors.border,
-      backgroundColor: tokens.colors.bgMuted,
+      borderBottomColor: "rgba(79,58,33,0.10)",
+      backgroundColor: "rgba(250,246,238,0.92)",
     },
     topBarActions: {
       flexDirection: "row",
@@ -66,6 +72,7 @@ export function createWriteStyles() {
       flex: 1,
       paddingHorizontal: tokens.space.lg,
       paddingTop: tokens.space.md,
+      paddingBottom: tokens.space.lg,
     },
     center: {
       alignItems: "center",
@@ -85,6 +92,91 @@ export function createWriteStyles() {
       shadowRadius: 14,
       shadowOffset: { width: 0, height: 8 },
       elevation: 2,
+    },
+
+    editorStage: {
+      marginBottom: 14,
+      borderRadius: 24,
+      padding: 14,
+      backgroundColor: "rgba(92,69,42,0.10)",
+      borderWidth: 1,
+      borderColor: "rgba(86,62,32,0.08)",
+      shadowColor: "#4d3920",
+      shadowOpacity: 0.12,
+      shadowRadius: 24,
+      shadowOffset: { width: 0, height: 14 },
+      elevation: 3,
+    },
+    editorPaper: {
+      borderRadius: 22,
+      paddingHorizontal: 22,
+      paddingTop: 20,
+      paddingBottom: 18,
+      minHeight: 420,
+      backgroundColor: "#f7efdf",
+      borderWidth: 1,
+      borderColor: "rgba(88,63,35,0.10)",
+      shadowColor: "#8c6a3c",
+      shadowOpacity: 0.08,
+      shadowRadius: 12,
+      shadowOffset: { width: 0, height: 8 },
+      elevation: 2,
+    },
+    editorPaperHeader: {
+      marginBottom: 14,
+      gap: 4,
+    },
+    editorPaperEyebrow: {
+      fontSize: 11,
+      letterSpacing: 1.4,
+      fontWeight: "900",
+      color: "rgba(80,58,32,0.55)",
+    },
+    editorPaperHint: {
+      fontSize: 12,
+      fontWeight: "700",
+      color: "rgba(80,58,32,0.64)",
+      letterSpacing: -0.2,
+    },
+    editorPlaceholder: {
+      color: "rgba(80,58,32,0.34)",
+    },
+    paperTitleInput: {
+      color: "#2e2418",
+      fontWeight: "700",
+      letterSpacing: -0.6,
+      paddingVertical: 4,
+      fontFamily: paperFont,
+    },
+    paperRule: {
+      height: 1,
+      backgroundColor: "rgba(98,73,41,0.12)",
+      marginTop: 12,
+      marginBottom: 18,
+    },
+    paperBodyInput: {
+      minHeight: 250,
+      color: "#2f2519",
+      paddingVertical: 4,
+      textAlignVertical: "top",
+      fontWeight: "500",
+      fontFamily: paperFont,
+    },
+    paperFooterRule: {
+      height: 1,
+      backgroundColor: "rgba(98,73,41,0.10)",
+      marginTop: 14,
+      marginBottom: 12,
+    },
+    paperFooterText: {
+      color: "rgba(76,57,34,0.62)",
+      fontSize: 12,
+      textAlign: "right",
+      fontWeight: "700",
+      fontFamily: paperFont,
+    },
+    editorControlDock: {
+      marginTop: 12,
     },
 
     label: {
@@ -128,9 +220,9 @@ export function createWriteStyles() {
       marginTop: 12,
       borderRadius: 14,
       padding: 12,
-      backgroundColor: tokens.colors.surface,
+      backgroundColor: "rgba(255,250,244,0.86)",
       borderWidth: 1,
-      borderColor: tokens.colors.border,
+      borderColor: "rgba(86,62,32,0.08)",
     },
     metaChipRow: {
       flexDirection: "row",
@@ -194,6 +286,29 @@ export function createWriteStyles() {
     layoutBlock: {
       marginTop: 10,
     },
+    layoutDock: {
+      borderRadius: 18,
+      padding: 14,
+      backgroundColor: "rgba(255,249,241,0.92)",
+      borderWidth: 1,
+      borderColor: "rgba(86,62,32,0.08)",
+    },
+    layoutDockHeader: {
+      marginBottom: 8,
+      gap: 4,
+    },
+    layoutDockTitle: {
+      fontSize: 13,
+      fontWeight: "900",
+      color: "#3b2d1d",
+      letterSpacing: -0.2,
+    },
+    layoutDockHint: {
+      fontSize: 12,
+      fontWeight: "700",
+      color: "rgba(76,57,34,0.62)",
+      letterSpacing: -0.2,
+    },
     layoutOptionRow: {
       flexDirection: "row",
       flexWrap: "wrap",
@@ -220,36 +335,57 @@ export function createWriteStyles() {
     layoutOptionTextActive: {
       color: tokens.colors.green900,
     },
-    previewCard: {
-      borderRadius: tokens.radius.lg,
-      padding: tokens.space.md,
-      backgroundColor: tokens.colors.white,
+    previewStage: {
+      borderRadius: 24,
+      padding: 14,
+      backgroundColor: "rgba(92,69,42,0.10)",
       borderWidth: 1,
-      borderColor: tokens.colors.border,
+      borderColor: "rgba(86,62,32,0.08)",
       marginBottom: 12,
     },
+    previewStageHeader: {
+      marginBottom: 10,
+      paddingHorizontal: 4,
+    },
+    previewStageEyebrow: {
+      fontSize: 11,
+      letterSpacing: 1.4,
+      fontWeight: "900",
+      color: "rgba(80,58,32,0.55)",
+    },
+    previewStageHint: {
+      marginTop: 4,
+      fontSize: 12,
+      fontWeight: "700",
+      color: "rgba(80,58,32,0.64)",
+    },
     previewPaper: {
-      minHeight: 280,
-      borderRadius: tokens.radius.lg,
-      backgroundColor: "#f7f1e7",
+      minHeight: 320,
+      borderRadius: 22,
+      backgroundColor: "#f7efdf",
       paddingHorizontal: 22,
       paddingVertical: 26,
       justifyContent: "space-between",
       gap: 16,
+      borderWidth: 1,
+      borderColor: "rgba(88,63,35,0.10)",
     },
     previewTitle: {
-      color: tokens.colors.text,
-      fontWeight: "800",
+      color: "#2e2418",
+      fontWeight: "700",
       letterSpacing: -0.3,
+      fontFamily: paperFont,
     },
     previewBody: {
       flex: 1,
-      color: tokens.colors.text,
-      fontWeight: "600",
+      color: "#2f2519",
+      fontWeight: "500",
+      fontFamily: paperFont,
     },
     previewFooter: {
-      color: tokens.colors.textMuted,
+      color: "rgba(76,57,34,0.62)",
       fontWeight: "700",
+      fontFamily: paperFont,
     },
 
     // --- Modal (cross-platform confirm UI) ---

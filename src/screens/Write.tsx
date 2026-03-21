@@ -88,6 +88,10 @@ export default function Write() {
     return "짧은 구절";
   }, [selectedType]);
 
+  const footerText = useMemo(() => {
+    return hashtagChips.length > 0 ? hashtagChips.map((item) => `#${item}`).join(" ") : categoryLabel;
+  }, [categoryLabel, hashtagChips]);
+
   const closeDraftPrompt = useCallback(() => setDraftPrompt(null), []);
 
   const openDraftPrompt = useCallback((next: Omit<NonNullable<ConfirmState>, "visible">) => {
@@ -437,10 +441,22 @@ export default function Write() {
             <WriteEditor
               title={title}
               body={body}
+              footerText={footerText}
+              layout={layout}
               onChangeTitle={setTitle}
               onChangeBody={setBody}
               styles={styles}
-            />
+            >
+              <WriteLayoutSection
+                styles={styles}
+                layout={layout}
+                onChangeTitleAlign={updateTitleAlign}
+                onChangeBodyAlign={updateBodyAlign}
+                onChangeTitleScale={updateTitleScale}
+                onChangeBodyScale={updateBodyScale}
+                onToggleFooter={toggleFooter}
+              />
+            </WriteEditor>
           )}
 
           <WriteMetaSection
@@ -450,16 +466,6 @@ export default function Write() {
             hashtagsInput={hashtagsInput}
             hashtagChips={hashtagChips}
             onChangeHashtagsInput={setHashtagsInput}
-          />
-
-          <WriteLayoutSection
-            styles={styles}
-            layout={layout}
-            onChangeTitleAlign={updateTitleAlign}
-            onChangeBodyAlign={updateBodyAlign}
-            onChangeTitleScale={updateTitleScale}
-            onChangeBodyScale={updateBodyScale}
-            onToggleFooter={toggleFooter}
           />
 
           <WriteStates styles={styles} confirm={activeConfirm} />

@@ -64,11 +64,11 @@ export function WriteLayoutSection({
   onToggleFooter,
 }: Props) {
   return (
-    <View style={styles.metaCard}>
-      <Text style={styles.label}>레이아웃</Text>
-      <Text style={styles.hint}>웹 드래그 편집기 대신 모바일용 정렬과 크기 조절을 먼저 지원해요.</Text>
-
-      <View style={styles.metaDivider} />
+    <View style={styles.layoutDock}>
+      <View style={styles.layoutDockHeader}>
+        <Text style={styles.layoutDockTitle}>레이아웃</Text>
+        <Text style={styles.layoutDockHint}>에디터 아래에서 바로 인쇄 느낌을 조절해요.</Text>
+      </View>
 
       <OptionRow
         label="제목 정렬"
