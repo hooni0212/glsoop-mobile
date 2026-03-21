@@ -83,7 +83,7 @@
 
 | Gap-ID | 현재 상태 | 마지막 반영일 | 근거 | 남은 이슈 |
 | --- | --- | --- | --- | --- |
-| `AUTH-P0-01` | `진행 중` | `2026-03-21` | `src/screens/AuthSignup.tsx`에 runtime-config 연동, 필수 동의 UI, signup legal fields, field error 표시를 반영했고 `tests/e2e/auth-signup-consent.spec.js`가 통과해 signup consent/verify-email 서버 흐름을 다시 확인했다 | 실제 모바일 앱 기준 `signup -> OTP 입력 -> 자동 로그인` 종단 검증이 남아 있다 |
+| `AUTH-P0-01` | `진행 중` | `2026-03-21` | `src/screens/AuthSignup.tsx`에 runtime-config 연동, 필수 동의 UI, signup legal fields, field error 표시를 반영했고 `tests/e2e/auth-signup-consent.spec.js`, `scripts/e2e_signup_outbox.js`가 통과해 `signup -> verify-email -> login -> /api/me` 서버 동등 흐름을 다시 확인했다 | 실제 모바일 앱 기준 `signup -> OTP 입력 -> 자동 로그인` 화면 종단 검증이 남아 있다 |
 | `AUTH-P0-02` | `반영됨` | `2026-03-21` | 서버 로그인 응답에 `token`을 포함하고, 모바일 `src/screens/AuthLogin.tsx`, `src/screens/AuthSignup.tsx`에서 `web`은 쿠키 세션, `ios/android`는 Bearer 토큰으로 분기하도록 반영했다. 서버 `tests/e2e/auth-security.spec.js`, `tests/e2e/auth-session-management.spec.js`도 최신 정책 기준으로 통과했다 | 실제 기기 기준 로그인 해피패스와 만료 시나리오 런타임 검증 필요 |
 | `AUTH-P0-03` | `반영됨` | `2026-03-21` | 모바일 `src/lib/authToken.ts`를 `expo-secure-store` 기반으로 전환하고 `web`만 AsyncStorage를 유지했다. 서버 인증/세션 E2E가 최신 정책 기준으로 통과했다 | secure storage 기반 앱 재기동/만료 복구 검증 필요 |
 | `AUTHOR-P0-01` | `진행 중` | `2026-03-21` | `src/features/users/useAuthorPosts.ts`를 `offset/limit + has_more`와 `sort` 기준으로 재설계했고, `src/screens/Author.tsx`에 팔로우/정렬/소개 토글/최신 글 CTA를 반영했다. `npm run lint` 통과 | 실제 목록/더보기/정렬 전환 기준 런타임 검증 필요 |
@@ -162,7 +162,7 @@
 ### 4.6 현재 남은 핵심 작업
 
 - `AUTH-P0-01`
-  - 서버 signup consent/verify-email E2E는 통과했다. 남은 건 실제 모바일 앱 기준 `signup -> OTP 인증 -> 자동 로그인` 해피패스 검증
+  - 서버 signup consent/verify-email E2E와 `signup -> verify-email -> login -> /api/me` outbox 스크립트는 통과했다. 남은 건 실제 모바일 앱 기준 `signup -> OTP 인증 -> 자동 로그인` 화면 해피패스 검증
 - `AUTH-P0-02`, `AUTH-P0-03`
   - 서버 인증/세션 E2E는 통과했다. 남은 건 실제 기기 기준 `login -> 앱 재기동 -> /api/me 유지 -> 401/만료 시 auth 복귀` 검증
 - `AUTHOR-P0-01`
@@ -184,8 +184,8 @@
 | --- | --- | --- | --- | --- | --- |
 | 로그인 | `../glsoop/public/html/login.html`, `../glsoop/public/js/login.js` | `../glsoop/routes/authRoutes.js` `POST /login` | `구현됨` | 서버는 쿠키 세션을 유지하면서 응답 `token`을 함께 반환하고, 모바일은 `web`은 쿠키 세션, `ios/android`는 Bearer 토큰으로 분기해 처리한다 | 유지 |
 | 로그인 후 guard/redirect | `../glsoop/routes/authPageRoutes.js`, `../glsoop/tests/e2e/auth-page-guard.spec.js` | `GET /api/me` | `부분 구현` | 모바일 `src/auth/AuthGate.tsx`와 auth 화면들에 `redirect` 기반 복귀를 반영했다. 다만 서버 웹의 모든 `next/from` 시나리오와 동일한 수준의 종단 검증은 남아 있다 | P2 |
-| 회원가입 + 이메일 인증 | `../glsoop/public/html/signup.html`, `../glsoop/public/js/signup.js`, `../glsoop/public/js/verify-email.js` | `POST /signup`, `POST /verify-email`, `POST /verify-email/resend` | `부분 구현` | OTP 단계 자체는 있으나, 현재 요청 바디가 서버 필수 동의/버전 검증을 통과하지 못해 가입 해피패스가 보장되지 않는다 | P0 |
-| 회원가입 시 법적 동의/버전 검증 | `../glsoop/tests/e2e/auth-signup-consent.spec.js` | `GET /api/runtime-config`, `POST /api/signup` | `부분 구현` | 모바일 가입 화면에 필수 동의와 version payload는 반영했다. 다만 실제 서버 기준 해피패스 검증과 OTP까지 포함한 종단 확인이 남아 있다 | P0 |
+| 회원가입 + 이메일 인증 | `../glsoop/public/html/signup.html`, `../glsoop/public/js/signup.js`, `../glsoop/public/js/verify-email.js` | `POST /signup`, `POST /verify-email`, `POST /verify-email/resend` | `부분 구현` | 모바일 가입 화면과 OTP 단계는 반영했고, 서버 `tests/e2e/auth-signup-consent.spec.js`, `scripts/e2e_signup_outbox.js` 기준으로 `signup -> verify-email -> login -> /api/me` 검증도 통과했다. 남은 건 실제 모바일 화면에서의 자동 로그인 종단 확인이다 | P0 |
+| 회원가입 시 법적 동의/버전 검증 | `../glsoop/tests/e2e/auth-signup-consent.spec.js` | `GET /api/runtime-config`, `POST /api/signup` | `부분 구현` | 모바일 가입 화면에 필수 동의와 version payload를 반영했고, 서버 consent E2E와 signup outbox 스크립트 기준으로 legal fields 해피패스를 재확인했다. 남은 건 모바일 화면 기준 종단 검증이다 | P0 |
 | 비밀번호 찾기/재설정 요청 | `../glsoop/public/html/forgot-password.html`, `../glsoop/public/js/forgot-password.js` | `POST /api/password-reset-request` | `부분 구현` | 모바일 `src/screens/AuthLogin.tsx`, `src/screens/AuthForgotPassword.tsx`에 진입점과 요청 화면을 반영했고, `scripts/e2e_password_reset_outbox.js` 기준 로컬 동등 환경 요청/메일 생성 검증이 통과했다. 남은 건 실제 메일 클릭 딥링크 종단 검증이다 | P2 |
 | 재설정 토큰 검증/새 비밀번호 저장 | `../glsoop/public/html/reset-password.html`, `../glsoop/public/js/reset-password.js` | `POST /api/password-reset/validate`, `POST /api/password-reset` | `부분 구현` | 모바일 `src/screens/AuthResetPassword.tsx`에서 토큰 검증과 새 비밀번호 저장 화면을 반영했고, 서버 메일도 웹 fallback과 앱 딥링크(`glsoopmobile://reset-password?token=...`)를 함께 제공하도록 맞췄다. `scripts/e2e_password_reset_outbox.js` 기준 reset까지 로컬 동등 환경 검증이 통과했다 | P2 |
 | 전체 로그아웃 | `../glsoop/public/js/mypage.js`, `../glsoop/tests/e2e/mypage-redesign.spec.js` | `POST /api/logout-all` | `구현됨` | 모바일 `src/screens/Me.tsx`에서 전체 로그아웃 버튼과 동작을 반영했다 | 유지 |
@@ -457,3 +457,4 @@
 - `2026-03-21`: 서버 `tests/e2e/auth-security.spec.js`, `tests/e2e/auth-session-management.spec.js`를 현재 로그인 응답 계약(`token` 포함) 기준으로 갱신했고, 두 테스트 묶음이 모두 통과했다.
 - `2026-03-21`: 서버 `tests/e2e/auth-signup-consent.spec.js`를 실행해 signup consent/verify-email 서버 흐름을 다시 확인했고 6개 테스트가 모두 통과했다.
 - `2026-03-21`: 서버 `scripts/e2e_password_reset_outbox.js`를 실행해 비밀번호 재설정 요청, outbox 메일 생성, token 검증, 비밀번호 변경까지 로컬 동등 환경에서 통과함을 확인했다.
+- `2026-03-21`: 서버 `services/mailer.js`, `routes/authRoutes.js`, `scripts/e2e_signup_outbox.js`를 정리해 signup OTP도 outbox 기반으로 검증 가능하게 만들었고, `signup -> verify-email -> login -> /api/me` 로컬 동등 흐름을 실제로 통과시켰다.
