@@ -8,6 +8,7 @@ import { AppError } from "@/components/state/AppError";
 import { AppLoading } from "@/components/state/AppLoading";
 import { buildAuthRoute } from "@/lib/authRedirect";
 import { useToast } from "@/feedback/ToastProvider";
+import { refreshMyCosmetics } from "@/features/cosmetics/useMyCosmetics";
 import { trackGrowthTelemetry, toGrowthTelemetryError } from "@/features/growth/growthTelemetry";
 import type { GrowthQuest } from "@/features/growth/useGrowthData";
 import { useGrowthData } from "@/features/growth/useGrowthData";
@@ -122,6 +123,7 @@ export default function QuestsScreen() {
         showToast(message, { tone: "success" });
 
         if (result.gainedCosmetics.length > 0) {
+          await refreshMyCosmetics(true).catch(() => {});
           Alert.alert(
             "코스메틱 획득",
             "방금 받은 코스메틱을 바로 프로필에 적용해볼까요?",

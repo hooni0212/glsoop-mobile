@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { getAuthToken, COOKIE_SESSION_TOKEN } from "@/lib/authToken";
 import type { PostType } from "@/types/post";
 
 export type WriteDraft = {
@@ -8,6 +9,7 @@ export type WriteDraft = {
   category?: PostType;
   mode?: "create" | "edit";
   postId?: string;
+  authNamespace?: string;
   updatedAt: number; // epoch ms
   expiresAt: number;
 };
@@ -17,6 +19,17 @@ const DRAFTS_KEY = "glsoop:write:drafts:v1";
 // NOTE: Keep drafts reasonably small. This app stores plain text only (no images).
 const MAX_DRAFTS = 30;
 const DRAFT_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+
+function toAuthNamespace(token: string | null) {
+  if (!token) return "anon";
+  if (token === COOKIE_SESSION_TOKEN) return "cookie_session";
+  return `bearer:${token.slice(0, 16)}`;
+}
+
+async function getCurrentAuthNamespace() {
+  const token = await getAuthToken();
+  return toAuthNamespace(token);
+}
 
 function safeJsonParse<T>(raw: string | null): T | null {
   if (!raw) return null;
@@ -41,6 +54,10 @@ function normalizeDraft(input: any): WriteDraft | null {
       : undefined;
   const mode = input.mode === "edit" ? "edit" : "create";
   const postId = typeof input.postId === "string" && input.postId.trim() ? input.postId.trim() : undefined;
+  const authNamespace =
+    typeof input.authNamespace === "string" && input.authNamespace.trim()
+      ? input.authNamespace.trim()
+      : "anon";
   const updatedAt =
     typeof input.updatedAt === "number" ? input.updatedAt : Date.now();
   const expiresAt =
@@ -48,7 +65,7 @@ function normalizeDraft(input: any): WriteDraft | null {
 
   if (expiresAt <= Date.now()) return null;
 
-  return { id, title, body, category, mode, postId, updatedAt, expiresAt };
+  return { id, title, body, category, mode, postId, authNamespace, updatedAt, expiresAt };
 }
 
 function uuidLike(): string {
@@ -91,7 +108,9 @@ async function saveAll(drafts: WriteDraft[]): Promise<void> {
 
 export async function listWriteDrafts(): Promise<WriteDraft[]> {
   try {
-    return await loadAll();
+    const namespace = await getCurrentAuthNamespace();
+    const drafts = await loadAll();
+    return drafts.filter((draft) => (draft.authNamespace ?? "anon") === namespace);
   } catch {
     return [];
   }
@@ -100,8 +119,10 @@ export async function listWriteDrafts(): Promise<WriteDraft[]> {
 export async function loadWriteDraftById(id: string): Promise<WriteDraft | null> {
   if (!id) return null;
   try {
+    const namespace = await getCurrentAuthNamespace();
     const drafts = await loadAll();
-    return drafts.find((d) => d.id === id) ?? null;
+    const scoped = drafts.filter((draft) => (draft.authNamespace ?? "anon") === namespace);
+    return scoped.find((d) => d.id === id) ?? null;
   } catch {
     return null;
   }
@@ -109,8 +130,10 @@ export async function loadWriteDraftById(id: string): Promise<WriteDraft | null>
 
 export async function loadLatestWriteDraft(): Promise<WriteDraft | null> {
   try {
+    const namespace = await getCurrentAuthNamespace();
     const drafts = await loadAll();
-    return drafts[0] ?? null;
+    const scoped = drafts.filter((draft) => (draft.authNamespace ?? "anon") === namespace);
+    return scoped[0] ?? null;
   } catch {
     return null;
   }
@@ -129,6 +152,7 @@ export async function upsertWriteDraft(input: {
 }): Promise<string> {
   const id = buildDraftId(input);
   const mode = input.mode === "edit" ? "edit" : "create";
+  const authNamespace = await getCurrentAuthNamespace();
   const payload: WriteDraft = {
     id,
     title: input.title ?? "",
@@ -136,6 +160,7 @@ export async function upsertWriteDraft(input: {
     category: input.category,
     mode,
     postId: typeof input.postId === "string" ? input.postId : undefined,
+    authNamespace,
     updatedAt: Date.now(),
     expiresAt: Date.now() + DRAFT_TTL_MS,
   };

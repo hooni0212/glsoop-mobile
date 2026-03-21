@@ -159,6 +159,23 @@
 - editor 레이아웃 편집/미리보기 강화
 - 성장 `top_posts`를 실제 데이터 중심으로 고도화
 
+### 4.6 현재 남은 핵심 작업
+
+- `AUTH-P0-01`
+  - 실제 서버 기준 `signup -> OTP 인증 -> 자동 로그인` 해피패스 검증
+- `AUTH-P0-02`, `AUTH-P0-03`
+  - 실제 기기 기준 `login -> 앱 재기동 -> /api/me 유지 -> 401/만료 시 auth 복귀` 검증
+- `AUTHOR-P0-01`
+  - 작가 글 목록 `loadMore`, `정렬 전환`, `refresh` 런타임 검증
+- 비밀번호 재설정
+  - 메일의 웹 fallback + 앱 딥링크는 반영했고, 실제 메일 클릭에서 앱 `reset-password` 화면으로 복귀하는 종단 검증이 남아 있음
+- 게시글 공유
+  - 모바일 공유 옵션 모달은 반영했지만 웹 수준의 세부 내보내기 표현은 남아 있음
+- 작성기
+  - 드래그 기반 레이아웃 편집 고도화는 아직 없음
+- 성장/코스메틱
+  - 퀘스트 보상 직후 인벤토리/프로필 반영은 캐시 갱신까지 붙였고, 실제 런타임 검증만 남음
+
 ## 5. 기능군별 상세 표
 
 ### 5.1 인증/계정
@@ -170,7 +187,7 @@
 | 회원가입 + 이메일 인증 | `../glsoop/public/html/signup.html`, `../glsoop/public/js/signup.js`, `../glsoop/public/js/verify-email.js` | `POST /signup`, `POST /verify-email`, `POST /verify-email/resend` | `부분 구현` | OTP 단계 자체는 있으나, 현재 요청 바디가 서버 필수 동의/버전 검증을 통과하지 못해 가입 해피패스가 보장되지 않는다 | P0 |
 | 회원가입 시 법적 동의/버전 검증 | `../glsoop/tests/e2e/auth-signup-consent.spec.js` | `GET /api/runtime-config`, `POST /api/signup` | `부분 구현` | 모바일 가입 화면에 필수 동의와 version payload는 반영했다. 다만 실제 서버 기준 해피패스 검증과 OTP까지 포함한 종단 확인이 남아 있다 | P0 |
 | 비밀번호 찾기/재설정 요청 | `../glsoop/public/html/forgot-password.html`, `../glsoop/public/js/forgot-password.js` | `POST /api/password-reset-request` | `부분 구현` | 모바일 `src/screens/AuthLogin.tsx`, `src/screens/AuthForgotPassword.tsx`에 진입점과 요청 화면을 반영했다. 실제 메일 발송/딥링크 종단 검증은 남아 있다 | P2 |
-| 재설정 토큰 검증/새 비밀번호 저장 | `../glsoop/public/html/reset-password.html`, `../glsoop/public/js/reset-password.js` | `POST /api/password-reset/validate`, `POST /api/password-reset` | `부분 구현` | 모바일 `src/screens/AuthResetPassword.tsx`에서 토큰 검증과 새 비밀번호 저장 화면을 반영했다. 실제 메일 링크에서 앱으로 복귀하는 종단 흐름 검증은 남아 있다 | P2 |
+| 재설정 토큰 검증/새 비밀번호 저장 | `../glsoop/public/html/reset-password.html`, `../glsoop/public/js/reset-password.js` | `POST /api/password-reset/validate`, `POST /api/password-reset` | `부분 구현` | 모바일 `src/screens/AuthResetPassword.tsx`에서 토큰 검증과 새 비밀번호 저장 화면을 반영했고, 서버 메일도 웹 fallback과 앱 딥링크(`glsoopmobile://reset-password?token=...`)를 함께 제공하도록 맞췄다. 남은 건 실제 메일 클릭 종단 검증이다 | P2 |
 | 전체 로그아웃 | `../glsoop/public/js/mypage.js`, `../glsoop/tests/e2e/mypage-redesign.spec.js` | `POST /api/logout-all` | `구현됨` | 모바일 `src/screens/Me.tsx`에서 전체 로그아웃 버튼과 동작을 반영했다 | 유지 |
 | 세션 목록 조회 | `../glsoop/public/js/mypage.js`, `../glsoop/tests/e2e/mypage-redesign.spec.js` | `GET /api/me/sessions` | `구현됨` | 모바일 `src/screens/Me.tsx`에 세션 탭과 목록 노출을 반영했다 | 유지 |
 
@@ -216,7 +233,7 @@
 | 기능 | 서버 웹 구현 근거 | 서버 API 근거 | 모바일 현재 상태 | 차이 메모 | 우선순위 |
 | --- | --- | --- | --- | --- | --- |
 | 새 글 작성 | `../glsoop/public/html/editor.html`, `../glsoop/public/html/editor2.html`, `../glsoop/public/js/editor.js`, `../glsoop/public/js/editor2.js` | `POST /api/posts` | `구현됨` | 모바일 `src/screens/Write.tsx`, `src/services/postService.ts` | 유지 |
-| 로컬 드래프트 저장/복구 | `../glsoop/public/js/editor2.js`, `../glsoop/docs/참고/API-레퍼런스.md` | 서버 draft API 없음, local draft 규칙만 존재 | `부분 구현` | 모바일 `src/services/draftStorage.ts`에서 create/edit draft 분리와 TTL 정리를 반영했다. 남은 차이는 서버 웹의 사용자 토큰 기반 충돌 방지와 더 촘촘한 복구 UX다 | P1 |
+| 로컬 드래프트 저장/복구 | `../glsoop/public/js/editor2.js`, `../glsoop/docs/참고/API-레퍼런스.md` | 서버 draft API 없음, local draft 규칙만 존재 | `부분 구현` | 모바일 `src/services/draftStorage.ts`에서 create/edit draft 분리, TTL 정리, auth namespace 기반 사용자 분리를 반영했다. 남은 차이는 서버 웹의 더 촘촘한 복구 UX다 | P1 |
 | 기존 글 편집 진입 | `../glsoop/public/js/editor2.js` | `GET /api/posts/:id/edit` | `구현됨` | 모바일 `src/screens/Me.tsx`에서 내 글 수정 버튼으로 `src/screens/Write.tsx` 편집 모드에 진입할 수 있다 | 유지 |
 | 수정 저장 | `../glsoop/public/js/editor2.js` | `PUT /api/posts/:id` | `구현됨` | 모바일 `src/screens/Write.tsx`, `src/services/postService.ts`에서 `GET /api/posts/:id/edit` 조회 후 `PUT /api/posts/:id` 저장을 반영했다 | 유지 |
 | 드래프트 삭제 | `../glsoop/public/js/editor2.js` | local draft 규칙 | `구현됨` | 모바일 `deleteWriteDraft`, `clearAllWriteDrafts`, `WriteDrafts` 화면 존재 | 유지 |
@@ -253,7 +270,7 @@
 | 성장 대시보드/요약/업적/퀘스트 | `../glsoop/public/html/growth.html`, `../glsoop/public/js/growth-dashboard.js`, `../glsoop/tests/e2e/growth-dashboard.spec.js` | `/api/growth/dashboard`, `/api/growth/summary`, `/api/growth/achievements`, `/api/quests/active` | `구현됨` | 모바일 `src/features/growth/useGrowthData.ts`, `src/screens/Growth.tsx` 등 | 유지 |
 | 퀘스트 보상 수령 | `../glsoop/public/js/growth-dashboard.js` | `POST /api/quests/:stateId/claim` | `구현됨` | 모바일 reward claim 연결 완료 | 유지 |
 | `top_posts` 노출 | `../glsoop/public/js/growth-dashboard.js` | `GET /api/growth/top-posts`, dashboard 포함 응답 | `구현됨` | 모바일 `src/features/growth/useGrowthData.ts`, `src/screens/Growth.tsx`, `src/components/growth/TopPostsList.tsx`에서 dashboard/fallback 모두 같은 노출 규칙을 쓰고, 데이터가 없을 때는 빈 상태 문구를 보여준다 | 유지 |
-| 퀘스트 보상 코스메틱 반영 | `../glsoop/routes/growthRoutes.js`, `../glsoop/routes/cosmeticsRoutes.js` | claim + cosmetics API | `부분 구현` | 모바일 `src/screens/growth/Quests.tsx`에서 보상 수령 직후 `프로필 꾸미기` CTA를 제공한다. 인벤토리 즉시 동기화까지는 별도 검증이 남아 있다 | P2 |
+| 퀘스트 보상 코스메틱 반영 | `../glsoop/routes/growthRoutes.js`, `../glsoop/routes/cosmeticsRoutes.js` | claim + cosmetics API | `부분 구현` | 모바일 `src/screens/growth/Quests.tsx`, `src/features/cosmetics/useMyCosmetics.ts`, `src/screens/ProfileCustomize.tsx`에서 보상 수령 직후 코스메틱 캐시를 새로고침하고 프로필 꾸미기 화면에서 최신 인벤토리를 바로 보도록 보강했다. 남은 건 실제 런타임 검증이다 | P2 |
 | 프로필 코스메틱 적용 | `../glsoop/routes/cosmeticsRoutes.js`, 서버 작가/마이페이지 카드 렌더링 | `GET /api/cosmetics/me`, `PUT /api/me/profile-cosmetics` | `구현됨` | 모바일 `src/screens/ProfileCustomize.tsx`, `src/features/cosmetics/useMyCosmetics.ts` | 유지 |
 
 ## 6. 우선순위 제안
@@ -433,3 +450,6 @@
 - `2026-03-21`: `src/auth/AuthGate.tsx`, `src/lib/authRedirect.ts`, auth 화면들 기준으로 작성기 `redirect` 복귀 흐름이 이미 구현돼 있음을 다시 확인해 `인증 리다이렉트` 항목 상태를 `구현됨`으로 올렸다.
 - `2026-03-21`: `src/lib/authToken.ts`를 `expo-secure-store` 기반으로 전환하고, `src/screens/AuthLogin.tsx`, `src/screens/AuthSignup.tsx`에서 `web`은 쿠키 세션, `ios/android`는 Bearer 토큰을 쓰도록 분기했다. 서버 `routes/authRoutes.js`도 로그인 응답에 `token`을 포함하도록 맞췄다.
 - `2026-03-21`: `src/features/growth/useGrowthData.ts`, `src/screens/Growth.tsx`, `src/components/growth/TopPostsList.tsx`에서 `top_posts`를 `ready/empty/error` 기준으로 단순화하고 pending placeholder를 제거했다.
+- `2026-03-21`: `src/features/cosmetics/useMyCosmetics.ts`, `src/screens/growth/Quests.tsx`, `src/screens/ProfileCustomize.tsx`에서 코스메틱 캐시/리프레시 흐름을 추가해 퀘스트 보상 직후 최신 인벤토리를 빠르게 반영하도록 보강했다.
+- `2026-03-21`: `src/services/draftStorage.ts`에서 write draft를 auth namespace 기준으로 분리해 로그인 상태나 사용자 변경 시 초안이 섞이는 위험을 줄였다.
+- `2026-03-21`: 서버 `routes/authRoutes.js`, `services/mailer.js`와 모바일 `docs/api/auth.md`를 함께 정리해 비밀번호 재설정 메일이 웹 fallback 링크와 앱 딥링크(`glsoopmobile://reset-password?token=...`)를 같이 제공하도록 맞췄다. 남은 건 실제 메일 클릭 종단 검증이다.

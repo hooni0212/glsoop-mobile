@@ -26,38 +26,86 @@ const EMPTY_INVENTORY: CosmeticsInventory = {
   stickers: [],
 };
 
-export function useMyCosmetics(): UseMyCosmeticsResult {
-  const [inventory, setInventory] = useState<CosmeticsInventory>(EMPTY_INVENTORY);
-  const [profile, setProfile] = useState<ProfileCosmeticsState>(
-    createEmptyProfileCosmeticsState
-  );
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<AppErrorModel | null>(null);
+type CosmeticsSnapshot = {
+  inventory: CosmeticsInventory;
+  profile: ProfileCosmeticsState;
+  loading: boolean;
+  error: AppErrorModel | null;
+};
 
-  const fetchMyCosmetics = useCallback(async () => {
+const INITIAL_SNAPSHOT: CosmeticsSnapshot = {
+  inventory: EMPTY_INVENTORY,
+  profile: createEmptyProfileCosmeticsState(),
+  loading: false,
+  error: null,
+};
+
+let cosmeticsSnapshot: CosmeticsSnapshot = INITIAL_SNAPSHOT;
+let cosmeticsInflight: Promise<void> | null = null;
+const listeners = new Set<(snapshot: CosmeticsSnapshot) => void>();
+
+function publishSnapshot(next: CosmeticsSnapshot) {
+  cosmeticsSnapshot = next;
+  listeners.forEach((listener) => listener(next));
+}
+
+export async function refreshMyCosmetics(force = false): Promise<void> {
+  if (cosmeticsInflight && !force) {
+    await cosmeticsInflight;
+    return;
+  }
+
+  cosmeticsInflight = (async () => {
+    publishSnapshot({
+      ...cosmeticsSnapshot,
+      loading: true,
+      error: null,
+    });
+
     try {
-      setLoading(true);
-      setError(null);
-
       const response = await getMyCosmetics();
-      setInventory(response.inventory);
-      setProfile(response.profile);
+      publishSnapshot({
+        inventory: response.inventory,
+        profile: response.profile,
+        loading: false,
+        error: null,
+      });
     } catch (err) {
-      setError(normalizeApiError(err));
-    } finally {
-      setLoading(false);
+      publishSnapshot({
+        ...cosmeticsSnapshot,
+        loading: false,
+        error: normalizeApiError(err),
+      });
     }
-  }, []);
+  })().finally(() => {
+    cosmeticsInflight = null;
+  });
+
+  await cosmeticsInflight;
+}
+
+export function useMyCosmetics(): UseMyCosmeticsResult {
+  const [snapshot, setSnapshot] = useState<CosmeticsSnapshot>(cosmeticsSnapshot);
 
   useEffect(() => {
-    fetchMyCosmetics();
-  }, [fetchMyCosmetics]);
+    setSnapshot(cosmeticsSnapshot);
+    const listener = (next: CosmeticsSnapshot) => setSnapshot(next);
+    listeners.add(listener);
+    void refreshMyCosmetics(false);
+    return () => {
+      listeners.delete(listener);
+    };
+  }, []);
+
+  const fetchMyCosmetics = useCallback(async () => {
+    await refreshMyCosmetics(true);
+  }, []);
 
   return {
-    inventory,
-    profile,
-    loading,
-    error,
+    inventory: snapshot.inventory,
+    profile: snapshot.profile,
+    loading: snapshot.loading,
+    error: snapshot.error,
     refetch: fetchMyCosmetics,
   };
 }
