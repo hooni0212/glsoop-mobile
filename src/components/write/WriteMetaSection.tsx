@@ -1,5 +1,6 @@
 import React from "react";
 import { Pressable, Text, TextInput, View } from "react-native";
+import type { PostFontKey } from "@/lib/postContent";
 import type { PostType } from "@/types/post";
 
 type Props = {
@@ -9,12 +10,20 @@ type Props = {
   hashtagsInput: string;
   hashtagChips: string[];
   onChangeHashtagsInput: (value: string) => void;
+  fontKey: PostFontKey;
+  onChangeFontKey: (value: PostFontKey) => void;
 };
 
 const CATEGORY_ITEMS: { type: PostType; label: string }[] = [
   { type: "poem", label: "시" },
   { type: "essay", label: "에세이" },
   { type: "short", label: "짧은 구절" },
+];
+
+const FONT_ITEMS: { key: PostFontKey; label: string }[] = [
+  { key: "serif", label: "명조" },
+  { key: "sans", label: "고딕" },
+  { key: "hand", label: "손글씨" },
 ];
 
 export function WriteMetaSection({
@@ -24,6 +33,8 @@ export function WriteMetaSection({
   hashtagsInput,
   hashtagChips,
   onChangeHashtagsInput,
+  fontKey,
+  onChangeFontKey,
 }: Props) {
   return (
     <View style={styles.metaCard}>
@@ -48,6 +59,30 @@ export function WriteMetaSection({
         })}
       </View>
       <Text style={styles.hint}>카테고리를 선택해야 게시할 수 있어요.</Text>
+
+      <View style={styles.metaDivider} />
+
+      <Text style={styles.label}>폰트</Text>
+      <View style={styles.metaChipRow}>
+        {FONT_ITEMS.map((item) => {
+          const active = fontKey === item.key;
+          return (
+            <Pressable
+              key={item.key}
+              onPress={() => onChangeFontKey(item.key)}
+              style={[styles.metaChip, active && styles.metaChipActive]}
+              accessibilityRole="button"
+              accessibilityLabel={`${item.label} 폰트 선택`}
+              testID={`write-font-${item.key}`}
+            >
+              <Text style={[styles.metaChipText, active && styles.metaChipTextActive]}>
+                {item.label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+      <Text style={styles.hint}>서버 프리뷰와 상세 렌더에 같은 폰트 메타를 전달해요.</Text>
 
       <View style={styles.metaDivider} />
 

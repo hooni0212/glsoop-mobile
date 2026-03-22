@@ -1,4 +1,5 @@
 import { buildApiUrl } from "@/lib/api";
+import { withPostFontMeta, type PostFontKey } from "@/lib/postContent";
 import { buildLayoutPayload, type WriteLayoutModel } from "@/lib/postLayout";
 
 type PreviewInput = {
@@ -8,6 +9,7 @@ type PreviewInput = {
   createdAt?: string;
   layout: WriteLayoutModel;
   template?: "paper01" | "paper02";
+  fontKey?: PostFontKey;
 };
 
 function simpleHash(seed: string) {
@@ -30,11 +32,12 @@ export function buildFeedPreviewUrl({
   createdAt,
   layout,
   template = "paper01",
+  fontKey = "serif",
 }: PreviewInput) {
   const payload = buildLayoutPayload(layout);
   const query = new URLSearchParams();
   query.set("title", title || "미리보기 제목");
-  query.set("content", content || "");
+  query.set("content", withPostFontMeta(content || "", fontKey));
   query.set("category", category || "short");
   query.set("template", template);
   query.set("scale", "2");

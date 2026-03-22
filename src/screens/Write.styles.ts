@@ -7,6 +7,16 @@ export function createWriteStyles() {
     android: "serif",
     default: "Georgia",
   });
+  const sansFont = Platform.select({
+    ios: "System",
+    android: "sans-serif",
+    default: "System",
+  });
+  const handFont = Platform.select({
+    ios: "Snell Roundhand",
+    android: "cursive",
+    default: "cursive",
+  });
 
   return StyleSheet.create({
     flex: { flex: 1 },
@@ -163,7 +173,6 @@ export function createWriteStyles() {
       color: "#3c342d",
       fontWeight: "700",
       letterSpacing: -0.3,
-      fontFamily: paperFont,
       height: "100%",
       padding: 0,
       textAlignVertical: "top",
@@ -171,7 +180,6 @@ export function createWriteStyles() {
     bookBodyInput: {
       color: "#524941",
       fontWeight: "500",
-      fontFamily: paperFont,
       height: "100%",
       padding: 0,
       textAlignVertical: "top",
@@ -207,7 +215,15 @@ export function createWriteStyles() {
     bookFooterText: {
       color: "rgba(81,65,49,0.72)",
       fontWeight: "700",
+    },
+    bookFontSerif: {
       fontFamily: paperFont,
+    },
+    bookFontSans: {
+      fontFamily: sansFont,
+    },
+    bookFontHand: {
+      fontFamily: handFont,
     },
     editorPlaceholder: {
       color: "rgba(80,58,32,0.34)",

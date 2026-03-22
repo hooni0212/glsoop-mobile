@@ -11,6 +11,7 @@ import {
   type PanResponderGestureState,
 } from "react-native";
 
+import type { PostFontKey } from "@/lib/postContent";
 import type { LayoutBox, LayoutBoxId, WriteLayoutModel } from "@/lib/postLayout";
 
 const PAPER_SOURCE = require("../../../assets/images/feed-templates/paper-source-01.jpg");
@@ -19,6 +20,7 @@ type Props = {
   title: string;
   body: string;
   footerText: string;
+  fontKey: PostFontKey;
   layout: WriteLayoutModel;
   activeBoxId: LayoutBoxId;
   onSelectBox: (boxId: LayoutBoxId) => void;
@@ -151,6 +153,7 @@ export function WriteEditor({
   title,
   body,
   footerText,
+  fontKey,
   layout,
   activeBoxId,
   onSelectBox,
@@ -161,6 +164,12 @@ export function WriteEditor({
   children,
 }: Props) {
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
+
+  const fontFamily = useMemo(() => {
+    if (fontKey === "sans") return styles.bookFontSans;
+    if (fontKey === "hand") return styles.bookFontHand;
+    return styles.bookFontSerif;
+  }, [fontKey, styles.bookFontHand, styles.bookFontSans, styles.bookFontSerif]);
 
   const onCanvasLayout = (event: LayoutChangeEvent) => {
     const { width, height } = event.nativeEvent.layout;
@@ -202,6 +211,7 @@ export function WriteEditor({
               multiline
               style={[
                 styles.bookTitleInput,
+                fontFamily,
                 {
                   textAlign: layout.titleStyle.align,
                   fontSize: 18 * layout.titleStyle.fontScale,
@@ -230,6 +240,7 @@ export function WriteEditor({
               multiline
               style={[
                 styles.bookBodyInput,
+                fontFamily,
                 {
                   textAlign: layout.bodyStyle.align,
                   fontSize: 13 * layout.bodyStyle.fontScale,
@@ -256,6 +267,7 @@ export function WriteEditor({
                 numberOfLines={2}
                 style={[
                   styles.bookFooterText,
+                  fontFamily,
                   {
                     textAlign: layout.footerStyle.align,
                     fontSize: 10 * layout.footerStyle.fontScale,

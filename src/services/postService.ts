@@ -1,6 +1,11 @@
 import type { PostType } from "@/types/post";
 import { apiDelete, apiGet, apiPost, apiPut } from "@/lib/api";
-import { normalizePostEditorText } from "@/lib/postContent";
+import {
+  extractPostFontKey,
+  normalizePostEditorText,
+  type PostFontKey,
+  withPostFontMeta,
+} from "@/lib/postContent";
 
 export type CreatePostInput = {
   type: PostType;
@@ -10,6 +15,7 @@ export type CreatePostInput = {
   contentFormat?: "plain";
   hashtags?: string[];
   layoutJson?: unknown;
+  fontKey?: PostFontKey;
 };
 
 type CreatePostResponse = {
@@ -33,6 +39,7 @@ type EditablePostResponse = {
     category?: PostType;
     hashtags?: string[];
     layout_json?: unknown;
+    content?: string;
   };
 };
 
@@ -45,7 +52,7 @@ export async function createPost(input: CreatePostInput): Promise<{ postId: stri
   const payload: Record<string, unknown> = {
     type: input.type,
     category: input.category ?? input.type,
-    content: input.content,
+    content: withPostFontMeta(input.content, input.fontKey ?? "serif"),
     content_format: input.contentFormat ?? "plain",
   };
 
@@ -81,6 +88,7 @@ export async function getEditablePost(postId: string): Promise<{
   category: PostType;
   hashtags: string[];
   layoutJson: unknown;
+  fontKey: PostFontKey;
 }> {
   const res = await apiGet<EditablePostResponse>(`/api/posts/${encodeURIComponent(postId)}/edit`);
 
@@ -97,6 +105,7 @@ export async function getEditablePost(postId: string): Promise<{
       ? res.post.hashtags.map(String).filter(Boolean)
       : [],
     layoutJson: res.post.layout_json ?? null,
+    fontKey: extractPostFontKey(res.post.content),
   };
 }
 
@@ -107,10 +116,11 @@ export async function updatePost(input: {
   content: string;
   hashtags?: string[];
   layoutJson?: unknown;
+  fontKey?: PostFontKey;
 }): Promise<void> {
   const res = await apiPut<UpdatePostResponse>(`/api/posts/${encodeURIComponent(input.postId)}`, {
     title: input.title,
-    content: input.content,
+    content: withPostFontMeta(input.content, input.fontKey ?? "serif"),
     category: input.type,
     hashtags: input.hashtags ?? [],
     layout_json: input.layoutJson,

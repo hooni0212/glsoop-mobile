@@ -41,8 +41,8 @@
 | 항목 | 현재 상태 | 마지막 반영일 | 근거 | 남은 이슈 |
 | --- | --- | --- | --- | --- |
 | Expo Go 로그인 오류 | `반영됨` | `2026-03-23` | [authToken.ts](/Users/gimtaehun/2026/workspace/projects/glsoop-mobile/src/lib/authToken.ts)의 `SecureStore` 키를 `glsoop_auth_token_v1`로 변경해 Expo Go/실기기에서 허용되는 키 형식으로 맞춤 | 실제 기기에서 로그인 재확인 필요 |
-| 편집기 vs Post 렌더 불일치 | `미착수` | `-` | 문제 정의만 완료 | 서버 프리뷰 기준으로 편집 화면 재정리 필요 |
-| 모바일 폰트 선택 부재 | `미착수` | `-` | 문제 정의만 완료 | `fontKey` 모델/UI/서버 렌더 정합성 구현 필요 |
+| 편집기 vs Post 렌더 불일치 | `부분 반영` | `2026-03-23` | [Write.tsx](/Users/gimtaehun/2026/workspace/projects/glsoop-mobile/src/screens/Write.tsx)에서 편집 화면 아래에 서버 `/api/feed-images/preview` 기반 라이브 프리뷰를 항상 노출하도록 변경했고, [WritePreviewCard.tsx](/Users/gimtaehun/2026/workspace/projects/glsoop-mobile/src/components/write/WritePreviewCard.tsx)가 같은 `layout_json`/폰트 메타로 최종 결과를 보여주도록 맞춤 | 로컬 편집 오버레이와 서버 렌더 사이의 미세한 줄바꿈/크기 차이는 여전히 남을 수 있음 |
+| 모바일 폰트 선택 부재 | `반영됨` | `2026-03-23` | [WriteMetaSection.tsx](/Users/gimtaehun/2026/workspace/projects/glsoop-mobile/src/components/write/WriteMetaSection.tsx)에 폰트 선택 UI 추가, [postContent.ts](/Users/gimtaehun/2026/workspace/projects/glsoop-mobile/src/lib/postContent.ts)와 [postService.ts](/Users/gimtaehun/2026/workspace/projects/glsoop-mobile/src/services/postService.ts)에서 `<!--FONT:...-->` 메타 저장/복원 반영 | 실기기에서 각 폰트가 의도한 체감으로 보이는지 QA 필요 |
 
 ## 2. 문제 정의
 
@@ -224,6 +224,9 @@
   - [feedImage.ts](/Users/gimtaehun/2026/workspace/projects/glsoop-mobile/src/lib/feedImage.ts)
 - 목표
   - 편집 중/미리보기/Post 상세의 최종 종이 결과를 하나의 시각 기준으로 통일
+- 현재 반영
+  - [Write.tsx](/Users/gimtaehun/2026/workspace/projects/glsoop-mobile/src/screens/Write.tsx)에서 편집 모드일 때도 서버 프리뷰 카드를 함께 노출
+  - [WritePreviewCard.tsx](/Users/gimtaehun/2026/workspace/projects/glsoop-mobile/src/components/write/WritePreviewCard.tsx)가 서버 프리뷰를 최종 결과 기준으로 사용
 
 ### 3순위. 폰트 선택 기능 추가
 
@@ -233,6 +236,11 @@
   - preview/post 렌더 계약
 - 목표
   - 서버와 동일한 폰트 선택 경험 확보
+- 현재 반영
+  - `serif / sans / hand` 선택 UI 추가
+  - 저장 시 `content`에 `<!--FONT:...-->` 메타 포함
+  - 수정 진입 시 기존 글의 폰트 메타를 읽어 복원
+  - 서버 프리뷰와 상세 렌더도 같은 메타를 사용
 
 ## 6. 구현 메모
 
@@ -278,6 +286,6 @@
 
 현재 가장 급한 문제는 `Expo Go 로그인 오류`다. 이건 실사용 자체를 막기 때문에 즉시 수정하는 게 맞다.
 
-그 다음 문제는 `편집기와 Post 상세가 서로 다른 렌더 엔진을 쓰는 구조`다. 사용자는 지금 “서버와 완전히 같은 느낌”을 원하고 있으므로, 최종 시각 기준은 서버 렌더 프리뷰로 통일하는 방향이 적합하다.
+그 다음 문제는 `편집기와 Post 상세가 서로 다른 렌더 엔진을 쓰는 구조`다. 현재는 서버 프리뷰를 편집 화면 아래에 상시 노출해서 최종 결과 기준을 맞추기 시작했다.
 
-마지막으로 `폰트 선택`은 아직 모바일에 빠져 있는 서버 기능이다. 이 항목은 단순 UI 추가가 아니라 `fontKey 저장/복원/렌더 반영`까지 한 세트로 봐야 한다.
+마지막으로 `폰트 선택`은 이제 모바일에도 반영됐고, `fontKey 저장/복원/렌더 반영`까지 한 세트로 연결됐다. 남은 것은 실제 기기 기준 QA와 미세 시각 차이 조정이다.

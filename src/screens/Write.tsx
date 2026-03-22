@@ -23,6 +23,7 @@ import { AppError } from "@/components/state/AppError";
 import { AppLoading } from "@/components/state/AppLoading";
 import { normalizeApiError, type AppErrorModel } from "@/lib/errors";
 import { logger } from "@/lib/logger";
+import type { PostFontKey } from "@/lib/postContent";
 import {
   DEFAULT_WRITE_LAYOUT,
   buildLayoutPayload,
@@ -55,6 +56,7 @@ export default function Write() {
   const [draftId, setDraftId] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState<PostType | null>(null);
   const [hashtagsInput, setHashtagsInput] = useState("");
+  const [fontKey, setFontKey] = useState<PostFontKey>("serif");
   const [editPostId, setEditPostId] = useState<string | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [layout, setLayout] = useState<WriteLayoutModel>(DEFAULT_WRITE_LAYOUT);
@@ -119,11 +121,12 @@ export default function Write() {
       title: trimmedTitle,
       body: trimmedBody,
       category: selectedType ?? undefined,
+      fontKey,
       mode: editPostId ? "edit" : "create",
       postId: editPostId,
     });
     if (!draftId) setDraftId(id);
-  }, [title, body, draftId, editPostId, selectedType]);
+  }, [title, body, draftId, editPostId, selectedType, fontKey]);
 
   const { confirm: leaveConfirm, requestLeave, allowNextLeave } = useConfirmBeforeLeave({
     hasChanges,
@@ -188,6 +191,7 @@ export default function Write() {
     setTitle("");
     setBody("");
     setSelectedType(null);
+    setFontKey("serif");
     setLayout(DEFAULT_WRITE_LAYOUT);
   }, []);
 
@@ -276,6 +280,7 @@ export default function Write() {
           content: trimmedBody,
           hashtags: hashtagChips,
           layoutJson: buildLayoutPayload(layout),
+          fontKey,
         });
         setCreatedPostId(editPostId);
         logger.debug("[write] update success", { postId: editPostId });
@@ -288,6 +293,7 @@ export default function Write() {
           contentFormat: "plain",
           hashtags: hashtagChips,
           layoutJson: buildLayoutPayload(layout),
+          fontKey,
         });
 
         if (draftId) {
@@ -304,7 +310,7 @@ export default function Write() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [selectedType, draftId, editPostId, hashtagChips, layout, title, body]);
+  }, [selectedType, draftId, editPostId, hashtagChips, layout, title, body, fontKey]);
 
   const onSuccessGoHome = useCallback(() => {
     setSubmitSuccess(false);
@@ -354,6 +360,7 @@ export default function Write() {
           setBody(editable.content);
           setSelectedType(editable.category ?? null);
           setHashtagsInput(editable.hashtags.join(", "));
+          setFontKey(editable.fontKey ?? "serif");
           setLayout(parseLayoutJson(editable.layoutJson));
           setActiveBoxId("text_box");
         } catch (err) {
@@ -377,6 +384,7 @@ export default function Write() {
           setBody(d.body);
           setSelectedType(d.category ?? null);
           setHashtagsInput("");
+          setFontKey(d.fontKey ?? "serif");
         }
         return;
       }
@@ -464,34 +472,49 @@ export default function Write() {
               categoryLabel={categoryLabel}
               selectedType={selectedType}
               layout={layout}
+              fontKey={fontKey}
             />
           ) : (
-            <WriteEditor
-              title={title}
-              body={body}
-              footerText={footerText}
-              layout={layout}
-              activeBoxId={activeBoxId}
-              onSelectBox={setActiveBoxId}
-              onDragBox={dragBox}
-              onChangeTitle={setTitle}
-              onChangeBody={setBody}
-              styles={styles}
-            >
-              <WriteLayoutSection
-                styles={styles}
+            <>
+              <WriteEditor
+                title={title}
+                body={body}
+                footerText={footerText}
+                fontKey={fontKey}
                 layout={layout}
                 activeBoxId={activeBoxId}
                 onSelectBox={setActiveBoxId}
-                onChangeTitleAlign={updateTitleAlign}
-                onChangeBodyAlign={updateBodyAlign}
-                onChangeTitleScale={updateTitleScale}
-                onChangeBodyScale={updateBodyScale}
-                onToggleFooter={toggleFooter}
-                onNudgeBox={nudgeBox}
-                onResizeBox={resizeBox}
+                onDragBox={dragBox}
+                onChangeTitle={setTitle}
+                onChangeBody={setBody}
+                styles={styles}
+              >
+                <WriteLayoutSection
+                  styles={styles}
+                  layout={layout}
+                  activeBoxId={activeBoxId}
+                  onSelectBox={setActiveBoxId}
+                  onChangeTitleAlign={updateTitleAlign}
+                  onChangeBodyAlign={updateBodyAlign}
+                  onChangeTitleScale={updateTitleScale}
+                  onChangeBodyScale={updateBodyScale}
+                  onToggleFooter={toggleFooter}
+                  onNudgeBox={nudgeBox}
+                  onResizeBox={resizeBox}
+                />
+              </WriteEditor>
+
+              <WritePreviewCard
+                title={title}
+                body={body}
+                hashtags={hashtagChips}
+                categoryLabel={categoryLabel}
+                selectedType={selectedType}
+                layout={layout}
+                fontKey={fontKey}
+                compact
               />
-            </WriteEditor>
+            </>
           )}
 
           <WriteMetaSection
@@ -501,6 +524,8 @@ export default function Write() {
             hashtagsInput={hashtagsInput}
             hashtagChips={hashtagChips}
             onChangeHashtagsInput={setHashtagsInput}
+            fontKey={fontKey}
+            onChangeFontKey={setFontKey}
           />
 
           <WriteStates styles={styles} confirm={activeConfirm} />
