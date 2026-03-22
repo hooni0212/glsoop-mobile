@@ -2,7 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as SecureStore from "expo-secure-store";
 import { Platform } from "react-native";
 
-const TOKEN_KEY = "glsoop:auth:token:v1";
+const TOKEN_KEY = "glsoop_auth_token_v1";
 export const COOKIE_SESSION_TOKEN = "__glsoop_cookie_session__";
 let cachedToken: string | null = null;
 
