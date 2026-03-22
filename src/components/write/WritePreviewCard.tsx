@@ -1,6 +1,8 @@
-import React from "react";
+import React, { useMemo } from "react";
+import { Text, View } from "react-native";
+import { Image } from "expo-image";
 
-import { PaperReadingCard } from "@/components/paper/PaperReadingCard";
+import { buildFeedPreviewUrl } from "@/lib/feedImage";
 import type { WriteLayoutModel } from "@/lib/postLayout";
 import type { PostType } from "@/types/post";
 
@@ -23,19 +25,74 @@ export function WritePreviewCard({
 }: Props) {
   const previewTitle = title.trim() || "제목 미리보기";
   const previewBody =
-    body.trim() || "본문 미리보기가 여기에 보여요. 입력한 텍스트가 레이아웃에 따라 정렬돼요.";
+    body.trim() || "본문 미리보기가 여기에 보여요. 서버 렌더 결과를 그대로 확인해요.";
   const footerText = hashtags.length > 0 ? hashtags.map((item) => `#${item}`).join(" ") : categoryLabel;
 
+  const uri = useMemo(
+    () =>
+      buildFeedPreviewUrl({
+        title: previewTitle,
+        content: previewBody,
+        category: selectedType ?? "short",
+        layout: {
+          ...layout,
+          showFooter: Boolean(footerText),
+        },
+      }),
+    [footerText, layout, previewBody, previewTitle, selectedType]
+  );
+
   return (
-    <PaperReadingCard
-      mode="read"
-      type={selectedType ?? "short"}
-      layout={layout}
-      title={previewTitle}
-      body={previewBody}
-      footerText={footerText}
-      eyebrow="BOOK PREVIEW"
-      hint="모바일에서 보일 인쇄 분위기를 미리 확인해요."
-    />
+    <View style={styles.wrap}>
+      <View style={styles.header}>
+        <Text style={styles.eyebrow}>SERVER PREVIEW</Text>
+        <Text style={styles.hint}>서버가 실제로 렌더하는 책 페이지를 그대로 보여줘요.</Text>
+      </View>
+      <View style={styles.frame}>
+        <Image
+          source={{ uri }}
+          style={styles.image}
+          contentFit="contain"
+          cachePolicy="none"
+          transition={120}
+        />
+      </View>
+    </View>
   );
 }
+
+const styles = {
+  wrap: {
+    marginBottom: 12,
+  },
+  header: {
+    marginBottom: 10,
+    paddingHorizontal: 4,
+    gap: 4,
+  },
+  eyebrow: {
+    fontSize: 11,
+    letterSpacing: 1.4,
+    fontWeight: "900" as const,
+    color: "rgba(80,58,32,0.55)",
+  },
+  hint: {
+    fontSize: 12,
+    fontWeight: "700" as const,
+    color: "rgba(80,58,32,0.64)",
+  },
+  frame: {
+    borderRadius: 24,
+    padding: 14,
+    backgroundColor: "rgba(92,69,42,0.10)",
+    borderWidth: 1,
+    borderColor: "rgba(86,62,32,0.08)",
+  },
+  image: {
+    width: "100%" as const,
+    aspectRatio: 500 / 666,
+    borderRadius: 20,
+    overflow: "hidden" as const,
+    backgroundColor: "#f4ead8",
+  },
+};

@@ -495,12 +495,14 @@ export default function PostDetail() {
             </View>
             <PostMetaBar type={post.type} tags={post.tags} styles={styles} />
             <PostBody
+              postId={postId}
               title={title}
               content={content}
               paragraphs={paragraphs}
               footerText={footerText}
               type={post.type}
               layout={postLayout}
+              versionSeed={`${title}|${content}|${JSON.stringify((post as any)?.layoutJson ?? null)}`}
             />
 
             {canManagePost ? (

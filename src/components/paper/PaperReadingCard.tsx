@@ -1,5 +1,5 @@
-import React, { useMemo } from "react";
-import { Text, View, type ReactNode } from "react-native";
+import React, { useMemo, type ReactNode } from "react";
+import { Text, View } from "react-native";
 
 import type { WriteLayoutModel } from "@/lib/postLayout";
 import type { PostType } from "@/types/post";

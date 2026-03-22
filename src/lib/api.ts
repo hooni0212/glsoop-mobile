@@ -154,6 +154,10 @@ function joinUrl(path: string) {
   return url;
 }
 
+export function buildApiUrl(path: string) {
+  return joinUrl(path);
+}
+
 type RequestOptions = {
   method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   body?: unknown;

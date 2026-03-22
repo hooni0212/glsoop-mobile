@@ -27,7 +27,9 @@ import {
   DEFAULT_WRITE_LAYOUT,
   buildLayoutPayload,
   parseLayoutJson,
+  updateLayoutBox,
   type LayoutAlign,
+  type LayoutBoxId,
   type WriteLayoutModel,
 } from "@/lib/postLayout";
 import {
@@ -56,6 +58,7 @@ export default function Write() {
   const [editPostId, setEditPostId] = useState<string | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [layout, setLayout] = useState<WriteLayoutModel>(DEFAULT_WRITE_LAYOUT);
+  const [activeBoxId, setActiveBoxId] = useState<LayoutBoxId>("text_box");
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState<AppErrorModel | null>(null);
 
@@ -223,6 +226,20 @@ export default function Write() {
     }));
   }, []);
 
+  const nudgeBox = useCallback((boxId: LayoutBoxId, axis: "x" | "y", delta: number) => {
+    setLayout((current) => {
+      const box = boxId === "title_box" ? current.titleBox : boxId === "text_box" ? current.bodyBox : current.footerBox;
+      return updateLayoutBox(current, boxId, { [axis]: box[axis] + delta });
+    });
+  }, []);
+
+  const resizeBox = useCallback((boxId: LayoutBoxId, axis: "w" | "h", delta: number) => {
+    setLayout((current) => {
+      const box = boxId === "title_box" ? current.titleBox : boxId === "text_box" ? current.bodyBox : current.footerBox;
+      return updateLayoutBox(current, boxId, { [axis]: box[axis] + delta });
+    });
+  }, []);
+
   const onPressSubmit = useCallback(async () => {
     if (!selectedType) return;
 
@@ -328,6 +345,7 @@ export default function Write() {
           setSelectedType(editable.category ?? null);
           setHashtagsInput(editable.hashtags.join(", "));
           setLayout(parseLayoutJson(editable.layoutJson));
+          setActiveBoxId("text_box");
         } catch (err) {
           logger.warn("[write] edit post load error", err);
           setEditError(normalizeApiError(err));
@@ -443,6 +461,8 @@ export default function Write() {
               body={body}
               footerText={footerText}
               layout={layout}
+              activeBoxId={activeBoxId}
+              onSelectBox={setActiveBoxId}
               onChangeTitle={setTitle}
               onChangeBody={setBody}
               styles={styles}
@@ -450,11 +470,15 @@ export default function Write() {
               <WriteLayoutSection
                 styles={styles}
                 layout={layout}
+                activeBoxId={activeBoxId}
+                onSelectBox={setActiveBoxId}
                 onChangeTitleAlign={updateTitleAlign}
                 onChangeBodyAlign={updateBodyAlign}
                 onChangeTitleScale={updateTitleScale}
                 onChangeBodyScale={updateBodyScale}
                 onToggleFooter={toggleFooter}
+                onNudgeBox={nudgeBox}
+                onResizeBox={resizeBox}
               />
             </WriteEditor>
           )}
