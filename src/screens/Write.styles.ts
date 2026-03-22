@@ -94,6 +94,10 @@ export function createWriteStyles() {
       elevation: 2,
     },
 
+    editorWrap: {
+      marginBottom: 14,
+    },
+
     editorStage: {
       marginBottom: 14,
       borderRadius: 24,

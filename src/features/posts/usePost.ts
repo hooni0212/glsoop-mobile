@@ -1,5 +1,6 @@
 import { apiGet } from "@/lib/api";
 import { normalizeApiError, type AppErrorModel } from "@/lib/errors";
+import { normalizePostReadText, splitPostParagraphs } from "@/lib/postContent";
 import type { Post } from "@/types/post";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -8,18 +9,6 @@ type PostDetailResponse = {
   post?: any;
   message?: string;
 };
-
-function stripHtml(s: string) {
-  return s
-    .replace(/<\s*br\s*\/?>/gi, "\n")
-    .replace(/<\/p>\s*/gi, "\n\n")
-    .replace(/<p[^>]*>/gi, "")
-    .replace(/<[^>]*>/g, " ")
-    .replace(/\n[ \t]+\n/g, "\n\n")
-    .replace(/[ \t]+/g, " ")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
-}
 
 function pickFirstString(...vals: any[]) {
   for (const v of vals) {
@@ -97,15 +86,19 @@ function normalizePostDetail(row: any): any {
     stats: { likeCount, bookmarkCount },
     tags: parseTags(row),
     viewer: { isLiked: userLiked, isBookmarked: userBookmarked },
-    content: stripHtml(contentRaw),
+    content: normalizePostReadText(contentRaw),
+    paragraphs: splitPostParagraphs(contentRaw),
     contentRaw,
+    layoutJson: row?.layout_json ?? row?.layoutJson ?? null,
   };
 
   return post as Post & { content?: string; contentRaw?: string };
 }
 
 export function usePost(id: string | undefined) {
-  const [post, setPost] = useState<(Post & { content?: string; contentRaw?: string }) | null>(null);
+  const [post, setPost] = useState<
+    (Post & { content?: string; contentRaw?: string; paragraphs?: string[]; layoutJson?: unknown }) | null
+  >(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<AppErrorModel | null>(null);
   const inflightRef = useRef(false);
@@ -142,8 +135,8 @@ export function usePost(id: string | undefined) {
   const mutatePost = useCallback(
     (
       updater: (
-        prev: Post & { content?: string; contentRaw?: string }
-      ) => Post & { content?: string; contentRaw?: string }
+        prev: Post & { content?: string; contentRaw?: string; paragraphs?: string[]; layoutJson?: unknown }
+      ) => Post & { content?: string; contentRaw?: string; paragraphs?: string[]; layoutJson?: unknown }
     ) => {
       setPost((prev) => (prev ? updater(prev) : prev));
     },

@@ -20,6 +20,26 @@ export const DEFAULT_WRITE_LAYOUT: WriteLayoutModel = {
   showFooter: true,
 };
 
+export function getFallbackLayoutForPostType(type?: string | null): WriteLayoutModel {
+  if (type === "essay") {
+    return {
+      titleStyle: { align: "left", fontScale: 1, lineHeight: 1.18 },
+      bodyStyle: { align: "left", fontScale: 1, lineHeight: 1.24 },
+      footerStyle: { align: "right", fontScale: 1, lineHeight: 1.1 },
+      showFooter: true,
+    };
+  }
+  if (type === "poem") {
+    return {
+      titleStyle: { align: "center", fontScale: 1, lineHeight: 1.16 },
+      bodyStyle: { align: "center", fontScale: 1.04, lineHeight: 1.28 },
+      footerStyle: { align: "right", fontScale: 1, lineHeight: 1.1 },
+      showFooter: true,
+    };
+  }
+  return { ...DEFAULT_WRITE_LAYOUT };
+}
+
 export const LAYOUT_ALIGN_OPTIONS: { value: LayoutAlign; label: string }[] = [
   { value: "left", label: "왼쪽" },
   { value: "center", label: "가운데" },
@@ -85,6 +105,13 @@ export function parseLayoutJson(raw: unknown): WriteLayoutModel {
     footerStyle: normalizeStyle(footerSource, DEFAULT_WRITE_LAYOUT.footerStyle),
     showFooter: !Boolean(record.footer_box?.hidden),
   };
+}
+
+export function resolvePostLayout(raw: unknown, type?: string | null): WriteLayoutModel {
+  if (raw == null || raw === "") {
+    return getFallbackLayoutForPostType(type);
+  }
+  return parseLayoutJson(raw);
 }
 
 export function buildLayoutPayload(layout: WriteLayoutModel) {

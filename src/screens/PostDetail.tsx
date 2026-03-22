@@ -4,7 +4,6 @@ import { useBottomDock } from "@/navigation/bottomDock";
 import { createPostDetailStyles } from "@/screens/PostDetail.styles";
 import { PostActionBar } from "@/components/post/PostActionBar";
 import { PostBody } from "@/components/post/PostBody";
-import { PostHeader } from "@/components/post/PostHeader";
 import { PostMetaBar } from "@/components/post/PostMetaBar";
 import { AppEmpty } from "@/components/state/AppEmpty";
 import { AppError } from "@/components/state/AppError";
@@ -20,6 +19,7 @@ import { logShareEvent } from "@/services/shareService";
 import { buildAuthRoute } from "@/lib/authRedirect";
 import { ApiError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
+import { resolvePostLayout } from "@/lib/postLayout";
 import { router, useLocalSearchParams, usePathname } from "expo-router";
 import React, { useMemo, useState } from "react";
 import {
@@ -114,6 +114,19 @@ export default function PostDetail() {
   const authorId = post?.author?.id;
   const dateText = formatKoreanDate((post as any)?.createdAt);
   const content = (post as any)?.content || "";
+  const paragraphs = Array.isArray((post as any)?.paragraphs) ? (post as any).paragraphs : [];
+  const postLayout = useMemo(
+    () => resolvePostLayout((post as any)?.layoutJson, post?.type),
+    [post]
+  );
+  const footerText = useMemo(() => {
+    const safeTags = Array.isArray(post?.tags) ? post.tags.filter(Boolean) : [];
+    if (safeTags.length > 0) return safeTags.map((item) => `#${item}`).join(" ");
+    if (post?.type === "poem") return "시";
+    if (post?.type === "essay") return "에세이";
+    if (dateText) return dateText;
+    return "짧은 글";
+  }, [dateText, post?.tags, post?.type]);
   const fallbackLikeCount = post?.stats?.likeCount ?? 0;
   const fallbackIsLiked = Boolean((post as any)?.viewer?.isLiked);
   const postId = post?.id ?? id ?? "";
@@ -458,15 +471,37 @@ export default function PostDetail() {
       ) : (
         <>
           <ScrollView contentContainerStyle={styles.scrollContent}>
-            <PostHeader
-              title={title}
-              authorName={authorName}
-              dateText={dateText}
-              onPressAuthor={authorId ? () => router.push(`/users/${authorId}`) : undefined}
-              styles={styles}
-            />
+            <View style={styles.introWrap}>
+              <Text style={styles.introEyebrow}>TODAY&apos;S PAGE</Text>
+              <View style={styles.metaRow}>
+                {authorId ? (
+                  <Pressable
+                    onPress={() => router.push(`/users/${authorId}`)}
+                    accessibilityRole="button"
+                    testID="post-author-btn"
+                  >
+                    <Text style={styles.metaAuthor}>{authorName}</Text>
+                  </Pressable>
+                ) : (
+                  <Text style={styles.metaAuthor}>{authorName}</Text>
+                )}
+                {dateText ? (
+                  <>
+                    <Text style={styles.metaDot}>·</Text>
+                    <Text style={styles.metaDate}>{dateText}</Text>
+                  </>
+                ) : null}
+              </View>
+            </View>
             <PostMetaBar type={post.type} tags={post.tags} styles={styles} />
-            <PostBody content={content} styles={styles} />
+            <PostBody
+              title={title}
+              content={content}
+              paragraphs={paragraphs}
+              footerText={footerText}
+              type={post.type}
+              layout={postLayout}
+            />
 
             {canManagePost ? (
               <View style={styles.relatedSection}>

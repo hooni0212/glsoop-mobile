@@ -430,11 +430,11 @@ export default function Write() {
           ) : null}
           {previewOpen ? (
             <WritePreviewCard
-              styles={styles}
               title={title}
               body={body}
               hashtags={hashtagChips}
               categoryLabel={categoryLabel}
+              selectedType={selectedType}
               layout={layout}
             />
           ) : (

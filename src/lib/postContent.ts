@@ -39,3 +39,19 @@ export function normalizePostEditorText(input: unknown): string {
 
   return decoded.trim();
 }
+
+export function normalizePostReadText(input: unknown): string {
+  return normalizePostEditorText(input)
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+export function splitPostParagraphs(input: unknown): string[] {
+  const normalized = normalizePostReadText(input);
+  if (!normalized) return [];
+
+  return normalized
+    .split(/\n{2,}/)
+    .map((paragraph) => paragraph.trim())
+    .filter(Boolean);
+}

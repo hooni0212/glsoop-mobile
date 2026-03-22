@@ -12,7 +12,7 @@ export function createPostDetailStyles(actionBarHeight: number) {
   return StyleSheet.create({
     safe: {
       flex: 1,
-      backgroundColor: tokens.colors.bg,
+      backgroundColor: "#ebe4d8",
     },
 
     // --- Header ---
@@ -43,16 +43,18 @@ export function createPostDetailStyles(actionBarHeight: number) {
       paddingTop: tokens.space.sm,
       paddingBottom: contentBottomPad,
     },
-
-    title: {
-      fontSize: tokens.font.h1,
-      fontWeight: "800",
-      letterSpacing: -0.4,
-      color: tokens.colors.text,
-      lineHeight: 30,
+    introWrap: {
+      marginTop: 2,
+      marginBottom: tokens.space.md,
+      gap: 4,
+    },
+    introEyebrow: {
+      fontSize: 11,
+      letterSpacing: 1.3,
+      fontWeight: "900",
+      color: "rgba(80,58,32,0.55)",
     },
     metaRow: {
-      marginTop: tokens.space.sm,
       flexDirection: "row",
       alignItems: "center",
       gap: 6,
@@ -60,22 +62,23 @@ export function createPostDetailStyles(actionBarHeight: number) {
     metaAuthor: {
       fontSize: 13,
       fontWeight: "800",
-      color: tokens.colors.green900,
+      color: "#4b3927",
     },
     metaDot: {
       fontSize: 13,
       fontWeight: "700",
-      color: tokens.colors.textFaint,
+      color: "rgba(75,57,39,0.44)",
     },
     metaDate: {
       fontSize: 13,
       fontWeight: "700",
-      color: tokens.colors.textFaint,
+      color: "rgba(75,57,39,0.52)",
     },
 
     // --- Meta bar ---
     metaBar: {
-      marginTop: tokens.space.lg,
+      marginTop: 0,
+      marginBottom: tokens.space.md,
       flexDirection: "row",
       alignItems: "center",
       flexWrap: "wrap",
@@ -85,39 +88,29 @@ export function createPostDetailStyles(actionBarHeight: number) {
       paddingHorizontal: tokens.space.sm,
       paddingVertical: 7,
       borderRadius: tokens.radius.pill,
-      backgroundColor: tokens.colors.green050,
+      backgroundColor: "rgba(252,248,240,0.88)",
       borderWidth: 1,
-      borderColor: tokens.colors.border,
+      borderColor: "rgba(86,62,32,0.09)",
     },
     typeChipText: {
       fontSize: 12,
       fontWeight: "800",
-      color: tokens.colors.green900,
+      color: "#5a4732",
       letterSpacing: -0.2,
     },
     tagChip: {
       paddingHorizontal: tokens.space.sm,
       paddingVertical: 7,
       borderRadius: tokens.radius.pill,
-      backgroundColor: tokens.colors.surface,
+      backgroundColor: "rgba(255,250,244,0.82)",
       borderWidth: 1,
-      borderColor: tokens.colors.border,
+      borderColor: "rgba(86,62,32,0.09)",
     },
     tagChipText: {
       fontSize: 12,
       fontWeight: "700",
-      color: tokens.colors.textMuted,
+      color: "rgba(75,57,39,0.70)",
       letterSpacing: -0.2,
-    },
-
-    // --- Body ---
-    body: {
-      marginTop: tokens.space.lg,
-      fontSize: tokens.font.body,
-      lineHeight: 26,
-      color: tokens.colors.text,
-      letterSpacing: -0.2,
-      opacity: 0.9,
     },
     relatedSection: {
       marginTop: tokens.space.xl,
