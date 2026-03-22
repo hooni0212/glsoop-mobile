@@ -147,7 +147,8 @@ export function createWriteStyles() {
     bookBox: {
       position: "absolute",
       paddingHorizontal: 4,
-      paddingVertical: 2,
+      paddingTop: 20,
+      paddingBottom: 2,
       borderRadius: 10,
       borderWidth: 1,
       borderColor: "rgba(79,58,33,0.12)",
@@ -177,6 +178,31 @@ export function createWriteStyles() {
     },
     bookFooterBox: {
       justifyContent: "center",
+    },
+    dragHandle: {
+      position: "absolute",
+      top: 4,
+      left: 4,
+      zIndex: 2,
+      height: 14,
+      paddingHorizontal: 6,
+      borderRadius: 999,
+      backgroundColor: "rgba(255,250,244,0.72)",
+      borderWidth: 1,
+      borderColor: "rgba(79,58,33,0.18)",
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 3,
+    },
+    dragHandleActive: {
+      backgroundColor: "rgba(237,250,241,0.92)",
+      borderColor: "rgba(24,96,58,0.5)",
+    },
+    dragHandleGrip: {
+      width: 3,
+      height: 3,
+      borderRadius: 999,
+      backgroundColor: "rgba(79,58,33,0.55)",
     },
     bookFooterText: {
       color: "rgba(81,65,49,0.72)",

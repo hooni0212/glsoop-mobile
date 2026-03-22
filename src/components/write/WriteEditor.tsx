@@ -1,7 +1,17 @@
-import React from "react";
-import { ImageBackground, Pressable, Text, TextInput, View } from "react-native";
+import React, { useMemo, useState } from "react";
+import {
+  ImageBackground,
+  PanResponder,
+  Pressable,
+  Text,
+  TextInput,
+  View,
+  type GestureResponderEvent,
+  type LayoutChangeEvent,
+  type PanResponderGestureState,
+} from "react-native";
 
-import type { LayoutBoxId, WriteLayoutModel } from "@/lib/postLayout";
+import type { LayoutBox, LayoutBoxId, WriteLayoutModel } from "@/lib/postLayout";
 
 const PAPER_SOURCE = require("../../../assets/images/feed-templates/paper-source-01.jpg");
 
@@ -12,6 +22,7 @@ type Props = {
   layout: WriteLayoutModel;
   activeBoxId: LayoutBoxId;
   onSelectBox: (boxId: LayoutBoxId) => void;
+  onDragBox: (boxId: LayoutBoxId, deltaX: number, deltaY: number) => void;
   onChangeTitle: (v: string) => void;
   onChangeBody: (v: string) => void;
   styles: any;
@@ -27,6 +38,115 @@ function boxFrameStyle(box: { x: number; y: number; w: number; h: number }) {
   };
 }
 
+function DragHandle({
+  boxId,
+  active,
+  canvasWidth,
+  canvasHeight,
+  onSelectBox,
+  onDragBox,
+  styles,
+}: {
+  boxId: LayoutBoxId;
+  active: boolean;
+  canvasWidth: number;
+  canvasHeight: number;
+  onSelectBox: (boxId: LayoutBoxId) => void;
+  onDragBox: (boxId: LayoutBoxId, deltaX: number, deltaY: number) => void;
+  styles: any;
+}) {
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+
+  const panResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => true,
+        onMoveShouldSetPanResponder: () => true,
+        onPanResponderGrant: () => {
+          onSelectBox(boxId);
+          setDragOffset({ x: 0, y: 0 });
+        },
+        onPanResponderMove: (_event: GestureResponderEvent, gesture: PanResponderGestureState) => {
+          setDragOffset({ x: gesture.dx, y: gesture.dy });
+        },
+        onPanResponderRelease: (_event: GestureResponderEvent, gesture: PanResponderGestureState) => {
+          setDragOffset({ x: 0, y: 0 });
+          if (canvasWidth <= 0 || canvasHeight <= 0) return;
+          onDragBox(boxId, gesture.dx / canvasWidth, gesture.dy / canvasHeight);
+        },
+        onPanResponderTerminate: () => {
+          setDragOffset({ x: 0, y: 0 });
+        },
+      }),
+    [boxId, canvasHeight, canvasWidth, onDragBox, onSelectBox]
+  );
+
+  return (
+    <View
+      {...panResponder.panHandlers}
+      style={[
+        styles.dragHandle,
+        active && styles.dragHandleActive,
+        {
+          transform: [{ translateX: dragOffset.x }, { translateY: dragOffset.y }],
+        },
+      ]}
+    >
+      <View style={styles.dragHandleGrip} />
+      <View style={styles.dragHandleGrip} />
+      <View style={styles.dragHandleGrip} />
+    </View>
+  );
+}
+
+function EditableBox({
+  boxId,
+  box,
+  activeBoxId,
+  canvasWidth,
+  canvasHeight,
+  onSelectBox,
+  onDragBox,
+  styles,
+  children,
+  footer = false,
+}: {
+  boxId: LayoutBoxId;
+  box: LayoutBox;
+  activeBoxId: LayoutBoxId;
+  canvasWidth: number;
+  canvasHeight: number;
+  onSelectBox: (boxId: LayoutBoxId) => void;
+  onDragBox: (boxId: LayoutBoxId, deltaX: number, deltaY: number) => void;
+  styles: any;
+  children: React.ReactNode;
+  footer?: boolean;
+}) {
+  const active = activeBoxId === boxId;
+  return (
+    <Pressable
+      onPress={() => onSelectBox(boxId)}
+      style={[
+        styles.bookBox,
+        footer && styles.bookFooterBox,
+        boxFrameStyle(box),
+        active && styles.bookBoxActive,
+      ]}
+    >
+      <DragHandle
+        boxId={boxId}
+        active={active}
+        canvasWidth={canvasWidth}
+        canvasHeight={canvasHeight}
+        onSelectBox={onSelectBox}
+        onDragBox={onDragBox}
+        styles={styles}
+      />
+      {children}
+    </Pressable>
+  );
+}
+
 export function WriteEditor({
   title,
   body,
@@ -34,11 +154,19 @@ export function WriteEditor({
   layout,
   activeBoxId,
   onSelectBox,
+  onDragBox,
   onChangeTitle,
   onChangeBody,
   styles,
   children,
 }: Props) {
+  const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
+
+  const onCanvasLayout = (event: LayoutChangeEvent) => {
+    const { width, height } = event.nativeEvent.layout;
+    setCanvasSize({ width, height });
+  };
+
   return (
     <View style={styles.editorWrap}>
       <View style={styles.editorStage}>
@@ -54,14 +182,17 @@ export function WriteEditor({
           resizeMode="cover"
           style={styles.bookCanvas}
           imageStyle={styles.bookCanvasImage}
+          onLayout={onCanvasLayout}
         >
-          <Pressable
-            onPress={() => onSelectBox("title_box")}
-            style={[
-              styles.bookBox,
-              boxFrameStyle(layout.titleBox),
-              activeBoxId === "title_box" && styles.bookBoxActive,
-            ]}
+          <EditableBox
+            boxId="title_box"
+            box={layout.titleBox}
+            activeBoxId={activeBoxId}
+            canvasWidth={canvasSize.width}
+            canvasHeight={canvasSize.height}
+            onSelectBox={onSelectBox}
+            onDragBox={onDragBox}
+            styles={styles}
           >
             <TextInput
               value={title}
@@ -79,15 +210,17 @@ export function WriteEditor({
               ]}
               testID="write-title-input"
             />
-          </Pressable>
+          </EditableBox>
 
-          <Pressable
-            onPress={() => onSelectBox("text_box")}
-            style={[
-              styles.bookBox,
-              boxFrameStyle(layout.bodyBox),
-              activeBoxId === "text_box" && styles.bookBoxActive,
-            ]}
+          <EditableBox
+            boxId="text_box"
+            box={layout.bodyBox}
+            activeBoxId={activeBoxId}
+            canvasWidth={canvasSize.width}
+            canvasHeight={canvasSize.height}
+            onSelectBox={onSelectBox}
+            onDragBox={onDragBox}
+            styles={styles}
           >
             <TextInput
               value={body}
@@ -105,17 +238,19 @@ export function WriteEditor({
               ]}
               testID="write-body-input"
             />
-          </Pressable>
+          </EditableBox>
 
           {layout.showFooter ? (
-            <Pressable
-              onPress={() => onSelectBox("footer_box")}
-              style={[
-                styles.bookBox,
-                styles.bookFooterBox,
-                boxFrameStyle(layout.footerBox),
-                activeBoxId === "footer_box" && styles.bookBoxActive,
-              ]}
+            <EditableBox
+              boxId="footer_box"
+              box={layout.footerBox}
+              activeBoxId={activeBoxId}
+              canvasWidth={canvasSize.width}
+              canvasHeight={canvasSize.height}
+              onSelectBox={onSelectBox}
+              onDragBox={onDragBox}
+              styles={styles}
+              footer
             >
               <Text
                 numberOfLines={2}
@@ -130,7 +265,7 @@ export function WriteEditor({
               >
                 {footerText || "#글숲"}
               </Text>
-            </Pressable>
+            </EditableBox>
           ) : null}
         </ImageBackground>
       </View>

@@ -240,6 +240,16 @@ export default function Write() {
     });
   }, []);
 
+  const dragBox = useCallback((boxId: LayoutBoxId, deltaX: number, deltaY: number) => {
+    setLayout((current) => {
+      const box = boxId === "title_box" ? current.titleBox : boxId === "text_box" ? current.bodyBox : current.footerBox;
+      return updateLayoutBox(current, boxId, {
+        x: box.x + deltaX,
+        y: box.y + deltaY,
+      });
+    });
+  }, []);
+
   const onPressSubmit = useCallback(async () => {
     if (!selectedType) return;
 
@@ -463,6 +473,7 @@ export default function Write() {
               layout={layout}
               activeBoxId={activeBoxId}
               onSelectBox={setActiveBoxId}
+              onDragBox={dragBox}
               onChangeTitle={setTitle}
               onChangeBody={setBody}
               styles={styles}
