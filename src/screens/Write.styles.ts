@@ -151,6 +151,9 @@ export function createWriteStyles() {
       shadowOffset: { width: 0, height: 8 },
       elevation: 2,
     },
+    bookCanvasPressable: {
+      width: "100%",
+    },
     bookCanvasImage: {
       borderRadius: 22,
     },

@@ -11,6 +11,8 @@ type Props = {
   onPressDrafts?: () => void;
   previewOpen?: boolean;
   onPressPreview?: () => void;
+  isKeyboardVisible?: boolean;
+  onPressHideKeyboard?: () => void;
   styles: any;
 };
 
@@ -22,6 +24,8 @@ export function WriteTopBar({
   onPressDrafts,
   previewOpen,
   onPressPreview,
+  isKeyboardVisible,
+  onPressHideKeyboard,
   styles,
 }: Props) {
   return (
@@ -64,6 +68,23 @@ export function WriteTopBar({
           >
             <Ionicons
               name={previewOpen ? "create-outline" : "eye-outline"}
+              size={20}
+              color={tokens.colors.text}
+            />
+          </Pressable>
+        )}
+
+        {!!isKeyboardVisible && !!onPressHideKeyboard && (
+          <Pressable
+            onPress={onPressHideKeyboard}
+            hitSlop={12}
+            style={styles.iconBtn}
+            accessibilityRole="button"
+            accessibilityLabel="키보드 내리기"
+            testID="write-hide-keyboard-btn"
+          >
+            <Ionicons
+              name="chevron-down-circle-outline"
               size={20}
               color={tokens.colors.text}
             />

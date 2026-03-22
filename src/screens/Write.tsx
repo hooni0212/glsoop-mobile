@@ -98,6 +98,7 @@ export default function Write() {
   }, [categoryLabel, hashtagChips]);
 
   const closeDraftPrompt = useCallback(() => setDraftPrompt(null), []);
+  const dismissKeyboard = useCallback(() => Keyboard.dismiss(), []);
 
   const openDraftPrompt = useCallback((next: Omit<NonNullable<ConfirmState>, "visible">) => {
     logger.debug("[write] confirm open", { title: next.title });
@@ -452,6 +453,8 @@ export default function Write() {
           onPressDrafts={onPressDrafts}
           previewOpen={previewOpen}
           onPressPreview={() => setPreviewOpen((current) => !current)}
+          isKeyboardVisible={isKeyboardVisible}
+          onPressHideKeyboard={dismissKeyboard}
           styles={styles}
         />
 
@@ -487,6 +490,7 @@ export default function Write() {
                 onDragBox={dragBox}
                 onChangeTitle={setTitle}
                 onChangeBody={setBody}
+                onPressBackground={dismissKeyboard}
                 styles={styles}
               >
                 <WriteLayoutSection
