@@ -24,6 +24,7 @@ export default function RootLayout() {
                 headerShown: false,
                 presentation: "modal",
                 animation: "slide_from_bottom",
+                gestureEnabled: false,
               }}
             />
 

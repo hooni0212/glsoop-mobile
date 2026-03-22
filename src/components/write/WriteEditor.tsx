@@ -66,6 +66,8 @@ function DragHandle({
       PanResponder.create({
         onStartShouldSetPanResponder: () => true,
         onMoveShouldSetPanResponder: () => true,
+        onStartShouldSetPanResponderCapture: () => true,
+        onMoveShouldSetPanResponderCapture: () => true,
         onPanResponderGrant: () => {
           onSelectBox(boxId);
           setDragOffset({ x: 0, y: 0 });
@@ -88,9 +90,11 @@ function DragHandle({
   return (
     <View
       {...panResponder.panHandlers}
+      hitSlop={{ top: 10, right: 14, bottom: 10, left: 14 }}
       style={[
         styles.dragHandle,
         active && styles.dragHandleActive,
+        boxId === "text_box" && styles.dragHandleBody,
         {
           transform: [{ translateX: dragOffset.x }, { translateY: dragOffset.y }],
         },
@@ -133,6 +137,7 @@ function EditableBox({
       style={[
         styles.bookBox,
         footer && styles.bookFooterBox,
+        boxId === "text_box" && styles.bookBodyBox,
         boxFrameStyle(box),
         active && styles.bookBoxActive,
       ]}
