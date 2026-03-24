@@ -23,13 +23,14 @@ import {
   removePostFromBookmarkList,
 } from "@/services/bookmarkService";
 
-const CATEGORIES = ["추천", "팔로잉", "인기", "힐링", "일상", "여행"] as const;
+const CATEGORIES = ["추천", "팔로잉", "인기", "여행"] as const;
 type Category = (typeof CATEGORIES)[number];
 
 export default function Home() {
   const pathname = usePathname();
   const [active, setActive] = useState<Category>("추천");
   const { showToast } = useToast();
+  const { token, signOut } = useAuth();
 
   const query = useMemo(() => {
     if (active === "인기") return { limit: 10, sort: "popular" as const };
@@ -40,7 +41,6 @@ export default function Home() {
 
   const { items, loading, refreshing, error, hasMore, refresh, loadMore, patchItem } =
     useFeed(query);
-  const { signOut } = useAuth();
   const [likePending, setLikePending] = useState<Record<string, boolean>>({});
   const [bookmarkPending, setBookmarkPending] = useState<Record<string, boolean>>({});
 
@@ -58,13 +58,26 @@ export default function Home() {
     setBookmarkPending((prev) => ({ ...prev, [postId]: pending }));
   };
 
+  const promptAuthForAction = (message: string) => {
+    Alert.alert("로그인이 필요해요", message, [
+      { text: "나중에", style: "cancel" },
+      {
+        text: "로그인",
+        onPress: () => router.push(buildAuthRoute("/(auth)", pathname)),
+      },
+    ]);
+  };
+
   const handleAuthError = async () => {
     await signOut();
-    router.replace(buildAuthRoute("/(auth)", pathname));
-    Alert.alert("로그인이 필요해요", "다시 로그인해주세요.");
+    promptAuthForAction("로그인 상태가 만료되었어요. 다시 로그인하면 이어서 사용할 수 있어요.");
   };
 
   const handleLike = async (postId: string) => {
+    if (!token) {
+      promptAuthForAction("공감은 로그인한 회원만 남길 수 있어요.");
+      return;
+    }
     if (likePending[postId]) return;
 
     const target = items.find((item) => item.id === postId);
@@ -111,6 +124,10 @@ export default function Home() {
   };
 
   const handleBookmark = async (postId: string) => {
+    if (!token) {
+      promptAuthForAction("북마크는 로그인한 회원만 사용할 수 있어요.");
+      return;
+    }
     if (bookmarkPending[postId]) return;
     const target = items.find((item) => item.id === postId);
     if (!target) return;
