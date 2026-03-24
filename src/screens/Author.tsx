@@ -12,13 +12,16 @@ import { AppLoading } from "@/components/state/AppLoading";
 import { useAuthorPosts, type AuthorPostSort } from "@/features/users/useAuthorPosts";
 import { useAuthorProfile } from "@/features/users/useAuthorProfile";
 import { authorScreenStyles } from "@/screens/Author.styles";
+import { releaseConfig, getLegalDocumentUrl } from "@/config/release";
 import { getLike, setLike, useLikeSnapshot } from "@/features/likes/likeStore";
 import { useToast } from "@/feedback/ToastProvider";
 import { useAuth } from "@/auth/AuthContext";
 import { buildAuthRoute } from "@/lib/authRedirect";
+import { openExternalUrl, openSupportMail } from "@/lib/externalLinks";
 import { togglePostLike } from "@/services/likeService";
 import { toggleFollowUser } from "@/services/userService";
 import { ApiError } from "@/lib/errors";
+import { useRuntimeLegalConfig } from "@/hooks/useRuntimeLegalConfig";
 import {
   normalizeProfileCosmeticsExpanded,
   type CosmeticStickerSlot,
@@ -84,6 +87,7 @@ export default function Author() {
   const params = useLocalSearchParams<{ id: string }>();
   const pathname = usePathname();
   const userId = params?.id ? String(params.id) : undefined;
+  const { config: runtimeLegalConfig } = useRuntimeLegalConfig();
 
   const [sort, setSort] = useState<AuthorPostSort>("newest");
   const {
@@ -105,7 +109,7 @@ export default function Author() {
     loadMore,
     patchItem,
   } = useAuthorPosts(userId, sort);
-  const { signOut } = useAuth();
+  const { token, signOut } = useAuth();
   const { showToast } = useToast();
   const [likePending, setLikePending] = useState<Record<string, boolean>>({});
   const [bioExpanded, setBioExpanded] = useState(false);
@@ -128,12 +132,26 @@ export default function Author() {
     () => normalizeProfileCosmeticsExpanded(user?.profile_cosmetics ?? null),
     [user?.profile_cosmetics]
   );
+  const supportEmail = runtimeLegalConfig?.contacts.email ?? releaseConfig.supportEmail;
 
   const showInitialLoading = profileLoading && !user;
 
   const setPending = (postId: string, pending: boolean) => {
     setLikePending((prev) => ({ ...prev, [postId]: pending }));
   };
+
+  const promptAuthForAction = useCallback(
+    (message: string, redirectPath = pathname) => {
+      Alert.alert("로그인이 필요해요", message, [
+        { text: "나중에", style: "cancel" },
+        {
+          text: "로그인",
+          onPress: () => router.push(buildAuthRoute("/(auth)", redirectPath)),
+        },
+      ]);
+    },
+    [pathname]
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -152,11 +170,16 @@ export default function Author() {
 
   const handleAuthError = useCallback(async () => {
     await signOut();
-    router.replace(buildAuthRoute("/(auth)", pathname));
-    Alert.alert("로그인이 필요해요", "다시 로그인해주세요.");
-  }, [pathname, signOut]);
+    promptAuthForAction(
+      "로그인 상태가 만료되었어요. 다시 로그인하면 이어서 사용할 수 있어요."
+    );
+  }, [promptAuthForAction, signOut]);
 
   const handleLike = async (postId: string) => {
+    if (!token) {
+      promptAuthForAction("공감은 로그인한 회원만 남길 수 있어요.");
+      return;
+    }
     if (likePending[postId]) return;
 
     const target = items.find((item) => item.id === postId);
@@ -203,6 +226,10 @@ export default function Author() {
   };
 
   const handleFollowToggle = useCallback(async () => {
+    if (!token) {
+      promptAuthForAction("팔로우는 로그인한 회원만 사용할 수 있어요.");
+      return;
+    }
     if (!userId || followBusy || showProfileCustomize) return;
 
     setFollowBusy(true);
@@ -236,8 +263,10 @@ export default function Author() {
     followBusy,
     handleAuthError,
     isFollowing,
+    promptAuthForAction,
     showProfileCustomize,
     showToast,
+    token,
     userId,
   ]);
 
@@ -265,6 +294,36 @@ export default function Author() {
     setOverflowOpen(false);
     router.push(`/posts/${items[0].id}`);
   }, [items]);
+
+  const handleAuthorSupport = useCallback(async () => {
+    // TODO(server: glsoop): add authenticated report-user and block-user APIs
+    // so author moderation actions can complete in-app instead of using support fallback.
+    const message = [
+      "작가 프로필 관련 문제 신고/지원 문의",
+      "",
+      `user_id: ${userId || "unknown"}`,
+      `name: ${name}`,
+      "",
+      "문제 내용을 적어주세요:",
+    ].join("\n");
+
+    try {
+      if (releaseConfig.supportUrl) {
+        await openExternalUrl(releaseConfig.supportUrl);
+        return;
+      }
+      if (supportEmail) {
+        await openSupportMail(supportEmail, {
+          subject: "[glsoop-mobile] 작가 프로필 문제 신고",
+          body: message,
+        });
+        return;
+      }
+      showToast("지원 연락처가 아직 앱 설정에 반영되지 않았어요.", { tone: "error" });
+    } catch {
+      showToast("문의 경로를 열지 못했어요. 잠시 후 다시 시도해주세요.", { tone: "error" });
+    }
+  }, [name, showToast, supportEmail, userId]);
 
   const listHeader = useMemo(
     () => {
@@ -424,6 +483,28 @@ export default function Author() {
                     <Text style={authorScreenStyles.overflowItemText}>프로필 꾸미기</Text>
                   </Pressable>
                 ) : null}
+                <Pressable
+                  onPress={() => {
+                    setOverflowOpen(false);
+                    void handleAuthorSupport();
+                  }}
+                  style={authorScreenStyles.overflowItem}
+                >
+                  <Text style={authorScreenStyles.overflowItemText}>문제 신고/지원 문의</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => {
+                    setOverflowOpen(false);
+                    void openExternalUrl(getLegalDocumentUrl("guidelines")).catch(() => {
+                      showToast("가이드라인을 열지 못했어요. 잠시 후 다시 시도해주세요.", {
+                        tone: "error",
+                      });
+                    });
+                  }}
+                  style={authorScreenStyles.overflowItem}
+                >
+                  <Text style={authorScreenStyles.overflowItemText}>커뮤니티 가이드라인</Text>
+                </Pressable>
               </View>
             ) : null}
 
@@ -483,6 +564,7 @@ export default function Author() {
       followerCount,
       followBusy,
       handleFollowToggle,
+      handleAuthorSupport,
       handleOpenLatestPost,
       handleShareAuthor,
       isFollowing,
@@ -493,6 +575,7 @@ export default function Author() {
       profileCosmetics,
       showProfileCustomize,
       showFollowButton,
+      showToast,
       overflowOpen,
       sort,
       totalLikes,

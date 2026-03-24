@@ -9,10 +9,13 @@ import { AppEmpty } from "@/components/state/AppEmpty";
 import { AppError } from "@/components/state/AppError";
 import { AppLoading } from "@/components/state/AppLoading";
 import { PostTopBar } from "@/components/post/PostTopBar";
+import { releaseConfig, getLegalDocumentUrl } from "@/config/release";
 import { useAuth } from "@/auth/AuthContext";
 import { setBookmark, useBookmarkSnapshot } from "@/features/bookmarks/bookmarkStore";
+import { useRuntimeLegalConfig } from "@/hooks/useRuntimeLegalConfig";
 import { getLike, setLike, useLikeSnapshot } from "@/features/likes/likeStore";
 import { useToast } from "@/feedback/ToastProvider";
+import { openExternalUrl, openSupportMail } from "@/lib/externalLinks";
 import { togglePostLike } from "@/services/likeService";
 import { deletePost, getEditablePost } from "@/services/postService";
 import { logShareEvent } from "@/services/shareService";
@@ -98,7 +101,8 @@ export default function PostDetail() {
     loading: relatedLoading,
     error: relatedError,
   } = useRelatedPosts(id, 6);
-  const { signOut } = useAuth();
+  const { config: runtimeLegalConfig } = useRuntimeLegalConfig();
+  const { token, signOut } = useAuth();
   const { showToast } = useToast();
   const [likePending, setLikePending] = useState(false);
   const [bookmarkModalVisible, setBookmarkModalVisible] = useState(false);
@@ -136,9 +140,23 @@ export default function PostDetail() {
   const fallbackBookmarked = Boolean((post as any)?.viewer?.isBookmarked);
   const bookmarkSnapshot = useBookmarkSnapshot(postId, fallbackBookmarked);
   const isBookmarked = bookmarkSnapshot.bookmarked;
+  const supportEmail = runtimeLegalConfig?.contacts.email ?? releaseConfig.supportEmail;
 
   const onPressBack = () => router.back();
   const showNotFound = error?.kind === "not_found";
+
+  const promptAuthForAction = React.useCallback(
+    (message: string, redirectPath = pathname) => {
+      Alert.alert("로그인이 필요해요", message, [
+        { text: "나중에", style: "cancel" },
+        {
+          text: "로그인",
+          onPress: () => router.push(buildAuthRoute("/(auth)", redirectPath)),
+        },
+      ]);
+    },
+    [pathname]
+  );
 
   React.useEffect(() => {
     let cancelled = false;
@@ -164,11 +182,16 @@ export default function PostDetail() {
 
   const handleAuthError = async () => {
     await signOut();
-    router.replace(buildAuthRoute("/(auth)", pathname));
-    Alert.alert("로그인이 필요해요", "다시 로그인해주세요.");
+    promptAuthForAction(
+      "로그인 상태가 만료되었어요. 다시 로그인하면 이어서 사용할 수 있어요."
+    );
   };
 
   const onPressLike = async () => {
+    if (!token) {
+      promptAuthForAction("공감은 로그인한 회원만 남길 수 있어요.");
+      return;
+    }
     if (!post || likePending) return;
 
     const stored = getLike(post.id);
@@ -221,6 +244,10 @@ export default function PostDetail() {
   };
 
   const openBookmarkModal = async () => {
+    if (!token) {
+      promptAuthForAction("북마크는 로그인한 회원만 사용할 수 있어요.");
+      return;
+    }
     if (!post) return;
     setBookmarkModalVisible(true);
     setBookmarkLoading(true);
@@ -439,10 +466,78 @@ export default function PostDetail() {
     ]);
   };
 
+  const onPressSafetyMenu = () => {
+    // TODO(server: glsoop): add authenticated report-content and block-user APIs
+    // so this surface can submit real moderation actions instead of support fallback.
+    const buttons: Parameters<typeof Alert.alert>[2] = [
+      { text: "취소", style: "cancel" },
+      {
+        text: "가이드라인 보기",
+        onPress: () => {
+          void openExternalUrl(getLegalDocumentUrl("guidelines")).catch(() => {
+            showToast("가이드라인을 열지 못했어요. 잠시 후 다시 시도해주세요.", {
+              tone: "error",
+            });
+          });
+        },
+      },
+    ];
+
+    if (supportEmail || releaseConfig.supportUrl) {
+      buttons.splice(1, 0, {
+        text: "문제 신고/지원 문의",
+        onPress: () => {
+          const postSummary = [
+            "[glsoop-mobile] 게시글 문제 신고/지원 문의",
+            "",
+            `post_id: ${postId || "unknown"}`,
+            `title: ${title || "제목 없음"}`,
+            `author: ${authorName}`,
+            "",
+            "문제 내용을 적어주세요:",
+          ].join("\n");
+
+          if (releaseConfig.supportUrl) {
+            void openExternalUrl(releaseConfig.supportUrl).catch(() => {
+              showToast("문의 경로를 열지 못했어요. 잠시 후 다시 시도해주세요.", {
+                tone: "error",
+              });
+            });
+            return;
+          }
+
+          if (!supportEmail) return;
+          void openSupportMail(supportEmail, {
+            subject: "[glsoop-mobile] 게시글 문제 신고",
+            body: postSummary,
+          }).catch(() => {
+            showToast("메일 앱을 열지 못했어요. 잠시 후 다시 시도해주세요.", {
+              tone: "error",
+            });
+          });
+        },
+      });
+    }
+
+    Alert.alert(
+      "문제 신고 / 지원 문의",
+      "현재 앱에는 게시글 즉시 신고나 사용자 차단 API가 연결되어 있지 않아요. 대신 운영팀 문의와 커뮤니티 가이드라인 확인 경로를 제공해요.",
+      buttons
+    );
+  };
+
   return (
     <SafeAreaView style={styles.safe}>
       {/* ✅ 고정 TopBar (기존 UX 유지) */}
-      <PostTopBar onPressBack={onPressBack} styles={styles} />
+      <PostTopBar
+        onPressBack={onPressBack}
+        styles={styles}
+        rightAction={{
+          onPress: onPressSafetyMenu,
+          testID: "post-safety-menu-btn",
+          accessibilityLabel: "문제 신고 및 지원 메뉴",
+        }}
+      />
 
       {loading ? (
         <View style={styles.center}>
