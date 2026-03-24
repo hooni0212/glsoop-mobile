@@ -3,6 +3,7 @@ import { Text, View } from "react-native";
 import { Image } from "expo-image";
 
 import { buildFeedPreviewUrl } from "@/lib/feedImage";
+import type { PostFontKey } from "@/lib/postContent";
 import type { WriteLayoutModel } from "@/lib/postLayout";
 import type { PostType } from "@/types/post";
 
@@ -13,6 +14,8 @@ type Props = {
   categoryLabel: string;
   selectedType?: PostType | null;
   layout: WriteLayoutModel;
+  fontKey: PostFontKey;
+  compact?: boolean;
 };
 
 export function WritePreviewCard({
@@ -22,6 +25,8 @@ export function WritePreviewCard({
   categoryLabel,
   selectedType,
   layout,
+  fontKey,
+  compact = false,
 }: Props) {
   const previewTitle = title.trim() || "제목 미리보기";
   const previewBody =
@@ -38,8 +43,9 @@ export function WritePreviewCard({
           ...layout,
           showFooter: Boolean(footerText),
         },
+        fontKey,
       }),
-    [footerText, layout, previewBody, previewTitle, selectedType]
+    [fontKey, footerText, layout, previewBody, previewTitle, selectedType]
   );
 
   return (
@@ -51,7 +57,7 @@ export function WritePreviewCard({
       <View style={styles.frame}>
         <Image
           source={{ uri }}
-          style={styles.image}
+          style={[styles.image, compact && styles.imageCompact]}
           contentFit="contain"
           cachePolicy="none"
           transition={120}
@@ -94,5 +100,8 @@ const styles = {
     borderRadius: 20,
     overflow: "hidden" as const,
     backgroundColor: "#f4ead8",
+  },
+  imageCompact: {
+    maxHeight: 300,
   },
 };

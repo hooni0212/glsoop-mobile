@@ -4,6 +4,8 @@ import React from "react";
 import { Pressable, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { useAuth } from "@/auth/AuthContext";
+import { buildAuthRoute } from "@/lib/authRedirect";
 import { COLORS, TAB_META, TAB_ORDER, type TabRouteName } from "./tabs.meta";
 import { createTabsStyles } from "./tabs.styles";
 
@@ -28,6 +30,7 @@ import { createTabsStyles } from "./tabs.styles";
 export function TabsBar(props: any /* BottomTabBarProps */) {
   const { state, navigation } = props;
 
+  const { token } = useAuth();
   const insets = useSafeAreaInsets();
   const styles = React.useMemo(
     () => createTabsStyles(insets.bottom),
@@ -35,6 +38,10 @@ export function TabsBar(props: any /* BottomTabBarProps */) {
   );
 
   const go = (name: TabRouteName) => {
+    if (!token && name !== "index") {
+      router.push(buildAuthRoute("/(auth)", `/${name}`));
+      return;
+    }
     // expo-router Tabs는 내부적으로 React Navigation 기반이라 navigate로 이동 가능
     navigation.navigate(name);
   };
@@ -76,7 +83,13 @@ export function TabsBar(props: any /* BottomTabBarProps */) {
       {/* FAB 오버레이 */}
       <View style={styles.fabWrap} pointerEvents="box-none">
         <Pressable
-          onPress={() => router.push("/write")}
+          onPress={() => {
+            if (!token) {
+              router.push(buildAuthRoute("/(auth)", "/write"));
+              return;
+            }
+            router.push("/write");
+          }}
           style={styles.fab}
           hitSlop={12}
           accessibilityRole="button"

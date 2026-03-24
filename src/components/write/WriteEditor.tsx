@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import {
   ImageBackground,
+  Keyboard,
   PanResponder,
   Pressable,
   Text,
@@ -11,6 +12,7 @@ import {
   type PanResponderGestureState,
 } from "react-native";
 
+import type { PostFontKey } from "@/lib/postContent";
 import type { LayoutBox, LayoutBoxId, WriteLayoutModel } from "@/lib/postLayout";
 
 const PAPER_SOURCE = require("../../../assets/images/feed-templates/paper-source-01.jpg");
@@ -19,12 +21,14 @@ type Props = {
   title: string;
   body: string;
   footerText: string;
+  fontKey: PostFontKey;
   layout: WriteLayoutModel;
   activeBoxId: LayoutBoxId;
   onSelectBox: (boxId: LayoutBoxId) => void;
   onDragBox: (boxId: LayoutBoxId, deltaX: number, deltaY: number) => void;
   onChangeTitle: (v: string) => void;
   onChangeBody: (v: string) => void;
+  onPressBackground?: () => void;
   styles: any;
   children?: React.ReactNode;
 };
@@ -62,6 +66,8 @@ function DragHandle({
       PanResponder.create({
         onStartShouldSetPanResponder: () => true,
         onMoveShouldSetPanResponder: () => true,
+        onStartShouldSetPanResponderCapture: () => true,
+        onMoveShouldSetPanResponderCapture: () => true,
         onPanResponderGrant: () => {
           onSelectBox(boxId);
           setDragOffset({ x: 0, y: 0 });
@@ -84,9 +90,11 @@ function DragHandle({
   return (
     <View
       {...panResponder.panHandlers}
+      hitSlop={{ top: 10, right: 14, bottom: 10, left: 14 }}
       style={[
         styles.dragHandle,
         active && styles.dragHandleActive,
+        boxId === "text_box" && styles.dragHandleBody,
         {
           transform: [{ translateX: dragOffset.x }, { translateY: dragOffset.y }],
         },
@@ -129,6 +137,7 @@ function EditableBox({
       style={[
         styles.bookBox,
         footer && styles.bookFooterBox,
+        boxId === "text_box" && styles.bookBodyBox,
         boxFrameStyle(box),
         active && styles.bookBoxActive,
       ]}
@@ -151,16 +160,24 @@ export function WriteEditor({
   title,
   body,
   footerText,
+  fontKey,
   layout,
   activeBoxId,
   onSelectBox,
   onDragBox,
   onChangeTitle,
   onChangeBody,
+  onPressBackground,
   styles,
   children,
 }: Props) {
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
+
+  const fontFamily = useMemo(() => {
+    if (fontKey === "sans") return styles.bookFontSans;
+    if (fontKey === "hand") return styles.bookFontHand;
+    return styles.bookFontSerif;
+  }, [fontKey, styles.bookFontHand, styles.bookFontSans, styles.bookFontSerif]);
 
   const onCanvasLayout = (event: LayoutChangeEvent) => {
     const { width, height } = event.nativeEvent.layout;
@@ -177,97 +194,105 @@ export function WriteEditor({
           </Text>
         </View>
 
-        <ImageBackground
-          source={PAPER_SOURCE}
-          resizeMode="cover"
-          style={styles.bookCanvas}
-          imageStyle={styles.bookCanvasImage}
-          onLayout={onCanvasLayout}
-        >
-          <EditableBox
-            boxId="title_box"
-            box={layout.titleBox}
-            activeBoxId={activeBoxId}
-            canvasWidth={canvasSize.width}
-            canvasHeight={canvasSize.height}
-            onSelectBox={onSelectBox}
-            onDragBox={onDragBox}
-            styles={styles}
+        <Pressable onPress={onPressBackground} style={styles.bookCanvasPressable}>
+          <ImageBackground
+            source={PAPER_SOURCE}
+            resizeMode="cover"
+            style={styles.bookCanvas}
+            imageStyle={styles.bookCanvasImage}
+            onLayout={onCanvasLayout}
           >
-            <TextInput
-              value={title}
-              onChangeText={onChangeTitle}
-              placeholder="제목을 입력해줘"
-              placeholderTextColor="rgba(74,62,48,0.35)"
-              multiline
-              style={[
-                styles.bookTitleInput,
-                {
-                  textAlign: layout.titleStyle.align,
-                  fontSize: 18 * layout.titleStyle.fontScale,
-                  lineHeight: 22 * layout.titleStyle.lineHeight,
-                },
-              ]}
-              testID="write-title-input"
-            />
-          </EditableBox>
-
-          <EditableBox
-            boxId="text_box"
-            box={layout.bodyBox}
-            activeBoxId={activeBoxId}
-            canvasWidth={canvasSize.width}
-            canvasHeight={canvasSize.height}
-            onSelectBox={onSelectBox}
-            onDragBox={onDragBox}
-            styles={styles}
-          >
-            <TextInput
-              value={body}
-              onChangeText={onChangeBody}
-              placeholder="오늘의 글을 남겨줘…"
-              placeholderTextColor="rgba(74,62,48,0.32)"
-              multiline
-              style={[
-                styles.bookBodyInput,
-                {
-                  textAlign: layout.bodyStyle.align,
-                  fontSize: 13 * layout.bodyStyle.fontScale,
-                  lineHeight: 20 * layout.bodyStyle.lineHeight,
-                },
-              ]}
-              testID="write-body-input"
-            />
-          </EditableBox>
-
-          {layout.showFooter ? (
             <EditableBox
-              boxId="footer_box"
-              box={layout.footerBox}
+              boxId="title_box"
+              box={layout.titleBox}
               activeBoxId={activeBoxId}
               canvasWidth={canvasSize.width}
               canvasHeight={canvasSize.height}
               onSelectBox={onSelectBox}
               onDragBox={onDragBox}
               styles={styles}
-              footer
             >
-              <Text
-                numberOfLines={2}
+              <TextInput
+                value={title}
+                onChangeText={onChangeTitle}
+                onSubmitEditing={Keyboard.dismiss}
+                blurOnSubmit
+                placeholder="제목을 입력해줘"
+                placeholderTextColor="rgba(74,62,48,0.35)"
+                multiline
                 style={[
-                  styles.bookFooterText,
+                  styles.bookTitleInput,
+                  fontFamily,
                   {
-                    textAlign: layout.footerStyle.align,
-                    fontSize: 10 * layout.footerStyle.fontScale,
-                    lineHeight: 12 * layout.footerStyle.lineHeight,
+                    textAlign: layout.titleStyle.align,
+                    fontSize: 18 * layout.titleStyle.fontScale,
+                    lineHeight: 22 * layout.titleStyle.lineHeight,
                   },
                 ]}
-              >
-                {footerText || "#글숲"}
-              </Text>
+                testID="write-title-input"
+              />
             </EditableBox>
-          ) : null}
-        </ImageBackground>
+
+            <EditableBox
+              boxId="text_box"
+              box={layout.bodyBox}
+              activeBoxId={activeBoxId}
+              canvasWidth={canvasSize.width}
+              canvasHeight={canvasSize.height}
+              onSelectBox={onSelectBox}
+              onDragBox={onDragBox}
+              styles={styles}
+            >
+              <TextInput
+                value={body}
+                onChangeText={onChangeBody}
+                placeholder="오늘의 글을 남겨줘…"
+                placeholderTextColor="rgba(74,62,48,0.32)"
+                multiline
+                blurOnSubmit={false}
+                style={[
+                  styles.bookBodyInput,
+                  fontFamily,
+                  {
+                    textAlign: layout.bodyStyle.align,
+                    fontSize: 13 * layout.bodyStyle.fontScale,
+                    lineHeight: 20 * layout.bodyStyle.lineHeight,
+                  },
+                ]}
+                testID="write-body-input"
+              />
+            </EditableBox>
+
+            {layout.showFooter ? (
+              <EditableBox
+                boxId="footer_box"
+                box={layout.footerBox}
+                activeBoxId={activeBoxId}
+                canvasWidth={canvasSize.width}
+                canvasHeight={canvasSize.height}
+                onSelectBox={onSelectBox}
+                onDragBox={onDragBox}
+                styles={styles}
+                footer
+              >
+                <Text
+                  numberOfLines={2}
+                  style={[
+                    styles.bookFooterText,
+                    fontFamily,
+                    {
+                      textAlign: layout.footerStyle.align,
+                      fontSize: 10 * layout.footerStyle.fontScale,
+                      lineHeight: 12 * layout.footerStyle.lineHeight,
+                    },
+                  ]}
+                >
+                  {footerText || "#글숲"}
+                </Text>
+              </EditableBox>
+            ) : null}
+          </ImageBackground>
+        </Pressable>
       </View>
 
       {children ? <View style={styles.editorControlDock}>{children}</View> : null}

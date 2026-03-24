@@ -3,6 +3,9 @@ const HTML_BLOCK_END_RE = /<\/(p|div|section|article|li|h1|h2|h3|h4|h5|h6)>/gi;
 const HTML_LIST_ITEM_RE = /<li[^>]*>/gi;
 const HTML_COMMENT_RE = /<!--[\s\S]*?-->/g;
 const HTML_TAG_RE = /<[^>]+>/g;
+const FONT_META_RE = /<!--\s*FONT:(serif|sans|hand)\s*-->/i;
+
+export type PostFontKey = "serif" | "sans" | "hand";
 
 const ENTITY_MAP: Record<string, string> = {
   nbsp: " ",
@@ -16,6 +19,20 @@ const ENTITY_MAP: Record<string, string> = {
 
 function decodeHtmlEntities(value: string) {
   return value.replace(/&([a-zA-Z0-9#]+);/g, (match, entity) => ENTITY_MAP[entity] ?? match);
+}
+
+export function extractPostFontKey(input: unknown): PostFontKey {
+  if (typeof input !== "string") return "serif";
+  const match = input.match(FONT_META_RE);
+  if (!match?.[1]) return "serif";
+  const key = match[1].toLowerCase();
+  return key === "sans" || key === "hand" ? key : "serif";
+}
+
+export function withPostFontMeta(input: string, fontKey: PostFontKey): string {
+  const safeFontKey = fontKey === "sans" || fontKey === "hand" ? fontKey : "serif";
+  const content = typeof input === "string" ? input.replace(FONT_META_RE, "").trim() : "";
+  return `<!--FONT:${safeFontKey}-->${content}`;
 }
 
 export function normalizePostEditorText(input: unknown): string {

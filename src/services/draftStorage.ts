@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getAuthToken, COOKIE_SESSION_TOKEN } from "@/lib/authToken";
+import type { PostFontKey } from "@/lib/postContent";
 import type { PostType } from "@/types/post";
 
 export type WriteDraft = {
@@ -7,6 +8,7 @@ export type WriteDraft = {
   title: string;
   body: string;
   category?: PostType;
+  fontKey?: PostFontKey;
   mode?: "create" | "edit";
   postId?: string;
   authNamespace?: string;
@@ -53,6 +55,10 @@ function normalizeDraft(input: any): WriteDraft | null {
       ? input.category
       : undefined;
   const mode = input.mode === "edit" ? "edit" : "create";
+  const fontKey =
+    input.fontKey === "sans" || input.fontKey === "hand" || input.fontKey === "serif"
+      ? input.fontKey
+      : "serif";
   const postId = typeof input.postId === "string" && input.postId.trim() ? input.postId.trim() : undefined;
   const authNamespace =
     typeof input.authNamespace === "string" && input.authNamespace.trim()
@@ -65,7 +71,7 @@ function normalizeDraft(input: any): WriteDraft | null {
 
   if (expiresAt <= Date.now()) return null;
 
-  return { id, title, body, category, mode, postId, authNamespace, updatedAt, expiresAt };
+  return { id, title, body, category, fontKey, mode, postId, authNamespace, updatedAt, expiresAt };
 }
 
 function uuidLike(): string {
@@ -147,6 +153,7 @@ export async function upsertWriteDraft(input: {
   title: string;
   body: string;
   category?: PostType;
+  fontKey?: PostFontKey;
   mode?: "create" | "edit";
   postId?: string | null;
 }): Promise<string> {
@@ -158,6 +165,7 @@ export async function upsertWriteDraft(input: {
     title: input.title ?? "",
     body: input.body ?? "",
     category: input.category,
+    fontKey: input.fontKey ?? "serif",
     mode,
     postId: typeof input.postId === "string" ? input.postId : undefined,
     authNamespace,

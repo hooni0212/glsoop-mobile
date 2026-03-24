@@ -7,6 +7,16 @@ export function createWriteStyles() {
     android: "serif",
     default: "Georgia",
   });
+  const sansFont = Platform.select({
+    ios: "System",
+    android: "sans-serif",
+    default: "System",
+  });
+  const handFont = Platform.select({
+    ios: "Snell Roundhand",
+    android: "cursive",
+    default: "cursive",
+  });
 
   return StyleSheet.create({
     flex: { flex: 1 },
@@ -141,6 +151,9 @@ export function createWriteStyles() {
       shadowOffset: { width: 0, height: 8 },
       elevation: 2,
     },
+    bookCanvasPressable: {
+      width: "100%",
+    },
     bookCanvasImage: {
       borderRadius: 22,
     },
@@ -154,6 +167,9 @@ export function createWriteStyles() {
       borderColor: "rgba(79,58,33,0.12)",
       backgroundColor: "rgba(255,255,255,0.04)",
     },
+    bookBodyBox: {
+      paddingTop: 24,
+    },
     bookBoxActive: {
       borderColor: "rgba(24,96,58,0.85)",
       borderStyle: "dashed",
@@ -163,7 +179,6 @@ export function createWriteStyles() {
       color: "#3c342d",
       fontWeight: "700",
       letterSpacing: -0.3,
-      fontFamily: paperFont,
       height: "100%",
       padding: 0,
       textAlignVertical: "top",
@@ -171,7 +186,6 @@ export function createWriteStyles() {
     bookBodyInput: {
       color: "#524941",
       fontWeight: "500",
-      fontFamily: paperFont,
       height: "100%",
       padding: 0,
       textAlignVertical: "top",
@@ -184,8 +198,9 @@ export function createWriteStyles() {
       top: 4,
       left: 4,
       zIndex: 2,
-      height: 14,
-      paddingHorizontal: 6,
+      minWidth: 34,
+      height: 18,
+      paddingHorizontal: 8,
       borderRadius: 999,
       backgroundColor: "rgba(255,250,244,0.72)",
       borderWidth: 1,
@@ -193,6 +208,13 @@ export function createWriteStyles() {
       flexDirection: "row",
       alignItems: "center",
       gap: 3,
+    },
+    dragHandleBody: {
+      minWidth: 42,
+      height: 22,
+      paddingHorizontal: 10,
+      top: 3,
+      left: 6,
     },
     dragHandleActive: {
       backgroundColor: "rgba(237,250,241,0.92)",
@@ -207,7 +229,15 @@ export function createWriteStyles() {
     bookFooterText: {
       color: "rgba(81,65,49,0.72)",
       fontWeight: "700",
+    },
+    bookFontSerif: {
       fontFamily: paperFont,
+    },
+    bookFontSans: {
+      fontFamily: sansFont,
+    },
+    bookFontHand: {
+      fontFamily: handFont,
     },
     editorPlaceholder: {
       color: "rgba(80,58,32,0.34)",
