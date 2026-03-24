@@ -28,6 +28,39 @@ export default function RootLayout() {
               }}
             />
 
+            <Stack.Screen
+              name="account-center/index"
+              options={{
+                headerShown: false,
+                presentation: "transparentModal",
+                animation: "fade",
+              }}
+            />
+            <Stack.Screen
+              name="account-center/profile"
+              options={{
+                headerShown: false,
+                presentation: "modal",
+                animation: "slide_from_right",
+              }}
+            />
+            <Stack.Screen
+              name="account-center/security"
+              options={{
+                headerShown: false,
+                presentation: "modal",
+                animation: "slide_from_right",
+              }}
+            />
+            <Stack.Screen
+              name="account-center/account-closure"
+              options={{
+                headerShown: false,
+                presentation: "modal",
+                animation: "slide_from_right",
+              }}
+            />
+
             <Stack.Screen name="search" options={{ headerShown: false }} />
             <Stack.Screen name="profile-customize" options={{ headerShown: false }} />
             <Stack.Screen name="ui-kit" options={{ headerShown: false }} />

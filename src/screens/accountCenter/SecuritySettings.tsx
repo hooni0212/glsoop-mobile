@@ -1,0 +1,368 @@
+import React from "react";
+import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
+import { router, usePathname } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+
+import { useAuth } from "@/auth/AuthContext";
+import { useToast } from "@/feedback/ToastProvider";
+import { AppEmpty } from "@/components/state/AppEmpty";
+import { AppError } from "@/components/state/AppError";
+import { AppLoading } from "@/components/state/AppLoading";
+import { buildAuthRoute } from "@/lib/authRedirect";
+import { apiGet, apiPost, apiPut } from "@/lib/api";
+import { normalizeApiError } from "@/lib/errors";
+import {
+  type MeResponse,
+  type SessionsResponse,
+  type SessionItem,
+  type UpdateMeResponse,
+  formatDateTime,
+  normalizeSession,
+  parseFlag,
+} from "@/features/me/accountCenter";
+import { tokens } from "@/theme/tokens";
+
+export default function AccountCenterSecuritySettingsScreen() {
+  const pathname = usePathname();
+  const { signOut } = useAuth();
+  const { showToast } = useToast();
+  const [me, setMe] = React.useState<MeResponse | null>(null);
+  const [sessions, setSessions] = React.useState<SessionItem[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<ReturnType<typeof normalizeApiError> | null>(null);
+  const [rememberLoginEnabled, setRememberLoginEnabled] = React.useState(false);
+  const [savingRemember, setSavingRemember] = React.useState(false);
+  const [logoutAllBusy, setLogoutAllBusy] = React.useState(false);
+
+  const loadSecurity = React.useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [meResponse, sessionsResponse] = await Promise.all([
+        apiGet<MeResponse>("/api/me"),
+        apiGet<SessionsResponse>("/api/me/sessions"),
+      ]);
+      setMe(meResponse);
+      setRememberLoginEnabled(parseFlag(meResponse.remember_login_enabled));
+      setSessions(
+        Array.isArray(sessionsResponse?.sessions)
+          ? sessionsResponse.sessions.map(normalizeSession)
+          : []
+      );
+    } catch (e) {
+      setError(normalizeApiError(e));
+      setMe(null);
+      setSessions([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    void loadSecurity();
+  }, [loadSecurity]);
+
+  async function onSaveRememberSetting(nextValue: boolean) {
+    setRememberLoginEnabled(nextValue);
+    setSavingRemember(true);
+    try {
+      const response = await apiPut<UpdateMeResponse>("/api/me", {
+        remember_login_enabled: nextValue,
+      });
+      if (response?.ok === false) {
+        throw new Error(response.message || "로그인 유지 설정 저장에 실패했어요.");
+      }
+      showToast("로그인 유지 설정을 저장했어요.", { tone: "success" });
+    } catch (e) {
+      setRememberLoginEnabled((current) => !current);
+      const normalized = normalizeApiError(e);
+      if (normalized.kind === "auth") {
+        router.replace(buildAuthRoute("/(auth)", pathname));
+        return;
+      }
+      showToast(normalized.description || normalized.title, { tone: "error" });
+    } finally {
+      setSavingRemember(false);
+    }
+  }
+
+  async function onLogoutAll() {
+    setLogoutAllBusy(true);
+    try {
+      await apiPost("/api/logout-all", {});
+      await signOut();
+      router.replace("/(auth)");
+    } catch (e) {
+      const normalized = normalizeApiError(e);
+      if (normalized.kind === "auth") {
+        router.replace(buildAuthRoute("/(auth)", pathname));
+        return;
+      }
+      showToast(normalized.description || normalized.title, { tone: "error" });
+    } finally {
+      setLogoutAllBusy(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <TopBar title="보안 및 로그인" />
+        <View style={styles.center}>
+          <AppLoading message="보안 설정을 불러오는 중..." />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (error?.kind === "auth") {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <TopBar title="보안 및 로그인" />
+        <View style={styles.center}>
+          <AppEmpty
+            title="로그인이 필요해요"
+            description="보안 설정은 로그인 후 이용할 수 있어요."
+            primaryAction={{
+              label: "로그인 하러가기",
+              onPress: () => router.replace(buildAuthRoute("/(auth)", pathname)),
+            }}
+          />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (error && !me) {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <TopBar title="보안 및 로그인" />
+        <View style={styles.center}>
+          <AppError error={error} onRetry={loadSecurity} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.safe}>
+      <TopBar title="보안 및 로그인" />
+      <ScrollView contentContainerStyle={styles.content}>
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>로그인 유지</Text>
+          <Text style={styles.cardDescription}>
+            현재 기기에서 로그인 유지 여부를 조절해요.
+          </Text>
+          <View style={styles.toggleRow}>
+            <Pressable
+              onPress={() => void onSaveRememberSetting(true)}
+              style={[styles.toggleChip, rememberLoginEnabled && styles.toggleChipActive]}
+              disabled={savingRemember}
+            >
+              <Text
+                style={[
+                  styles.toggleChipText,
+                  rememberLoginEnabled && styles.toggleChipTextActive,
+                ]}
+              >
+                켜기
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => void onSaveRememberSetting(false)}
+              style={[styles.toggleChip, !rememberLoginEnabled && styles.toggleChipActive]}
+              disabled={savingRemember}
+            >
+              <Text
+                style={[
+                  styles.toggleChipText,
+                  !rememberLoginEnabled && styles.toggleChipTextActive,
+                ]}
+              >
+                끄기
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>활성 세션</Text>
+          <Text style={styles.cardDescription}>
+            현재 로그인된 기기를 확인하고 모든 기기에서 로그아웃할 수 있어요.
+          </Text>
+
+          {sessions.length === 0 ? (
+            <Text style={styles.emptyText}>활성 세션이 없어요.</Text>
+          ) : (
+            <View style={styles.sessionList}>
+              {sessions.map((session) => (
+                <View key={session.sid} style={styles.sessionCard}>
+                  <Text style={styles.sessionTitle}>
+                    {session.current ? "현재 기기" : "다른 기기"}
+                  </Text>
+                  <Text style={styles.sessionMeta}>{session.userAgent}</Text>
+                  <Text style={styles.sessionMeta}>
+                    최근 활동 {formatDateTime(session.lastSeenAt)}
+                  </Text>
+                  <Text style={styles.sessionMeta}>만료 {formatDateTime(session.expiresAt)}</Text>
+                  <Text style={styles.sessionMeta}>
+                    {session.rememberMe ? "로그인 유지" : "기본 세션"}
+                    {session.ipHint ? ` · ${session.ipHint}` : ""}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          )}
+
+          <Pressable
+            onPress={() => void onLogoutAll()}
+            style={[styles.secondaryBtn, logoutAllBusy && styles.disabledBtn]}
+            disabled={logoutAllBusy}
+          >
+            <Text style={styles.secondaryBtnText}>
+              {logoutAllBusy ? "처리 중..." : "전체 로그아웃"}
+            </Text>
+          </Pressable>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+function TopBar({ title }: { title: string }) {
+  return (
+    <View style={styles.topBar}>
+      <Pressable onPress={() => router.back()} style={styles.topBarBtn}>
+        <Ionicons name="chevron-back" size={20} color={tokens.colors.text} />
+      </Pressable>
+      <Text style={styles.topBarTitle}>{title}</Text>
+      <View style={styles.topBarSpacer} />
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: tokens.colors.bg },
+  center: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: tokens.space.xl,
+  },
+  topBar: {
+    paddingTop: tokens.space.xs,
+    paddingHorizontal: tokens.space.md,
+    paddingBottom: tokens.space.sm,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  topBarBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: tokens.radius.pill,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: tokens.colors.surfaceStrong,
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+  },
+  topBarTitle: {
+    fontSize: 17,
+    fontWeight: "900",
+    color: tokens.colors.text,
+  },
+  topBarSpacer: {
+    width: 40,
+    height: 40,
+  },
+  content: {
+    paddingHorizontal: tokens.space.xl,
+    paddingTop: tokens.space.md,
+    paddingBottom: tokens.space.xl,
+    gap: tokens.space.lg as any,
+  },
+  card: {
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+    borderRadius: tokens.radius.xl,
+    backgroundColor: tokens.colors.surfaceStrong,
+    padding: tokens.space.lg,
+    gap: tokens.space.md as any,
+  },
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: "900",
+    color: tokens.colors.text,
+  },
+  cardDescription: {
+    fontSize: tokens.font.small,
+    color: tokens.colors.textMuted,
+    lineHeight: 20,
+  },
+  toggleRow: {
+    flexDirection: "row",
+    gap: tokens.space.xs as any,
+  },
+  toggleChip: {
+    borderWidth: 1,
+    borderColor: tokens.colors.borderStrong,
+    borderRadius: tokens.radius.pill,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    backgroundColor: tokens.colors.surface,
+  },
+  toggleChipActive: {
+    backgroundColor: tokens.colors.green100,
+    borderColor: tokens.colors.green700,
+  },
+  toggleChipText: {
+    fontSize: tokens.font.small,
+    fontWeight: "800",
+    color: tokens.colors.textMuted,
+  },
+  toggleChipTextActive: {
+    color: tokens.colors.green900,
+  },
+  emptyText: {
+    fontSize: tokens.font.small,
+    color: tokens.colors.textMuted,
+    lineHeight: 20,
+  },
+  sessionList: {
+    gap: tokens.space.sm as any,
+  },
+  sessionCard: {
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+    borderRadius: tokens.radius.lg,
+    backgroundColor: tokens.colors.surface,
+    padding: tokens.space.md,
+    gap: 6,
+  },
+  sessionTitle: {
+    fontSize: 15,
+    fontWeight: "900",
+    color: tokens.colors.text,
+  },
+  sessionMeta: {
+    fontSize: tokens.font.small,
+    color: tokens.colors.textMuted,
+  },
+  secondaryBtn: {
+    backgroundColor: tokens.colors.surface,
+    borderWidth: 1,
+    borderColor: tokens.colors.borderStrong,
+    borderRadius: tokens.radius.lg,
+    paddingVertical: 14,
+    alignItems: "center",
+  },
+  secondaryBtnText: {
+    color: tokens.colors.text,
+    fontSize: 15,
+    fontWeight: "800",
+  },
+  disabledBtn: {
+    opacity: 0.6,
+  },
+});

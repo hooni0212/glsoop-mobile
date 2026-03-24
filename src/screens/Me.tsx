@@ -1,46 +1,22 @@
 import React from "react";
-import {
-  Alert,
-  Pressable,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 
-import { useAuth } from "@/auth/AuthContext";
 import { FeedCard } from "@/components/FeedCard";
 import { AppEmpty } from "@/components/state/AppEmpty";
 import { AppError } from "@/components/state/AppError";
 import { AppLoading } from "@/components/state/AppLoading";
-import { apiGet, apiPost, apiPut } from "@/lib/api";
+import {
+  type MeResponse,
+  parseFlag,
+  pickFirstNumber,
+  pickFirstString,
+} from "@/features/me/accountCenter";
+import { apiGet } from "@/lib/api";
 import { normalizeApiError } from "@/lib/errors";
 import { deletePost } from "@/services/postService";
 import { tokens } from "@/theme/tokens";
 import type { Post } from "@/types/post";
-
-type MeResponse = {
-  ok?: boolean;
-  id: number;
-  name: string;
-  nickname?: string | null;
-  email: string;
-  bio?: string | null;
-  about?: string | null;
-  is_admin?: boolean;
-  is_verified?: boolean;
-  remember_login_enabled?: boolean;
-  marketing_email_opt_in?: boolean;
-  level: number;
-  xp: number;
-  streak_days: number;
-  max_streak_days: number;
-  follower_count?: number;
-  following_count?: number;
-};
 
 type PostListResponse = {
   ok?: boolean;
@@ -51,17 +27,6 @@ type PostListResponse = {
 type FollowingsResponse = {
   ok?: boolean;
   followings?: any[];
-  message?: string;
-};
-
-type SessionsResponse = {
-  ok?: boolean;
-  sessions?: any[];
-  message?: string;
-};
-
-type UpdateMeResponse = {
-  ok?: boolean;
   message?: string;
 };
 
@@ -90,46 +55,7 @@ type FollowingUser = {
   followerCount: number;
 };
 
-type SessionItem = {
-  sid: string;
-  current: boolean;
-  rememberMe: boolean;
-  createdAt: string;
-  lastSeenAt: string;
-  expiresAt: string;
-  userAgent: string;
-  ipHint?: string | null;
-};
-
-type MeTab = "summary" | "myPosts" | "likedPosts" | "followings" | "sessions";
-
-function pickFirstString(...vals: any[]) {
-  for (const value of vals) {
-    if (typeof value === "string" && value.trim()) return value;
-  }
-  return "";
-}
-
-function pickFirstNumber(...vals: any[]) {
-  for (const value of vals) {
-    const next = Number(value);
-    if (!Number.isNaN(next)) return next;
-  }
-  return 0;
-}
-
-function parseFlag(...vals: any[]) {
-  for (const value of vals) {
-    if (typeof value === "boolean") return value;
-    if (typeof value === "number") return value === 1;
-    if (typeof value === "string") {
-      const normalized = value.trim().toLowerCase();
-      if (normalized === "1" || normalized === "true") return true;
-      if (normalized === "0" || normalized === "false" || normalized === "") return false;
-    }
-  }
-  return false;
-}
+type MeTab = "summary" | "myPosts" | "likedPosts" | "followings";
 
 function stripHtml(s: string) {
   return s.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
@@ -202,33 +128,8 @@ function normalizeFollowing(row: any): FollowingUser {
   };
 }
 
-function normalizeSession(row: any): SessionItem {
-  return {
-    sid: pickFirstString(row?.sid),
-    current: parseFlag(row?.current),
-    rememberMe: parseFlag(row?.remember_me, row?.rememberMe),
-    createdAt: pickFirstString(row?.created_at, row?.createdAt),
-    lastSeenAt: pickFirstString(row?.last_seen_at, row?.lastSeenAt),
-    expiresAt: pickFirstString(row?.expires_at, row?.expiresAt),
-    userAgent: pickFirstString(row?.user_agent, row?.userAgent) || "알 수 없는 기기",
-    ipHint: pickFirstString(row?.ip_hint, row?.ipHint) || null,
-  };
-}
-
-function formatDateTime(iso?: string) {
-  if (!iso) return "";
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return "";
-  return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, "0")}.${String(
-    date.getDate()
-  ).padStart(2, "0")} ${String(date.getHours()).padStart(2, "0")}:${String(
-    date.getMinutes()
-  ).padStart(2, "0")}`;
-}
-
 export default function MeScreen() {
   const router = useRouter();
-  const { signOut } = useAuth();
 
   const [me, setMe] = React.useState<MeResponse | null>(null);
   const [loading, setLoading] = React.useState(true);
@@ -238,20 +139,10 @@ export default function MeScreen() {
   const [myPosts, setMyPosts] = React.useState<Post[]>([]);
   const [likedPosts, setLikedPosts] = React.useState<Post[]>([]);
   const [followings, setFollowings] = React.useState<FollowingUser[]>([]);
-  const [sessions, setSessions] = React.useState<SessionItem[]>([]);
   const [tabLoading, setTabLoading] = React.useState(false);
   const [tabError, setTabError] = React.useState<ReturnType<typeof normalizeApiError> | null>(null);
-  const [logoutAllBusy, setLogoutAllBusy] = React.useState(false);
   const [deletingPostId, setDeletingPostId] = React.useState<string | null>(null);
   const [growthSummary, setGrowthSummary] = React.useState<GrowthSummaryResponse["summary"] | null>(null);
-  const [showEdit, setShowEdit] = React.useState(false);
-  const [editNickname, setEditNickname] = React.useState("");
-  const [editBio, setEditBio] = React.useState("");
-  const [editAbout, setEditAbout] = React.useState("");
-  const [rememberLoginEnabled, setRememberLoginEnabled] = React.useState(false);
-  const [savingProfile, setSavingProfile] = React.useState(false);
-  const [saveMessage, setSaveMessage] = React.useState<string | null>(null);
-  const [saveError, setSaveError] = React.useState<ReturnType<typeof normalizeApiError> | null>(null);
 
   const loadMe = React.useCallback(async () => {
     setLoading(true);
@@ -299,12 +190,6 @@ export default function MeScreen() {
         setFollowings(
           Array.isArray(data?.followings) ? data.followings.map(normalizeFollowing) : []
         );
-        return;
-      }
-
-      if (activeTab === "sessions") {
-        const data = await apiGet<SessionsResponse>("/api/me/sessions");
-        setSessions(Array.isArray(data?.sessions) ? data.sessions.map(normalizeSession) : []);
       }
     } catch (e) {
       setTabError(normalizeApiError(e));
@@ -318,281 +203,113 @@ export default function MeScreen() {
   }, [loadMe]);
 
   React.useEffect(() => {
-    if (!me) return;
-    setEditNickname(me.nickname ?? "");
-    setEditBio(me.bio ?? "");
-    setEditAbout(me.about ?? "");
-    setRememberLoginEnabled(parseFlag(me.remember_login_enabled));
-  }, [me]);
-
-  React.useEffect(() => {
     void loadActiveTab();
   }, [loadActiveTab]);
 
-  async function onLogout() {
-    await signOut();
-    router.replace("/(auth)");
-  }
-
-  async function onLogoutAll() {
-    setLogoutAllBusy(true);
-    try {
-      await apiPost("/api/logout-all", {});
-      await signOut();
-      router.replace("/(auth)");
-    } catch (e) {
-      setTabError(normalizeApiError(e));
-    } finally {
-      setLogoutAllBusy(false);
-    }
-  }
-
-  async function onSaveProfile() {
-    const nickname = editNickname.trim();
-    if (!nickname) {
-      setSaveMessage(null);
-      setSaveError(normalizeApiError(new Error("닉네임을 입력해주세요.")));
-      return;
-    }
-
-    setSavingProfile(true);
-    setSaveMessage(null);
-    setSaveError(null);
-    try {
-      const res = await apiPut<UpdateMeResponse>("/api/me", {
-        nickname,
-        bio: editBio.trim(),
-        about: editAbout.trim(),
-        remember_login_enabled: rememberLoginEnabled,
-      });
-      if (res?.ok === false) {
-        throw new Error(res.message || "프로필 수정에 실패했어요.");
-      }
-      setSaveMessage(res?.message || "프로필을 저장했어요.");
-      setShowEdit(false);
-      await loadMe();
-    } catch (e) {
-      setSaveError(normalizeApiError(e));
-    } finally {
-      setSavingProfile(false);
-    }
-  }
-
   function onDeleteMyPost(postId: string) {
-    Alert.alert("글 삭제", "정말 이 글을 삭제할까요?", [
-      { text: "취소", style: "cancel" },
-      {
-        text: "삭제",
-        style: "destructive",
-        onPress: () => {
-          void (async () => {
-            setDeletingPostId(postId);
-            setTabError(null);
-            try {
-              await deletePost(postId);
-              setMyPosts((prev) => prev.filter((item) => item.id !== postId));
-            } catch (e) {
-              setTabError(normalizeApiError(e));
-            } finally {
-              setDeletingPostId((current) => (current === postId ? null : current));
-            }
-          })();
-        },
-      },
-    ]);
+    setDeletingPostId(postId);
+    void (async () => {
+      setTabError(null);
+      try {
+        await deletePost(postId);
+        setMyPosts((prev) => prev.filter((item) => item.id !== postId));
+      } catch (e) {
+        setTabError(normalizeApiError(e));
+      } finally {
+        setDeletingPostId((current) => (current === postId ? null : current));
+      }
+    })();
   }
 
-  const renderTabBody = () => {
-    if (activeTab === "summary") {
-      return (
-        <View style={styles.summaryActions}>
-          <View style={styles.editCard}>
-            <View style={styles.editHeaderRow}>
-              <View style={styles.editHeaderCopy}>
-                <Text style={styles.editTitle}>프로필 관리</Text>
-                <Text style={styles.editDescription}>
-                  닉네임, 소개, 로그인 유지 설정을 바로 수정할 수 있어요.
+  const renderSummaryBody = () => {
+    const displayName = me?.nickname || me?.name || "익명";
+    const followerCount = pickFirstNumber(me?.follower_count);
+    const followingCount = pickFirstNumber(me?.following_count);
+
+    return (
+      <View style={styles.summaryActions}>
+        <View style={styles.card}>
+          <Text style={styles.name}>{displayName}</Text>
+          <Text style={styles.meta}>{me?.email}</Text>
+          <View style={styles.row}>
+            <Text style={styles.badge}>Lv. {pickFirstNumber(me?.level)}</Text>
+            <Text style={styles.badge}>XP {pickFirstNumber(me?.xp)}</Text>
+            <Text style={styles.badge}>연속 {pickFirstNumber(me?.streak_days)}일</Text>
+          </View>
+          <View style={styles.row}>
+            <Text style={styles.badge}>팔로워 {followerCount}</Text>
+            <Text style={styles.badge}>팔로잉 {followingCount}</Text>
+          </View>
+          {me?.bio ? <Text style={styles.bodyText}>{me.bio}</Text> : null}
+          {me?.about ? <Text style={styles.bodyText}>{me.about}</Text> : null}
+        </View>
+
+        <View style={styles.profileHomeCard}>
+          <View style={styles.profileHomeHeader}>
+            <View style={styles.profileHomeCopy}>
+              <Text style={styles.profileHomeTitle}>프로필 홈</Text>
+              <Text style={styles.profileHomeDescription}>
+                활동은 여기서 보고, 보안과 계정 정리는 계정 센터에서 따로 관리해요.
+              </Text>
+            </View>
+            <Pressable onPress={() => router.push("/account-center")} style={styles.accountCenterBtn}>
+              <Text style={styles.accountCenterBtnText}>계정 센터</Text>
+            </Pressable>
+          </View>
+
+          <View style={styles.quickActionRow}>
+            <Pressable
+              onPress={() => router.push("/profile-customize")}
+              style={styles.quickActionBtn}
+              testID="me-profile-customize-btn"
+            >
+              <Text style={styles.quickActionBtnTitle}>프로필 꾸미기</Text>
+              <Text style={styles.quickActionBtnDescription}>뱃지와 스티커를 정리해요</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => router.push("/account-center")}
+              style={styles.quickActionBtn}
+            >
+              <Text style={styles.quickActionBtnTitle}>계정 센터</Text>
+              <Text style={styles.quickActionBtnDescription}>프로필, 보안, 탈퇴를 관리해요</Text>
+            </Pressable>
+          </View>
+        </View>
+
+        {growthSummary ? (
+          <View style={styles.growthCard}>
+            <View style={styles.growthHeaderRow}>
+              <View style={styles.growthHeaderCopy}>
+                <Text style={styles.growthTitle}>성장 요약</Text>
+                <Text style={styles.growthDescription}>
+                  Lv.{pickFirstNumber(growthSummary.level)} {pickFirstString(growthSummary.title)}
                 </Text>
               </View>
-              <Pressable
-                onPress={() => {
-                  setShowEdit((prev) => !prev);
-                  setSaveMessage(null);
-                  setSaveError(null);
-                }}
-                style={styles.editToggleBtn}
-              >
-                <Text style={styles.editToggleBtnText}>{showEdit ? "닫기" : "수정"}</Text>
+              <Pressable onPress={() => router.push("/growth")} style={styles.growthShortcutBtn}>
+                <Text style={styles.growthShortcutBtnText}>자세히</Text>
               </Pressable>
             </View>
 
-            {showEdit ? (
-              <View style={styles.editForm}>
-                <View style={styles.fieldGroup}>
-                  <Text style={styles.fieldLabel}>닉네임</Text>
-                  <TextInput
-                    value={editNickname}
-                    onChangeText={setEditNickname}
-                    placeholder="닉네임"
-                    autoCapitalize="none"
-                    style={styles.input}
-                  />
-                </View>
-
-                <View style={styles.fieldGroup}>
-                  <Text style={styles.fieldLabel}>한 줄 소개</Text>
-                  <TextInput
-                    value={editBio}
-                    onChangeText={setEditBio}
-                    placeholder="한 줄 소개"
-                    style={styles.input}
-                  />
-                </View>
-
-                <View style={styles.fieldGroup}>
-                  <Text style={styles.fieldLabel}>자기소개</Text>
-                  <TextInput
-                    value={editAbout}
-                    onChangeText={setEditAbout}
-                    placeholder="자기소개"
-                    multiline
-                    textAlignVertical="top"
-                    style={[styles.input, styles.textArea]}
-                  />
-                </View>
-
-                <View style={styles.fieldGroup}>
-                  <Text style={styles.fieldLabel}>로그인 유지</Text>
-                  <View style={styles.toggleRow}>
-                    <Pressable
-                      onPress={() => setRememberLoginEnabled(true)}
-                      style={[
-                        styles.toggleChip,
-                        rememberLoginEnabled && styles.toggleChipActive,
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.toggleChipText,
-                          rememberLoginEnabled && styles.toggleChipTextActive,
-                        ]}
-                      >
-                        켜기
-                      </Text>
-                    </Pressable>
-                    <Pressable
-                      onPress={() => setRememberLoginEnabled(false)}
-                      style={[
-                        styles.toggleChip,
-                        !rememberLoginEnabled && styles.toggleChipActive,
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.toggleChipText,
-                          !rememberLoginEnabled && styles.toggleChipTextActive,
-                        ]}
-                      >
-                        끄기
-                      </Text>
-                    </Pressable>
-                  </View>
-                </View>
-
-                {saveError ? (
-                  <Text style={styles.formErrorText}>{saveError.message}</Text>
-                ) : null}
-                {saveMessage ? <Text style={styles.formSuccessText}>{saveMessage}</Text> : null}
-
-                <View style={styles.editActionRow}>
-                  <Pressable
-                    onPress={() => void onSaveProfile()}
-                    style={[styles.primaryBtn, savingProfile && styles.disabledBtn]}
-                    disabled={savingProfile}
-                  >
-                    <Text style={styles.primaryBtnText}>
-                      {savingProfile ? "저장 중..." : "저장하기"}
-                    </Text>
-                  </Pressable>
-                  <Pressable
-                    onPress={() => {
-                      if (!me) return;
-                      setEditNickname(me.nickname ?? "");
-                      setEditBio(me.bio ?? "");
-                      setEditAbout(me.about ?? "");
-                      setRememberLoginEnabled(parseFlag(me.remember_login_enabled));
-                      setSaveMessage(null);
-                      setSaveError(null);
-                      setShowEdit(false);
-                    }}
-                    style={styles.secondaryBtn}
-                    disabled={savingProfile}
-                  >
-                    <Text style={styles.secondaryBtnText}>취소</Text>
-                  </Pressable>
-                </View>
-              </View>
-            ) : null}
-          </View>
-
-          {growthSummary ? (
-            <View style={styles.growthCard}>
-              <View style={styles.growthHeaderRow}>
-                <View style={styles.growthHeaderCopy}>
-                  <Text style={styles.growthTitle}>성장 요약</Text>
-                  <Text style={styles.growthDescription}>
-                    Lv.{pickFirstNumber(growthSummary.level)} {pickFirstString(growthSummary.title)}
-                  </Text>
-                </View>
-                <Pressable
-                  onPress={() => router.push("/growth")}
-                  style={styles.growthShortcutBtn}
-                >
-                  <Text style={styles.growthShortcutBtnText}>자세히</Text>
-                </Pressable>
-              </View>
-
-              <View style={styles.growthStatRow}>
-                <Text style={styles.growthStatChip}>
-                  오늘 +{pickFirstNumber(growthSummary.today_xp)} XP
-                </Text>
-                <Text style={styles.growthStatChip}>
-                  이번 주 {pickFirstNumber(growthSummary.weekly_posts)}개
-                </Text>
-                <Text style={styles.growthStatChip}>
-                  연속 {pickFirstNumber(growthSummary.streak_days)}일
-                </Text>
-              </View>
+            <View style={styles.growthStatRow}>
+              <Text style={styles.growthStatChip}>
+                오늘 +{pickFirstNumber(growthSummary.today_xp)} XP
+              </Text>
+              <Text style={styles.growthStatChip}>
+                이번 주 {pickFirstNumber(growthSummary.weekly_posts)}개
+              </Text>
+              <Text style={styles.growthStatChip}>
+                연속 {pickFirstNumber(growthSummary.streak_days)}일
+              </Text>
             </View>
-          ) : null}
+          </View>
+        ) : null}
+      </View>
+    );
+  };
 
-          <Pressable
-            onPress={() => router.push("/profile-customize")}
-            style={styles.primaryBtn}
-            testID="me-profile-customize-btn"
-          >
-            <Text style={styles.primaryBtnText}>프로필 꾸미기</Text>
-          </Pressable>
-
-          <Pressable
-            onPress={() => void onLogoutAll()}
-            style={styles.secondaryBtn}
-            disabled={logoutAllBusy}
-          >
-            <Text style={styles.secondaryBtnText}>
-              {logoutAllBusy ? "처리 중..." : "전체 로그아웃"}
-            </Text>
-          </Pressable>
-
-          <Pressable onPress={onLogout} style={styles.secondaryBtn}>
-            <Text style={styles.secondaryBtnText}>로그아웃</Text>
-          </Pressable>
-
-          <Pressable onPress={loadMe} style={styles.ghostBtn}>
-            <Text style={styles.ghostBtnText}>새로고침</Text>
-          </Pressable>
-        </View>
-      );
+  const renderTabBody = () => {
+    if (activeTab === "summary") {
+      return renderSummaryBody();
     }
 
     if (tabLoading) {
@@ -658,57 +375,28 @@ export default function MeScreen() {
       );
     }
 
-    if (activeTab === "followings") {
-      if (followings.length === 0) {
-        return (
-          <View style={styles.center}>
-            <AppEmpty title="팔로잉한 사용자가 없어요" />
-          </View>
-        );
-      }
-
-      return (
-        <View style={styles.followingList}>
-          {followings.map((item) => (
-            <Pressable
-              key={item.id}
-              onPress={() => router.push(`/users/${item.id}`)}
-              style={styles.followingCard}
-            >
-              <Text style={styles.followingName}>{item.nickname || item.name}</Text>
-              <Text style={styles.followingMeta}>{item.email}</Text>
-              {item.bio ? <Text style={styles.followingBody}>{item.bio}</Text> : null}
-              {item.about ? <Text style={styles.followingBody}>{item.about}</Text> : null}
-              <Text style={styles.followingFoot}>팔로워 {item.followerCount}</Text>
-            </Pressable>
-          ))}
-        </View>
-      );
-    }
-
-    if (sessions.length === 0) {
+    if (followings.length === 0) {
       return (
         <View style={styles.center}>
-          <AppEmpty title="활성 세션이 없어요" />
+          <AppEmpty title="팔로잉한 사용자가 없어요" />
         </View>
       );
     }
 
     return (
-      <View style={styles.sessionList}>
-        {sessions.map((session) => (
-          <View key={session.sid} style={styles.sessionCard}>
-            <Text style={styles.sessionTitle}>
-              {session.current ? "현재 기기" : "다른 기기"}
-            </Text>
-            <Text style={styles.sessionMeta}>{session.userAgent}</Text>
-            <Text style={styles.sessionMeta}>최근 활동 {formatDateTime(session.lastSeenAt)}</Text>
-            <Text style={styles.sessionMeta}>만료 {formatDateTime(session.expiresAt)}</Text>
-            <Text style={styles.sessionMeta}>
-              {session.rememberMe ? "로그인 유지" : "기본 세션"}
-              {session.ipHint ? ` · ${session.ipHint}` : ""}
-            </Text>
-          </View>
+      <View style={styles.followingList}>
+        {followings.map((item) => (
+          <Pressable
+            key={item.id}
+            onPress={() => router.push(`/users/${item.id}`)}
+            style={styles.followingCard}
+          >
+            <Text style={styles.followingName}>{item.nickname || item.name}</Text>
+            <Text style={styles.followingMeta}>{item.email}</Text>
+            {item.bio ? <Text style={styles.followingBody}>{item.bio}</Text> : null}
+            {item.about ? <Text style={styles.followingBody}>{item.about}</Text> : null}
+            <Text style={styles.followingFoot}>팔로워 {item.followerCount}</Text>
+          </Pressable>
         ))}
       </View>
     );
@@ -765,38 +453,10 @@ export default function MeScreen() {
     );
   }
 
-  const displayName = me.nickname || me.name;
-  const followerCount = pickFirstNumber(me.follower_count);
-  const followingCount = pickFirstNumber(me.following_count);
-
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.container}>
         <Text style={styles.h1}>내 정보</Text>
-
-        <View style={styles.card}>
-          <Text style={styles.name}>{displayName}</Text>
-          <Text style={styles.meta}>{me.email}</Text>
-          <View style={styles.row}>
-            <Text style={styles.badge}>Lv. {me.level}</Text>
-            <Text style={styles.badge}>XP {me.xp}</Text>
-            <Text style={styles.badge}>연속 {me.streak_days}일</Text>
-          </View>
-          <View style={styles.row}>
-            <Text style={styles.badge}>팔로워 {followerCount}</Text>
-            <Text style={styles.badge}>팔로잉 {followingCount}</Text>
-          </View>
-          {me.bio ? <Text style={styles.bodyText}>{me.bio}</Text> : null}
-          {me.about ? <Text style={styles.bodyText}>{me.about}</Text> : null}
-          <View style={styles.row}>
-            <Text style={styles.badgeSecondary}>
-              로그인 유지 {parseFlag(me.remember_login_enabled) ? "켜짐" : "꺼짐"}
-            </Text>
-            <Text style={styles.badgeSecondary}>
-              마케팅 {parseFlag(me.marketing_email_opt_in) ? "동의" : "미동의"}
-            </Text>
-          </View>
-        </View>
 
         <View style={styles.tabRow}>
           {([
@@ -804,7 +464,6 @@ export default function MeScreen() {
             ["myPosts", "내 글"],
             ["likedPosts", "좋아요"],
             ["followings", "팔로잉"],
-            ["sessions", "세션"],
           ] as const).map(([value, label]) => {
             const active = activeTab === value;
             return (
@@ -865,15 +524,6 @@ const styles = StyleSheet.create({
     borderRadius: tokens.radius.pill,
     overflow: "hidden",
   },
-  badgeSecondary: {
-    fontSize: tokens.font.small,
-    color: tokens.colors.textMuted,
-    backgroundColor: tokens.colors.surface,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: tokens.radius.pill,
-    overflow: "hidden",
-  },
   tabRow: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -900,7 +550,7 @@ const styles = StyleSheet.create({
     color: tokens.colors.green900,
   },
   summaryActions: { gap: tokens.space.sm as any },
-  editCard: {
+  profileHomeCard: {
     borderWidth: 1,
     borderColor: tokens.colors.border,
     borderRadius: tokens.radius.xl,
@@ -908,99 +558,59 @@ const styles = StyleSheet.create({
     padding: tokens.space.md,
     gap: tokens.space.md as any,
   },
-  editHeaderRow: {
+  profileHomeHeader: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "flex-start",
+    justifyContent: "space-between",
     gap: tokens.space.sm as any,
   },
-  editHeaderCopy: {
+  profileHomeCopy: {
     flex: 1,
     gap: 4,
   },
-  editTitle: {
+  profileHomeTitle: {
     fontSize: 16,
     fontWeight: "900",
     color: tokens.colors.text,
   },
-  editDescription: {
+  profileHomeDescription: {
     fontSize: tokens.font.small,
     color: tokens.colors.textMuted,
     lineHeight: 20,
   },
-  editToggleBtn: {
+  accountCenterBtn: {
     borderWidth: 1,
-    borderColor: tokens.colors.borderStrong,
+    borderColor: tokens.colors.green700,
     borderRadius: tokens.radius.pill,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    backgroundColor: tokens.colors.surface,
+    backgroundColor: tokens.colors.green100,
   },
-  editToggleBtnText: {
+  accountCenterBtnText: {
     fontSize: tokens.font.small,
     fontWeight: "800",
-    color: tokens.colors.text,
+    color: tokens.colors.green900,
   },
-  editForm: {
-    gap: tokens.space.md as any,
+  quickActionRow: {
+    gap: tokens.space.sm as any,
   },
-  fieldGroup: {
-    gap: 8,
-  },
-  fieldLabel: {
-    fontSize: tokens.font.small,
-    fontWeight: "800",
-    color: tokens.colors.text,
-  },
-  input: {
+  quickActionBtn: {
     borderWidth: 1,
-    borderColor: tokens.colors.borderStrong,
+    borderColor: tokens.colors.border,
     borderRadius: tokens.radius.lg,
     backgroundColor: tokens.colors.surface,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    padding: tokens.space.md,
+    gap: 4,
+  },
+  quickActionBtnTitle: {
     fontSize: 15,
+    fontWeight: "900",
     color: tokens.colors.text,
   },
-  textArea: {
-    minHeight: 108,
-  },
-  toggleRow: {
-    flexDirection: "row",
-    gap: tokens.space.xs as any,
-  },
-  toggleChip: {
-    borderWidth: 1,
-    borderColor: tokens.colors.borderStrong,
-    borderRadius: tokens.radius.pill,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    backgroundColor: tokens.colors.surface,
-  },
-  toggleChipActive: {
-    backgroundColor: tokens.colors.green100,
-    borderColor: tokens.colors.green700,
-  },
-  toggleChipText: {
+  quickActionBtnDescription: {
     fontSize: tokens.font.small,
-    fontWeight: "800",
     color: tokens.colors.textMuted,
-  },
-  toggleChipTextActive: {
-    color: tokens.colors.green900,
-  },
-  formErrorText: {
-    fontSize: tokens.font.small,
-    color: tokens.colors.red700,
-    lineHeight: 20,
-  },
-  formSuccessText: {
-    fontSize: tokens.font.small,
-    color: tokens.colors.green900,
-    lineHeight: 20,
-  },
-  editActionRow: {
-    gap: tokens.space.sm as any,
+    lineHeight: 18,
   },
   growthCard: {
     borderWidth: 1,
@@ -1076,28 +686,6 @@ const styles = StyleSheet.create({
   followingMeta: { fontSize: tokens.font.small, color: tokens.colors.textMuted },
   followingBody: { fontSize: tokens.font.small, color: tokens.colors.textMuted, lineHeight: 20 },
   followingFoot: { fontSize: tokens.font.small, color: tokens.colors.green900, fontWeight: "800" },
-  sessionList: { gap: tokens.space.sm as any },
-  sessionCard: {
-    borderWidth: 1,
-    borderColor: tokens.colors.border,
-    borderRadius: tokens.radius.lg,
-    backgroundColor: tokens.colors.surfaceStrong,
-    padding: tokens.space.md,
-    gap: 6,
-  },
-  sessionTitle: { fontSize: 15, fontWeight: "900", color: tokens.colors.text },
-  sessionMeta: { fontSize: tokens.font.small, color: tokens.colors.textMuted },
-  primaryBtn: {
-    backgroundColor: tokens.colors.green900,
-    borderRadius: tokens.radius.lg,
-    paddingVertical: 14,
-    alignItems: "center",
-  },
-  primaryBtnText: {
-    color: tokens.colors.textInverse,
-    fontSize: 15,
-    fontWeight: "800",
-  },
   secondaryBtn: {
     flex: 1,
     backgroundColor: tokens.colors.surfaceStrong,
@@ -1107,24 +695,19 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     alignItems: "center",
   },
-  disabledBtn: {
-    opacity: 0.6,
-  },
   secondaryBtnText: { color: tokens.colors.text, fontSize: 15, fontWeight: "800" },
   dangerBtn: {
     flex: 1,
-    backgroundColor: tokens.colors.red100,
+    backgroundColor: tokens.colors.dangerSoft,
     borderWidth: 1,
-    borderColor: tokens.colors.red300,
+    borderColor: tokens.colors.dangerBorder,
     borderRadius: tokens.radius.lg,
     paddingVertical: 12,
     alignItems: "center",
   },
   dangerBtnText: {
-    color: tokens.colors.red700,
+    color: tokens.colors.danger,
     fontSize: tokens.font.small,
     fontWeight: "800",
   },
-  ghostBtn: { paddingVertical: 10, alignItems: "center" },
-  ghostBtnText: { color: tokens.colors.textMuted, fontSize: tokens.font.small, fontWeight: "800" },
 });
