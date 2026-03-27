@@ -15,7 +15,7 @@ function normalizeOptionalText(value?: string | null) {
 const siteUrl = normalizeOptionalUrl(process.env.EXPO_PUBLIC_SITE_URL) ?? DEFAULT_SITE_URL;
 
 export const releaseConfig = {
-  iosBundleIdentifier: "com.glsoop.mobile",
+  iosBundleIdentifier: "com.glsoop.app",
   siteUrl,
   supportUrl: normalizeOptionalUrl(process.env.EXPO_PUBLIC_SUPPORT_URL),
   supportEmail: normalizeOptionalText(process.env.EXPO_PUBLIC_SUPPORT_EMAIL),

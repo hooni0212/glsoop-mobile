@@ -13,6 +13,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 
 import { useAuth } from "@/auth/AuthContext";
 import { AppError } from "@/components/state/AppError";
+import { extractAuthToken } from "@/lib/authResponse";
 import { buildAuthRoute, resolvePostAuthRedirect } from "@/lib/authRedirect";
 import { apiGet, apiPost } from "@/lib/api";
 import {
@@ -270,9 +271,9 @@ export default function AuthSignup() {
         return;
       }
       const nextAuthToken =
-        Platform.OS === "web" ? COOKIE_SESSION_TOKEN : loginRes.token ?? null;
+        Platform.OS === "web" ? COOKIE_SESSION_TOKEN : extractAuthToken(loginRes);
       if (!nextAuthToken) {
-        setMessage("서버 인증 정보를 확인할 수 없어요. 로그인 응답을 점검해 주세요.");
+        setMessage("로그인 응답에 네이티브 인증 토큰이 없어요. 서버 로그인 응답 형식을 확인해 주세요.");
         return;
       }
 

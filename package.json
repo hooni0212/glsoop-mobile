@@ -9,7 +9,12 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "lint": "expo lint",
+    "typecheck": "tsc --noEmit",
     "e2e:web": "playwright test",
+    "release:ios:context": "sh tools/release/record-ios-build-context.sh",
+    "release:ios:verify:config": "node tools/release/verify-ios-production-config.mjs",
+    "release:ios:verify:prod-env": "eas env:exec production 'node tools/release/verify-ios-production-config.mjs --check-env'",
+    "release:ios:verify:api": "node tools/release/check-production-api.mjs",
     "sync:notion": "node tools/notion-sync/sync.mjs",
     "sync:notion:dry": "NOTION_SYNC_DRY_RUN=true node tools/notion-sync/sync.mjs"
   },
@@ -45,6 +50,7 @@
   "devDependencies": {
     "@playwright/test": "^1.49.0",
     "@types/react": "~19.1.0",
+    "eas-cli": "^18.4.0",
     "eslint": "^9.25.0",
     "eslint-config-expo": "~10.0.0",
     "typescript": "~5.9.2"
