@@ -3,9 +3,17 @@ import { Pressable, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { tokens } from "@/theme/tokens";
 
+type RightAction = {
+  onPress: () => void;
+  testID?: string;
+  accessibilityLabel?: string;
+  iconName?: "ellipsis-horizontal" | "ellipsis-vertical";
+};
+
 export type PostTopBarProps = {
   onPressBack: () => void;
   backButtonTestID?: string;
+  rightAction?: RightAction;
   styles: {
     topBar: any;
     backBtn: any;
@@ -16,6 +24,7 @@ export type PostTopBarProps = {
 export function PostTopBar({
   onPressBack,
   backButtonTestID,
+  rightAction,
   styles,
 }: PostTopBarProps) {
   return (
@@ -29,8 +38,24 @@ export function PostTopBar({
         <Ionicons name="chevron-back" size={22} color={tokens.colors.text} />
       </Pressable>
 
-      {/* right side spacer (keeps center alignment if we add actions later) */}
-      <View style={styles.topBarSpacer} />
+      {rightAction ? (
+        <Pressable
+          onPress={rightAction.onPress}
+          hitSlop={12}
+          style={styles.backBtn}
+          testID={rightAction.testID}
+          accessibilityRole="button"
+          accessibilityLabel={rightAction.accessibilityLabel}
+        >
+          <Ionicons
+            name={rightAction.iconName ?? "ellipsis-horizontal"}
+            size={20}
+            color={tokens.colors.text}
+          />
+        </Pressable>
+      ) : (
+        <View style={styles.topBarSpacer} />
+      )}
     </View>
   );
 }

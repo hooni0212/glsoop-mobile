@@ -6,7 +6,7 @@ import { normalizeApiError, type AppErrorModel } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 export type GrowthLoadSource = "dashboard" | "fallback" | null;
-export type GrowthTopPostsMode = "pending" | "ready";
+export type GrowthTopPostsMode = "ready" | "empty" | "error";
 
 export type GrowthSummary = {
   level: number;
@@ -128,6 +128,12 @@ type ActiveQuestsResponse = {
   campaigns?: unknown;
 };
 
+type TopPostsResponse = {
+  ok?: boolean;
+  message?: string;
+  top_posts?: unknown;
+};
+
 type ClaimQuestResponse = {
   ok?: boolean;
   message?: string;
@@ -162,7 +168,7 @@ const INITIAL_SNAPSHOT: GrowthSnapshot = {
   achievements: [],
   campaigns: [],
   topPosts: [],
-  topPostsMode: "pending",
+  topPostsMode: "empty",
   loading: false,
   error: null,
   source: null,
@@ -403,20 +409,23 @@ async function fetchDashboard() {
   const res = await apiGet<DashboardResponse>("/api/growth/dashboard");
   if (!res?.ok) throw new Error(res?.message || "성장 대시보드를 불러오지 못했어요.");
 
+  const topPosts = normalizeTopPosts(res.top_posts);
+
   return {
     summary: normalizeSummary(res.summary),
     achievements: normalizeAchievements(res.achievements),
     campaigns: normalizeCampaigns(res.campaigns),
-    topPosts: normalizeTopPosts(res.top_posts),
-    topPostsMode: "ready" as const,
+    topPosts,
+    topPostsMode: (topPosts.length > 0 ? "ready" : "empty") as const,
   };
 }
 
 async function fetchFallback() {
-  const [summaryRes, achievementsRes, campaignsRes] = await Promise.all([
+  const [summaryRes, achievementsRes, campaignsRes, topPostsRes] = await Promise.all([
     apiGet<SummaryResponse>("/api/growth/summary"),
     apiGet<AchievementsResponse>("/api/growth/achievements"),
     apiGet<ActiveQuestsResponse>("/api/quests/active"),
+    apiGet<TopPostsResponse>("/api/growth/top-posts").catch(() => null),
   ]);
 
   if (!summaryRes?.ok) {
@@ -429,10 +438,14 @@ async function fetchFallback() {
     throw new Error(campaignsRes?.message || "퀘스트 정보를 불러오지 못했어요.");
   }
 
+  const topPosts = topPostsRes?.ok ? normalizeTopPosts(topPostsRes.top_posts) : [];
+
   return {
     summary: normalizeSummary(summaryRes.summary),
     achievements: normalizeAchievements(achievementsRes.achievements),
     campaigns: normalizeCampaigns(campaignsRes.campaigns),
+    topPosts,
+    topPostsMode: (topPosts.length > 0 ? "ready" : "empty") as const,
   };
 }
 
@@ -496,8 +509,8 @@ async function loadGrowth(force = false) {
         summary: fallback.summary,
         achievements: fallback.achievements,
         campaigns: fallback.campaigns,
-        topPosts: [],
-        topPostsMode: "pending",
+        topPosts: fallback.topPosts,
+        topPostsMode: fallback.topPostsMode,
         source: "fallback",
         error: null,
         loading: false,
@@ -506,7 +519,7 @@ async function loadGrowth(force = false) {
         source: "fallback",
         achievementsCount: fallback.achievements.length,
         campaignsCount: fallback.campaigns.length,
-        topPostsCount: 0,
+        topPostsCount: fallback.topPosts.length,
         force,
       });
       lastLoadedAt = Date.now();
@@ -522,7 +535,7 @@ async function loadGrowth(force = false) {
         achievements: [],
         campaigns: [],
         topPosts: [],
-        topPostsMode: "pending",
+        topPostsMode: "error",
         source: null,
         error: normalizeApiError(fallbackError),
         loading: false,

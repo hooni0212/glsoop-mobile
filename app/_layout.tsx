@@ -24,6 +24,40 @@ export default function RootLayout() {
                 headerShown: false,
                 presentation: "modal",
                 animation: "slide_from_bottom",
+                gestureEnabled: false,
+              }}
+            />
+
+            <Stack.Screen
+              name="account-center/index"
+              options={{
+                headerShown: false,
+                presentation: "transparentModal",
+                animation: "fade",
+              }}
+            />
+            <Stack.Screen
+              name="account-center/profile"
+              options={{
+                headerShown: false,
+                presentation: "modal",
+                animation: "slide_from_right",
+              }}
+            />
+            <Stack.Screen
+              name="account-center/security"
+              options={{
+                headerShown: false,
+                presentation: "modal",
+                animation: "slide_from_right",
+              }}
+            />
+            <Stack.Screen
+              name="account-center/account-closure"
+              options={{
+                headerShown: false,
+                presentation: "modal",
+                animation: "slide_from_right",
               }}
             />
 

@@ -14,13 +14,25 @@ import {
 
 import { WriteActionBar } from "@/components/write/WriteActionBar";
 import { WriteEditor } from "@/components/write/WriteEditor";
+import { WriteLayoutSection } from "@/components/write/WriteLayoutSection";
 import { WriteMetaSection } from "@/components/write/WriteMetaSection";
+import { WritePreviewCard } from "@/components/write/WritePreviewCard";
 import { WriteStates } from "@/components/write/WriteStates";
 import { WriteTopBar } from "@/components/write/WriteTopBar";
 import { AppError } from "@/components/state/AppError";
 import { AppLoading } from "@/components/state/AppLoading";
 import { normalizeApiError, type AppErrorModel } from "@/lib/errors";
 import { logger } from "@/lib/logger";
+import type { PostFontKey } from "@/lib/postContent";
+import {
+  DEFAULT_WRITE_LAYOUT,
+  buildLayoutPayload,
+  parseLayoutJson,
+  updateLayoutBox,
+  type LayoutAlign,
+  type LayoutBoxId,
+  type WriteLayoutModel,
+} from "@/lib/postLayout";
 import {
   deleteWriteDraft,
   listWriteDrafts,
@@ -28,7 +40,7 @@ import {
   upsertWriteDraft,
   clearAllWriteDrafts,
 } from "@/services/draftStorage";
-import { createPost } from "@/services/postService";
+import { createPost, getEditablePost, updatePost } from "@/services/postService";
 import type { PostType } from "@/types/post";
 import { ConfirmState, useConfirmBeforeLeave } from "@/hooks/useConfirmBeforeLeave";
 
@@ -43,6 +55,14 @@ export default function Write() {
   const [body, setBody] = useState("");
   const [draftId, setDraftId] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState<PostType | null>(null);
+  const [hashtagsInput, setHashtagsInput] = useState("");
+  const [fontKey, setFontKey] = useState<PostFontKey>("serif");
+  const [editPostId, setEditPostId] = useState<string | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [layout, setLayout] = useState<WriteLayoutModel>(DEFAULT_WRITE_LAYOUT);
+  const [activeBoxId, setActiveBoxId] = useState<LayoutBoxId>("text_box");
+  const [editLoading, setEditLoading] = useState(false);
+  const [editError, setEditError] = useState<AppErrorModel | null>(null);
 
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const [draftPrompt, setDraftPrompt] = useState<ConfirmState>(null);
@@ -52,12 +72,33 @@ export default function Write() {
   const [submitError, setSubmitError] = useState<AppErrorModel | null>(null);
 
   const hasShownRestorePromptRef = useRef(false);
+  const isEditMode = Boolean(editPostId);
+
+  const hashtagChips = useMemo(() => {
+    return hashtagsInput
+      .split(/[\s,]+/)
+      .map((item) => item.trim().replace(/^#+/, "").toLowerCase())
+      .filter(Boolean)
+      .filter((item, index, arr) => arr.indexOf(item) === index)
+      .slice(0, 12);
+  }, [hashtagsInput]);
 
   const hasChanges = title.trim().length > 0 || body.trim().length > 0 || selectedType !== null;
   const canSubmit =
     title.trim().length > 0 && body.trim().length > 0 && selectedType !== null;
 
+  const categoryLabel = useMemo(() => {
+    if (selectedType === "poem") return "시";
+    if (selectedType === "essay") return "에세이";
+    return "짧은 구절";
+  }, [selectedType]);
+
+  const footerText = useMemo(() => {
+    return hashtagChips.length > 0 ? hashtagChips.map((item) => `#${item}`).join(" ") : categoryLabel;
+  }, [categoryLabel, hashtagChips]);
+
   const closeDraftPrompt = useCallback(() => setDraftPrompt(null), []);
+  const dismissKeyboard = useCallback(() => Keyboard.dismiss(), []);
 
   const openDraftPrompt = useCallback((next: Omit<NonNullable<ConfirmState>, "visible">) => {
     logger.debug("[write] confirm open", { title: next.title });
@@ -81,9 +122,12 @@ export default function Write() {
       title: trimmedTitle,
       body: trimmedBody,
       category: selectedType ?? undefined,
+      fontKey,
+      mode: editPostId ? "edit" : "create",
+      postId: editPostId,
     });
     if (!draftId) setDraftId(id);
-  }, [title, body, draftId, selectedType]);
+  }, [title, body, draftId, editPostId, selectedType, fontKey]);
 
   const { confirm: leaveConfirm, requestLeave, allowNextLeave } = useConfirmBeforeLeave({
     hasChanges,
@@ -148,6 +192,67 @@ export default function Write() {
     setTitle("");
     setBody("");
     setSelectedType(null);
+    setFontKey("serif");
+    setLayout(DEFAULT_WRITE_LAYOUT);
+  }, []);
+
+  const updateTitleAlign = useCallback((value: LayoutAlign) => {
+    setLayout((current) => ({
+      ...current,
+      titleStyle: { ...current.titleStyle, align: value },
+    }));
+  }, []);
+
+  const updateBodyAlign = useCallback((value: LayoutAlign) => {
+    setLayout((current) => ({
+      ...current,
+      bodyStyle: { ...current.bodyStyle, align: value },
+    }));
+  }, []);
+
+  const updateTitleScale = useCallback((value: number) => {
+    setLayout((current) => ({
+      ...current,
+      titleStyle: { ...current.titleStyle, fontScale: value },
+    }));
+  }, []);
+
+  const updateBodyScale = useCallback((value: number) => {
+    setLayout((current) => ({
+      ...current,
+      bodyStyle: { ...current.bodyStyle, fontScale: value },
+    }));
+  }, []);
+
+  const toggleFooter = useCallback(() => {
+    setLayout((current) => ({
+      ...current,
+      showFooter: !current.showFooter,
+    }));
+  }, []);
+
+  const nudgeBox = useCallback((boxId: LayoutBoxId, axis: "x" | "y", delta: number) => {
+    setLayout((current) => {
+      const box = boxId === "title_box" ? current.titleBox : boxId === "text_box" ? current.bodyBox : current.footerBox;
+      return updateLayoutBox(current, boxId, { [axis]: box[axis] + delta });
+    });
+  }, []);
+
+  const resizeBox = useCallback((boxId: LayoutBoxId, axis: "w" | "h", delta: number) => {
+    setLayout((current) => {
+      const box = boxId === "title_box" ? current.titleBox : boxId === "text_box" ? current.bodyBox : current.footerBox;
+      return updateLayoutBox(current, boxId, { [axis]: box[axis] + delta });
+    });
+  }, []);
+
+  const dragBox = useCallback((boxId: LayoutBoxId, deltaX: number, deltaY: number) => {
+    setLayout((current) => {
+      const box = boxId === "title_box" ? current.titleBox : boxId === "text_box" ? current.bodyBox : current.footerBox;
+      return updateLayoutBox(current, boxId, {
+        x: box.x + deltaX,
+        y: box.y + deltaY,
+      });
+    });
   }, []);
 
   const onPressSubmit = useCallback(async () => {
@@ -168,21 +273,37 @@ export default function Write() {
     setCreatedPostId(null);
     setIsSubmitting(true);
     try {
-      const created = await createPost({
-        type: selectedType,
-        category: selectedType,
-        title: trimmedTitle || undefined,
-        content: trimmedBody,
-        contentFormat: "plain",
-      });
+      if (editPostId) {
+        await updatePost({
+          postId: editPostId,
+          type: selectedType,
+          title: trimmedTitle || undefined,
+          content: trimmedBody,
+          hashtags: hashtagChips,
+          layoutJson: buildLayoutPayload(layout),
+          fontKey,
+        });
+        setCreatedPostId(editPostId);
+        logger.debug("[write] update success", { postId: editPostId });
+      } else {
+        const created = await createPost({
+          type: selectedType,
+          category: selectedType,
+          title: trimmedTitle || undefined,
+          content: trimmedBody,
+          contentFormat: "plain",
+          hashtags: hashtagChips,
+          layoutJson: buildLayoutPayload(layout),
+          fontKey,
+        });
 
-      // ✅ 게시 성공(가정) 시 해당 draft 삭제
-      if (draftId) {
-        await deleteWriteDraft(draftId);
-        setDraftId(null);
+        if (draftId) {
+          await deleteWriteDraft(draftId);
+          setDraftId(null);
+        }
+        setCreatedPostId(created.postId);
+        logger.debug("[write] submit success", { postId: created.postId });
       }
-      setCreatedPostId(created.postId);
-      logger.debug("[write] submit success", { postId: created.postId });
       setSubmitSuccess(true);
     } catch (err) {
       logger.warn("[write] submit error", err);
@@ -190,7 +311,7 @@ export default function Write() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [selectedType, draftId, title, body]);
+  }, [selectedType, draftId, editPostId, hashtagChips, layout, title, body, fontKey]);
 
   const onSuccessGoHome = useCallback(() => {
     setSubmitSuccess(false);
@@ -226,6 +347,32 @@ export default function Write() {
     hasShownRestorePromptRef.current = true;
 
     void (async () => {
+      const paramPostId =
+        params && (params as any).postId ? String((params as any).postId) : null;
+
+      if (paramPostId) {
+        setEditLoading(true);
+        setEditError(null);
+        try {
+          const editable = await getEditablePost(paramPostId);
+          logger.debug("[write] edit post restored", { postId: editable.id });
+          setEditPostId(editable.id);
+          setTitle(editable.title);
+          setBody(editable.content);
+          setSelectedType(editable.category ?? null);
+          setHashtagsInput(editable.hashtags.join(", "));
+          setFontKey(editable.fontKey ?? "serif");
+          setLayout(parseLayoutJson(editable.layoutJson));
+          setActiveBoxId("text_box");
+        } catch (err) {
+          logger.warn("[write] edit post load error", err);
+          setEditError(normalizeApiError(err));
+        } finally {
+          setEditLoading(false);
+        }
+        return;
+      }
+
       const paramDraftId =
         params && (params as any).draftId ? String((params as any).draftId) : null;
 
@@ -237,6 +384,8 @@ export default function Write() {
           setTitle(d.title);
           setBody(d.body);
           setSelectedType(d.category ?? null);
+          setHashtagsInput("");
+          setFontKey(d.fontKey ?? "serif");
         }
         return;
       }
@@ -270,6 +419,26 @@ export default function Write() {
 
   const activeConfirm = draftPrompt ?? leaveConfirm;
 
+  if (editLoading) {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <View style={styles.center}>
+          <AppLoading message="편집할 글을 불러오는 중..." />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (editError) {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <View style={styles.center}>
+          <AppError error={editError} onRetry={editError.canRetry ? () => router.replace(`/write?postId=${params?.postId}`) : undefined} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.safe}>
       <KeyboardAvoidingView
@@ -277,11 +446,15 @@ export default function Write() {
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <WriteTopBar
-          title="글쓰기"
+          title={isEditMode ? "글 수정" : "글쓰기"}
           canSubmit={canSubmit}
           onPressClose={onPressClose}
           onPressSubmit={onPressSubmit}
           onPressDrafts={onPressDrafts}
+          previewOpen={previewOpen}
+          onPressPreview={() => setPreviewOpen((current) => !current)}
+          isKeyboardVisible={isKeyboardVisible}
+          onPressHideKeyboard={dismissKeyboard}
           styles={styles}
         />
 
@@ -294,18 +467,69 @@ export default function Write() {
               />
             </View>
           ) : null}
-          <WriteEditor
-            title={title}
-            body={body}
-            onChangeTitle={setTitle}
-            onChangeBody={setBody}
-            styles={styles}
-          />
+          {previewOpen ? (
+            <WritePreviewCard
+              title={title}
+              body={body}
+              hashtags={hashtagChips}
+              categoryLabel={categoryLabel}
+              selectedType={selectedType}
+              layout={layout}
+              fontKey={fontKey}
+            />
+          ) : (
+            <>
+              <WriteEditor
+                title={title}
+                body={body}
+                footerText={footerText}
+                fontKey={fontKey}
+                layout={layout}
+                activeBoxId={activeBoxId}
+                onSelectBox={setActiveBoxId}
+                onDragBox={dragBox}
+                onChangeTitle={setTitle}
+                onChangeBody={setBody}
+                onPressBackground={dismissKeyboard}
+                styles={styles}
+              >
+                <WriteLayoutSection
+                  styles={styles}
+                  layout={layout}
+                  activeBoxId={activeBoxId}
+                  onSelectBox={setActiveBoxId}
+                  onChangeTitleAlign={updateTitleAlign}
+                  onChangeBodyAlign={updateBodyAlign}
+                  onChangeTitleScale={updateTitleScale}
+                  onChangeBodyScale={updateBodyScale}
+                  onToggleFooter={toggleFooter}
+                  onNudgeBox={nudgeBox}
+                  onResizeBox={resizeBox}
+                />
+              </WriteEditor>
+
+              <WritePreviewCard
+                title={title}
+                body={body}
+                hashtags={hashtagChips}
+                categoryLabel={categoryLabel}
+                selectedType={selectedType}
+                layout={layout}
+                fontKey={fontKey}
+                compact
+              />
+            </>
+          )}
 
           <WriteMetaSection
             styles={styles}
             selectedType={selectedType}
             onSelectType={setSelectedType}
+            hashtagsInput={hashtagsInput}
+            hashtagChips={hashtagChips}
+            onChangeHashtagsInput={setHashtagsInput}
+            fontKey={fontKey}
+            onChangeFontKey={setFontKey}
           />
 
           <WriteStates styles={styles} confirm={activeConfirm} />
@@ -326,7 +550,9 @@ export default function Write() {
           <View style={styles.successOverlay}>
             <View style={styles.successCard}>
               <Text style={styles.successTitle}>완료되었어요</Text>
-              <Text style={styles.successMessage}>어디로 이동할까요?</Text>
+              <Text style={styles.successMessage}>
+                {isEditMode ? "수정한 글을 확인할까요?" : "어디로 이동할까요?"}
+              </Text>
               <View style={styles.successActions}>
                 <Pressable
                   onPress={onSuccessViewPost}

@@ -1,11 +1,14 @@
 import React from "react";
 import { Pressable, SafeAreaView, StyleSheet, Text, View } from "react-native";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 
+import { buildAuthRoute } from "@/lib/authRedirect";
 import { tokens } from "@/theme/tokens";
 
 export default function AuthWelcome() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ redirect?: string }>();
+  const redirect = params?.redirect ? String(params.redirect) : undefined;
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -22,14 +25,14 @@ export default function AuthWelcome() {
 
         <View style={styles.actions}>
           <Pressable
-            onPress={() => router.push("/(auth)/login")}
+            onPress={() => router.push(buildAuthRoute("/(auth)/login", redirect))}
             style={({ pressed }) => [styles.primaryBtn, pressed && styles.primaryBtnPressed]}
           >
             <Text style={styles.primaryText}>로그인</Text>
           </Pressable>
 
           <Pressable
-            onPress={() => router.push("/(auth)/signup")}
+            onPress={() => router.push(buildAuthRoute("/(auth)/signup", redirect))}
             style={({ pressed }) => [styles.secondaryBtn, pressed && styles.secondaryBtnPressed]}
           >
             <Text style={styles.secondaryText}>회원가입</Text>

@@ -1,12 +1,14 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert, Pressable, RefreshControl, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
-import { useRouter } from "expo-router";
+import { usePathname, useRouter } from "expo-router";
 
 import { GrowthDetailTopBar } from "@/components/growth/GrowthDetailTopBar";
 import { AppEmpty } from "@/components/state/AppEmpty";
 import { AppError } from "@/components/state/AppError";
 import { AppLoading } from "@/components/state/AppLoading";
+import { buildAuthRoute } from "@/lib/authRedirect";
 import { useToast } from "@/feedback/ToastProvider";
+import { refreshMyCosmetics } from "@/features/cosmetics/useMyCosmetics";
 import { trackGrowthTelemetry, toGrowthTelemetryError } from "@/features/growth/growthTelemetry";
 import type { GrowthQuest } from "@/features/growth/useGrowthData";
 import { useGrowthData } from "@/features/growth/useGrowthData";
@@ -49,6 +51,7 @@ function formatCampaignType(value: string) {
 
 export default function QuestsScreen() {
   const router = useRouter();
+  const pathname = usePathname();
   const { showToast } = useToast();
   const { campaigns, loading, error, refetch, claimQuestReward } = useGrowthData();
   const [refreshing, setRefreshing] = useState(false);
@@ -118,6 +121,21 @@ export default function QuestsScreen() {
           message = `${message} · 코스메틱 ${result.gainedCosmetics.length}개 획득`;
         }
         showToast(message, { tone: "success" });
+
+        if (result.gainedCosmetics.length > 0) {
+          await refreshMyCosmetics(true).catch(() => {});
+          Alert.alert(
+            "코스메틱 획득",
+            "방금 받은 코스메틱을 바로 프로필에 적용해볼까요?",
+            [
+              { text: "나중에", style: "cancel" },
+              {
+                text: "프로필 꾸미기",
+                onPress: () => router.push("/profile-customize"),
+              },
+            ]
+          );
+        }
       } catch (claimError) {
         if (claimError instanceof ApiError && claimError.code === "ENTITLEMENT_REQUIRED") {
           showToast("시즌 패스가 필요한 퀘스트예요.", { tone: "error" });
@@ -133,7 +151,7 @@ export default function QuestsScreen() {
 
         if (normalized.kind === "auth") {
           Alert.alert(normalized.title, normalized.description);
-          router.push("/(auth)");
+          router.push(buildAuthRoute("/(auth)", pathname));
           return;
         }
 
@@ -144,7 +162,7 @@ export default function QuestsScreen() {
         setClaimPendingByStateId((prev) => ({ ...prev, [stateId]: false }));
       }
     },
-    [claimPendingByStateId, claimQuestReward, refetch, router, showToast]
+    [claimPendingByStateId, claimQuestReward, pathname, refetch, router, showToast]
   );
 
   if (error?.kind === "auth") {
@@ -160,7 +178,10 @@ export default function QuestsScreen() {
           <AppEmpty
             title="로그인이 필요해요"
             description="퀘스트 정보를 보려면 로그인해 주세요."
-            primaryAction={{ label: "로그인 하러가기", onPress: () => router.push("/(auth)") }}
+            primaryAction={{
+              label: "로그인 하러가기",
+              onPress: () => router.push(buildAuthRoute("/(auth)", pathname)),
+            }}
           />
         </View>
       </SafeAreaView>

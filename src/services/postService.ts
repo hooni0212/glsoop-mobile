@@ -1,5 +1,11 @@
 import type { PostType } from "@/types/post";
-import { apiPost } from "@/lib/api";
+import { apiDelete, apiGet, apiPost, apiPut } from "@/lib/api";
+import {
+  extractPostFontKey,
+  normalizePostEditorText,
+  type PostFontKey,
+  withPostFontMeta,
+} from "@/lib/postContent";
 
 export type CreatePostInput = {
   type: PostType;
@@ -7,7 +13,9 @@ export type CreatePostInput = {
   title?: string;
   content: string;
   contentFormat?: "plain";
-  tags?: string[];
+  hashtags?: string[];
+  layoutJson?: unknown;
+  fontKey?: PostFontKey;
 };
 
 type CreatePostResponse = {
@@ -16,16 +24,41 @@ type CreatePostResponse = {
   post_id?: string;
 };
 
+type DeletePostResponse = {
+  ok?: boolean;
+  message?: string;
+};
+
+type EditablePostResponse = {
+  ok?: boolean;
+  message?: string;
+  post?: {
+    id?: string | number;
+    title?: string;
+    content?: string;
+    category?: PostType;
+    hashtags?: string[];
+    layout_json?: unknown;
+    content?: string;
+  };
+};
+
+type UpdatePostResponse = {
+  ok?: boolean;
+  message?: string;
+};
+
 export async function createPost(input: CreatePostInput): Promise<{ postId: string }> {
   const payload: Record<string, unknown> = {
     type: input.type,
     category: input.category ?? input.type,
-    content: input.content,
+    content: withPostFontMeta(input.content, input.fontKey ?? "serif"),
     content_format: input.contentFormat ?? "plain",
   };
 
   if (input.title) payload.title = input.title;
-  if (input.tags && input.tags.length > 0) payload.tags = input.tags;
+  if (input.hashtags && input.hashtags.length > 0) payload.hashtags = input.hashtags;
+  if (input.layoutJson) payload.layout_json = input.layoutJson;
 
   const res = await apiPost<CreatePostResponse>("/api/posts", payload);
 
@@ -38,4 +71,62 @@ export async function createPost(input: CreatePostInput): Promise<{ postId: stri
   }
 
   return { postId: res.post_id };
+}
+
+export async function deletePost(postId: string): Promise<void> {
+  const res = await apiDelete<DeletePostResponse>(`/api/posts/${encodeURIComponent(postId)}`);
+
+  if (res?.ok === false) {
+    throw new Error(res.message || "글 삭제에 실패했어요.");
+  }
+}
+
+export async function getEditablePost(postId: string): Promise<{
+  id: string;
+  title: string;
+  content: string;
+  category: PostType;
+  hashtags: string[];
+  layoutJson: unknown;
+  fontKey: PostFontKey;
+}> {
+  const res = await apiGet<EditablePostResponse>(`/api/posts/${encodeURIComponent(postId)}/edit`);
+
+  if (!res?.ok || !res.post?.id) {
+    throw new Error(res?.message || "편집할 글을 불러오지 못했어요.");
+  }
+
+  return {
+    id: String(res.post.id),
+    title: typeof res.post.title === "string" ? res.post.title : "",
+    content: normalizePostEditorText(res.post.content),
+    category: (res.post.category ?? "short") as PostType,
+    hashtags: Array.isArray(res.post.hashtags)
+      ? res.post.hashtags.map(String).filter(Boolean)
+      : [],
+    layoutJson: res.post.layout_json ?? null,
+    fontKey: extractPostFontKey(res.post.content),
+  };
+}
+
+export async function updatePost(input: {
+  postId: string;
+  type: PostType;
+  title?: string;
+  content: string;
+  hashtags?: string[];
+  layoutJson?: unknown;
+  fontKey?: PostFontKey;
+}): Promise<void> {
+  const res = await apiPut<UpdatePostResponse>(`/api/posts/${encodeURIComponent(input.postId)}`, {
+    title: input.title,
+    content: withPostFontMeta(input.content, input.fontKey ?? "serif"),
+    category: input.type,
+    hashtags: input.hashtags ?? [],
+    layout_json: input.layoutJson,
+  });
+
+  if (res?.ok === false) {
+    throw new Error(res.message || "글 수정에 실패했어요.");
+  }
 }

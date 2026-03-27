@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
-import { router } from "expo-router";
+import { router, usePathname } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
 
 import { useAuth } from "@/auth/AuthContext";
@@ -8,6 +8,7 @@ import { FeedCard } from "@/components/FeedCard";
 import { AppEmpty } from "@/components/state/AppEmpty";
 import { AppError } from "@/components/state/AppError";
 import { AppLoading } from "@/components/state/AppLoading";
+import { buildAuthRoute } from "@/lib/authRedirect";
 import { useToast } from "@/feedback/ToastProvider";
 import { getLike, setLike, useLikeSnapshot } from "@/features/likes/likeStore";
 import { ApiError, normalizeApiError, type AppErrorModel } from "@/lib/errors";
@@ -17,6 +18,7 @@ import {
   deleteBookmarkList,
   listBookmarkItems,
   listBookmarkLists,
+  renameBookmarkList,
   removePostFromBookmarkList,
 } from "@/services/bookmarkService";
 import { togglePostLike } from "@/services/likeService";
@@ -40,6 +42,7 @@ function initialFolderItemsState(): FolderItemsState {
 }
 
 export default function BookmarksScreen() {
+  const pathname = usePathname();
   const { signOut } = useAuth();
   const { showToast } = useToast();
   const [mode, setMode] = useState<ScreenMode>("lists");
@@ -56,6 +59,10 @@ export default function BookmarksScreen() {
   const [newFolderDesc, setNewFolderDesc] = useState("");
   const [creatingFolder, setCreatingFolder] = useState(false);
   const [deletingListId, setDeletingListId] = useState<string | null>(null);
+  const [editingListId, setEditingListId] = useState<string | null>(null);
+  const [editFolderName, setEditFolderName] = useState("");
+  const [editFolderDesc, setEditFolderDesc] = useState("");
+  const [renamingListId, setRenamingListId] = useState<string | null>(null);
   const [likePending, setLikePending] = useState<Record<string, boolean>>({});
 
   const selectedList = useMemo(
@@ -154,8 +161,8 @@ export default function BookmarksScreen() {
 
   const handleAuthError = useCallback(async () => {
     await signOut();
-    router.replace("/(auth)");
-  }, [signOut]);
+    router.replace(buildAuthRoute("/(auth)", pathname));
+  }, [pathname, signOut]);
 
   const onPressCreateFolder = useCallback(async () => {
     const trimmedName = newFolderName.trim();
@@ -210,6 +217,48 @@ export default function BookmarksScreen() {
     },
     [selectedListId, lists, showToast]
   );
+
+  const onStartEditFolder = useCallback((list: BookmarkList) => {
+    setEditingListId(list.id);
+    setEditFolderName(list.name);
+    setEditFolderDesc(list.description ?? "");
+  }, []);
+
+  const onCancelEditFolder = useCallback(() => {
+    setEditingListId(null);
+    setEditFolderName("");
+    setEditFolderDesc("");
+  }, []);
+
+  const onPressRenameFolder = useCallback(async () => {
+    if (!editingListId) return;
+    const trimmedName = editFolderName.trim();
+    if (!trimmedName) return;
+
+    setRenamingListId(editingListId);
+    try {
+      const updated = await renameBookmarkList({
+        listId: editingListId,
+        name: trimmedName,
+        description: editFolderDesc.trim() || undefined,
+      });
+
+      setLists((prev) => prev.map((list) => (list.id === updated.id ? updated : list)));
+      if (selectedListId === updated.id) {
+        setSelectedListId(updated.id);
+      }
+      showToast(`'${updated.name}' 폴더를 수정했어요.`, { tone: "success" });
+      onCancelEditFolder();
+    } catch (e) {
+      const normalized = normalizeApiError(e);
+      setListsError(normalized);
+      showToast(normalized.description || normalized.title || "폴더 수정에 실패했어요.", {
+        tone: "error",
+      });
+    } finally {
+      setRenamingListId(null);
+    }
+  }, [editFolderDesc, editFolderName, editingListId, onCancelEditFolder, selectedListId, showToast]);
 
   const onPressRemoveFromList = useCallback(
     async (postId: string) => {
@@ -339,38 +388,86 @@ export default function BookmarksScreen() {
       <ScrollView contentContainerStyle={styles.listScroll}>
         {lists.map((list) => (
           <View key={list.id} style={styles.folderCard}>
-            <Pressable
-              onPress={() => {
-                setSelectedListId(list.id);
-                setMode("items");
-              }}
-              style={styles.folderMainBtn}
-              testID={`bookmark-folder-${list.id}`}
-            >
-              <View style={styles.folderHeaderRow}>
-                <Text style={styles.folderTitle} numberOfLines={1}>
-                  {list.name}
-                </Text>
-                <Text style={styles.folderCount}>{list.itemCount ?? 0}개</Text>
+            {editingListId === list.id ? (
+              <View style={styles.editBox}>
+                <TextInput
+                  value={editFolderName}
+                  onChangeText={setEditFolderName}
+                  placeholder="폴더 이름"
+                  style={styles.input}
+                  maxLength={80}
+                />
+                <TextInput
+                  value={editFolderDesc}
+                  onChangeText={setEditFolderDesc}
+                  placeholder="설명 (선택)"
+                  style={styles.input}
+                  maxLength={120}
+                />
+                <View style={styles.editActions}>
+                  <Pressable onPress={onCancelEditFolder} style={styles.editSecondaryBtn}>
+                    <Text style={styles.editSecondaryBtnText}>취소</Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => void onPressRenameFolder()}
+                    disabled={renamingListId === list.id || !editFolderName.trim()}
+                    style={[
+                      styles.editPrimaryBtn,
+                      (renamingListId === list.id || !editFolderName.trim()) &&
+                        styles.createBtnDisabled,
+                    ]}
+                  >
+                    <Text style={styles.editPrimaryBtnText}>
+                      {renamingListId === list.id ? "저장 중..." : "저장"}
+                    </Text>
+                  </Pressable>
+                </View>
               </View>
-              {!!list.description && (
-                <Text style={styles.folderDescription} numberOfLines={2}>
-                  {list.description}
-                </Text>
-              )}
-              <Text style={styles.folderOpenHint}>열어서 글 보기</Text>
-            </Pressable>
+            ) : (
+              <>
+                <Pressable
+                  onPress={() => {
+                    setSelectedListId(list.id);
+                    setMode("items");
+                  }}
+                  style={styles.folderMainBtn}
+                  testID={`bookmark-folder-${list.id}`}
+                >
+                  <View style={styles.folderHeaderRow}>
+                    <Text style={styles.folderTitle} numberOfLines={1}>
+                      {list.name}
+                    </Text>
+                    <Text style={styles.folderCount}>{list.itemCount ?? 0}개</Text>
+                  </View>
+                  {!!list.description && (
+                    <Text style={styles.folderDescription} numberOfLines={2}>
+                      {list.description}
+                    </Text>
+                  )}
+                  <Text style={styles.folderOpenHint}>열어서 글 보기</Text>
+                </Pressable>
 
-            <Pressable
-              onPress={() => void onPressDeleteFolder(list.id)}
-              hitSlop={10}
-              disabled={deletingListId === list.id}
-              style={styles.folderDeleteBtn}
-            >
-              <Text style={styles.folderDeleteText}>
-                {deletingListId === list.id ? "삭제중..." : "폴더 삭제"}
-              </Text>
-            </Pressable>
+                <View style={styles.folderActions}>
+                  <Pressable
+                    onPress={() => onStartEditFolder(list)}
+                    hitSlop={10}
+                    style={styles.folderEditBtn}
+                  >
+                    <Text style={styles.folderEditText}>폴더 수정</Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => void onPressDeleteFolder(list.id)}
+                    hitSlop={10}
+                    disabled={deletingListId === list.id}
+                    style={styles.folderDeleteBtn}
+                  >
+                    <Text style={styles.folderDeleteText}>
+                      {deletingListId === list.id ? "삭제중..." : "폴더 삭제"}
+                    </Text>
+                  </Pressable>
+                </View>
+              </>
+            )}
           </View>
         ))}
       </ScrollView>
@@ -590,6 +687,7 @@ const styles = StyleSheet.create({
     padding: 12,
     gap: 10,
   },
+  editBox: { gap: 8 },
   folderMainBtn: { gap: 8 },
   folderHeaderRow: {
     flexDirection: "row",
@@ -601,6 +699,21 @@ const styles = StyleSheet.create({
   folderCount: { fontSize: 12, color: tokens.colors.textMuted, fontWeight: "800" },
   folderDescription: { fontSize: 12, color: tokens.colors.textMuted, fontWeight: "700" },
   folderOpenHint: { fontSize: 12, color: tokens.colors.green900, fontWeight: "800" },
+  folderActions: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 8,
+  },
+  folderEditBtn: {
+    alignSelf: "flex-end",
+    borderRadius: tokens.radius.sm,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    backgroundColor: tokens.colors.surface,
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+  },
+  folderEditText: { fontSize: 11, fontWeight: "800", color: tokens.colors.text },
   folderDeleteBtn: {
     alignSelf: "flex-end",
     borderRadius: tokens.radius.sm,
@@ -609,6 +722,31 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(180,50,50,0.08)",
   },
   folderDeleteText: { fontSize: 11, fontWeight: "800", color: "rgba(180,50,50,0.95)" },
+  editActions: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 8,
+  },
+  editSecondaryBtn: {
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: tokens.radius.md,
+    borderWidth: 1,
+    borderColor: tokens.colors.borderStrong,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+    backgroundColor: tokens.colors.surface,
+  },
+  editSecondaryBtnText: { fontSize: 13, fontWeight: "800", color: tokens.colors.text },
+  editPrimaryBtn: {
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: tokens.radius.md,
+    backgroundColor: tokens.colors.green700,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+  },
+  editPrimaryBtnText: { fontSize: 13, fontWeight: "800", color: "#fff" },
 
   detailHeader: {
     flexDirection: "row",

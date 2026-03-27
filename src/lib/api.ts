@@ -1,15 +1,95 @@
+import Constants from "expo-constants";
 import { Platform } from "react-native";
 
-import { getAuthToken } from "@/lib/authToken";
+import { COOKIE_SESSION_TOKEN, getAuthToken } from "@/lib/authToken";
 import { ApiError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 type ApiOk<T> = { success: true; data: T };
 
 const RAW_BASE = process.env.EXPO_PUBLIC_API_BASE_URL;
-const API_BASE = (RAW_BASE || "").replace(/\/+$/, "");
 const API_DEBUG =
   typeof process !== "undefined" && process?.env?.EXPO_PUBLIC_API_DEBUG === "true";
+const LOCAL_API_HOSTS = new Set(["localhost", "127.0.0.1", "0.0.0.0"]);
+
+function trimTrailingSlash(value: string) {
+  return value.replace(/\/+$/, "");
+}
+
+function extractExpoHost() {
+  const hostCandidates = [
+    (Constants as any)?.expoConfig?.hostUri,
+    (Constants as any)?.expoGoConfig?.debuggerHost,
+    (Constants as any)?.manifest2?.extra?.expoClient?.hostUri,
+    (Constants as any)?.manifest?.debuggerHost,
+  ];
+
+  for (const candidate of hostCandidates) {
+    if (typeof candidate !== "string") continue;
+    const match = candidate.match(/^([^/:]+)(?::\d+)?/);
+    if (match?.[1]) {
+      return match[1];
+    }
+  }
+
+  return null;
+}
+
+function resolveApiBase(rawBase?: string) {
+  const trimmed = trimTrailingSlash((rawBase || "").trim());
+  const isNativeApp = Platform.OS === "ios" || Platform.OS === "android";
+  const isWeb = Platform.OS === "web";
+
+  if (__DEV__ && isWeb && trimmed) {
+    try {
+      const parsed = new URL(trimmed);
+      const runtimeHost =
+        typeof window !== "undefined" && typeof window.location?.hostname === "string"
+          ? window.location.hostname
+          : "";
+
+      if (runtimeHost && LOCAL_API_HOSTS.has(parsed.hostname)) {
+        parsed.hostname = runtimeHost;
+        return trimTrailingSlash(parsed.toString());
+      }
+    } catch {
+      // no-op
+    }
+  }
+
+  if (!__DEV__ || !isNativeApp) {
+    return trimmed;
+  }
+
+  const expoHost = extractExpoHost();
+  if (!expoHost) {
+    return trimmed;
+  }
+
+  if (!trimmed) {
+    return `http://${expoHost}:3000`;
+  }
+
+  if (trimmed.startsWith("/")) {
+    return `http://${expoHost}:3000${trimmed}`;
+  }
+
+  try {
+    const parsed = new URL(trimmed);
+    if (!LOCAL_API_HOSTS.has(parsed.hostname)) {
+      return trimTrailingSlash(parsed.toString());
+    }
+
+    const nextPort = parsed.port || "3000";
+    parsed.hostname = expoHost;
+    parsed.port = nextPort;
+    return trimTrailingSlash(parsed.toString());
+  } catch {
+    return trimmed;
+  }
+}
+
+const API_BASE = resolveApiBase(RAW_BASE);
 
 // EXPO_PUBLIC_API_DEBUG=true (dev)로 API 로그 활성화
 function apiLog(...args: unknown[]) {
@@ -22,14 +102,18 @@ function apiLog(...args: unknown[]) {
   logger.debug("[api]", { args });
 }
 
-if (__DEV__ && (RAW_BASE === undefined || RAW_BASE === null)) {
-  logger.warn("[api] EXPO_PUBLIC_API_BASE_URL is not set. Using same-origin paths.");
+if (__DEV__ && (RAW_BASE === undefined || RAW_BASE === null || RAW_BASE.trim() === "")) {
+  logger.warn("[api] EXPO_PUBLIC_API_BASE_URL is not set. Using inferred dev host or same-origin paths.");
 }
 
 let didLogJoin = false;
 
 if (__DEV__ && API_DEBUG) {
-  logger.debug("[api] base url resolved", { base: API_BASE || "(same-origin)" });
+  logger.debug("[api] base url resolved", {
+    rawBase: RAW_BASE || "(unset)",
+    base: API_BASE || "(same-origin)",
+    expoHost: extractExpoHost() || "(unavailable)",
+  });
 }
 
 // 간단 타임아웃 유틸
@@ -70,6 +154,10 @@ function joinUrl(path: string) {
   return url;
 }
 
+export function buildApiUrl(path: string) {
+  return joinUrl(path);
+}
+
 type RequestOptions = {
   method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   body?: unknown;
@@ -84,6 +172,7 @@ async function apiRequest<T>(path: string, options: RequestOptions): Promise<T> 
 
   try {
     const token = await getAuthToken();
+    const bearerToken = token && token !== COOKIE_SESSION_TOKEN ? token : null;
 
     const headers: Record<string, string> = {
       Accept: "application/json",
@@ -94,12 +183,12 @@ async function apiRequest<T>(path: string, options: RequestOptions): Promise<T> 
     if (hasBody) headers["Content-Type"] = "application/json";
 
     // ✅ Bearer 토큰 인증(권장)
-    if (token) headers["Authorization"] = `Bearer ${token}`;
+    if (bearerToken) headers["Authorization"] = `Bearer ${bearerToken}`;
 
     apiLog("[api] request", {
       method: options.method,
       url,
-      hasToken: Boolean(token),
+      hasToken: Boolean(bearerToken),
     });
 
     const res = await fetch(url, {
@@ -107,8 +196,7 @@ async function apiRequest<T>(path: string, options: RequestOptions): Promise<T> 
       headers,
       body: hasBody ? JSON.stringify(options.body) : undefined,
       signal: controller.signal,
-      // ✅ 쿠키 인증이 필요할 때만 include
-      ...(options.credentials && Platform.OS === "web" ? { credentials: "include" } : null),
+      ...(Platform.OS === "web" ? { credentials: "include" } : null),
     } as any);
 
     // ✅ res.json() 대신 text→parse (HTML/빈바디/에러페이지 대비)

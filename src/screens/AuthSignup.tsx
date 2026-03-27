@@ -9,15 +9,18 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 
 import { useAuth } from "@/auth/AuthContext";
 import { AppError } from "@/components/state/AppError";
-import { apiPost } from "@/lib/api";
+import { extractAuthToken } from "@/lib/authResponse";
+import { buildAuthRoute, resolvePostAuthRedirect } from "@/lib/authRedirect";
+import { apiGet, apiPost } from "@/lib/api";
 import {
   buildEmailVerificationNotice,
   isEmailVerificationRequired,
 } from "@/lib/authMessages";
+import { COOKIE_SESSION_TOKEN } from "@/lib/authToken";
 import { ApiError, normalizeApiError } from "@/lib/errors";
 import { tokens } from "@/theme/tokens";
 
@@ -51,15 +54,47 @@ type ResendResponse = {
   retry_after?: number;
 };
 
+type SignupFieldErrors = Partial<
+  Record<
+    | "name"
+    | "nickname"
+    | "email"
+    | "pw"
+    | "age_confirmed"
+    | "terms_agreed"
+    | "privacy_agreed"
+    | "terms_version"
+    | "privacy_version",
+    string
+  >
+>;
+
+type RuntimeConfigResponse = {
+  ok: boolean;
+  legal?: {
+    versions?: {
+      terms?: string;
+      privacy?: string;
+    };
+  };
+};
+
 export default function AuthSignup() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ redirect?: string }>();
   const { signIn } = useAuth();
+  const redirect = params?.redirect ? String(params.redirect) : undefined;
 
   const [step, setStep] = React.useState<"form" | "otp">("form");
   const [name, setName] = React.useState("");
   const [nickname, setNickname] = React.useState("");
   const [email, setEmail] = React.useState("");
   const [pw, setPw] = React.useState("");
+  const [ageConfirmed, setAgeConfirmed] = React.useState(false);
+  const [termsAgreed, setTermsAgreed] = React.useState(false);
+  const [privacyAgreed, setPrivacyAgreed] = React.useState(false);
+  const [termsVersion, setTermsVersion] = React.useState<string | null>(null);
+  const [privacyVersion, setPrivacyVersion] = React.useState<string | null>(null);
   const [otp, setOtp] = React.useState("");
   const [pendingId, setPendingId] = React.useState<string | null>(null);
   const [emailMasked, setEmailMasked] = React.useState<string | null>(null);
@@ -69,7 +104,29 @@ export default function AuthSignup() {
   const [busy, setBusy] = React.useState(false);
   const [resendBusy, setResendBusy] = React.useState(false);
   const [message, setMessage] = React.useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = React.useState<SignupFieldErrors>({});
   const [error, setError] = React.useState<ReturnType<typeof normalizeApiError> | null>(null);
+
+  React.useEffect(() => {
+    let active = true;
+
+    async function loadRuntimeConfig() {
+      try {
+        const res = await apiGet<RuntimeConfigResponse>("/api/runtime-config");
+        if (!active) return;
+        setTermsVersion(res?.legal?.versions?.terms ?? null);
+        setPrivacyVersion(res?.legal?.versions?.privacy ?? null);
+      } catch (runtimeError) {
+        if (!active) return;
+        setError(normalizeApiError(runtimeError));
+      }
+    }
+
+    void loadRuntimeConfig();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   React.useEffect(() => {
     setResendCountdown(resendAfter);
@@ -87,9 +144,15 @@ export default function AuthSignup() {
     (err: unknown) => {
       if (err instanceof ApiError) {
         if (err.status && [400, 409, 429].includes(err.status)) {
+          const nextFieldErrors = (err.payload?.error?.field_errors ??
+            err.payload?.field_errors ??
+            {}) as SignupFieldErrors;
+          setFieldErrors(nextFieldErrors);
           const rawMessage = err.message || "요청을 처리할 수 없어요.";
           if (isEmailVerificationRequired(rawMessage)) {
             setMessage(buildEmailVerificationNotice(email));
+          } else if (Object.keys(nextFieldErrors).length > 0) {
+            setMessage(Object.values(nextFieldErrors)[0] ?? rawMessage);
           } else {
             setMessage(rawMessage);
           }
@@ -131,6 +194,7 @@ export default function AuthSignup() {
     setBusy(true);
     setMessage(null);
     setError(null);
+    setFieldErrors({});
 
     try {
       const res = await apiPost<SignupResponse>("/api/signup", {
@@ -138,6 +202,11 @@ export default function AuthSignup() {
         nickname,
         email,
         pw,
+        age_confirmed: ageConfirmed,
+        terms_agreed: termsAgreed,
+        privacy_agreed: privacyAgreed,
+        terms_version: termsVersion,
+        privacy_version: privacyVersion,
       });
 
       if (!res?.ok) {
@@ -173,6 +242,7 @@ export default function AuthSignup() {
     setBusy(true);
     setMessage(null);
     setError(null);
+    setFieldErrors({});
 
     try {
       const res = await apiPost<VerifyEmailResponse>("/api/verify-email", {
@@ -200,13 +270,15 @@ export default function AuthSignup() {
         }
         return;
       }
-      if (!loginRes.token) {
-        setMessage("서버가 token을 응답하지 않았어요. (Bearer 계약 필요)");
+      const nextAuthToken =
+        Platform.OS === "web" ? COOKIE_SESSION_TOKEN : extractAuthToken(loginRes);
+      if (!nextAuthToken) {
+        setMessage("로그인 응답에 네이티브 인증 토큰이 없어요. 서버 로그인 응답 형식을 확인해 주세요.");
         return;
       }
 
-      await signIn(loginRes.token);
-      router.replace("/(tabs)");
+      await signIn(nextAuthToken);
+      router.replace(resolvePostAuthRedirect(redirect));
     } catch (e) {
       handleApiError(e);
     } finally {
@@ -219,6 +291,7 @@ export default function AuthSignup() {
     setResendBusy(true);
     setMessage(null);
     setError(null);
+    setFieldErrors({});
 
     try {
       const payload = pendingId ? { pending_id: pendingId } : { email };
@@ -241,11 +314,21 @@ export default function AuthSignup() {
     }
   }
 
-  const canSubmitForm = Boolean(name && nickname && email && pw);
+  const canSubmitForm = Boolean(
+    name &&
+      nickname &&
+      email &&
+      pw &&
+      ageConfirmed &&
+      termsAgreed &&
+      privacyAgreed &&
+      termsVersion &&
+      privacyVersion
+  );
   const canSubmitOtp = otp.length === 6;
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={styles.safe} testID="auth-signup-screen">
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -277,13 +360,19 @@ export default function AuthSignup() {
                   onChangeText={setName}
                   placeholder="이름"
                   style={styles.input}
+                  testID="signup-name-input"
                 />
+                {fieldErrors.name ? <Text style={styles.fieldError}>{fieldErrors.name}</Text> : null}
                 <TextInput
                   value={nickname}
                   onChangeText={setNickname}
                   placeholder="닉네임"
                   style={styles.input}
+                  testID="signup-nickname-input"
                 />
+                {fieldErrors.nickname ? (
+                  <Text style={styles.fieldError}>{fieldErrors.nickname}</Text>
+                ) : null}
                 <TextInput
                   value={email}
                   onChangeText={setEmail}
@@ -291,18 +380,73 @@ export default function AuthSignup() {
                   autoCapitalize="none"
                   keyboardType="email-address"
                   style={styles.input}
+                  testID="signup-email-input"
                 />
+                {fieldErrors.email ? <Text style={styles.fieldError}>{fieldErrors.email}</Text> : null}
                 <TextInput
                   value={pw}
                   onChangeText={setPw}
                   placeholder="비밀번호"
                   secureTextEntry
                   style={styles.input}
+                  testID="signup-password-input"
                 />
+                {fieldErrors.pw ? <Text style={styles.fieldError}>{fieldErrors.pw}</Text> : null}
+
+                <View style={styles.consentGroup}>
+                  <Pressable
+                    onPress={() => setAgeConfirmed((current) => !current)}
+                    style={styles.checkboxRow}
+                    testID="signup-age-checkbox"
+                  >
+                    <View style={[styles.checkbox, ageConfirmed && styles.checkboxChecked]}>
+                      {ageConfirmed ? <Text style={styles.checkboxMark}>✓</Text> : null}
+                    </View>
+                    <Text style={styles.checkboxLabel}>만 14세 이상입니다.</Text>
+                  </Pressable>
+                  {fieldErrors.age_confirmed ? (
+                    <Text style={styles.fieldError}>{fieldErrors.age_confirmed}</Text>
+                  ) : null}
+
+                  <Pressable
+                    onPress={() => setTermsAgreed((current) => !current)}
+                    style={styles.checkboxRow}
+                    testID="signup-terms-checkbox"
+                  >
+                    <View style={[styles.checkbox, termsAgreed && styles.checkboxChecked]}>
+                      {termsAgreed ? <Text style={styles.checkboxMark}>✓</Text> : null}
+                    </View>
+                    <Text style={styles.checkboxLabel}>서비스 이용약관에 동의합니다.</Text>
+                  </Pressable>
+                  {fieldErrors.terms_agreed ? (
+                    <Text style={styles.fieldError}>{fieldErrors.terms_agreed}</Text>
+                  ) : null}
+                  {fieldErrors.terms_version ? (
+                    <Text style={styles.fieldError}>{fieldErrors.terms_version}</Text>
+                  ) : null}
+
+                  <Pressable
+                    onPress={() => setPrivacyAgreed((current) => !current)}
+                    style={styles.checkboxRow}
+                    testID="signup-privacy-checkbox"
+                  >
+                    <View style={[styles.checkbox, privacyAgreed && styles.checkboxChecked]}>
+                      {privacyAgreed ? <Text style={styles.checkboxMark}>✓</Text> : null}
+                    </View>
+                    <Text style={styles.checkboxLabel}>개인정보 수집 및 이용에 동의합니다.</Text>
+                  </Pressable>
+                  {fieldErrors.privacy_agreed ? (
+                    <Text style={styles.fieldError}>{fieldErrors.privacy_agreed}</Text>
+                  ) : null}
+                  {fieldErrors.privacy_version ? (
+                    <Text style={styles.fieldError}>{fieldErrors.privacy_version}</Text>
+                  ) : null}
+                </View>
 
                 <Pressable
                   onPress={onSignup}
                   disabled={busy || !canSubmitForm}
+                  testID="signup-submit-btn"
                   style={({ pressed }) => [
                     styles.primaryBtn,
                     (busy || !canSubmitForm) && styles.primaryBtnDisabled,
@@ -314,7 +458,7 @@ export default function AuthSignup() {
 
                 {message ? <Text style={styles.helper}>{message}</Text> : null}
 
-                <Pressable onPress={() => router.push("/(auth)/login")}>
+                <Pressable onPress={() => router.push(buildAuthRoute("/(auth)/login", redirect))}>
                   <Text style={styles.link}>이미 계정이 있나요? 로그인</Text>
                 </Pressable>
               </>
@@ -337,11 +481,13 @@ export default function AuthSignup() {
                   keyboardType="number-pad"
                   maxLength={6}
                   style={styles.input}
+                  testID="signup-otp-input"
                 />
 
                 <Pressable
                   onPress={onVerifyOtp}
                   disabled={busy || !canSubmitOtp}
+                  testID="signup-otp-submit-btn"
                   style={({ pressed }) => [
                     styles.primaryBtn,
                     (busy || !canSubmitOtp) && styles.primaryBtnDisabled,
@@ -354,6 +500,7 @@ export default function AuthSignup() {
                 <Pressable
                   onPress={onResendOtp}
                   disabled={resendCountdown > 0 || resendBusy}
+                  testID="signup-otp-resend-btn"
                   style={({ pressed }) => [
                     styles.secondaryBtn,
                     (resendCountdown > 0 || resendBusy) && styles.secondaryBtnDisabled,
@@ -413,6 +560,44 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: tokens.font.body,
     color: tokens.colors.text,
+  },
+  consentGroup: {
+    gap: tokens.space.xs as any,
+    paddingVertical: tokens.space.xs,
+  },
+  checkboxRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: tokens.space.sm as any,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: tokens.colors.borderStrong,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: tokens.colors.surfaceStrong,
+  },
+  checkboxChecked: {
+    backgroundColor: tokens.colors.green700,
+    borderColor: tokens.colors.green700,
+  },
+  checkboxMark: {
+    color: "white",
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  checkboxLabel: {
+    flex: 1,
+    color: tokens.colors.text,
+    fontSize: tokens.font.small,
+  },
+  fieldError: {
+    fontSize: tokens.font.small,
+    color: tokens.colors.danger,
+    marginTop: -2,
   },
   primaryBtn: {
     backgroundColor: tokens.colors.green700,

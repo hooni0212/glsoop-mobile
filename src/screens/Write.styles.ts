@@ -1,13 +1,29 @@
-import { StyleSheet } from "react-native";
+import { Platform, StyleSheet } from "react-native";
 import { tokens } from "@/theme/tokens";
 
 export function createWriteStyles() {
+  const paperFont = Platform.select({
+    ios: "Georgia",
+    android: "serif",
+    default: "Georgia",
+  });
+  const sansFont = Platform.select({
+    ios: "System",
+    android: "sans-serif",
+    default: "System",
+  });
+  const handFont = Platform.select({
+    ios: "Snell Roundhand",
+    android: "cursive",
+    default: "cursive",
+  });
+
   return StyleSheet.create({
     flex: { flex: 1 },
 
     safe: {
       flex: 1,
-      backgroundColor: tokens.colors.bgMuted,
+      backgroundColor: "#ebe4d8",
     },
 
     topBar: {
@@ -17,8 +33,8 @@ export function createWriteStyles() {
       alignItems: "center",
       justifyContent: "space-between",
       borderBottomWidth: 1,
-      borderBottomColor: tokens.colors.border,
-      backgroundColor: tokens.colors.bgMuted,
+      borderBottomColor: "rgba(79,58,33,0.10)",
+      backgroundColor: "rgba(250,246,238,0.92)",
     },
     topBarActions: {
       flexDirection: "row",
@@ -66,6 +82,7 @@ export function createWriteStyles() {
       flex: 1,
       paddingHorizontal: tokens.space.lg,
       paddingTop: tokens.space.md,
+      paddingBottom: tokens.space.lg,
     },
     center: {
       alignItems: "center",
@@ -85,6 +102,148 @@ export function createWriteStyles() {
       shadowRadius: 14,
       shadowOffset: { width: 0, height: 8 },
       elevation: 2,
+    },
+
+    editorWrap: {
+      marginBottom: 14,
+    },
+
+    editorStage: {
+      marginBottom: 14,
+      borderRadius: 24,
+      padding: 14,
+      backgroundColor: "rgba(92,69,42,0.10)",
+      borderWidth: 1,
+      borderColor: "rgba(86,62,32,0.08)",
+      shadowColor: "#4d3920",
+      shadowOpacity: 0.12,
+      shadowRadius: 24,
+      shadowOffset: { width: 0, height: 14 },
+      elevation: 3,
+    },
+    editorStageHeader: {
+      marginBottom: 14,
+      gap: 4,
+    },
+    editorStageEyebrow: {
+      fontSize: 11,
+      letterSpacing: 1.4,
+      fontWeight: "900",
+      color: "rgba(80,58,32,0.55)",
+    },
+    editorStageHint: {
+      fontSize: 12,
+      fontWeight: "700",
+      color: "rgba(80,58,32,0.64)",
+      letterSpacing: -0.2,
+    },
+    bookCanvas: {
+      width: "100%",
+      aspectRatio: 500 / 666,
+      borderRadius: 22,
+      overflow: "hidden",
+      backgroundColor: "#f7efdf",
+      borderWidth: 1,
+      borderColor: "rgba(88,63,35,0.10)",
+      shadowColor: "#8c6a3c",
+      shadowOpacity: 0.08,
+      shadowRadius: 12,
+      shadowOffset: { width: 0, height: 8 },
+      elevation: 2,
+    },
+    bookCanvasPressable: {
+      width: "100%",
+    },
+    bookCanvasImage: {
+      borderRadius: 22,
+    },
+    bookBox: {
+      position: "absolute",
+      paddingHorizontal: 4,
+      paddingTop: 20,
+      paddingBottom: 2,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: "rgba(79,58,33,0.12)",
+      backgroundColor: "rgba(255,255,255,0.04)",
+    },
+    bookBodyBox: {
+      paddingTop: 24,
+    },
+    bookBoxActive: {
+      borderColor: "rgba(24,96,58,0.85)",
+      borderStyle: "dashed",
+      backgroundColor: "rgba(240,252,245,0.18)",
+    },
+    bookTitleInput: {
+      color: "#3c342d",
+      fontWeight: "700",
+      letterSpacing: -0.3,
+      height: "100%",
+      padding: 0,
+      textAlignVertical: "top",
+    },
+    bookBodyInput: {
+      color: "#524941",
+      fontWeight: "500",
+      height: "100%",
+      padding: 0,
+      textAlignVertical: "top",
+    },
+    bookFooterBox: {
+      justifyContent: "center",
+    },
+    dragHandle: {
+      position: "absolute",
+      top: 4,
+      left: 4,
+      zIndex: 2,
+      minWidth: 34,
+      height: 18,
+      paddingHorizontal: 8,
+      borderRadius: 999,
+      backgroundColor: "rgba(255,250,244,0.72)",
+      borderWidth: 1,
+      borderColor: "rgba(79,58,33,0.18)",
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 3,
+    },
+    dragHandleBody: {
+      minWidth: 42,
+      height: 22,
+      paddingHorizontal: 10,
+      top: 3,
+      left: 6,
+    },
+    dragHandleActive: {
+      backgroundColor: "rgba(237,250,241,0.92)",
+      borderColor: "rgba(24,96,58,0.5)",
+    },
+    dragHandleGrip: {
+      width: 3,
+      height: 3,
+      borderRadius: 999,
+      backgroundColor: "rgba(79,58,33,0.55)",
+    },
+    bookFooterText: {
+      color: "rgba(81,65,49,0.72)",
+      fontWeight: "700",
+    },
+    bookFontSerif: {
+      fontFamily: paperFont,
+    },
+    bookFontSans: {
+      fontFamily: sansFont,
+    },
+    bookFontHand: {
+      fontFamily: handFont,
+    },
+    editorPlaceholder: {
+      color: "rgba(80,58,32,0.34)",
+    },
+    editorControlDock: {
+      marginTop: 12,
     },
 
     label: {
@@ -128,9 +287,9 @@ export function createWriteStyles() {
       marginTop: 12,
       borderRadius: 14,
       padding: 12,
-      backgroundColor: tokens.colors.surface,
+      backgroundColor: "rgba(255,250,244,0.86)",
       borderWidth: 1,
-      borderColor: tokens.colors.border,
+      borderColor: "rgba(86,62,32,0.08)",
     },
     metaChipRow: {
       flexDirection: "row",
@@ -156,6 +315,150 @@ export function createWriteStyles() {
     },
     metaChipTextActive: {
       color: tokens.colors.green900,
+    },
+    metaDivider: {
+      height: 1,
+      backgroundColor: tokens.colors.border,
+      marginVertical: 12,
+    },
+    metaInput: {
+      borderWidth: 1,
+      borderColor: tokens.colors.borderStrong,
+      borderRadius: tokens.radius.lg,
+      backgroundColor: tokens.colors.white,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      fontSize: 14,
+      color: tokens.colors.text,
+    },
+    metaChipWrap: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 8,
+      marginTop: 10,
+    },
+    hashChip: {
+      borderRadius: tokens.radius.pill,
+      borderWidth: 1,
+      borderColor: tokens.colors.green700,
+      backgroundColor: tokens.colors.green100,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+    },
+    hashChipText: {
+      fontSize: tokens.font.small,
+      fontWeight: "800",
+      color: tokens.colors.green900,
+    },
+    layoutBlock: {
+      marginTop: 10,
+    },
+    layoutDock: {
+      borderRadius: 18,
+      padding: 14,
+      backgroundColor: "rgba(255,249,241,0.92)",
+      borderWidth: 1,
+      borderColor: "rgba(86,62,32,0.08)",
+    },
+    layoutDockHeader: {
+      marginBottom: 8,
+      gap: 4,
+    },
+    layoutDockTitle: {
+      fontSize: 13,
+      fontWeight: "900",
+      color: "#3b2d1d",
+      letterSpacing: -0.2,
+    },
+    layoutDockHint: {
+      fontSize: 12,
+      fontWeight: "700",
+      color: "rgba(76,57,34,0.62)",
+      letterSpacing: -0.2,
+    },
+    layoutMetrics: {
+      marginTop: 8,
+      fontSize: 12,
+      fontWeight: "700",
+      color: "rgba(76,57,34,0.62)",
+    },
+    layoutOptionRow: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 8,
+      marginTop: 6,
+    },
+    layoutOption: {
+      borderRadius: tokens.radius.pill,
+      borderWidth: 1,
+      borderColor: tokens.colors.borderStrong,
+      backgroundColor: tokens.colors.white,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+    },
+    layoutOptionActive: {
+      borderColor: tokens.colors.green900,
+      backgroundColor: tokens.colors.green100,
+    },
+    layoutOptionText: {
+      fontSize: tokens.font.small,
+      fontWeight: "800",
+      color: tokens.colors.text,
+    },
+    layoutOptionTextActive: {
+      color: tokens.colors.green900,
+    },
+    previewStage: {
+      borderRadius: 24,
+      padding: 14,
+      backgroundColor: "rgba(92,69,42,0.10)",
+      borderWidth: 1,
+      borderColor: "rgba(86,62,32,0.08)",
+      marginBottom: 12,
+    },
+    previewStageHeader: {
+      marginBottom: 10,
+      paddingHorizontal: 4,
+    },
+    previewStageEyebrow: {
+      fontSize: 11,
+      letterSpacing: 1.4,
+      fontWeight: "900",
+      color: "rgba(80,58,32,0.55)",
+    },
+    previewStageHint: {
+      marginTop: 4,
+      fontSize: 12,
+      fontWeight: "700",
+      color: "rgba(80,58,32,0.64)",
+    },
+    previewPaper: {
+      minHeight: 320,
+      borderRadius: 22,
+      backgroundColor: "#f7efdf",
+      paddingHorizontal: 22,
+      paddingVertical: 26,
+      justifyContent: "space-between",
+      gap: 16,
+      borderWidth: 1,
+      borderColor: "rgba(88,63,35,0.10)",
+    },
+    previewTitle: {
+      color: "#2e2418",
+      fontWeight: "700",
+      letterSpacing: -0.3,
+      fontFamily: paperFont,
+    },
+    previewBody: {
+      flex: 1,
+      color: "#2f2519",
+      fontWeight: "500",
+      fontFamily: paperFont,
+    },
+    previewFooter: {
+      color: "rgba(76,57,34,0.62)",
+      fontWeight: "700",
+      fontFamily: paperFont,
     },
 
     // --- Modal (cross-platform confirm UI) ---
