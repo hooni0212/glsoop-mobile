@@ -78,7 +78,13 @@ function normalizePost(row: any): Post {
   const title = pickFirstString(row?.title, row?.post_title);
   const content = pickFirstString(row?.content, row?.body, row?.html, row?.text);
   const createdAt = pickFirstString(row?.createdAt, row?.created_at, row?.created, row?.date);
-  const authorName = pickFirstString(row?.author_name, row?.authorName, row?.nickname, row?.name);
+  const authorName = pickFirstString(
+    row?.author_nickname,
+    row?.nickname,
+    row?.author_name,
+    row?.authorName,
+    row?.name
+  );
   const authorId = String(row?.author_id ?? row?.user_id ?? row?.uid ?? "");
 
   const likeCount = pickFirstNumber(row?.like_count, row?.likeCount, row?.likes, row?.likes_count);

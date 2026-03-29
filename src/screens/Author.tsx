@@ -1,5 +1,14 @@
 import React, { useCallback, useMemo, useState } from "react";
-import { Alert, FlatList, Pressable, SafeAreaView, Share, Text, View } from "react-native";
+import {
+  Alert,
+  FlatList,
+  InteractionManager,
+  Pressable,
+  SafeAreaView,
+  Share,
+  Text,
+  View,
+} from "react-native";
 import { router, useLocalSearchParams, usePathname } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
 
@@ -156,7 +165,13 @@ export default function Author() {
   useFocusEffect(
     useCallback(() => {
       if (!userId) return;
-      void refetchProfile();
+      const task = InteractionManager.runAfterInteractions(() => {
+        void refetchProfile();
+      });
+
+      return () => {
+        task.cancel();
+      };
     }, [refetchProfile, userId])
   );
 

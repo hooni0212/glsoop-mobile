@@ -1,9 +1,12 @@
 import React from "react";
+import { Image } from "expo-image";
 import { Pressable, SafeAreaView, StyleSheet, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 
 import { buildAuthRoute } from "@/lib/authRedirect";
 import { tokens } from "@/theme/tokens";
+
+const glsoopIcon = require("../../assets/images/icon.png");
 
 export default function AuthWelcome() {
   const router = useRouter();
@@ -14,8 +17,8 @@ export default function AuthWelcome() {
     <SafeAreaView style={styles.safe}>
       <View style={styles.container}>
         <View style={styles.hero}>
-          <View style={styles.logo}>
-            <Text style={styles.logoText}>글</Text>
+          <View style={styles.logoFrame}>
+            <Image source={glsoopIcon} style={styles.logoImage} contentFit="cover" transition={120} />
           </View>
           <Text style={styles.title}>글숲</Text>
           <Text style={styles.subtitle}>
@@ -54,22 +57,26 @@ const styles = StyleSheet.create({
   },
   hero: {
     alignItems: "center",
-    marginTop: tokens.space.xl,
+    marginTop: tokens.space.xl * 1.4,
     gap: tokens.space.md as any,
   },
-  logo: {
-    width: 88,
-    height: 88,
-    borderRadius: tokens.radius.lg,
-    backgroundColor: tokens.colors.green700,
-    alignItems: "center",
-    justifyContent: "center",
+  logoFrame: {
+    width: 122,
+    height: 122,
+    borderRadius: 30,
+    overflow: "hidden",
+    backgroundColor: "#f4eedf",
+    borderWidth: 1,
+    borderColor: "rgba(45,90,61,0.08)",
     shadowColor: tokens.shadow.color,
     shadowOpacity: tokens.shadow.opacity,
     shadowRadius: tokens.shadow.radius,
     shadowOffset: { width: 0, height: tokens.shadow.offsetY },
   },
-  logoText: { color: "white", fontSize: 34, fontWeight: "900" },
+  logoImage: {
+    width: "100%",
+    height: "100%",
+  },
   title: { fontSize: tokens.font.title, fontWeight: "900", color: tokens.colors.text },
   subtitle: {
     fontSize: tokens.font.body,

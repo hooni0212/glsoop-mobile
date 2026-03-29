@@ -8,6 +8,7 @@
 - Owner: `taehun`
 - 관련 문서:
   - `docs/api/README.md`
+  - `docs/release/ios-app-store-public-release.md`
   - `docs/release/ios-production-testflight-pass1.md`
   - `README.md`
 
@@ -28,20 +29,21 @@
 - [x] Expo Router 기반 앱 구조가 잡혀 있다.
 - [x] 앱 버전이 `1.0.0`으로 설정되어 있다.
 - [x] iOS 번들 ID `com.glsoop.app`이 설정되어 있다.
+- [x] `eas.json`이 있고 `production` build / submit profile이 연결되어 있다.
+- [x] `package.json`에 `typecheck`와 iOS release 검증 스크립트가 있다.
 - [x] 기본 검증 스크립트로 `npm run lint`, `npm run e2e:web`가 있다.
 - [x] 루트 진입과 세션 복구 중 blank-like 인상을 줄이기 위한 상태 문구가 반영되어 있다.
 - [x] `내 정보` 화면이 프로필 홈 중심으로 정리되어 있고, 설정성 액션은 계정 센터로 분리되어 있다.
 - [x] 계정 비활성화/즉시 탈퇴가 `POST /api/me/account-closure`와 연결되어 있다.
 - [x] 게시글/작가 화면에 문제 신고/지원 문의 및 커뮤니티 가이드라인 진입점이 추가되어 있다.
 - [x] `GET /api/runtime-config` 기반 지원 정보 표시와 공용 release config/legal link 헬퍼가 추가되어 있다.
+- [x] iOS production build `1.0.0 (6)`이 App Store Connect/TestFlight까지 업로드되었다.
 
 ### 아직 보강이 필요한 것
 
-- [ ] `eas.json`이 없다.
 - [ ] `.github/workflows`가 없어 CI 릴리스 게이트가 자동화되어 있지 않다.
-- [ ] `package.json`에 `typecheck` 같은 명시적인 타입 검사 스크립트가 없다.
 - [ ] `app.json`에 Android `package` / `versionCode`가 없다.
-- [ ] App Store Connect / Play Console 메타데이터 준비 상태가 문서로 고정되어 있지 않다.
+- [ ] App Store Connect 공개 출시용 메타데이터, 스크린샷, 연령등급, 앱 프라이버시 입력이 완료되지 않았다.
 - [ ] 실제 디바이스 기준 최종 스모크 QA 결과가 최신 문서로 묶여 있지 않다.
 
 ---
@@ -196,10 +198,15 @@
 - [ ] App Store Connect에 앱 레코드 생성
 - [ ] 앱 이름, 서브타이틀, 설명, 키워드 작성
 - [ ] 카테고리 / 연령 등급 / 지역 설정
+- [ ] 앱 프라이버시(App Privacy) 문항 작성
 - [ ] 지원 URL / 개인정보 처리방침 URL / 마케팅 URL 입력
 - [ ] 스크린샷 준비
 - [ ] 심사용 테스트 계정 또는 심사 메모 준비
-- [ ] 배포용 빌드 업로드
+- [x] 배포용 빌드 업로드
+- [ ] App Store Connect 버전에 build `1.0.0 (6)` 선택
+- [ ] `Add for Review` -> `Submit for Review` 수행
+- [ ] App Store 공개 방식 결정
+  - 권장: `Manually release this version`
 
 #### Android
 
@@ -265,13 +272,13 @@
 
 출시 준비를 바로 시작한다면 아래 순서가 효율적이다.
 
-1. [ ] 출시 대상 플랫폼과 목표일 확정
-2. [ ] `app.json` 릴리스 값 확정
-3. [ ] `eas.json` 추가 여부 결정 및 빌드 경로 확정
-4. [ ] `typecheck` + CI 게이트 추가
-5. [ ] 실기기 스모크 QA 한 차수 수행
-6. [ ] App Store Connect 메타데이터 초안 작성
-7. [ ] 정책 링크 / 지원 정보 / 심사용 계정 확정
+1. [ ] TestFlight `1.0.0 (6)` 실기기 스모크 QA 마감
+2. [ ] App Store Connect 메타데이터 작성
+3. [ ] iOS 스크린샷 업로드
+4. [ ] 연령 등급 / 앱 프라이버시 / 지역 가용성 설정
+5. [ ] 심사용 테스트 계정 / 심사 메모 정리
+6. [ ] App Store Connect에서 build `1.0.0 (6)`을 선택해 `Submit for Review`
+7. [ ] 승인 후 수동 공개 또는 출시 시각 확정
 
 ---
 
@@ -287,13 +294,15 @@
 ## 10) 현재 판단
 
 - Production iOS bundle identifier: `com.glsoop.app`
-- App Store Connect submission ready: `NO`
+- Latest uploaded iOS build: `1.0.0 (6)`
+- App Store Connect upload ready: `YES`
+- App Review submission ready: `NOT YET`
 - Likely App Review ready with current server capabilities: `RISKY`
 
 ### Why These Are Not `YES`
 
-- `App Store Connect submission ready`가 아직 `NO`인 이유:
-  - 앱 레코드, 메타데이터, 심사용 빌드 업로드 같은 수작업이 남아 있다.
+- `App Review submission ready`가 아직 `NOT YET`인 이유:
+  - 메타데이터, 스크린샷, 연령 등급, 앱 프라이버시, 심사용 정보 입력이 남아 있다.
 - `Likely App Review ready`가 `RISKY`인 이유:
   - direct report/block API 없이 support fallback 비중이 크다.
 - 현재 기준으로 문서상 명시된 `P0 blocker`는 없지만,

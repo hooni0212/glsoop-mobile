@@ -15,8 +15,11 @@ export default function TabsLayout() {
 
   return (
     <Tabs
+      detachInactiveScreens={false}
       screenOptions={{
         headerShown: false,
+        freezeOnBlur: true,
+        lazy: true,
         // 기본 탭바는 숨기고 우리가 직접 그립니다.
         // NOTE: tabBarStyle.height를 명시해두면 RN이 "하단 영역"을 안정적으로 예약하는 데 도움이 됨
         // (커스텀 tabBar를 쓰는 경우에도 화면별 체감 높이 차이가 줄어든다)

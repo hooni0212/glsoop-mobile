@@ -80,9 +80,10 @@ function normalizePost(row: any): Post {
     row?.date
   );
   const authorName = pickFirstString(
+    row?.author_nickname,
+    row?.nickname,
     row?.author_name,
     row?.authorName,
-    row?.nickname,
     row?.name
   );
   const authorId = String(row?.author_id ?? row?.user_id ?? row?.uid ?? "");

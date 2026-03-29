@@ -1,8 +1,9 @@
 import React from "react";
 import { Redirect, usePathname, useRouter, useSegments } from "expo-router";
-import { AppState, Text, View } from "react-native";
+import { AppState, StyleSheet, View } from "react-native";
 
 import { useAuth } from "@/auth/AuthContext";
+import { AppBootScreen } from "@/components/state/AppBootScreen";
 import { buildAuthRoute } from "@/lib/authRedirect";
 import { apiGet } from "@/lib/api";
 import { ApiError } from "@/lib/errors";
@@ -20,11 +21,20 @@ export function AuthGate() {
   const { ready, token, signOut } = useAuth();
   const [validating, setValidating] = React.useState(false);
   const [validationTick, setValidationTick] = React.useState(0);
-  const lastValidatedTokenRef = React.useRef<string | null>(null);
+  const [validatedKey, setValidatedKey] = React.useState<string | null>(null);
+  const latestRouteRef = React.useRef({
+    inAuthGroup: false,
+    needsAuth: false,
+    pathname: "/",
+  });
 
   const inAuthGroup = segments[0] === "(auth)";
   const needsAuth = isProtectedRoute(pathname, segments as string[]);
-  const shouldBlockForValidation = validating && lastValidatedTokenRef.current === null;
+  const shouldBlockForValidation = validating && validatedKey === null;
+
+  React.useEffect(() => {
+    latestRouteRef.current = { inAuthGroup, needsAuth, pathname };
+  }, [inAuthGroup, needsAuth, pathname]);
 
   React.useEffect(() => {
     if (!ready || !token) return;
@@ -48,44 +58,52 @@ export function AuthGate() {
     if (!ready) return;
 
     if (!token) {
-      lastValidatedTokenRef.current = null;
+      setValidatedKey(null);
+      setValidating(false);
+      return;
+    }
+
+    if (validatedKey && inAuthGroup) {
+      router.replace("/(tabs)");
+    }
+  }, [ready, token, validatedKey, inAuthGroup, router]);
+
+  React.useEffect(() => {
+    if (!ready) return;
+
+    if (!token) {
       if (needsAuth && !inAuthGroup) {
         router.replace(buildAuthRoute("/(auth)", pathname));
       }
       return;
     }
 
-    const validationKey = `${token}:${pathname}:${validationTick}`;
+    const validationKey = `${token}:${validationTick}`;
 
-    if (lastValidatedTokenRef.current === validationKey) {
-      if (inAuthGroup) {
-        router.replace("/(tabs)");
-      }
+    if (validatedKey === validationKey) {
       return;
     }
 
     let cancelled = false;
-    setValidating(true);
+    setValidating(validatedKey === null);
     (async () => {
       try {
         await apiGet("/api/me");
         if (cancelled) return;
-        lastValidatedTokenRef.current = validationKey;
-        if (inAuthGroup) {
-          router.replace("/(tabs)");
-        }
+        setValidatedKey(validationKey);
       } catch (error) {
         if (cancelled) return;
+        const latestRoute = latestRouteRef.current;
         if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
           await signOut();
-          lastValidatedTokenRef.current = null;
-          if (needsAuth || inAuthGroup) {
-            router.replace(buildAuthRoute("/(auth)", pathname));
+          setValidatedKey(null);
+          if (latestRoute.needsAuth || latestRoute.inAuthGroup) {
+            router.replace(buildAuthRoute("/(auth)", latestRoute.pathname));
           }
           return;
         }
-        if (needsAuth) {
-          router.replace(buildAuthRoute("/(auth)", pathname));
+        if (validatedKey === null && latestRoute.needsAuth) {
+          router.replace(buildAuthRoute("/(auth)", latestRoute.pathname));
         }
       } finally {
         if (!cancelled) {
@@ -97,7 +115,7 @@ export function AuthGate() {
     return () => {
       cancelled = true;
     };
-  }, [ready, token, inAuthGroup, needsAuth, pathname, router, signOut, validationTick]);
+  }, [ready, token, validatedKey, signOut, validationTick, inAuthGroup, needsAuth, pathname, router]);
 
   // 최초 로딩 중에는 화면 전환을 막기 위해 아무것도 렌더링하지 않음
   if (!ready) {
@@ -106,8 +124,11 @@ export function AuthGate() {
 
   if (shouldBlockForValidation) {
     return (
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-        <Text>로그인 상태를 확인하고 있어요...</Text>
+      <View pointerEvents="auto" style={styles.blockingOverlay}>
+        <AppBootScreen
+          title="로그인 상태를 확인하고 있어요"
+          message="조금만 기다리면 안정적으로 이어서 열어드릴게요."
+        />
       </View>
     );
   }
@@ -119,3 +140,11 @@ export function AuthGate() {
 
   return null;
 }
+
+const styles = StyleSheet.create({
+  blockingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 20,
+    elevation: 20,
+  },
+});

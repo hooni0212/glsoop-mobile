@@ -1,5 +1,14 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import {
+  InteractionManager,
+  Pressable,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import { router, usePathname } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
 
@@ -141,11 +150,17 @@ export default function BookmarksScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      void loadLists();
-      if (mode === "items" && selectedListId) {
-        setFolderItems(initialFolderItemsState());
-        void loadItems({ reset: true });
-      }
+      const task = InteractionManager.runAfterInteractions(() => {
+        void loadLists();
+        if (mode === "items" && selectedListId) {
+          setFolderItems(initialFolderItemsState());
+          void loadItems({ reset: true });
+        }
+      });
+
+      return () => {
+        task.cancel();
+      };
     }, [mode, selectedListId, loadLists, loadItems])
   );
 

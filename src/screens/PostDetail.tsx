@@ -27,6 +27,7 @@ import { router, useLocalSearchParams, usePathname } from "expo-router";
 import React, { useMemo, useState } from "react";
 import {
   Alert,
+  InteractionManager,
   Modal,
   Platform,
   Pressable,
@@ -166,17 +167,20 @@ export default function PostDetail() {
       return;
     }
 
-    void (async () => {
-      try {
-        await getEditablePost(post.id);
-        if (!cancelled) setCanManagePost(true);
-      } catch {
-        if (!cancelled) setCanManagePost(false);
-      }
-    })();
+    const task = InteractionManager.runAfterInteractions(() => {
+      void (async () => {
+        try {
+          await getEditablePost(post.id);
+          if (!cancelled) setCanManagePost(true);
+        } catch {
+          if (!cancelled) setCanManagePost(false);
+        }
+      })();
+    });
 
     return () => {
       cancelled = true;
+      task.cancel();
     };
   }, [post?.id]);
 
