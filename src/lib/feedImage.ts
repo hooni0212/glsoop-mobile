@@ -50,6 +50,9 @@ export function buildFeedPreviewUrl({
   query.set("layout_align", String(payload.text_box.align));
   query.set("layout_font_scale", String(payload.text_box.font_scale));
   query.set("layout_line_height", String(payload.text_box.line_height));
+  if (typeof payload.text_box.letter_spacing === "number") {
+    query.set("layout_letter_spacing", String(payload.text_box.letter_spacing));
+  }
 
   query.set("layout_title_x", String(payload.title_box.x));
   query.set("layout_title_y", String(payload.title_box.y));
@@ -58,6 +61,9 @@ export function buildFeedPreviewUrl({
   query.set("layout_title_align", String(payload.title_box.align));
   query.set("layout_title_font_scale", String(payload.title_box.font_scale));
   query.set("layout_title_line_height", String(payload.title_box.line_height));
+  if (typeof payload.title_box.letter_spacing === "number") {
+    query.set("layout_title_letter_spacing", String(payload.title_box.letter_spacing));
+  }
 
   query.set("layout_footer_x", String(payload.footer_box.x));
   query.set("layout_footer_y", String(payload.footer_box.y));

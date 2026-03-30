@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 
-const AUTH_TOKEN_KEY = "glsoop:auth:token:v1";
+const AUTH_TOKEN_KEY = "glsoop_auth_token_v1";
 
 const HOME_POSTS = [
   {
@@ -252,5 +252,86 @@ test.describe("글 상세 화면", () => {
     await expect(page.getByText("공유에 실패했어요. 잠시 후 다시 시도해주세요.")).toBeVisible();
     await expect.poll(() => shareEventRequests.length).toBe(1);
     await expect.poll(() => shareEventRequests[0]?.result).toBe("failed");
+  });
+
+  test("서버 이미지 실패 시 layout_json 행간/자간으로 fallback 카드와 KST 날짜를 유지한다", async ({ page }) => {
+    await setupApiRoutes(page);
+
+    await page.route("**/api/posts/101", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          post: {
+            ...DETAIL_POST,
+            category: "short",
+            hashtags: [],
+            layout_json: {
+              layout_version: 1,
+              unit: "normalized",
+              title_box: {
+                x: 0.336,
+                y: 0.256,
+                w: 0.424,
+                h: 0.122,
+                align: "center",
+                font_scale: 1,
+                line_height: 1.3,
+                letter_spacing: 0.04,
+                hidden: false,
+              },
+              text_box: {
+                x: 0.336,
+                y: 0.364,
+                w: 0.424,
+                h: 0.346,
+                align: "center",
+                font_scale: 1,
+                line_height: 1.45,
+                letter_spacing: -0.02,
+                hidden: false,
+              },
+              footer_box: {
+                x: 0.78,
+                y: 0.9,
+                w: 0.16,
+                h: 0.06,
+                align: "right",
+                font_scale: 1,
+                line_height: 1.1,
+                hidden: false,
+              },
+            },
+          },
+        }),
+      });
+    });
+
+    await page.route("**/api/feed-images/post/101**", async (route) => {
+      await route.fulfill({
+        status: 500,
+        contentType: "application/json",
+        body: JSON.stringify({ ok: false, message: "render failed" }),
+      });
+    });
+
+    await setAuthToken(page, "mock-token-post-detail-fallback");
+    await openPostDetailFromHome(page);
+
+    await expect(page.getByText("이미지 렌더를 불러오지 못해 텍스트 카드로 보여줘요.")).toBeVisible();
+    await expect(page.getByText("2026년 2월 10일").first()).toBeVisible();
+
+    const titleLetterSpacing = await page
+      .getByText("북마크 모달 테스트 글")
+      .last()
+      .evaluate((node) => Number.parseFloat(window.getComputedStyle(node).letterSpacing || "0"));
+    expect(titleLetterSpacing).toBeGreaterThan(1);
+
+    const bodyLetterSpacing = await page
+      .getByText("북마크 recent fallback과 공유 토스트를 검증하기 위한 본문입니다.")
+      .last()
+      .evaluate((node) => Number.parseFloat(window.getComputedStyle(node).letterSpacing || "0"));
+    expect(bodyLetterSpacing).toBeLessThan(0);
   });
 });

@@ -5,6 +5,7 @@ export type LayoutStyle = {
   align: LayoutAlign;
   fontScale: number;
   lineHeight: number;
+  letterSpacing?: number;
 };
 
 export type LayoutBox = {
@@ -100,6 +101,25 @@ export const LAYOUT_SCALE_OPTIONS: { value: number; label: string }[] = [
   { value: 1.3, label: "크게" },
 ];
 
+export const LAYOUT_LINE_HEIGHT_OPTIONS = {
+  title: [
+    { value: 1.05, label: "촘촘" },
+    { value: 1.15, label: "보통" },
+    { value: 1.3, label: "넉넉" },
+  ],
+  body: [
+    { value: 1.15, label: "촘촘" },
+    { value: 1.3, label: "보통" },
+    { value: 1.45, label: "넉넉" },
+  ],
+} as const;
+
+export const LAYOUT_LETTER_SPACING_OPTIONS: { value: number; label: string }[] = [
+  { value: -0.02, label: "좁게" },
+  { value: 0, label: "보통" },
+  { value: 0.04, label: "넓게" },
+];
+
 function toFiniteNumber(value: unknown): number | null {
   if (typeof value === "number") {
     return Number.isFinite(value) ? value : null;
@@ -124,14 +144,20 @@ function toAlign(value: unknown, fallback: LayoutAlign): LayoutAlign {
   return value === "left" || value === "center" || value === "right" ? value : fallback;
 }
 
-function normalizeStyle(raw: any, fallback: LayoutStyle): LayoutStyle {
+function normalizeStyle(raw: any, fallback: LayoutStyle, { allowLetterSpacing = false } = {}): LayoutStyle {
   const fontScale = toFiniteNumber(raw?.font_scale);
   const lineHeight = toFiniteNumber(raw?.line_height);
+  const letterSpacing = toFiniteNumber(raw?.letter_spacing);
   return {
     align: toAlign(raw?.align, fallback.align),
     fontScale: fontScale != null && fontScale > 0 ? round(clamp(fontScale, 0.7, 2), 3) : fallback.fontScale,
     lineHeight:
       lineHeight != null && lineHeight > 0 ? round(clamp(lineHeight, 1, 2.2), 3) : fallback.lineHeight,
+    ...(allowLetterSpacing && letterSpacing != null
+      ? { letterSpacing: round(clamp(letterSpacing, -0.04, 0.08), 3) }
+      : typeof fallback.letterSpacing === "number"
+        ? { letterSpacing: fallback.letterSpacing }
+        : {}),
   };
 }
 
@@ -201,8 +227,12 @@ export function parseLayoutJson(raw: unknown): WriteLayoutModel {
   layout.titleBox = normalizeBox(titleSource, DEFAULT_TITLE_BOX);
   layout.bodyBox = normalizeBox(bodySource, DEFAULT_BODY_BOX);
   layout.footerBox = normalizeBox(footerSource, DEFAULT_FOOTER_BOX);
-  layout.titleStyle = normalizeStyle(record.styles?.title ?? titleSource, DEFAULT_WRITE_LAYOUT.titleStyle);
-  layout.bodyStyle = normalizeStyle(record.styles?.body ?? bodySource, DEFAULT_WRITE_LAYOUT.bodyStyle);
+  layout.titleStyle = normalizeStyle(record.styles?.title ?? titleSource, DEFAULT_WRITE_LAYOUT.titleStyle, {
+    allowLetterSpacing: true,
+  });
+  layout.bodyStyle = normalizeStyle(record.styles?.body ?? bodySource, DEFAULT_WRITE_LAYOUT.bodyStyle, {
+    allowLetterSpacing: true,
+  });
   layout.footerStyle = normalizeStyle(record.styles?.footer ?? footerSource, DEFAULT_WRITE_LAYOUT.footerStyle);
   layout.showFooter = !Boolean(layout.footerBox.hidden);
 
@@ -239,6 +269,9 @@ export function buildLayoutPayload(layout: WriteLayoutModel) {
       align: layout.titleStyle.align,
       font_scale: layout.titleStyle.fontScale,
       line_height: layout.titleStyle.lineHeight,
+      ...(typeof layout.titleStyle.letterSpacing === "number"
+        ? { letter_spacing: layout.titleStyle.letterSpacing }
+        : {}),
       hidden: Boolean(layout.titleBox.hidden),
     },
     text_box: {
@@ -249,6 +282,9 @@ export function buildLayoutPayload(layout: WriteLayoutModel) {
       align: layout.bodyStyle.align,
       font_scale: layout.bodyStyle.fontScale,
       line_height: layout.bodyStyle.lineHeight,
+      ...(typeof layout.bodyStyle.letterSpacing === "number"
+        ? { letter_spacing: layout.bodyStyle.letterSpacing }
+        : {}),
       hidden: Boolean(layout.bodyBox.hidden),
     },
     footer_box: {
@@ -262,4 +298,9 @@ export function buildLayoutPayload(layout: WriteLayoutModel) {
       hidden: !layout.showFooter,
     },
   };
+}
+
+export function toLayoutLetterSpacingPx(fontSize: number, letterSpacingEm?: number) {
+  if (!Number.isFinite(fontSize) || typeof letterSpacingEm !== "number") return undefined;
+  return round(fontSize * letterSpacingEm, 3);
 }

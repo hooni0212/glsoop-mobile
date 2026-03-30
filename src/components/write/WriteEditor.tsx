@@ -12,7 +12,12 @@ import {
 } from "react-native";
 
 import type { PostFontKey } from "@/lib/postContent";
-import type { LayoutBox, LayoutBoxId, WriteLayoutModel } from "@/lib/postLayout";
+import {
+  toLayoutLetterSpacingPx,
+  type LayoutBox,
+  type LayoutBoxId,
+  type WriteLayoutModel,
+} from "@/lib/postLayout";
 
 const PAPER_SOURCE = require("../../../assets/images/feed-templates/paper-source-01.jpg");
 
@@ -178,6 +183,11 @@ export function WriteEditor({
     setCanvasSize({ width, height });
   };
 
+  const titleFontSize = 18 * layout.titleStyle.fontScale;
+  const bodyFontSize = 13 * layout.bodyStyle.fontScale;
+  const titleLetterSpacing = toLayoutLetterSpacingPx(titleFontSize, layout.titleStyle.letterSpacing);
+  const bodyLetterSpacing = toLayoutLetterSpacingPx(bodyFontSize, layout.bodyStyle.letterSpacing);
+
   return (
     <View style={styles.editorWrap}>
       <View style={styles.editorStage}>
@@ -212,8 +222,11 @@ export function WriteEditor({
                   fontFamily,
                   {
                     textAlign: layout.titleStyle.align,
-                    fontSize: 18 * layout.titleStyle.fontScale,
+                    fontSize: titleFontSize,
                     lineHeight: 22 * layout.titleStyle.lineHeight,
+                    ...(typeof titleLetterSpacing === "number"
+                      ? { letterSpacing: titleLetterSpacing }
+                      : {}),
                   },
                 ]}
                 testID="write-title-input"
@@ -242,8 +255,11 @@ export function WriteEditor({
                   fontFamily,
                   {
                     textAlign: layout.bodyStyle.align,
-                    fontSize: 13 * layout.bodyStyle.fontScale,
+                    fontSize: bodyFontSize,
                     lineHeight: 20 * layout.bodyStyle.lineHeight,
+                    ...(typeof bodyLetterSpacing === "number"
+                      ? { letterSpacing: bodyLetterSpacing }
+                      : {}),
                   },
                 ]}
                 testID="write-body-input"

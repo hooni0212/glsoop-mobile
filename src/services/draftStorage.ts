@@ -9,6 +9,7 @@ export type WriteDraft = {
   body: string;
   category?: PostType;
   fontKey?: PostFontKey;
+  layoutJson?: unknown;
   mode?: "create" | "edit";
   postId?: string;
   authNamespace?: string;
@@ -59,6 +60,7 @@ function normalizeDraft(input: any): WriteDraft | null {
     input.fontKey === "sans" || input.fontKey === "hand" || input.fontKey === "serif"
       ? input.fontKey
       : "serif";
+  const layoutJson = input.layoutJson ?? null;
   const postId = typeof input.postId === "string" && input.postId.trim() ? input.postId.trim() : undefined;
   const authNamespace =
     typeof input.authNamespace === "string" && input.authNamespace.trim()
@@ -71,7 +73,19 @@ function normalizeDraft(input: any): WriteDraft | null {
 
   if (expiresAt <= Date.now()) return null;
 
-  return { id, title, body, category, fontKey, mode, postId, authNamespace, updatedAt, expiresAt };
+  return {
+    id,
+    title,
+    body,
+    category,
+    fontKey,
+    layoutJson,
+    mode,
+    postId,
+    authNamespace,
+    updatedAt,
+    expiresAt,
+  };
 }
 
 function uuidLike(): string {
@@ -154,6 +168,7 @@ export async function upsertWriteDraft(input: {
   body: string;
   category?: PostType;
   fontKey?: PostFontKey;
+  layoutJson?: unknown;
   mode?: "create" | "edit";
   postId?: string | null;
 }): Promise<string> {
@@ -166,6 +181,7 @@ export async function upsertWriteDraft(input: {
     body: input.body ?? "",
     category: input.category,
     fontKey: input.fontKey ?? "serif",
+    layoutJson: input.layoutJson ?? null,
     mode,
     postId: typeof input.postId === "string" ? input.postId : undefined,
     authNamespace,

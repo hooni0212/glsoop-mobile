@@ -1,7 +1,15 @@
 import { expect, test, type Page } from "@playwright/test";
 
-const AUTH_TOKEN_KEY = "glsoop:auth:token:v1";
+const AUTH_TOKEN = "mock-token-for-write-ux";
+const AUTH_TOKEN_KEY = "glsoop_auth_token_v1";
 const DRAFTS_KEY = "glsoop:write:drafts:v1";
+type CapturedPostPayload = Record<string, unknown> & {
+  layout_json?: Record<string, any>;
+};
+
+function toAuthNamespace(token: string) {
+  return `bearer:${token.slice(0, 16)}`;
+}
 
 async function setAuthToken(page: Page, token: string) {
   await page.goto("/");
@@ -26,18 +34,20 @@ async function seedDraft(
 ) {
   await page.goto("/");
   await page.waitForLoadState("domcontentloaded");
+  const authNamespace = toAuthNamespace(AUTH_TOKEN);
   await page.evaluate(
-    ({ key, draftData }) => {
+    ({ key, draftData, nextAuthNamespace }) => {
       const now = Date.now();
       const payload = [
         {
           ...draftData,
+          authNamespace: nextAuthNamespace,
           updatedAt: draftData.updatedAt ?? now,
         },
       ];
       localStorage.setItem(key, JSON.stringify(payload));
     },
-    { key: DRAFTS_KEY, draftData: draft }
+    { key: DRAFTS_KEY, draftData: draft, nextAuthNamespace: authNamespace }
   );
 }
 
@@ -79,7 +89,7 @@ test.describe("Write 임시저장 UX", () => {
       });
     });
 
-    await setAuthToken(page, "mock-token-for-write-ux");
+    await setAuthToken(page, AUTH_TOKEN);
   });
 
   test("S0: 임시저장 없음 → 선택 알림 없이 빈 Write 진입", async ({ page }) => {
@@ -109,10 +119,11 @@ test.describe("Write 임시저장 UX", () => {
     await page.keyboard.type("제목 A");
     await page.getByTestId("write-body-input").click();
     await page.keyboard.type("내용 A");
-    await page.getByTestId("write-category-short").click();
-
     const submitBtn = page.getByTestId("write-submit-btn");
     await expect(submitBtn).toBeEnabled();
+    await submitBtn.click();
+    await expect(page.getByText("미리보기")).toBeVisible();
+    await page.getByTestId("write-category-short").click();
     await submitBtn.click();
 
     await expect(page.getByText("완료되었어요")).toBeVisible();
@@ -123,6 +134,53 @@ test.describe("Write 임시저장 UX", () => {
     await expect(page).toHaveURL(/\/write$/);
     await expect(page.getByTestId("write-confirm-modal")).toHaveCount(0);
     await expect(await getDrafts(page)).toHaveLength(0);
+  });
+
+  test("S2-1: 행간/자간 설정을 layout_json으로 전송한다", async ({ page }) => {
+    await clearDrafts(page);
+
+    const capture: { payload?: CapturedPostPayload } = {};
+    await page.route("**/api/posts", async (route) => {
+      if (route.request().method() !== "POST") {
+        await route.fallback();
+        return;
+      }
+
+      capture.payload = route.request().postDataJSON() as CapturedPostPayload;
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ ok: true, post_id: "post-layout-spacing" }),
+      });
+    });
+
+    await page.goto("/write");
+    await page.getByTestId("write-title-input").fill("행간 자간 제목");
+    await page.getByTestId("write-body-input").fill("행간 자간 본문");
+
+    await page.getByTestId("write-layout-box-title_box").click();
+    await page.getByTestId("write-layout-title-line-height-1_3").click();
+    await page.getByTestId("write-layout-title-letter-spacing-0_04").click();
+
+    await page.getByTestId("write-layout-box-text_box").click();
+    await page.getByTestId("write-layout-body-line-height-1_45").click();
+    await page.getByTestId("write-layout-body-letter-spacing-neg_0_02").click();
+
+    const submitBtn = page.getByTestId("write-submit-btn");
+    await submitBtn.click();
+    await expect(page.getByText("미리보기")).toBeVisible();
+    await page.getByTestId("write-category-short").click();
+    await submitBtn.click();
+
+    await expect(page.getByText("완료되었어요")).toBeVisible();
+    expect(capture.payload).toBeTruthy();
+
+    const layoutJson = capture.payload?.layout_json;
+    expect(layoutJson?.title_box?.line_height).toBe(1.3);
+    expect(layoutJson?.title_box?.letter_spacing).toBe(0.04);
+    expect(layoutJson?.text_box?.line_height).toBe(1.45);
+    expect(layoutJson?.text_box?.letter_spacing).toBe(-0.02);
+    expect(layoutJson?.footer_box?.letter_spacing).toBeUndefined();
   });
 
   test("S3: 작성 중 X confirm (취소/그냥 닫기/임시 저장하기)", async ({ page }) => {

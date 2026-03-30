@@ -127,11 +127,12 @@ export default function Write() {
       body: trimmedBody,
       category: selectedType ?? undefined,
       fontKey,
+      layoutJson: buildLayoutPayload(layout),
       mode: editPostId ? "edit" : "create",
       postId: editPostId,
     });
     if (!draftId) setDraftId(id);
-  }, [title, body, draftId, editPostId, selectedType, fontKey]);
+  }, [title, body, draftId, editPostId, selectedType, fontKey, layout]);
 
   const { confirm: leaveConfirm, requestLeave, allowNextLeave } = useConfirmBeforeLeave({
     hasChanges,
@@ -230,6 +231,34 @@ export default function Write() {
     setLayout((current) => ({
       ...current,
       bodyStyle: { ...current.bodyStyle, fontScale: value },
+    }));
+  }, []);
+
+  const updateTitleLineHeight = useCallback((value: number) => {
+    setLayout((current) => ({
+      ...current,
+      titleStyle: { ...current.titleStyle, lineHeight: value },
+    }));
+  }, []);
+
+  const updateBodyLineHeight = useCallback((value: number) => {
+    setLayout((current) => ({
+      ...current,
+      bodyStyle: { ...current.bodyStyle, lineHeight: value },
+    }));
+  }, []);
+
+  const updateTitleLetterSpacing = useCallback((value: number) => {
+    setLayout((current) => ({
+      ...current,
+      titleStyle: { ...current.titleStyle, letterSpacing: value },
+    }));
+  }, []);
+
+  const updateBodyLetterSpacing = useCallback((value: number) => {
+    setLayout((current) => ({
+      ...current,
+      bodyStyle: { ...current.bodyStyle, letterSpacing: value },
     }));
   }, []);
 
@@ -405,6 +434,8 @@ export default function Write() {
           setSelectedType(d.category ?? null);
           setHashtagsInput("");
           setFontKey(d.fontKey ?? "serif");
+          setLayout(parseLayoutJson(d.layoutJson));
+          setActiveBoxId("text_box");
         }
         return;
       }
@@ -525,6 +556,10 @@ export default function Write() {
                   onChangeBodyAlign={updateBodyAlign}
                   onChangeTitleScale={updateTitleScale}
                   onChangeBodyScale={updateBodyScale}
+                  onChangeTitleLineHeight={updateTitleLineHeight}
+                  onChangeBodyLineHeight={updateBodyLineHeight}
+                  onChangeTitleLetterSpacing={updateTitleLetterSpacing}
+                  onChangeBodyLetterSpacing={updateBodyLetterSpacing}
                   onNudgeBox={nudgeBox}
                   onResizeBox={resizeBox}
                 />
