@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from "react";
-import { Alert, SafeAreaView } from "react-native";
+import { Alert } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { CategoryChips } from "@/components/home/CategoryChips";
 import { FeedSection } from "@/components/home/FeedSection";
@@ -219,7 +220,7 @@ export default function Home() {
   };
 
   return (
-    <SafeAreaView style={homeScreenStyles.safe}>
+    <SafeAreaView style={homeScreenStyles.safe} edges={["top"]}>
       <HomeHeader onPressSearch={() => router.push("/search")} />
 
       <CategoryChips

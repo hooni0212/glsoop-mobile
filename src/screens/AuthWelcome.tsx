@@ -1,7 +1,8 @@
 import React from "react";
 import { Image } from "expo-image";
-import { Pressable, SafeAreaView, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { buildAuthRoute } from "@/lib/authRedirect";
 import { tokens } from "@/theme/tokens";
@@ -14,7 +15,7 @@ export default function AuthWelcome() {
   const redirect = params?.redirect ? String(params.redirect) : undefined;
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={styles.safe} edges={["top"]}>
       <View style={styles.container}>
         <View style={styles.hero}>
           <View style={styles.logoFrame}>

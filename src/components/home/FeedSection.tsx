@@ -13,6 +13,7 @@ import { AppError } from "@/components/state/AppError";
 import { AppLoading } from "@/components/state/AppLoading";
 import { useLikeSnapshot } from "@/features/likes/likeStore";
 import type { AppErrorModel } from "@/lib/errors";
+import { useBottomDock } from "@/navigation/bottomDock";
 import { feedSectionStyles as styles } from "@/screens/Home.styles";
 
 type Props<Item extends { id: string | number }> = {
@@ -44,6 +45,8 @@ export function FeedSection<Item extends { id: string | number }>({
   onBookmarkPress,
   getLikeDisabled,
 }: Props<Item>) {
+  const dock = useBottomDock();
+
   return (
     <FlatList
       data={items}
@@ -75,7 +78,7 @@ export function FeedSection<Item extends { id: string | number }>({
       ListFooterComponent={
         <View style={styles.footer}>
           {items.length > 0 && hasMore && loading ? <ActivityIndicator /> : null}
-          <View style={{ height: 28 }} />
+          <View style={{ height: dock.tab.height + 12 }} />
         </View>
       }
       refreshing={refreshing}

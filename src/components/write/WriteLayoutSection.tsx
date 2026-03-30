@@ -18,7 +18,6 @@ type Props = {
   onChangeBodyAlign: (value: LayoutAlign) => void;
   onChangeTitleScale: (value: number) => void;
   onChangeBodyScale: (value: number) => void;
-  onToggleFooter: () => void;
   onNudgeBox: (boxId: LayoutBoxId, axis: "x" | "y", delta: number) => void;
   onResizeBox: (boxId: LayoutBoxId, axis: "w" | "h", delta: number) => void;
 };
@@ -62,7 +61,6 @@ function OptionRow({
 const BOX_ITEMS: { id: LayoutBoxId; label: string }[] = [
   { id: "title_box", label: "제목 박스" },
   { id: "text_box", label: "본문 박스" },
-  { id: "footer_box", label: "푸터 박스" },
 ];
 
 export function WriteLayoutSection({
@@ -74,24 +72,15 @@ export function WriteLayoutSection({
   onChangeBodyAlign,
   onChangeTitleScale,
   onChangeBodyScale,
-  onToggleFooter,
   onNudgeBox,
   onResizeBox,
 }: Props) {
-  const activeBox =
-    activeBoxId === "title_box"
-      ? layout.titleBox
-      : activeBoxId === "text_box"
-        ? layout.bodyBox
-        : layout.footerBox;
+  const activeBox = activeBoxId === "title_box" ? layout.titleBox : layout.bodyBox;
 
   return (
     <View style={styles.layoutDock}>
       <View style={styles.layoutDockHeader}>
-        <Text style={styles.layoutDockTitle}>레이아웃</Text>
-        <Text style={styles.layoutDockHint}>
-          서버와 같은 `title/text/footer` 박스를 바로 고르고 위치를 맞춰요.
-        </Text>
+        <Text style={styles.layoutDockTitle}>글 배치</Text>
       </View>
 
       <View style={styles.layoutBlock}>
@@ -185,25 +174,6 @@ export function WriteLayoutSection({
         onSelect={onChangeBodyScale}
         styles={styles}
       />
-
-      <View style={styles.layoutBlock}>
-        <Text style={styles.label}>푸터 표시</Text>
-        <View style={styles.layoutOptionRow}>
-          <Pressable
-            onPress={onToggleFooter}
-            style={[styles.layoutOption, layout.showFooter && styles.layoutOptionActive]}
-          >
-            <Text
-              style={[
-                styles.layoutOptionText,
-                layout.showFooter && styles.layoutOptionTextActive,
-              ]}
-            >
-              {layout.showFooter ? "보임" : "숨김"}
-            </Text>
-          </Pressable>
-        </View>
-      </View>
     </View>
   );
 }

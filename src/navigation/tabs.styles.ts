@@ -1,5 +1,6 @@
 import { StyleSheet } from "react-native";
 import { COLORS } from "./tabs.meta";
+import { floatingShadowStyle } from "@/theme/shadows";
 
 /**
  * Bottom Tabs UI tokens
@@ -132,13 +133,7 @@ export function createTabsStyles(insetBottom?: number) {
       width: TAB_BAR_FAB_SIZE,
       height: TAB_BAR_FAB_SIZE,
       borderRadius: TAB_BAR_FAB_SIZE / 2,
-
-      shadowColor: "#000",
-      shadowOpacity: 0.14,
-      shadowRadius: 18,
-      shadowOffset: { width: 0, height: 10 },
-      elevation: 6,
-
+      ...floatingShadowStyle,
       alignItems: "center",
       justifyContent: "center",
     },

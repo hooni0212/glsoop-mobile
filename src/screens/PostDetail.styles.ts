@@ -142,16 +142,16 @@ export function createPostDetailStyles(actionBarHeight: number) {
     manageDeleteBtn: {
       flex: 1,
       borderWidth: 1,
-      borderColor: tokens.colors.red300,
+      borderColor: tokens.colors.dangerBorder,
       borderRadius: tokens.radius.lg,
-      backgroundColor: tokens.colors.red100,
+      backgroundColor: tokens.colors.dangerSoft,
       alignItems: "center",
       paddingVertical: 12,
     },
     manageDeleteBtnText: {
       fontSize: tokens.font.small,
       fontWeight: "800",
-      color: tokens.colors.red700,
+      color: tokens.colors.danger,
     },
     relatedHint: {
       fontSize: tokens.font.small,

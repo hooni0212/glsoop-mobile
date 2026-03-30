@@ -1,4 +1,5 @@
 import { tokens } from "@/theme/tokens";
+import { softCardShadowStyle } from "@/theme/shadows";
 import type { Post } from "@/types/post";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
@@ -134,14 +135,7 @@ const styles = StyleSheet.create({
     // 피그마 톤: 테두리 거의 없음
     borderWidth: 0,
 
-    // 매우 은은한 그림자 (iOS)
-    shadowColor: "#000",
-    shadowOpacity: 0.035,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 6 },
-
-    // Android도 최소
-    elevation: 1,
+    ...softCardShadowStyle,
   },
 
   title: {

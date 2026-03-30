@@ -4,7 +4,6 @@ import {
   Keyboard,
   PanResponder,
   Pressable,
-  Text,
   TextInput,
   View,
   type GestureResponderEvent,
@@ -20,7 +19,6 @@ const PAPER_SOURCE = require("../../../assets/images/feed-templates/paper-source
 type Props = {
   title: string;
   body: string;
-  footerText: string;
   fontKey: PostFontKey;
   layout: WriteLayoutModel;
   activeBoxId: LayoutBoxId;
@@ -117,7 +115,6 @@ function EditableBox({
   onDragBox,
   styles,
   children,
-  footer = false,
 }: {
   boxId: LayoutBoxId;
   box: LayoutBox;
@@ -128,7 +125,6 @@ function EditableBox({
   onDragBox: (boxId: LayoutBoxId, deltaX: number, deltaY: number) => void;
   styles: any;
   children: React.ReactNode;
-  footer?: boolean;
 }) {
   const active = activeBoxId === boxId;
   return (
@@ -136,7 +132,6 @@ function EditableBox({
       onPress={() => onSelectBox(boxId)}
       style={[
         styles.bookBox,
-        footer && styles.bookFooterBox,
         boxId === "text_box" && styles.bookBodyBox,
         boxFrameStyle(box),
         active && styles.bookBoxActive,
@@ -159,7 +154,6 @@ function EditableBox({
 export function WriteEditor({
   title,
   body,
-  footerText,
   fontKey,
   layout,
   activeBoxId,
@@ -187,13 +181,6 @@ export function WriteEditor({
   return (
     <View style={styles.editorWrap}>
       <View style={styles.editorStage}>
-        <View style={styles.editorStageHeader}>
-          <Text style={styles.editorStageEyebrow}>SERVER PAPER LAYOUT</Text>
-          <Text style={styles.editorStageHint}>
-            서버와 같은 종이 이미지 위에서 글 영역을 바로 조절해요.
-          </Text>
-        </View>
-
         <Pressable onPress={onPressBackground} style={styles.bookCanvasPressable}>
           <ImageBackground
             source={PAPER_SOURCE}
@@ -262,35 +249,6 @@ export function WriteEditor({
                 testID="write-body-input"
               />
             </EditableBox>
-
-            {layout.showFooter ? (
-              <EditableBox
-                boxId="footer_box"
-                box={layout.footerBox}
-                activeBoxId={activeBoxId}
-                canvasWidth={canvasSize.width}
-                canvasHeight={canvasSize.height}
-                onSelectBox={onSelectBox}
-                onDragBox={onDragBox}
-                styles={styles}
-                footer
-              >
-                <Text
-                  numberOfLines={2}
-                  style={[
-                    styles.bookFooterText,
-                    fontFamily,
-                    {
-                      textAlign: layout.footerStyle.align,
-                      fontSize: 10 * layout.footerStyle.fontScale,
-                      lineHeight: 12 * layout.footerStyle.lineHeight,
-                    },
-                  ]}
-                >
-                  {footerText || "#글숲"}
-                </Text>
-              </EditableBox>
-            ) : null}
           </ImageBackground>
         </Pressable>
       </View>

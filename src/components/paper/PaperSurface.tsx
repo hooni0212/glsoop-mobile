@@ -1,5 +1,6 @@
 import React from "react";
 import { Platform, StyleSheet, Text, View, type StyleProp, type ViewStyle } from "react-native";
+import { paperFrameShadowStyle, paperInnerShadowStyle } from "@/theme/shadows";
 
 type Props = {
   children: React.ReactNode;
@@ -52,11 +53,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(92,69,42,0.10)",
     borderWidth: 1,
     borderColor: "rgba(86,62,32,0.08)",
-    shadowColor: "#4d3920",
-    shadowOpacity: 0.12,
-    shadowRadius: 24,
-    shadowOffset: { width: 0, height: 14 },
-    elevation: 3,
+    ...paperFrameShadowStyle,
   },
   header: {
     marginBottom: 10,
@@ -81,11 +78,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#f7efdf",
     borderWidth: 1,
     borderColor: "rgba(88,63,35,0.10)",
-    shadowColor: "#8c6a3c",
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 2,
+    ...paperInnerShadowStyle,
   },
   tintWash: {
     ...StyleSheet.absoluteFillObject,

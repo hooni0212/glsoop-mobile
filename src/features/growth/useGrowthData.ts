@@ -410,13 +410,14 @@ async function fetchDashboard() {
   if (!res?.ok) throw new Error(res?.message || "성장 대시보드를 불러오지 못했어요.");
 
   const topPosts = normalizeTopPosts(res.top_posts);
+  const topPostsMode: GrowthTopPostsMode = topPosts.length > 0 ? "ready" : "empty";
 
   return {
     summary: normalizeSummary(res.summary),
     achievements: normalizeAchievements(res.achievements),
     campaigns: normalizeCampaigns(res.campaigns),
     topPosts,
-    topPostsMode: (topPosts.length > 0 ? "ready" : "empty") as const,
+    topPostsMode,
   };
 }
 
@@ -439,13 +440,14 @@ async function fetchFallback() {
   }
 
   const topPosts = topPostsRes?.ok ? normalizeTopPosts(topPostsRes.top_posts) : [];
+  const topPostsMode: GrowthTopPostsMode = topPosts.length > 0 ? "ready" : "empty";
 
   return {
     summary: normalizeSummary(summaryRes.summary),
     achievements: normalizeAchievements(achievementsRes.achievements),
     campaigns: normalizeCampaigns(campaignsRes.campaigns),
     topPosts,
-    topPostsMode: (topPosts.length > 0 ? "ready" : "empty") as const,
+    topPostsMode,
   };
 }
 

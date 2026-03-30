@@ -5,6 +5,7 @@ import { Image } from "expo-image";
 import { PaperReadingCard } from "@/components/paper/PaperReadingCard";
 import { buildRenderedPostImageUrl } from "@/lib/feedImage";
 import type { WriteLayoutModel } from "@/lib/postLayout";
+import { paperFrameShadowStyle } from "@/theme/shadows";
 import type { PostType } from "@/types/post";
 
 export type PostBodyProps = {
@@ -99,11 +100,7 @@ const styles = {
     backgroundColor: "rgba(92,69,42,0.10)",
     borderWidth: 1,
     borderColor: "rgba(86,62,32,0.08)",
-    shadowColor: "#4d3920",
-    shadowOpacity: 0.12,
-    shadowRadius: 24,
-    shadowOffset: { width: 0, height: 14 },
-    elevation: 3,
+    ...paperFrameShadowStyle,
   },
   image: {
     width: "100%" as const,

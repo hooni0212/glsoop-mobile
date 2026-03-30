@@ -4,11 +4,13 @@
 - 적용 범위: `glsoop-mobile`
 - 대상 독자: 모바일 개발자, 서버 개발자, QA, 릴리스 담당자
 - 상태: `Draft`
-- 최종 업데이트: `2026-03-27`
+- 최종 업데이트: `2026-03-29`
 - Owner: `taehun`
 - 관련 문서:
   - `docs/api/README.md`
+  - `docs/release/android-play-store-public-release.md`
   - `docs/release/ios-app-store-public-release.md`
+  - `docs/release/store-metadata-canonical.md`
   - `docs/release/ios-production-testflight-pass1.md`
   - `README.md`
 
@@ -29,21 +31,23 @@
 - [x] Expo Router 기반 앱 구조가 잡혀 있다.
 - [x] 앱 버전이 `1.0.0`으로 설정되어 있다.
 - [x] iOS 번들 ID `com.glsoop.app`이 설정되어 있다.
+- [x] Android package `com.glsoop.app`과 `android.versionCode=1`이 설정되어 있다.
 - [x] `eas.json`이 있고 `production` build / submit profile이 연결되어 있다.
-- [x] `package.json`에 `typecheck`와 iOS release 검증 스크립트가 있다.
+- [x] `package.json`에 `typecheck`와 iOS/Android release 검증 스크립트가 있다.
 - [x] 기본 검증 스크립트로 `npm run lint`, `npm run e2e:web`가 있다.
 - [x] 루트 진입과 세션 복구 중 blank-like 인상을 줄이기 위한 상태 문구가 반영되어 있다.
 - [x] `내 정보` 화면이 프로필 홈 중심으로 정리되어 있고, 설정성 액션은 계정 센터로 분리되어 있다.
 - [x] 계정 비활성화/즉시 탈퇴가 `POST /api/me/account-closure`와 연결되어 있다.
 - [x] 게시글/작가 화면에 문제 신고/지원 문의 및 커뮤니티 가이드라인 진입점이 추가되어 있다.
 - [x] `GET /api/runtime-config` 기반 지원 정보 표시와 공용 release config/legal link 헬퍼가 추가되어 있다.
-- [x] iOS production build `1.0.0 (6)`이 App Store Connect/TestFlight까지 업로드되었다.
+- [x] iOS production build가 App Store Connect/TestFlight까지 업로드되었다.
 
 ### 아직 보강이 필요한 것
 
 - [ ] `.github/workflows`가 없어 CI 릴리스 게이트가 자동화되어 있지 않다.
-- [ ] `app.json`에 Android `package` / `versionCode`가 없다.
+- [ ] Android Play Console 앱 레코드와 service account credentials가 아직 연결되지 않았다.
 - [ ] App Store Connect 공개 출시용 메타데이터, 스크린샷, 연령등급, 앱 프라이버시 입력이 완료되지 않았다.
+- [ ] Play Console 공개 출시용 store listing, App content, Data safety 입력이 완료되지 않았다.
 - [ ] 실제 디바이스 기준 최종 스모크 QA 결과가 최신 문서로 묶여 있지 않다.
 
 ---
@@ -71,6 +75,9 @@
 - [ ] `npx expo install --check`
 - [ ] `npm audit --omit=dev`
 - [ ] `npm run e2e:web`
+- [ ] `npm run release:android:verify:config`
+- [ ] `npm run release:android:verify:prod-env`
+- [ ] `npm run release:android:verify:api`
 - [ ] Write 관련 E2E가 여전히 안정적인지 별도 확인
   - 권장: `npx playwright test e2e/write-draft.spec.ts e2e/write-ux.spec.ts`
 
@@ -81,6 +88,7 @@
 - [ ] 핵심 API 호출 실패 시 앱이 깨지지 않고 fallback/에러 문구를 보여주는지 확인
 - [ ] 앱 첫 진입과 세션 복구 중 blank screen이 아닌 상태 문구가 보이는지 확인
 - [ ] iOS 릴리스 빌드 메타데이터에서 bundle identifier가 `com.glsoop.app`인지 확인
+- [ ] Android 릴리스 빌드 메타데이터에서 package name `com.glsoop.app`과 target API 정책 충족 여부를 확인
 - [ ] 실제 스토어 업로드 가능한 빌드를 한 번 생성해본다.
 
 ### C. 참고용 과거 검증 기록
@@ -131,7 +139,7 @@
   - `expo.version`
   - `ios.buildNumber`
   - Android 출시 시 `android.versionCode`
-- [ ] Android 출시 계획이 있으면 `android.package` 추가
+- [x] Android 출시용 `android.package` 추가
 - [ ] EAS 사용 여부 결정
   - 사용할 경우 `eas.json` 추가
   - build profile / submit profile 정의
@@ -203,7 +211,7 @@
 - [ ] 스크린샷 준비
 - [ ] 심사용 테스트 계정 또는 심사 메모 준비
 - [x] 배포용 빌드 업로드
-- [ ] App Store Connect 버전에 build `1.0.0 (6)` 선택
+- [ ] App Store Connect 버전에 build `1.0.0 (9)` 선택
 - [ ] `Add for Review` -> `Submit for Review` 수행
 - [ ] App Store 공개 방식 결정
   - 권장: `Manually release this version`
@@ -215,6 +223,8 @@
 - [ ] 앱 아이콘 / 피처 그래픽 / 스크린샷 준비
 - [ ] internal testing 트랙 업로드
 - [ ] 출시 대상 국가 / 앱 콘텐츠 / 데이터 세이프티 작성
+- [ ] 개인 개발자 계정이면 closed test 요구사항 적용 여부 확인
+- [ ] production 출시는 staged rollout 기준으로 진행
 
 ### G. 출시 당일 운영
 
@@ -252,8 +262,8 @@
   - 현재 모바일은 차단 성공을 가장하지 않고 support fallback만 제공한다.
 - `EXPO_PUBLIC_SUPPORT_URL`이 아직 확정되지 않았다.
   - 지금은 `runtime-config`의 이메일/연락처에 주로 의존한다.
-- EAS submission profile이 repo에 없다.
-  - 팀이 EAS build/submit을 쓸 계획이면 최소 설정이 필요하다.
+- Android submit profile 기본 track은 repo에 반영됐다.
+  - service account key 업로드와 Play Console 앱 생성은 별도다.
 
 ---
 
@@ -272,12 +282,12 @@
 
 출시 준비를 바로 시작한다면 아래 순서가 효율적이다.
 
-1. [ ] TestFlight `1.0.0 (6)` 실기기 스모크 QA 마감
+1. [ ] TestFlight `1.0.0 (9)` 실기기 스모크 QA 마감
 2. [ ] App Store Connect 메타데이터 작성
 3. [ ] iOS 스크린샷 업로드
 4. [ ] 연령 등급 / 앱 프라이버시 / 지역 가용성 설정
 5. [ ] 심사용 테스트 계정 / 심사 메모 정리
-6. [ ] App Store Connect에서 build `1.0.0 (6)`을 선택해 `Submit for Review`
+6. [ ] App Store Connect에서 build `1.0.0 (9)`를 선택해 `Submit for Review`
 7. [ ] 승인 후 수동 공개 또는 출시 시각 확정
 
 ---
@@ -285,7 +295,7 @@
 ## 9) 현재 기준 리스크
 
 - `eas.json`과 CI가 없어 출시 직전 빌드/검증이 사람 손에 많이 의존한다.
-- iOS 정보는 어느 정도 준비되어 있지만 Android 스토어 배포 설정은 아직 시작 전 상태에 가깝다.
+- iOS 정보는 어느 정도 준비되어 있고 Android도 기본 식별자와 런북은 준비됐지만, 콘솔 입력과 credentials 연결은 아직 남아 있다.
 - 기존 문서가 여러 장으로 나뉘어 있어 실제 출시 오너가 한 번에 보기 어렵다.
 - 스토어 심사에서 필요한 메타데이터, 테스트 계정, 지원 정보는 코드 밖 수작업 비중이 크다.
 
@@ -294,7 +304,7 @@
 ## 10) 현재 판단
 
 - Production iOS bundle identifier: `com.glsoop.app`
-- Latest uploaded iOS build: `1.0.0 (6)`
+- Latest uploaded iOS build: `1.0.0 (9)`
 - App Store Connect upload ready: `YES`
 - App Review submission ready: `NOT YET`
 - Likely App Review ready with current server capabilities: `RISKY`

@@ -80,9 +80,11 @@ export function createWriteStyles() {
 
     container: {
       flex: 1,
+    },
+    scrollContent: {
       paddingHorizontal: tokens.space.lg,
       paddingTop: tokens.space.md,
-      paddingBottom: tokens.space.lg,
+      paddingBottom: tokens.space.xl,
     },
     center: {
       alignItems: "center",

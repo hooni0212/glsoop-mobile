@@ -2,6 +2,7 @@ import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import type { AppErrorModel } from "@/lib/errors";
+import { softPanelShadowStyle } from "@/theme/shadows";
 import { tokens } from "@/theme/tokens";
 
 type AppErrorDisplay = Pick<AppErrorModel, "title" | "description">;
@@ -44,11 +45,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: tokens.space.sm as any,
-    shadowColor: tokens.shadow.color,
-    shadowOpacity: tokens.shadow.opacity,
-    shadowRadius: tokens.shadow.radius,
-    shadowOffset: { width: 0, height: tokens.shadow.offsetY },
-    elevation: 2,
+    ...softPanelShadowStyle,
   },
   title: {
     fontSize: tokens.font.body,

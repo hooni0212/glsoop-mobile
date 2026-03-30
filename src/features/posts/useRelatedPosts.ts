@@ -89,7 +89,7 @@ function normalizeRelatedPost(row: any): Post {
     excerpt: toExcerpt(content),
     createdAt,
     author: {
-      id: authorId || undefined,
+      id: authorId,
       name: authorName || "익명",
     },
     stats: {

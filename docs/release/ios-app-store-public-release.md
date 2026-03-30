@@ -4,8 +4,9 @@
 - 적용 범위: `glsoop-mobile`
 - 대상 독자: 모바일 개발자, 릴리스 담당자
 - 상태: `Draft`
-- 최종 업데이트: `2026-03-27`
+- 최종 업데이트: `2026-03-29`
 - Owner: `taehun`
+- 공통 기준 문서: `docs/release/store-metadata-canonical.md`
 
 ---
 
@@ -19,7 +20,7 @@ build를 버전에 연결한 뒤 App Review에 직접 제출해야 한다.
 
 - App Store Connect app id: `6761228925`
 - bundle identifier: `com.glsoop.app`
-- latest uploaded build: `1.0.0 (6)`
+- latest uploaded build: `1.0.0 (9)`
 - `eas.json` submit profile에 `ascAppId`가 연결되어 있다.
 
 이번 런북의 범위:
@@ -42,6 +43,8 @@ build를 버전에 연결한 뒤 App Review에 직접 제출해야 한다.
 
 버전 페이지(`1.0 Prepare for Submission`)에서 아래를 채운다.
 
+공통 필드 값은 `docs/release/store-metadata-canonical.md`를 기준으로 사용한다.
+
 - 앱 이름
 - 서브타이틀
 - 설명
@@ -55,6 +58,8 @@ build를 버전에 연결한 뒤 App Review에 직접 제출해야 한다.
 ### 2. 필수 규제/정책 입력을 끝낸다
 
 App Store Connect에서 아래를 완료한다.
+
+지원 URL, 개인정보 처리방침 URL, 연락처 정보는 Android와 다른 값을 쓰지 않는다.
 
 - Age Rating 설문
 - App Privacy 문항
@@ -77,11 +82,11 @@ App Store Connect에서 아래를 완료한다.
   - 지원/신고는 support fallback 중심이라는 점
   - 비활성화 계정 재활성화 흐름이 있다면 그 테스트 방법
 
-### 4. build `1.0.0 (6)`을 버전에 연결한다
+### 4. build `1.0.0 (9)`를 버전에 연결한다
 
 App Store Connect 버전 페이지에서:
 
-- Build 섹션에 `1.0.0 (6)`을 선택
+- Build 섹션에 `1.0.0 (9)`를 선택
 - `Add for Review`
 - `Submit for Review`
 
@@ -106,7 +111,7 @@ App Store Version Release 옵션은 아래 중 하나를 고른다.
 
 ### App Review 제출 전
 
-- [ ] TestFlight `1.0.0 (6)` 실기기 QA 완료
+- [ ] TestFlight `1.0.0 (9)` 실기기 QA 완료
 - [ ] 로그인/세션 복구 확인
 - [ ] 홈 피드, 글 상세, 글쓰기, 북마크, 성장 확인
 - [ ] `내 정보`의 정책/지원 링크 확인
@@ -135,7 +140,7 @@ App Store Version Release 옵션은 아래 중 하나를 고른다.
 
 ## Assumptions
 
-- 현재 공개 출시 후보 build는 `1.0.0 (6)`이다.
+- 현재 공개 출시 후보 build는 `1.0.0 (9)`다.
 - 서버 운영 계약은 최신 상태이며 로그인은 실기기에서 이미 검증됐다.
 - 이번 단계는 App Review 제출과 공개 배포 준비까지다.
 - 첫 공개 출시는 수동 공개가 더 안전하다.

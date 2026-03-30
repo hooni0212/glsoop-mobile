@@ -1,3 +1,5 @@
+import type { Href } from "expo-router";
+
 export type AuthRoutePath =
   | "/(auth)"
   | "/(auth)/login"
@@ -13,8 +15,9 @@ function normalizeRedirectPath(input: unknown): string | null {
   return trimmed;
 }
 
-export function resolvePostAuthRedirect(input: unknown, fallback = "/(tabs)") {
-  return normalizeRedirectPath(input) ?? fallback;
+export function resolvePostAuthRedirect(input: unknown, fallback: Href = "/(tabs)") {
+  const normalized = normalizeRedirectPath(input);
+  return (normalized ?? fallback) as Href;
 }
 
 export function buildAuthRoute(pathname: AuthRoutePath, redirect?: unknown) {

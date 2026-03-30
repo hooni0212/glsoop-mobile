@@ -1,6 +1,7 @@
 import React from "react";
-import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { FeedCard } from "@/components/FeedCard";
 import { AppEmpty } from "@/components/state/AppEmpty";

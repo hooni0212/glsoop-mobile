@@ -336,39 +336,49 @@ export default function AuthSignup() {
                 <TextInput
                   value={name}
                   onChangeText={setName}
-                  placeholder="이름"
+                  placeholder="이름을 입력해 주세요"
                   style={styles.input}
                   testID="signup-name-input"
                 />
+                <Text style={styles.fieldHint}>본명을 입력해 주세요. 예: 홍길동</Text>
                 {fieldErrors.name ? <Text style={styles.fieldError}>{fieldErrors.name}</Text> : null}
                 <TextInput
                   value={nickname}
                   onChangeText={setNickname}
-                  placeholder="닉네임"
+                  placeholder="닉네임을 입력해 주세요"
                   style={styles.input}
                   testID="signup-nickname-input"
                 />
+                <Text style={styles.fieldHint}>
+                  앱에서 표시될 이름이에요. 예: 글숲러
+                </Text>
                 {fieldErrors.nickname ? (
                   <Text style={styles.fieldError}>{fieldErrors.nickname}</Text>
                 ) : null}
                 <TextInput
                   value={email}
                   onChangeText={setEmail}
-                  placeholder="이메일"
+                  placeholder="이메일 주소를 입력해 주세요"
                   autoCapitalize="none"
                   keyboardType="email-address"
                   style={styles.input}
                   testID="signup-email-input"
                 />
+                <Text style={styles.fieldHint}>
+                  로그인과 인증번호 수신에 사용할 이메일이에요. 예: user@example.com
+                </Text>
                 {fieldErrors.email ? <Text style={styles.fieldError}>{fieldErrors.email}</Text> : null}
                 <TextInput
                   value={pw}
                   onChangeText={setPw}
-                  placeholder="비밀번호"
+                  placeholder="비밀번호를 입력해 주세요"
                   secureTextEntry
                   style={styles.input}
                   testID="signup-password-input"
                 />
+                <Text style={styles.fieldHint}>
+                  영문, 숫자 포함 8자 이상으로 설정해 주세요.
+                </Text>
                 {fieldErrors.pw ? <Text style={styles.fieldError}>{fieldErrors.pw}</Text> : null}
 
                 <View style={styles.consentGroup}>
@@ -576,6 +586,13 @@ const styles = StyleSheet.create({
     fontSize: tokens.font.small,
     color: tokens.colors.danger,
     marginTop: -2,
+  },
+  fieldHint: {
+    fontSize: tokens.font.small,
+    color: tokens.colors.textMuted,
+    marginTop: -2,
+    marginBottom: 4,
+    paddingHorizontal: 4,
   },
   primaryBtn: {
     backgroundColor: tokens.colors.green700,

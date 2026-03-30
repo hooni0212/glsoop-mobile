@@ -4,13 +4,13 @@ import {
   Modal,
   Platform,
   Pressable,
-  SafeAreaView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useAuth } from "@/auth/AuthContext";
 import { AppError } from "@/components/state/AppError";
@@ -137,6 +137,11 @@ export default function AuthLogin() {
 
       await finishLogin(res);
     } catch (e) {
+      const rawMessage = e instanceof Error ? e.message : "";
+      if (e instanceof ApiError && e.status && e.status < 500) {
+        setMessage(rawMessage || "로그인에 실패했어요.");
+        return;
+      }
       setError(normalizeApiError(e));
     } finally {
       setBusy(false);
@@ -144,7 +149,7 @@ export default function AuthLogin() {
   }
 
   return (
-    <SafeAreaView style={styles.safe} testID="auth-login-screen">
+    <SafeAreaView style={styles.safe} edges={["top"]} testID="auth-login-screen">
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === "ios" ? "padding" : undefined}

@@ -106,7 +106,7 @@ npm run release:ios:verify:api
 1단계는 build만 수행한다.
 
 ```bash
-npx eas build --platform ios --profile production
+npx eas-cli build --platform ios --profile production
 ```
 
 build 성공 후 확인:
@@ -124,7 +124,7 @@ build 성공 후 확인:
 기본 제출 명령:
 
 ```bash
-npx eas submit --platform ios --latest
+npx eas-cli submit --platform ios --latest
 ```
 
 첫 pass에서 build와 submit을 분리하는 이유:
@@ -173,19 +173,19 @@ npm run release:ios:context
 ### 빌드
 
 ```bash
-npx eas build --platform ios --profile production
+npx eas-cli build --platform ios --profile production
 ```
 
 ### 제출/처리 확인
 
 ```bash
-npx eas submit --platform ios --latest
+npx eas-cli submit --platform ios --latest
 ```
 
 필요 시 내부 테스트 그룹 지정:
 
 ```bash
-npx eas submit --platform ios --latest --groups "<internal-group>"
+npx eas-cli submit --platform ios --latest --groups "<internal-group>"
 ```
 
 ### 설치 후 스모크

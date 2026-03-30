@@ -1,4 +1,5 @@
 const DEFAULT_SITE_URL = "https://www.glsoop.com";
+const APP_IDENTIFIER = "com.glsoop.app";
 
 function normalizeOptionalUrl(value?: string | null) {
   if (typeof value !== "string") return null;
@@ -15,7 +16,13 @@ function normalizeOptionalText(value?: string | null) {
 const siteUrl = normalizeOptionalUrl(process.env.EXPO_PUBLIC_SITE_URL) ?? DEFAULT_SITE_URL;
 
 export const releaseConfig = {
-  iosBundleIdentifier: "com.glsoop.app",
+  appDisplayName: "글숲",
+  appIdentifier: APP_IDENTIFIER,
+  iosBundleIdentifier: APP_IDENTIFIER,
+  androidPackage: APP_IDENTIFIER,
+  shortTagline: "일상의 작은 순간들을 기록하고 나누는 공간",
+  longDescription:
+    "매일 조금씩 읽고 쓰는 사람들을 위한 공간, 글숲에서 조용히 오래 남는 글을 만들고 있어요.",
   siteUrl,
   supportUrl: normalizeOptionalUrl(process.env.EXPO_PUBLIC_SUPPORT_URL),
   supportEmail: normalizeOptionalText(process.env.EXPO_PUBLIC_SUPPORT_EMAIL),
