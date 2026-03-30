@@ -26,6 +26,7 @@ import { getLike, setLike, useLikeSnapshot } from "@/features/likes/likeStore";
 import { useToast } from "@/feedback/ToastProvider";
 import { useAuth } from "@/auth/AuthContext";
 import { buildAuthRoute } from "@/lib/authRedirect";
+import { formatKstDateKorean } from "@/lib/dateTime";
 import { openExternalUrl, openSupportMail } from "@/lib/externalLinks";
 import { togglePostLike } from "@/services/likeService";
 import { toggleFollowUser } from "@/services/userService";
@@ -36,13 +37,6 @@ import {
   type CosmeticStickerSlot,
 } from "@/types/cosmetics";
 import type { Post } from "@/types/post";
-
-function formatJoinedDate(iso?: string) {
-  if (!iso) return "";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "";
-  return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일 가입`;
-}
 
 function toRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
@@ -134,7 +128,8 @@ export default function Author() {
   const about = user?.about || user?.bio || "";
   const collapsedAbout =
     about.length > 96 && !bioExpanded ? `${about.slice(0, 96).trim()}...` : about;
-  const joinedAtLabel = formatJoinedDate(user?.joinedAt);
+  const joinedAtValue = user?.joinedAt ?? user?.joined_at;
+  const joinedAtLabel = joinedAtValue ? `${formatKstDateKorean(joinedAtValue)} 가입` : "";
   const showProfileCustomize = isOwnProfile(viewer, user);
   const showFollowButton = Boolean(userId && !showProfileCustomize);
   const profileCosmetics = useMemo(

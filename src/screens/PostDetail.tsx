@@ -20,6 +20,7 @@ import { togglePostLike } from "@/services/likeService";
 import { deletePost, getEditablePost } from "@/services/postService";
 import { logShareEvent } from "@/services/shareService";
 import { buildAuthRoute } from "@/lib/authRedirect";
+import { formatKstDateKorean } from "@/lib/dateTime";
 import { ApiError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { resolvePostLayout } from "@/lib/postLayout";
@@ -45,16 +46,6 @@ import {
   listPostBookmarkLists,
   removePostFromBookmarkList,
 } from "@/services/bookmarkService";
-
-function formatKoreanDate(iso?: string) {
-  if (!iso) return "";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "";
-  const y = d.getFullYear();
-  const m = d.getMonth() + 1;
-  const day = d.getDate();
-  return `${y}년 ${m}월 ${day}일`;
-}
 
 function mergeRecentAndAllLists(recentLists: BookmarkList[], allLists: BookmarkList[]) {
   if (recentLists.length === 0) return allLists;
@@ -117,7 +108,7 @@ export default function PostDetail() {
   const title = post?.title || "";
   const authorName = post?.author?.name || "익명";
   const authorId = post?.author?.id;
-  const dateText = formatKoreanDate((post as any)?.createdAt);
+  const dateText = formatKstDateKorean((post as any)?.createdAt);
   const content = (post as any)?.content || "";
   const paragraphs = Array.isArray((post as any)?.paragraphs) ? (post as any).paragraphs : [];
   const postLayout = useMemo(

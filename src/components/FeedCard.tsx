@@ -1,6 +1,7 @@
 import { tokens } from "@/theme/tokens";
 import { softCardShadowStyle } from "@/theme/shadows";
 import type { Post } from "@/types/post";
+import { formatRelativeKorean } from "@/lib/dateTime";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
@@ -99,30 +100,6 @@ export function FeedCard({
       </View>
     </Pressable>
   );
-}
-
-function formatRelativeKorean(iso: string) {
-  try {
-    const d = new Date(iso);
-    const diffMs = Date.now() - d.getTime();
-    const diffMin = Math.floor(diffMs / 60000);
-
-    if (diffMin < 1) return "방금 전";
-    if (diffMin < 60) return `${diffMin}분 전`;
-
-    const diffHr = Math.floor(diffMin / 60);
-    if (diffHr < 24) return `${diffHr}시간 전`;
-
-    const diffDay = Math.floor(diffHr / 24);
-    if (diffDay < 7) return `${diffDay}일 전`;
-
-    // 너무 오래된 건 날짜로
-    return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(
-      d.getDate()
-    ).padStart(2, "0")}`;
-  } catch {
-    return iso;
-  }
 }
 
 const styles = StyleSheet.create({

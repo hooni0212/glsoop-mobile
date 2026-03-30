@@ -18,6 +18,7 @@ import { extractAuthToken } from "@/lib/authResponse";
 import { buildAuthRoute, resolvePostAuthRedirect } from "@/lib/authRedirect";
 import { apiPost } from "@/lib/api";
 import { COOKIE_SESSION_TOKEN } from "@/lib/authToken";
+import { formatKstDateTime } from "@/lib/dateTime";
 import { ApiError, normalizeApiError } from "@/lib/errors";
 import { tokens } from "@/theme/tokens";
 
@@ -37,15 +38,7 @@ type PendingReactivation = {
 };
 
 function formatReactivationDeadline(iso?: string | null) {
-  if (!iso) return "";
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return "";
-
-  return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, "0")}.${String(
-    date.getDate()
-  ).padStart(2, "0")} ${String(date.getHours()).padStart(2, "0")}:${String(
-    date.getMinutes()
-  ).padStart(2, "0")}`;
+  return formatKstDateTime(iso);
 }
 
 export default function AuthLogin() {

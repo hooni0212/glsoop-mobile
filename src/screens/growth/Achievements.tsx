@@ -10,14 +10,8 @@ import { AppLoading } from "@/components/state/AppLoading";
 import type { GrowthAchievement } from "@/features/growth/useGrowthData";
 import { trackGrowthTelemetry, toGrowthTelemetryError } from "@/features/growth/growthTelemetry";
 import { useGrowthData } from "@/features/growth/useGrowthData";
+import { formatKstDateDot, toTimestampMs } from "@/lib/dateTime";
 import { tokens } from "@/theme/tokens";
-
-function formatDateLabel(iso: string | null) {
-  if (!iso) return "";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "";
-  return `${d.getFullYear()}.${d.getMonth() + 1}.${d.getDate()}`;
-}
 
 function clampPercent(value: number) {
   return Math.max(0, Math.min(100, Math.round(value)));
@@ -67,8 +61,8 @@ export default function AchievementsScreen() {
     const completed = achievements
       .filter((item) => item.status === "completed")
       .sort((a, b) => {
-        const aTime = a.unlockedAt ? new Date(a.unlockedAt).getTime() : 0;
-        const bTime = b.unlockedAt ? new Date(b.unlockedAt).getTime() : 0;
+        const aTime = a.unlockedAt ? toTimestampMs(a.unlockedAt) || 0 : 0;
+        const bTime = b.unlockedAt ? toTimestampMs(b.unlockedAt) || 0 : 0;
         return bTime - aTime;
       });
     const locked = achievements
@@ -184,7 +178,7 @@ export default function AchievementsScreen() {
 function AchievementCard({ item }: { item: GrowthAchievement }) {
   const statusMeta = getStatusMeta(item.status);
   const percent = item.target > 0 ? clampPercent((item.progress / item.target) * 100) : 0;
-  const unlockedLabel = item.unlockedAt ? `달성일 ${formatDateLabel(item.unlockedAt)}` : "미달성";
+  const unlockedLabel = item.unlockedAt ? `달성일 ${formatKstDateDot(item.unlockedAt)}` : "미달성";
 
   return (
     <View style={styles.card}>

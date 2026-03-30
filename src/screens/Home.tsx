@@ -13,6 +13,7 @@ import { useAuth } from "@/auth/AuthContext";
 import { buildAuthRoute } from "@/lib/authRedirect";
 import { togglePostLike } from "@/services/likeService";
 import { ApiError } from "@/lib/errors";
+import { toTimestampMs } from "@/lib/dateTime";
 import { router, usePathname } from "expo-router";
 import { useToast } from "@/feedback/ToastProvider";
 import {
@@ -162,7 +163,7 @@ export default function Home() {
               }
               const res = await listBookmarkItems({ listId: list.id, limit: 1, offset: 0 });
               const top = res.items[0];
-              const t = top?.createdAt ? new Date(top.createdAt).getTime() : NaN;
+              const t = toTimestampMs(top?.createdAt);
               return {
                 list,
                 index,

@@ -27,6 +27,14 @@ function toText(value: unknown) {
   return typeof value === "string" ? value : "";
 }
 
+function pickFirstText(...values: unknown[]) {
+  for (const value of values) {
+    const next = toText(value);
+    if (next) return next;
+  }
+  return "";
+}
+
 function toIdText(value: unknown) {
   if (typeof value === "string" && value.length > 0) return value;
   if (typeof value === "number" && Number.isFinite(value)) return String(value);
@@ -53,8 +61,8 @@ function normalizeSearchPost(value: unknown): Post | null {
   const id = toIdText(row.id);
   if (!id) return null;
 
-  const createdAt = toText(row.created_at) || new Date().toISOString();
-  const authorName = toText(row.author_name) || toText(row.author_nickname) || "익명";
+  const createdAt = pickFirstText(row.createdAt, row.created_at, row.created, row.date) || new Date().toISOString();
+  const authorName = pickFirstText(row.author_name, row.author_nickname, row.authorName, row.nickname) || "익명";
   const authorId = toIdText(row.author_id);
 
   return {
@@ -89,7 +97,7 @@ function normalizeSearchAuthor(value: unknown): SearchAuthor | null {
     nickname: toText(row.nickname),
     postCount: toNumber(row.post_count),
     followerCount: toNumber(row.follower_count),
-    latestPostAt: toText(row.latest_post_at) || null,
+    latestPostAt: pickFirstText(row.latestPostAt, row.latest_post_at) || null,
   };
 }
 

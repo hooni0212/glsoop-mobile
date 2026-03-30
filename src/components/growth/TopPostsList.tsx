@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { AppEmpty } from "@/components/state/AppEmpty";
 import { AppError } from "@/components/state/AppError";
 import { AppLoading } from "@/components/state/AppLoading";
+import { formatKstDateDot } from "@/lib/dateTime";
 import type { AppErrorModel } from "@/lib/errors";
 import { tokens } from "@/theme/tokens";
 
@@ -28,16 +29,6 @@ type Props = {
   emptyTitle?: string;
   emptyDescription?: string;
 };
-
-function formatCreatedAt(iso?: string | null) {
-  if (!iso) return "";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "";
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}.${m}.${day}`;
-}
 
 export function TopPostsList({
   items,
@@ -77,7 +68,7 @@ export function TopPostsList({
 
       <View style={styles.list}>
         {items.map((item, index) => {
-          const createdAtLabel = formatCreatedAt(item.createdAt);
+          const createdAtLabel = formatKstDateDot(item.createdAt);
           const content = (
             <>
               <View style={styles.rankWrap}>

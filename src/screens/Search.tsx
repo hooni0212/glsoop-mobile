@@ -19,20 +19,11 @@ import { AppLoading } from "@/components/state/AppLoading";
 import { useSearch, type SearchAuthor } from "@/features/search/useSearch";
 import { clearRecentSearches, listRecentSearches, saveRecentSearch } from "@/services/searchHistory";
 import { tokens } from "@/theme/tokens";
+import { formatKstDateDot, toTimestampMs } from "@/lib/dateTime";
 
 type SearchTabKey = "posts" | "authors";
 type PostSortKey = "popular" | "latest";
 type AuthorSortKey = "activity" | "recent";
-
-function formatDateLabel(iso?: string | null) {
-  if (!iso) return "최근 글 없음";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "최근 글 없음";
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}.${m}.${day}`;
-}
 
 export default function SearchScreen() {
   const [query, setQuery] = useState("");
@@ -107,8 +98,8 @@ export default function SearchScreen() {
     const next = [...posts];
     if (postSort === "latest") {
       next.sort((a, b) => {
-        const at = new Date(a.createdAt || 0).getTime();
-        const bt = new Date(b.createdAt || 0).getTime();
+        const at = toTimestampMs(a.createdAt) || 0;
+        const bt = toTimestampMs(b.createdAt) || 0;
         return bt - at;
       });
       return next;
@@ -119,8 +110,8 @@ export default function SearchScreen() {
       if (likeDiff !== 0) return likeDiff;
       const bookmarkDiff = (b.stats?.bookmarkCount ?? 0) - (a.stats?.bookmarkCount ?? 0);
       if (bookmarkDiff !== 0) return bookmarkDiff;
-      const at = new Date(a.createdAt || 0).getTime();
-      const bt = new Date(b.createdAt || 0).getTime();
+      const at = toTimestampMs(a.createdAt) || 0;
+      const bt = toTimestampMs(b.createdAt) || 0;
       return bt - at;
     });
     return next;
@@ -130,8 +121,8 @@ export default function SearchScreen() {
     const next = [...authors];
     if (authorSort === "recent") {
       next.sort((a, b) => {
-        const at = new Date(a.latestPostAt || 0).getTime();
-        const bt = new Date(b.latestPostAt || 0).getTime();
+        const at = toTimestampMs(a.latestPostAt) || 0;
+        const bt = toTimestampMs(b.latestPostAt) || 0;
         return bt - at;
       });
       return next;
@@ -142,8 +133,8 @@ export default function SearchScreen() {
       if (postDiff !== 0) return postDiff;
       const followerDiff = b.followerCount - a.followerCount;
       if (followerDiff !== 0) return followerDiff;
-      const at = new Date(a.latestPostAt || 0).getTime();
-      const bt = new Date(b.latestPostAt || 0).getTime();
+      const at = toTimestampMs(a.latestPostAt) || 0;
+      const bt = toTimestampMs(b.latestPostAt) || 0;
       return bt - at;
     });
     return next;
@@ -453,7 +444,7 @@ function AuthorResultCard({
         <Text style={styles.authorMetaText}>팔로워 {author.followerCount}</Text>
       </View>
       <Text style={styles.authorLatestLabel}>
-        최근 글 {formatDateLabel(author.latestPostAt)}
+        최근 글 {formatKstDateDot(author.latestPostAt) || "최근 글 없음"}
       </Text>
     </Pressable>
   );
