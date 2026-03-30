@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { apiGet } from "@/lib/api";
 import { normalizeApiError, type AppErrorModel } from "@/lib/errors";
+import { normalizePublicDisplayName } from "@/lib/publicDisplayName";
 import type { Post } from "@/types/post";
 
 type AuthorPostsResponse = {
@@ -79,12 +80,11 @@ function normalizePost(row: any): Post {
     row?.created,
     row?.date
   );
-  const authorName = pickFirstString(
-    row?.author_nickname,
+  const authorName = normalizePublicDisplayName(
+    row?.display_name,
+    row?.author_display_name,
     row?.nickname,
-    row?.author_name,
-    row?.authorName,
-    row?.name
+    row?.author_nickname
   );
   const authorId = String(row?.author_id ?? row?.user_id ?? row?.uid ?? "");
 
@@ -118,7 +118,7 @@ function normalizePost(row: any): Post {
     createdAt,
     author: {
       id: authorId || undefined,
-      name: authorName || "익명",
+      name: authorName,
     },
     stats: {
       likeCount,

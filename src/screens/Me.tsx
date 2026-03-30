@@ -15,6 +15,7 @@ import {
 } from "@/features/me/accountCenter";
 import { apiGet } from "@/lib/api";
 import { normalizeApiError } from "@/lib/errors";
+import { normalizePublicDisplayName, pickOptionalText } from "@/lib/publicDisplayName";
 import { deletePost } from "@/services/postService";
 import { tokens } from "@/theme/tokens";
 import type { Post } from "@/types/post";
@@ -52,7 +53,6 @@ type FollowingUser = {
   nickname?: string | null;
   bio?: string | null;
   about?: string | null;
-  email: string;
   followerCount: number;
 };
 
@@ -85,12 +85,11 @@ function normalizePost(row: any): Post {
   const title = pickFirstString(row?.title, row?.post_title);
   const content = pickFirstString(row?.content, row?.body, row?.html, row?.text);
   const createdAt = pickFirstString(row?.createdAt, row?.created_at, row?.created, row?.date);
-  const authorName = pickFirstString(
-    row?.author_nickname,
+  const authorName = normalizePublicDisplayName(
+    row?.display_name,
+    row?.author_display_name,
     row?.nickname,
-    row?.author_name,
-    row?.authorName,
-    row?.name
+    row?.author_nickname
   );
   const authorId = String(row?.author_id ?? row?.user_id ?? row?.uid ?? "");
   const likeCount = pickFirstNumber(row?.like_count, row?.likeCount, row?.likes, row?.likes_count);
@@ -109,7 +108,7 @@ function normalizePost(row: any): Post {
     createdAt,
     author: {
       id: authorId || "",
-      name: authorName || "익명",
+      name: authorName,
     },
     stats: {
       likeCount,
@@ -126,11 +125,10 @@ function normalizePost(row: any): Post {
 function normalizeFollowing(row: any): FollowingUser {
   return {
     id: String(row?.id ?? ""),
-    name: pickFirstString(row?.name) || "익명",
-    nickname: typeof row?.nickname === "string" ? row.nickname : null,
+    name: normalizePublicDisplayName(row?.display_name, row?.nickname),
+    nickname: pickOptionalText(row?.nickname),
     bio: typeof row?.bio === "string" ? row.bio : null,
     about: typeof row?.about === "string" ? row.about : null,
-    email: pickFirstString(row?.email),
     followerCount: pickFirstNumber(row?.follower_count, row?.followerCount),
   };
 }
@@ -401,8 +399,7 @@ export default function MeScreen() {
             onPress={() => router.push(`/users/${item.id}`)}
             style={styles.followingCard}
           >
-            <Text style={styles.followingName}>{item.nickname || item.name}</Text>
-            <Text style={styles.followingMeta}>{item.email}</Text>
+            <Text style={styles.followingName}>{item.name}</Text>
             {item.bio ? <Text style={styles.followingBody}>{item.bio}</Text> : null}
             {item.about ? <Text style={styles.followingBody}>{item.about}</Text> : null}
             <Text style={styles.followingFoot}>팔로워 {item.followerCount}</Text>

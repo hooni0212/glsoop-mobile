@@ -2,12 +2,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { apiGet } from "@/lib/api";
 import { normalizeApiError, type AppErrorModel } from "@/lib/errors";
+import { normalizePublicDisplayName, pickOptionalText } from "@/lib/publicDisplayName";
 import type { Post, PostType } from "@/types/post";
 
 export type SearchAuthor = {
   id: string;
   name: string;
-  nickname: string;
+  nickname: string | null;
   postCount: number;
   followerCount: number;
   latestPostAt: string | null;
@@ -62,7 +63,12 @@ function normalizeSearchPost(value: unknown): Post | null {
   if (!id) return null;
 
   const createdAt = pickFirstText(row.createdAt, row.created_at, row.created, row.date) || new Date().toISOString();
-  const authorName = pickFirstText(row.author_name, row.author_nickname, row.authorName, row.nickname) || "익명";
+  const authorName = normalizePublicDisplayName(
+    row.display_name,
+    row.author_display_name,
+    row.nickname,
+    row.author_nickname
+  );
   const authorId = toIdText(row.author_id);
 
   return {
@@ -93,8 +99,8 @@ function normalizeSearchAuthor(value: unknown): SearchAuthor | null {
 
   return {
     id,
-    name: toText(row.name) || "익명 작가",
-    nickname: toText(row.nickname),
+    name: normalizePublicDisplayName(row.display_name, row.nickname),
+    nickname: pickOptionalText(row.nickname),
     postCount: toNumber(row.post_count),
     followerCount: toNumber(row.follower_count),
     latestPostAt: pickFirstText(row.latestPostAt, row.latest_post_at) || null,

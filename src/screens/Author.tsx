@@ -28,6 +28,7 @@ import { useAuth } from "@/auth/AuthContext";
 import { buildAuthRoute } from "@/lib/authRedirect";
 import { formatKstDateKorean } from "@/lib/dateTime";
 import { openExternalUrl, openSupportMail } from "@/lib/externalLinks";
+import { normalizePublicDisplayName } from "@/lib/publicDisplayName";
 import { togglePostLike } from "@/services/likeService";
 import { toggleFollowUser } from "@/services/userService";
 import { ApiError } from "@/lib/errors";
@@ -121,7 +122,7 @@ export default function Author() {
   const [followerCount, setFollowerCount] = useState(0);
   const [overflowOpen, setOverflowOpen] = useState(false);
 
-  const name = user?.name || "익명";
+  const name = normalizePublicDisplayName(user?.display_name, user?.nickname);
   const bio = user?.bio || "소개가 아직 없어요.";
   const postCount = stats?.postCount ?? user?.postCount ?? user?.post_count ?? 0;
   const totalLikes = stats?.totalLikes ?? user?.totalLikes ?? user?.total_likes ?? 0;

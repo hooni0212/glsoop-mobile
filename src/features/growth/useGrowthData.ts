@@ -4,6 +4,7 @@ import { trackGrowthTelemetry, toGrowthTelemetryError } from "@/features/growth/
 import { apiGet, apiPost } from "@/lib/api";
 import { normalizeApiError, type AppErrorModel } from "@/lib/errors";
 import { logger } from "@/lib/logger";
+import { normalizePublicDisplayName } from "@/lib/publicDisplayName";
 
 export type GrowthLoadSource = "dashboard" | "fallback" | null;
 export type GrowthTopPostsMode = "ready" | "empty" | "error";
@@ -312,7 +313,12 @@ function normalizeTopPost(input: unknown): GrowthTopPost | null {
     id,
     title,
     excerpt: toText(row.excerpt),
-    authorName: toText(row.author_name),
+    authorName: normalizePublicDisplayName(
+      row.display_name,
+      row.author_display_name,
+      row.nickname,
+      row.author_nickname
+    ),
     category: toText(row.category),
     createdAt: toNullableText(row.created_at),
     likeCount: toNumber(row.like_count),
