@@ -63,6 +63,20 @@ export function normalizePostReadText(input: unknown): string {
     .trim();
 }
 
+export function normalizePostPreviewText(input: unknown): string {
+  return normalizePostReadText(input)
+    .replace(/\s*\n+\s*/g, " ")
+    .replace(/[ \t]{2,}/g, " ")
+    .trim();
+}
+
+export function buildPostExcerpt(input: unknown, maxLen = 90): string {
+  const normalized = normalizePostPreviewText(input);
+  if (!normalized) return "";
+  if (normalized.length <= maxLen) return normalized;
+  return `${normalized.slice(0, Math.max(0, maxLen - 3)).trim()}...`;
+}
+
 export function splitPostParagraphs(input: unknown): string[] {
   const normalized = normalizePostReadText(input);
   if (!normalized) return [];

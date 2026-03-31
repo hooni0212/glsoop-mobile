@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { apiGet } from "@/lib/api";
 import { normalizeApiError, type AppErrorModel } from "@/lib/errors";
+import { normalizePostPreviewText } from "@/lib/postContent";
 import { normalizePublicDisplayName, pickOptionalText } from "@/lib/publicDisplayName";
 import type { Post, PostType } from "@/types/post";
 
@@ -75,7 +76,7 @@ function normalizeSearchPost(value: unknown): Post | null {
     id,
     type: normalizePostCategory(row.category),
     title: toText(row.title) || "(제목 없음)",
-    excerpt: toText(row.excerpt),
+    excerpt: normalizePostPreviewText(row.excerpt),
     createdAt,
     author: {
       id: authorId,

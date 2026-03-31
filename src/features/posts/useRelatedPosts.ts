@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { apiGet } from "@/lib/api";
 import { normalizeApiError, type AppErrorModel } from "@/lib/errors";
+import { buildPostExcerpt } from "@/lib/postContent";
 import { normalizePublicDisplayName } from "@/lib/publicDisplayName";
 import type { Post } from "@/types/post";
 
@@ -10,16 +11,6 @@ type RelatedPostsResponse = {
   message?: string;
   posts?: any[];
 };
-
-function stripHtml(s: string) {
-  return s.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
-}
-
-function toExcerpt(content: any, maxLen = 72) {
-  const raw = typeof content === "string" ? content : "";
-  const plain = stripHtml(raw);
-  return plain.length > maxLen ? `${plain.slice(0, maxLen).trim()}...` : plain;
-}
 
 function pickFirstString(...vals: any[]) {
   for (const value of vals) {
@@ -86,7 +77,7 @@ function normalizeRelatedPost(row: any): Post {
     id,
     type: category as Post["type"],
     title: title || undefined,
-    excerpt: toExcerpt(content),
+    excerpt: buildPostExcerpt(content, 72),
     createdAt,
     author: {
       id: authorId,

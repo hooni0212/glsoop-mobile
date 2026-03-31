@@ -20,6 +20,7 @@ import { useSearch, type SearchAuthor } from "@/features/search/useSearch";
 import { clearRecentSearches, listRecentSearches, saveRecentSearch } from "@/services/searchHistory";
 import { tokens } from "@/theme/tokens";
 import { formatKstDateDot, toTimestampMs } from "@/lib/dateTime";
+import { blurActiveElementBeforeRouteChange } from "@/lib/webFocus";
 
 type SearchTabKey = "posts" | "authors";
 type PostSortKey = "popular" | "latest";
@@ -170,7 +171,10 @@ export default function SearchScreen() {
     <SafeAreaView style={styles.safe} testID="search-screen">
       <View style={styles.topBar}>
         <Pressable
-          onPress={() => router.back()}
+          onPress={() => {
+            blurActiveElementBeforeRouteChange();
+            router.back();
+          }}
           style={styles.iconBtn}
           hitSlop={10}
           accessibilityRole="button"
@@ -332,6 +336,7 @@ export default function SearchScreen() {
                 <FeedCard
                   post={post}
                   onPress={() => {
+                    blurActiveElementBeforeRouteChange();
                     void commitRecentQuery(debouncedQuery);
                     router.push(`/posts/${post.id}`);
                   }}
@@ -347,6 +352,7 @@ export default function SearchScreen() {
                 key={author.id}
                 author={author}
                 onPress={() => {
+                  blurActiveElementBeforeRouteChange();
                   void commitRecentQuery(debouncedQuery);
                   router.push(`/users/${author.id}`);
                 }}

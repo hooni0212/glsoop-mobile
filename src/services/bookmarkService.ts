@@ -1,4 +1,5 @@
 import { apiDelete, apiGet, apiPatch, apiPost } from "@/lib/api";
+import { buildPostExcerpt } from "@/lib/postContent";
 import { normalizePublicDisplayName } from "@/lib/publicDisplayName";
 import type { Post } from "@/types/post";
 
@@ -63,16 +64,6 @@ function parseFlag(...vals: any[]) {
   return false;
 }
 
-function stripHtml(s: string) {
-  return s.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
-}
-
-function toExcerpt(content: any, maxLen = 90) {
-  const raw = typeof content === "string" ? content : "";
-  const plain = stripHtml(raw);
-  return plain.length > maxLen ? plain.slice(0, maxLen) + "…" : plain;
-}
-
 function parseTags(row: any) {
   if (Array.isArray(row?.tags)) return row.tags.map(String).filter(Boolean);
 
@@ -126,7 +117,7 @@ function normalizeBookmarkPost(row: any): Post {
     id,
     type: type as Post["type"],
     title: title || undefined,
-    excerpt: toExcerpt(content),
+    excerpt: buildPostExcerpt(content, 90),
     tags: parseTags(row),
     createdAt,
     author: {

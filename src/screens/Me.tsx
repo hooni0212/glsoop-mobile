@@ -15,6 +15,7 @@ import {
 } from "@/features/me/accountCenter";
 import { apiGet } from "@/lib/api";
 import { normalizeApiError } from "@/lib/errors";
+import { buildPostExcerpt } from "@/lib/postContent";
 import { normalizePublicDisplayName, pickOptionalText } from "@/lib/publicDisplayName";
 import { deletePost } from "@/services/postService";
 import { tokens } from "@/theme/tokens";
@@ -58,16 +59,6 @@ type FollowingUser = {
 
 type MeTab = "summary" | "myPosts" | "likedPosts" | "followings";
 
-function stripHtml(s: string) {
-  return s.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
-}
-
-function toExcerpt(content: any, maxLen = 90) {
-  const raw = typeof content === "string" ? content : "";
-  const plain = stripHtml(raw);
-  return plain.length > maxLen ? `${plain.slice(0, maxLen).trim()}...` : plain;
-}
-
 function parseTags(row: any) {
   if (Array.isArray(row?.tags)) return row.tags.map(String).filter(Boolean);
 
@@ -104,7 +95,7 @@ function normalizePost(row: any): Post {
     id,
     type: (pickFirstString(row?.category, row?.type) || "short") as Post["type"],
     title: title || undefined,
-    excerpt: toExcerpt(content),
+    excerpt: buildPostExcerpt(content, 90),
     createdAt,
     author: {
       id: authorId || "",

@@ -5,6 +5,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { CategoryChips } from "@/components/home/CategoryChips";
 import { FeedSection } from "@/components/home/FeedSection";
 import { HomeHeader } from "@/components/home/HomeHeader";
+import { blurActiveElementBeforeRouteChange } from "@/lib/webFocus";
 import { homeScreenStyles } from "@/screens/Home.styles";
 import { useFeed } from "@/features/feed/useFeed";
 import { getBookmark, setBookmark } from "@/features/bookmarks/bookmarkStore";
@@ -222,7 +223,12 @@ export default function Home() {
 
   return (
     <SafeAreaView style={homeScreenStyles.safe} edges={["top"]}>
-      <HomeHeader onPressSearch={() => router.push("/search")} />
+      <HomeHeader
+        onPressSearch={() => {
+          blurActiveElementBeforeRouteChange();
+          router.push("/search");
+        }}
+      />
 
       <CategoryChips
         categories={CATEGORIES}
