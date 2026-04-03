@@ -132,6 +132,11 @@ Apple이 iPad Air 11-inch (M3)에서 `레이아웃 settings` 등 일부 UI를 �
 - `2026-04-04`: `Track A` 1차 반영 시작
   - 공개 범위를 `Home/Search/Post detail/Author profile`로 유지하고
     `Growth/Bookmarks/Me/Write`만 로그인 필요하도록 모바일 라우트 정책을 다시 맞춘다.
+- `2026-04-04`: `Track B` 구현 완료
+  - 서버에서 `차단 -> source='block' safety report 생성` 흐름을 추가하고
+    admin safety 목록에 `report + block`을 함께 노출하도록 조정했다.
+  - 모바일 차단 확인 문구와 success message를
+    `즉시 숨김 + 운영 검토 큐 접수` 기준으로 맞췄다.
 
 ### B. 서버 저장소(glsoop)
 
@@ -148,7 +153,8 @@ Apple이 iPad Air 11-inch (M3)에서 `레이아웃 settings` 등 일부 UI를 �
   - `POST /api/admin/safety/reports/:id/resolve`
 - runtime config에 `moderation_sla_hours = 24`가 노출된다.
 - 차단 시 검색/피드/상세/작가 화면에서 숨김 처리하는 서버 조건이 이미 존재한다.
-- 현재 구현은 `차단 시 자동 신고를 만들지 않음` 상태다.
+- 현재 구현은 `차단 시 source='block' 자동 신고를 생성`하고
+  admin safety 목록에서 `report`, `block` 둘 다 확인할 수 있다.
 
 ### C. 지원 URL 상태
 
@@ -237,7 +243,7 @@ Apple이 iPad Air 11-inch (M3)에서 `레이아웃 settings` 등 일부 UI를 �
 
 - `blockUser()`에서 자동 신고 생성 로직 추가
 - `POST /api/users/:id/block` 응답에 `report_id`를 채우도록 조정
-- admin safety 목록에서 차단으로 생성된 레코드가 실제 운영 검토 큐에 잡히는지 정책 확정
+- admin safety 목록에서 차단으로 생성된 `source='block'` 레코드를 함께 노출
 - `24시간 내 처리` 운영 설명과 실제 admin 확인 흐름 일치 여부 점검
 
 ### 모바일(glsoop-mobile)
@@ -257,7 +263,8 @@ Apple이 iPad Air 11-inch (M3)에서 `레이아웃 settings` 등 일부 UI를 �
 
 열린 이슈:
 
-- admin에서 `source='block'`을 별도 구분해서 보여줄지, `report`와 통합해서 보여줄지 정책 확정 필요
+- `source='block'`은 admin safety 목록에 `차단 자동 접수`로 노출하고,
+  `reported-posts` 집계는 직접 신고(`source='report'`)만 유지한다.
 
 ---
 
@@ -406,7 +413,7 @@ Apple이 iPad Air 11-inch (M3)에서 `레이아웃 settings` 등 일부 UI를 �
 - [x] `AuthGate` 동작 확인
 - [ ] UGC 접근 전 고지 UI 추가
 - [ ] support 진입점 추가
-- [ ] 차단 문구 수정
+- [x] 차단 문구 수정
 - [ ] `playwright.config.ts` 수정
 - [ ] `npm run lint`
 - [ ] `npm run typecheck`
@@ -415,9 +422,9 @@ Apple이 iPad Air 11-inch (M3)에서 `레이아웃 settings` 등 일부 UI를 �
 
 ### glsoop
 
-- [ ] 차단 시 자동 신고 생성 로직 추가
-- [ ] block API 응답에 `report_id` 반영
-- [ ] admin safety 노출 정책 최종 반영
+- [x] 차단 시 자동 신고 생성 로직 추가
+- [x] block API 응답에 `report_id` 반영
+- [x] admin safety 노출 정책 최종 반영
 - [ ] `public/html/support.html` 추가
 - [ ] 필요 시 `/support` 공개 진입 라우트 추가
 - [ ] support 페이지에 정책 링크와 연락처 고정
@@ -452,7 +459,6 @@ Apple이 iPad Air 11-inch (M3)에서 `레이아웃 settings` 등 일부 UI를 �
 
 ## 8) 아직 남은 확인 포인트
 
-- `source='block'` 레코드를 admin에서 어떤 방식으로 보여줄지
 - UGC 고지 UI를 `첫 진입 1회`로 할지, `매 버전 재확인`으로 할지
 - support URL 최종 경로를 `/support`로 할지 `/html/support.html`로 둘지
 - `npm audit --omit=dev` 결과 중 이번 제출 차단으로 볼 취약점 범위

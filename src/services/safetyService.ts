@@ -156,7 +156,9 @@ export async function blockUserById(input: {
   );
 
   return {
-    message: response.message ?? "사용자를 차단했어요. 내 화면에서 이 사용자의 글과 프로필이 숨겨져요.",
+    message:
+      response.message ??
+      "사용자를 차단했어요. 내 화면에서 이 사용자의 글과 프로필이 숨겨지고 운영 검토 큐에도 접수돼요.",
     hiddenPostCount: Number(response.hidden_post_count ?? 0),
     reportId: response.report_id ?? null,
     alreadyBlocked: Boolean(response.already_blocked),

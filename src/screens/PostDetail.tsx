@@ -875,7 +875,7 @@ export default function PostDetail() {
           <View style={styles.bookmarkModalCard}>
             <Text style={styles.bookmarkModalTitle}>작성자 차단</Text>
             <Text style={styles.bookmarkModalDescription}>
-              {`${authorName}님의 글과 프로필을 내 화면에서 숨길까요? 나중에 계정 센터에서 차단을 해제할 수 있어요.`}
+              {`${authorName}님의 글과 프로필을 내 화면에서 즉시 숨기고 운영 검토 큐에도 접수할까요? 나중에 계정 센터에서 차단을 해제할 수 있어요.`}
             </Text>
 
             <View style={styles.modalActionList}>
