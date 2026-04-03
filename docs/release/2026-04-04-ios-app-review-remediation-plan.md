@@ -142,6 +142,11 @@ Apple이 iPad Air 11-inch (M3)에서 `레이아웃 settings` 등 일부 UI를 �
     App Store support URL로 사용할 수 있게 서버 라우트를 연결했다.
   - 모바일 `계정 센터 > 도움말 및 지원` 화면에서
     지원 메일, 지원 페이지, 정책 문서를 바로 열 수 있게 연결했다.
+- `2026-04-04`: `Track C` 구현 완료
+  - 비로그인 사용자가 공개 UGC route로 진입하면
+    이용약관, 개인정보 처리방침, 커뮤니티 가이드라인을 먼저 확인하는 전역 고지 gate를 추가했다.
+  - 고지는 한 번 확인하면 재노출하지 않고,
+    법률 문서 버전이 바뀌면 다시 보이도록 버전 키 기반으로 저장한다.
 
 ### B. 서버 저장소(glsoop)
 
@@ -298,6 +303,12 @@ Apple이 iPad Air 11-inch (M3)에서 `레이아웃 settings` 등 일부 UI를 �
 - 앱 첫 진입 또는 첫 공개 피드 진입 시 full-screen 또는 bottom sheet
 - 확인 이후 재노출 정책은 로컬 저장으로 제어
 
+구현 결과:
+
+- 비로그인 + 공개 UGC route 진입 시 전역 overlay gate로 노출
+- 고지 확인 상태는 AsyncStorage에 저장
+- terms/privacy/guidelines 버전 중 하나라도 바뀌면 재노출
+
 완료 기준:
 
 - 비로그인 사용자가 공개 피드/검색/상세에 들어가기 전에 고지 흐름을 녹화로 보여줄 수 있음
@@ -422,7 +433,7 @@ Apple이 iPad Air 11-inch (M3)에서 `레이아웃 settings` 등 일부 UI를 �
 
 - [x] `src/lib/routeAccess.ts` 공개/비공개 정책 반영
 - [x] `AuthGate` 동작 확인
-- [ ] UGC 접근 전 고지 UI 추가
+- [x] UGC 접근 전 고지 UI 추가
 - [x] support 진입점 추가
 - [x] 차단 문구 수정
 - [ ] `playwright.config.ts` 수정
@@ -470,7 +481,6 @@ Apple이 iPad Air 11-inch (M3)에서 `레이아웃 settings` 등 일부 UI를 �
 
 ## 8) 아직 남은 확인 포인트
 
-- UGC 고지 UI를 `첫 진입 1회`로 할지, `매 버전 재확인`으로 할지
 - `npm audit --omit=dev` 결과 중 이번 제출 차단으로 볼 취약점 범위
 
 ---

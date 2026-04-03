@@ -7,7 +7,9 @@ import { AppBootScreen } from "@/components/state/AppBootScreen";
 import { buildAuthRoute } from "@/lib/authRedirect";
 import { apiGet } from "@/lib/api";
 import { ApiError } from "@/lib/errors";
-import { isProtectedRoute } from "@/lib/routeAccess";
+import { isProtectedRoute, isPublicUgcRoute } from "@/lib/routeAccess";
+
+import { PublicUgcNoticeGate } from "./PublicUgcNoticeGate";
 
 /**
  * 전역 인증 게이트
@@ -31,6 +33,7 @@ export function AuthGate() {
 
   const inAuthGroup = segments[0] === "(auth)";
   const needsAuth = isProtectedRoute(pathname, segments as string[]);
+  const isPublicUgc = isPublicUgcRoute(pathname, segments as string[]);
   const shouldBlockForValidation = validating && validatedKey === null;
 
   React.useEffect(() => {
@@ -139,7 +142,7 @@ export function AuthGate() {
     return <Redirect href={buildAuthRoute("/(auth)", pathname)} />;
   }
 
-  return null;
+  return <PublicUgcNoticeGate active={!token && !inAuthGroup && isPublicUgc} />;
 }
 
 const styles = StyleSheet.create({
