@@ -11,6 +11,7 @@
   - `docs/release/ios-app-store-public-release.md`
   - `docs/release/ios-app-review-notes-draft.md`
   - `docs/release/ios-app-review-recording-script.md`
+  - `docs/release/ios-resubmission-preflight-status.md`
   - `docs/release/store-metadata-canonical.md`
   - `../glsoop/docs/운영/2026-04-03-안전-기능-차단-신고-개편-계획.md`
 
@@ -165,6 +166,10 @@ Apple이 iPad Air 11-inch (M3)에서 `레이아웃 settings` 등 일부 UI를 �
 - `2026-04-04`: `Track F` 준비 문서 작성 완료
   - App Store Connect에 바로 붙여 넣을 `App Review Notes` 초안을 문서로 정리했다.
   - 실제 iPhone 물리 디바이스 녹화를 위한 순서별 스크립트를 문서로 정리했다.
+- `2026-04-04`: production 사전 점검 결과 정리
+  - 리뷰 계정의 production 로그인은 `glsoop.com/api/login`, `/api/me` 기준으로 확인했다.
+  - `https://www.glsoop.com/support`는 아직 `404`라서 서버 배포가 남은 상태다.
+  - 실제 신고/차단 production 검증과 새 iOS build 생성은 아직 수동 단계로 남아 있다.
 
 ### B. 서버 저장소(glsoop)
 
@@ -485,7 +490,7 @@ Apple이 iPad Air 11-inch (M3)에서 `레이아웃 settings` 등 일부 UI를 �
 
 ### 수동 / 운영
 
-- [ ] production 리뷰 계정 로그인 확인
+- [x] production 리뷰 계정 로그인 확인
 - [ ] 실제 신고가 admin에 잡히는지 확인
 - [ ] 실제 차단 후 홈/검색/상세/작가 화면 숨김 확인
 - [ ] support URL 200 확인
