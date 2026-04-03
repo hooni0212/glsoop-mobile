@@ -5,6 +5,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { buildAuthRoute } from "@/lib/authRedirect";
+import { AuthLegalLinks } from "@/components/auth/AuthLegalLinks";
 import { tokens } from "@/theme/tokens";
 
 const glsoopIcon = require("../../assets/images/icon.png");
@@ -25,6 +26,7 @@ export default function AuthWelcome() {
           <Text style={styles.subtitle}>
             일상의 작은 순간들을 기록하고{"\n"}나누는 공간
           </Text>
+          <AuthLegalLinks />
         </View>
 
         <View style={styles.actions}>

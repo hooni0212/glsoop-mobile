@@ -12,6 +12,7 @@ import {
 import { useLocalSearchParams, useRouter } from "expo-router";
 
 import { useAuth } from "@/auth/AuthContext";
+import { AuthLegalLinks } from "@/components/auth/AuthLegalLinks";
 import { AppError } from "@/components/state/AppError";
 import { extractAuthToken } from "@/lib/authResponse";
 import { buildAuthRoute, resolvePostAuthRedirect } from "@/lib/authRedirect";
@@ -323,6 +324,12 @@ export default function AuthSignup() {
           <Text style={styles.sub}>
             {step === "form" ? "이메일로 간단히 시작해요." : "인증번호를 입력해 주세요."}
           </Text>
+
+          {step === "form" ? (
+            <View style={styles.block}>
+              <AuthLegalLinks compact showAgreementHint={false} />
+            </View>
+          ) : null}
 
           {error ? (
             <View style={styles.block}>

@@ -86,6 +86,17 @@ export function createWriteStyles() {
       paddingTop: tokens.space.md,
       paddingBottom: tokens.space.xl,
     },
+    scrollContentWide: {
+      alignItems: "center",
+      paddingBottom: tokens.space.xl * 1.5,
+    },
+    contentStack: {
+      width: "100%",
+    },
+    contentStackWide: {
+      width: "100%",
+      maxWidth: 760,
+    },
     center: {
       alignItems: "center",
       justifyContent: "center",

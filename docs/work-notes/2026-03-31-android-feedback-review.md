@@ -3,7 +3,7 @@
 - 문서 타입: `Work Note`
 - 적용 범위: `glsoop-mobile/docs/work-notes/2026-03-31-android-feedback-review.md`
 - 대상 독자: 모바일/서버 개발자, QA, PM
-- 상태: `Draft`
+- 상태: `In Progress`
 - 최종 업데이트: `2026-03-31`
 - Owner: `taehun`
 - 관련 문서:
@@ -14,6 +14,8 @@
   - `src/components/paper/PaperReadingCard.tsx`
   - `src/features/growth/useGrowthData.ts`
   - `src/features/search/useSearch.ts`
+  - `src/lib/postContent.ts`
+  - `src/lib/webFocus.ts`
   - `src/screens/PostDetail.tsx`
   - `src/screens/Author.tsx`
   - `src/screens/Me.tsx`
@@ -24,6 +26,7 @@
   - `../glsoop/routes/searchRoutes.js`
   - `../glsoop/routes/userRoutes.js`
   - `../glsoop/routes/authRoutes.js`
+  - `../glsoop/utils/postPreview.js`
   - `../glsoop/utils/feedImageRenderer.js`
   - `../glsoop/utils/sanitize.js`
 
@@ -207,6 +210,12 @@
   - real `name` 은 `/api/me` 같은 본인 전용 엔드포인트에만 남긴다.
   - 모바일도 모든 공개 surface 에서 `display_name` 을 우선 사용하도록 맞춘다.
 - 분류: `모바일 + 서버 동시 수정`
+- 진행 현황:
+  - `2026-03-31` 기준 1차 반영 완료.
+  - 서버 공개 응답은 `display_name` / `author_display_name` 중심으로 정리했고, 기존 `name` / `author_name` 은 alias 로 유지했다.
+  - 공개 검색의 작성자 매칭은 real name 제거, nickname 기준으로 통일했다.
+  - 모바일은 검색/작가/피드/글 상세/성장 인기글/팔로잉 목록까지 공개 이름 normalizer 로 통일했다.
+  - 남은 일은 수동 QA 와 edge surface 추가 점검이다.
 
 ### 3.8 성장 인기글 표시 방식 수정
 
@@ -224,41 +233,84 @@
   - 모바일 UI 개편은 가능하지만, 서버도 `author_display_name` 중심으로 응답을 정리하는 편이 좋다.
   - 필요 시 preview image 또는 layout summary 같은 표시용 필드를 더 내려주는 것도 검토할 수 있다.
 - 분류: `모바일 우선, 필요 시 서버 응답 보강`
+- 진행 현황:
+  - `2026-03-31` 기준 1차 반영 완료.
+  - 성장 인기글과 검색 결과의 excerpt 에 HTML comment / tag 가 노출되던 문제를 서버 excerpt helper 공통화로 정리했다.
+  - 모바일도 preview helper 를 공통 사용하도록 바꿔서 예전 데이터나 회귀 응답이 들어와도 raw markup 이 그대로 보이지 않게 방어했다.
+  - 웹에서는 `/search` 진입/이동 시 focused element 를 blur 하도록 넣어 `aria-hidden` 경고 가능성을 낮췄다.
+  - 남은 일은 카드 시각 표현 자체의 개편 여부를 결정하는 것이다.
 
 ---
 
-## 4. 우선순위 제안
+## 4. 진행 현황
 
-안드로이드 피드백 중 실제 사용자 리스크 기준 우선순위는 아래가 적절하다.
+`2026-03-31` 기준 이번 메모에서 실제로 반영된 작업은 아래와 같다.
 
-1. 실명 노출 방지
-2. 문자 허용 정책 정리
-3. 공유 플로우 정리
-4. 제목 깨짐 수정
-5. 레벨 실시간 동기화
-6. 갤럭시 UI 최적화
-7. 성장 인기글 표시 개편
-8. 행간/자간 discoverability 개선
+### 4.1 완료된 1차 작업
+
+- 실명 노출 방지
+  - 공개/타인 정보 surface 를 `display_name = nickname || 익명` 기준으로 정리했다.
+  - `/api/me` 는 real `name`, `email` 을 유지하고, 공개 profile/search/post/growth/followings 는 공개 최소화 규칙으로 맞췄다.
+- 검색/성장 인기글 preview 정리
+  - 서버: excerpt 생성 로직을 공통 helper 로 모아 HTML comment, tag, entity, 공백을 정리한 plain text preview 로 고정했다.
+  - 모바일: search/growth/feed/bookmarks/author/related/me 목록이 같은 preview helper 를 쓰도록 통일했다.
+- 회귀 테스트 보강
+  - search API rich HTML fixture 검증을 추가했다.
+  - growth top-posts API 에 plain text excerpt 검증을 추가했다.
+
+### 4.2 아직 남은 확인
+
+- 웹에서 `/search` 관련 `aria-hidden` 경고가 실제 브라우저 수동 QA 에서 사라졌는지 확인
+- 공개 이름/preview 규칙이 남아 있는 다른 surface 에서도 추가로 새지 않는지 점검
+
+### 4.3 현재 체감 진척도
+
+- 공개 이름 규칙 정리: `완료(1차)`
+- 검색/성장 preview 깨짐 수정: `완료(1차)`
+- 문자 허용 정책: `미착수`
+- 공유 플로우 개편: `미착수`
+- 제목 깨짐 수정: `미착수`
+- 레벨 실시간 동기화: `미착수`
+- 갤럭시 UI 최적화: `미착수`
+- 행간/자간 discoverability 개선: `미착수`
+
+---
+
+## 5. 우선순위 제안
+
+안드로이드 피드백 중 남은 작업 기준 우선순위는 아래가 적절하다.
+
+선행 완료:
+
+- 실명 노출 방지 1차
+- 검색/성장 인기글 preview 정리 1차
+
+1. 문자 허용 정책 정리
+2. 공유 플로우 정리
+3. 제목 깨짐 수정
+4. 레벨 실시간 동기화
+5. 갤럭시 UI 최적화
+6. 성장 인기글 표시 개편
+7. 행간/자간 discoverability 개선
 
 정리 기준:
 
 - `개인정보/공개 데이터 계약` 이 걸린 이슈를 최우선으로 본다.
+- 이미 1차 반영이 끝난 항목은 다음 배치에서 QA/잔여 edge 점검 위주로 본다.
 - 그 다음은 `공유/상세 렌더` 처럼 외부 노출 체감이 큰 문제를 본다.
 - UI polish 성격 항목은 그 다음으로 둔다.
 
 ---
 
-## 5. 실행 묶음 제안
+## 6. 실행 묶음 제안
 
 ### 묶음 A. 서버 계약 우선 정리
 
-- 공개 응답에서 실명 제거
-- `display_name` 기준 통일
 - 문자 허용 정책 확정
 - growth/me 응답 정합성 검토
 - share payload 기준 정리
 
-이 묶음은 모바일보다 서버를 먼저 정리해야 drift 를 줄일 수 있다.
+실명/preview 관련 1차 정리가 끝났으므로, 이제 이 묶음은 “정책/응답 계약의 남은 결정” 중심으로 본다.
 
 ### 묶음 B. 모바일 사용자 체감 개선
 
@@ -279,7 +331,7 @@
 
 ---
 
-## 6. 남은 결정사항
+## 7. 남은 결정사항
 
 이번 메모는 구현 문서가 아니라 리뷰 문서이므로, 아래는 아직 결정이 필요하다.
 
@@ -292,15 +344,17 @@
 
 ---
 
-## 7. 오늘 결론
+## 8. 오늘 결론
 
 이번 안드로이드 피드백은 “안드로이드만 이상하다”기보다,
 모바일 UI, 서버 공개 응답, 서버 렌더 이미지, 모바일 캐시가 부분적으로 어긋난 결과라고 보는 게 맞다.
 
+현재까지는 `공개 이름 규칙 정리` 와 `검색/성장 preview 정리` 의 1차 작업을 끝냈다.
+
 따라서 다음 작업은 화면만 손보는 식으로 흩어지기보다,
 
-1. 공개 데이터 계약 정리
-2. 제목/공유/성장 동기화 같은 정합성 이슈 수정
+1. 문자 허용 정책 같은 선결정 사항 확정
+2. 공유/제목/성장 동기화 같은 정합성 이슈 수정
 3. 마지막으로 Android UX 최적화
 
 순으로 묶어서 처리하는 편이 안정적이다.

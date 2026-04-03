@@ -9,6 +9,7 @@ import {
   Pressable,
   ScrollView,
   Text,
+  useWindowDimensions,
   View,
   Modal,
 } from "react-native";
@@ -51,6 +52,8 @@ export default function Write() {
   const styles = useMemo(() => createWriteStyles(), []);
   const params = useLocalSearchParams();
   const navigation = useNavigation();
+  const { width } = useWindowDimensions();
+  const isLargeScreen = width >= 768;
 
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
@@ -511,29 +514,33 @@ export default function Write() {
 
         <ScrollView
           style={styles.container}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[
+            styles.scrollContent,
+            isLargeScreen && styles.scrollContentWide,
+          ]}
+          contentInsetAdjustmentBehavior="automatic"
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
           showsVerticalScrollIndicator={false}
         >
-          {submitError ? (
-            <View style={styles.center}>
-              <AppError
-                error={submitError}
-                onRetry={submitError.canRetry ? onPressSubmit : undefined}
+          <View style={[styles.contentStack, isLargeScreen && styles.contentStackWide]}>
+            {submitError ? (
+              <View style={styles.center}>
+                <AppError
+                  error={submitError}
+                  onRetry={submitError.canRetry ? onPressSubmit : undefined}
+                />
+              </View>
+            ) : null}
+            {previewOpen ? (
+              <WritePreviewCard
+                title={title}
+                body={body}
+                selectedType={selectedType}
+                layout={submissionLayout}
+                fontKey={fontKey}
               />
-            </View>
-          ) : null}
-          {previewOpen ? (
-            <WritePreviewCard
-              title={title}
-              body={body}
-              selectedType={selectedType}
-              layout={submissionLayout}
-              fontKey={fontKey}
-            />
-          ) : (
-            <>
+            ) : (
               <WriteEditor
                 title={title}
                 body={body}
@@ -564,37 +571,37 @@ export default function Write() {
                   onResizeBox={resizeBox}
                 />
               </WriteEditor>
-            </>
-          )}
+            )}
 
-          {!previewOpen ? (
-            <WriteMetaSection
-              styles={styles}
-              selectedType={selectedType}
-              onSelectType={setSelectedType}
-              hashtagsInput={hashtagsInput}
-              hashtagChips={hashtagChips}
-              onChangeHashtagsInput={setHashtagsInput}
-              fontKey={fontKey}
-              onChangeFontKey={setFontKey}
-              showCategory={false}
-            />
-          ) : (
-            <WriteMetaSection
-              styles={styles}
-              selectedType={selectedType}
-              onSelectType={setSelectedType}
-              hashtagsInput={hashtagsInput}
-              hashtagChips={hashtagChips}
-              onChangeHashtagsInput={setHashtagsInput}
-              fontKey={fontKey}
-              onChangeFontKey={setFontKey}
-              showFont={false}
-              showHashtags={false}
-            />
-          )}
+            {!previewOpen ? (
+              <WriteMetaSection
+                styles={styles}
+                selectedType={selectedType}
+                onSelectType={setSelectedType}
+                hashtagsInput={hashtagsInput}
+                hashtagChips={hashtagChips}
+                onChangeHashtagsInput={setHashtagsInput}
+                fontKey={fontKey}
+                onChangeFontKey={setFontKey}
+                showCategory={false}
+              />
+            ) : (
+              <WriteMetaSection
+                styles={styles}
+                selectedType={selectedType}
+                onSelectType={setSelectedType}
+                hashtagsInput={hashtagsInput}
+                hashtagChips={hashtagChips}
+                onChangeHashtagsInput={setHashtagsInput}
+                fontKey={fontKey}
+                onChangeFontKey={setFontKey}
+                showFont={false}
+                showHashtags={false}
+              />
+            )}
 
-          <WriteStates styles={styles} confirm={activeConfirm} />
+            <WriteStates styles={styles} confirm={activeConfirm} />
+          </View>
         </ScrollView>
 
         {/* ✅ 키보드 ON 시 ActionBar 숨김 */}

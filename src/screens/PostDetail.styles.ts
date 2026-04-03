@@ -17,6 +17,8 @@ export function createPostDetailStyles(actionBarHeight: number) {
 
     // --- Header ---
     topBar: {
+      position: "relative",
+      zIndex: 10,
       paddingTop: tokens.space.xs,
       paddingHorizontal: tokens.space.md,
       paddingBottom: tokens.space.xs,
@@ -30,6 +32,16 @@ export function createPostDetailStyles(actionBarHeight: number) {
       borderRadius: 20,
       alignItems: "center",
       justifyContent: "center",
+    },
+    rightActionBtn: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: "rgba(255,250,244,0.84)",
+      borderWidth: 1,
+      borderColor: "rgba(86,62,32,0.12)",
     },
 
     topBarSpacer: {
@@ -249,6 +261,34 @@ export function createPostDetailStyles(actionBarHeight: number) {
       fontSize: tokens.font.small,
       color: tokens.colors.textMuted,
       fontWeight: "700",
+    },
+    modalActionList: {
+      marginTop: 16,
+      gap: 10,
+    },
+    modalActionBtn: {
+      borderRadius: tokens.radius.lg,
+      borderWidth: 1,
+      borderColor: tokens.colors.borderStrong,
+      backgroundColor: tokens.colors.surfaceStrong,
+      alignItems: "center",
+      paddingVertical: 13,
+      paddingHorizontal: tokens.space.md,
+    },
+    modalActionBtnDanger: {
+      borderColor: tokens.colors.dangerBorder,
+      backgroundColor: tokens.colors.dangerSoft,
+    },
+    modalActionBtnGhost: {
+      backgroundColor: tokens.colors.surface,
+    },
+    modalActionText: {
+      fontSize: tokens.font.small,
+      fontWeight: "800",
+      color: tokens.colors.text,
+    },
+    modalActionTextDanger: {
+      color: tokens.colors.danger,
     },
     bookmarkModalLoadingWrap: {
       marginTop: 14,
