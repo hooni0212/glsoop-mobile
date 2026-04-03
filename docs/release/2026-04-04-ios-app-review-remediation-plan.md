@@ -227,6 +227,12 @@ Apple이 iPad Air 11-inch (M3)에서 `레이아웃 settings` 등 일부 UI를 �
 2. App Store Connect 빌드 연결
 3. App Review Information 업데이트
 
+### P3. Android / Galaxy UI 개선 준비
+
+1. Galaxy 계열에서 완성도가 떨어지는 화면을 우선 수집한다.
+2. iPhone 대비 Android 차이를 재현 가능한 기준으로 정리한다.
+3. 재심 제출과 분리된 후속 트랙으로 UI polish 범위를 확정한다.
+
 ---
 
 ## 5) 실행 트랙
@@ -535,3 +541,60 @@ Apple이 iPad Air 11-inch (M3)에서 `레이아웃 settings` 등 일부 UI를 �
 - [ ] 핵심 자동 검증이 다시 green이다.
 - [ ] App Review Notes와 리뷰 계정이 준비되었다.
 - [ ] 새 iOS 빌드가 App Store Connect에 업로드되었다.
+
+---
+
+## 10) 후속 트랙: Galaxy UI 개선
+
+이 트랙은 `iOS 재심 제출 블로커`와는 분리해서 관리한다.
+
+목표:
+
+- iPhone에서는 안정적이지만 Galaxy 계열에서 어색하게 보이는 화면을 수집하고
+  Android 전용 간격, 폰트, safe area, 입력창, 버튼, 하단 시트 완성도를 높인다.
+
+우선 살펴볼 가능성이 높은 영역:
+
+- Home 피드 상단과 탭 간격
+- 검색 화면 입력창과 결과 카드 밀도
+- 글 상세 top bar / action button / modal spacing
+- Write 화면 입력창, preview, 하단 액션 바
+- Growth / Me / 계정 센터 카드형 레이아웃
+- 모달, Alert 대체 UI, 키보드 올라올 때 레이아웃 흔들림
+
+예상 이슈 범주:
+
+- Android 기본 폰트 metrics 차이로 인한 줄높이/잘림
+- Samsung One UI에서 여백이 과하거나 모자라 보이는 문제
+- 하단 탭, FAB, bottom sheet, modal 높이 차이
+- TextInput placeholder / caret / multiline 높이 차이
+- shadow, border, radius, elevation 표현 차이
+- status bar / safe area / navigation bar 겹침
+
+이 트랙을 시작하기 전에 사용자에게 받아야 할 정보:
+
+- 문제가 보이는 `Galaxy 기기 목록`
+  - 예: `S23`, `S24 Ultra`, `Z Flip`, `A 시리즈`
+- 각 기기의 `Android 버전 / One UI 버전`
+- 우선순위가 높은 `화면 목록`
+  - 예: `홈`, `검색`, `글 상세`, `글쓰기`, `내 정보`
+- iPhone과 비교 가능한 `스크린샷 또는 화면 녹화`
+  - 같은 화면을 iPhone / Galaxy에서 나란히 주면 가장 빠르다
+- “이상하다”고 느낀 포인트를 한 줄씩 적은 메모
+  - 예: `텍스트가 답답함`, `카드가 너무 커 보임`, `버튼이 아래로 쏠림`
+- 실사용 기준에서 반드시 맞춰야 하는 `디자인 기준`
+  - iPhone 쪽을 기준으로 맞출지, Android에 맞는 별도 최적화를 허용할지
+
+권장 진행 순서:
+
+1. Galaxy 실제 캡처 수집
+2. 화면별 이슈 목록화
+3. 공통 토큰 문제인지 화면별 스타일 문제인지 분리
+4. 우선순위 높은 화면부터 수정
+5. Android 실기기 재검증
+
+완료 기준:
+
+- 우선순위 화면에서 Galaxy와 iPhone 간 시각적 완성도 차이가 크게 줄어든다.
+- 텍스트 잘림, 버튼 겹침, 키보드 레이아웃 붕괴 같은 명확한 UX 결함이 제거된다.
+- Android 실기기 QA 체크리스트가 별도로 만들어진다.
