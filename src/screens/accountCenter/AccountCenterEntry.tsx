@@ -26,6 +26,12 @@ const MENU_ITEMS = [
     icon: "ban-outline" as const,
   },
   {
+    title: "도움말 및 지원",
+    description: "지원 메일, 지원 페이지, 정책 문서를 한 곳에서 확인해요.",
+    route: "/account-center/support" as const,
+    icon: "help-circle-outline" as const,
+  },
+  {
     title: "계정 관리",
     description: "계정 비활성화와 회원 탈퇴를 진행해요.",
     route: "/account-center/account-closure" as const,
@@ -66,7 +72,7 @@ export default function AccountCenterEntryScreen() {
             {MENU_ITEMS.map((item) => (
               <Pressable
                 key={item.route}
-                onPress={() => router.push(item.route)}
+                onPress={() => router.push(item.route as never)}
                 style={styles.menuItem}
               >
                 <View style={styles.menuIconWrap}>

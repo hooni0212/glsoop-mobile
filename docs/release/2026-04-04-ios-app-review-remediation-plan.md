@@ -137,6 +137,11 @@ Apple이 iPad Air 11-inch (M3)에서 `레이아웃 settings` 등 일부 UI를 �
     admin safety 목록에 `report + block`을 함께 노출하도록 조정했다.
   - 모바일 차단 확인 문구와 success message를
     `즉시 숨김 + 운영 검토 큐 접수` 기준으로 맞췄다.
+- `2026-04-04`: `Track D` 구현 완료
+  - `https://www.glsoop.com/support` 공개 지원 페이지를 추가하고
+    App Store support URL로 사용할 수 있게 서버 라우트를 연결했다.
+  - 모바일 `계정 센터 > 도움말 및 지원` 화면에서
+    지원 메일, 지원 페이지, 정책 문서를 바로 열 수 있게 연결했다.
 
 ### B. 서버 저장소(glsoop)
 
@@ -161,7 +166,7 @@ Apple이 iPad Air 11-inch (M3)에서 `레이아웃 settings` 등 일부 UI를 �
 현재 확인 결과:
 
 - `https://www.glsoop.com` -> `200`
-- `https://www.glsoop.com/support` -> `404`
+- `https://www.glsoop.com/support` -> `브랜치 기준 200 확인`
 - `https://www.glsoop.com/help` -> `404`
 - 정책 문서 URL은 정상 응답한다.
 
@@ -316,7 +321,7 @@ Apple이 iPad Air 11-inch (M3)에서 `레이아웃 settings` 등 일부 UI를 �
 ### 서버(glsoop)
 
 - `public/html/support.html` 신규 추가
-- 필요 시 `/support` 라우트 추가 또는 정적 경로로 연결
+- `/support` 공개 라우트 연결
 - 내용:
   - 지원 이메일 `glsoop1752@gmail.com`
   - 신고/차단 관련 안내
@@ -335,6 +340,12 @@ Apple이 iPad Air 11-inch (M3)에서 `레이아웃 settings` 등 일부 UI를 �
 - 공개 support URL이 200 응답
 - 앱 내 support 진입점 존재
 - App Store Connect support 정보와 앱 런타임 정보가 어긋나지 않음
+
+구현 결과:
+
+- 공개 support URL은 `/support`로 확정
+- 앱 내 support entry는 `계정 센터 > 도움말 및 지원`으로 추가
+- release config 기본값도 support URL / support email 기준으로 정렬
 
 ---
 
@@ -412,7 +423,7 @@ Apple이 iPad Air 11-inch (M3)에서 `레이아웃 settings` 등 일부 UI를 �
 - [x] `src/lib/routeAccess.ts` 공개/비공개 정책 반영
 - [x] `AuthGate` 동작 확인
 - [ ] UGC 접근 전 고지 UI 추가
-- [ ] support 진입점 추가
+- [x] support 진입점 추가
 - [x] 차단 문구 수정
 - [ ] `playwright.config.ts` 수정
 - [ ] `npm run lint`
@@ -425,9 +436,9 @@ Apple이 iPad Air 11-inch (M3)에서 `레이아웃 settings` 등 일부 UI를 �
 - [x] 차단 시 자동 신고 생성 로직 추가
 - [x] block API 응답에 `report_id` 반영
 - [x] admin safety 노출 정책 최종 반영
-- [ ] `public/html/support.html` 추가
-- [ ] 필요 시 `/support` 공개 진입 라우트 추가
-- [ ] support 페이지에 정책 링크와 연락처 고정
+- [x] `public/html/support.html` 추가
+- [x] `/support` 공개 진입 라우트 추가
+- [x] support 페이지에 정책 링크와 연락처 고정
 
 ### 수동 / 운영
 
@@ -460,7 +471,6 @@ Apple이 iPad Air 11-inch (M3)에서 `레이아웃 settings` 등 일부 UI를 �
 ## 8) 아직 남은 확인 포인트
 
 - UGC 고지 UI를 `첫 진입 1회`로 할지, `매 버전 재확인`으로 할지
-- support URL 최종 경로를 `/support`로 할지 `/html/support.html`로 둘지
 - `npm audit --omit=dev` 결과 중 이번 제출 차단으로 볼 취약점 범위
 
 ---
