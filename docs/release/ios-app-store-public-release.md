@@ -4,7 +4,7 @@
 - 적용 범위: `glsoop-mobile`
 - 대상 독자: 모바일 개발자, 릴리스 담당자
 - 상태: `Draft`
-- 최종 업데이트: `2026-03-29`
+- 최종 업데이트: `2026-04-04`
 - Owner: `taehun`
 - 공통 기준 문서: `docs/release/store-metadata-canonical.md`
 
@@ -74,7 +74,6 @@ App Store Connect에서 아래를 완료한다.
 공개 제출 전 아래를 준비한다.
 
 - iPhone 스크린샷
-- 필요 시 iPad 스크린샷
 - 심사용 연락처
 - 심사용 테스트 계정
 - 심사 메모

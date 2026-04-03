@@ -121,7 +121,8 @@ Apple이 iPad Air 11-inch (M3)에서 `레이아웃 settings` 등 일부 UI를 �
 ### A. 모바일 저장소(glsoop-mobile)
 
 - iOS `supportsTablet: false`는 이미 설정되어 있다.
-- 다만 `write` 화면에는 최근까지 iPad 분기 흔적이 있었고, 현재 로컬 변경으로 정리 중이다.
+- `write` 화면에 남아 있던 iPad 분기 흔적도 제거해
+  iPhone-only 제출 전략과 코드가 일치한다.
 - `lint`, `typecheck`, `release:ios:verify:config`는 통과했다.
 - `npm run e2e:web`는 최근 앱 변경 이후 E2E fixture가 뒤처져 있어
   인증 토큰 키, 공개 UGC 고지 gate, 공유 모달 흐름을 함께 정리해야 하는 상태다.
@@ -155,6 +156,10 @@ Apple이 iPad Air 11-inch (M3)에서 `레이아웃 settings` 등 일부 UI를 �
     공개 UGC gate / 공유 모달 / Growth fallback UI 기준으로 다시 맞췄다.
   - 최종 검증으로 `npm run lint`, `npm run typecheck`, `npm run e2e:web`,
     `npm run release:ios:verify:config`를 모두 통과했다.
+- `2026-04-04`: `iPhone-only` 제출 정리 완료
+  - `write` 화면의 iPad 전용 presentation 분기를 제거했다.
+  - iOS 공개 출시 런북에서도 iPad 스크린샷 항목을 제외해
+    iPhone-only 제출 전략과 문서 기준을 맞췄다.
 
 ### B. 서버 저장소(glsoop)
 
@@ -511,7 +516,7 @@ Apple이 iPad Air 11-inch (M3)에서 `레이아웃 settings` 등 일부 UI를 �
 
 아래를 모두 만족하면 재심 제출 가능으로 본다.
 
-- [ ] iPhone-only 제출 전략이 코드/문서/설정에서 일치한다.
+- [x] iPhone-only 제출 전략이 코드/문서/설정에서 일치한다.
 - [ ] 공개/비공개 화면 범위가 제품 의도대로 동작한다.
 - [ ] 차단 시 즉시 숨김 + 자동 신고 생성이 production 기준으로 검증된다.
 - [ ] 신고가 admin 검토 큐에 들어가고 24시간 moderation 설명이 가능하다.

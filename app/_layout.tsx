@@ -6,7 +6,7 @@ import { AppBootScreen } from "@/components/state/AppBootScreen";
 import { ToastProvider } from "@/feedback/ToastProvider";
 import { BottomDockProvider } from "@/navigation/bottomDock";
 import { Stack } from "expo-router";
-import { Platform, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider, initialWindowMetrics } from "react-native-safe-area-context";
 
@@ -61,11 +61,8 @@ function RootLayoutContent() {
                   name="write"
                   options={{
                     headerShown: false,
-                    presentation: Platform.OS === "ios" && Platform.isPad ? "card" : "modal",
-                    animation:
-                      Platform.OS === "ios" && Platform.isPad
-                        ? "slide_from_right"
-                        : "slide_from_bottom",
+                    presentation: "modal",
+                    animation: "slide_from_bottom",
                     gestureEnabled: false,
                   }}
                 />
