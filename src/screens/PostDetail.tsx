@@ -5,20 +5,23 @@ import { createPostDetailStyles } from "@/screens/PostDetail.styles";
 import { PostActionBar } from "@/components/post/PostActionBar";
 import { PostBody } from "@/components/post/PostBody";
 import { PostMetaBar } from "@/components/post/PostMetaBar";
+import { SafetyReasonModal } from "@/components/safety/SafetyReasonModal";
 import { AppEmpty } from "@/components/state/AppEmpty";
 import { AppError } from "@/components/state/AppError";
 import { AppLoading } from "@/components/state/AppLoading";
 import { PostTopBar } from "@/components/post/PostTopBar";
-import { releaseConfig, getLegalDocumentUrl } from "@/config/release";
+import { getLegalDocumentUrl } from "@/config/release";
 import { useAuth } from "@/auth/AuthContext";
 import { setBookmark, useBookmarkSnapshot } from "@/features/bookmarks/bookmarkStore";
 import { useRuntimeLegalConfig } from "@/hooks/useRuntimeLegalConfig";
 import { getLike, setLike, useLikeSnapshot } from "@/features/likes/likeStore";
 import { useToast } from "@/feedback/ToastProvider";
-import { openExternalUrl, openSupportMail } from "@/lib/externalLinks";
+import { openExternalUrl } from "@/lib/externalLinks";
 import { togglePostLike } from "@/services/likeService";
 import { deletePost, getEditablePost } from "@/services/postService";
+import { blockUserById, pickSafetyReasons, reportPost } from "@/services/safetyService";
 import { logShareEvent } from "@/services/shareService";
+import { resolveRuntimeLegalDocumentUrl } from "@/services/runtimeConfigService";
 import { buildAuthRoute } from "@/lib/authRedirect";
 import { formatKstDateKorean } from "@/lib/dateTime";
 import { ApiError } from "@/lib/errors";
@@ -99,6 +102,10 @@ export default function PostDetail() {
   const [likePending, setLikePending] = useState(false);
   const [bookmarkModalVisible, setBookmarkModalVisible] = useState(false);
   const [shareModalVisible, setShareModalVisible] = useState(false);
+  const [safetyMenuVisible, setSafetyMenuVisible] = useState(false);
+  const [reportReasonVisible, setReportReasonVisible] = useState(false);
+  const [blockConfirmVisible, setBlockConfirmVisible] = useState(false);
+  const [reportSubmitting, setReportSubmitting] = useState(false);
   const [bookmarkLoading, setBookmarkLoading] = useState(false);
   const [bookmarkLists, setBookmarkLists] = useState<BookmarkList[]>([]);
   const [bookmarkPending, setBookmarkPending] = useState<Record<string, boolean>>({});
@@ -132,7 +139,15 @@ export default function PostDetail() {
   const fallbackBookmarked = Boolean((post as any)?.viewer?.isBookmarked);
   const bookmarkSnapshot = useBookmarkSnapshot(postId, fallbackBookmarked);
   const isBookmarked = bookmarkSnapshot.bookmarked;
-  const supportEmail = runtimeLegalConfig?.contacts.email ?? releaseConfig.supportEmail;
+  const legalGuidelinesUrl = resolveRuntimeLegalDocumentUrl(
+    runtimeLegalConfig,
+    "guidelines",
+    getLegalDocumentUrl("guidelines")
+  );
+  const postSafetyReasons = pickSafetyReasons(runtimeLegalConfig?.safety.reportReasons, "post");
+  const userSafetyReasons = pickSafetyReasons(runtimeLegalConfig?.safety.reportReasons, "user");
+  const reportDetailMaxLength = runtimeLegalConfig?.safety.detailMaxLength;
+  const reportDetailRequiredReasonCodes = runtimeLegalConfig?.safety.detailRequiredReasonCodes;
 
   const onPressBack = () => router.back();
   const showNotFound = error?.kind === "not_found";
@@ -175,12 +190,12 @@ export default function PostDetail() {
     };
   }, [post?.id]);
 
-  const handleAuthError = async () => {
+  const handleAuthError = React.useCallback(async () => {
     await signOut();
     promptAuthForAction(
       "로그인 상태가 만료되었어요. 다시 로그인하면 이어서 사용할 수 있어요."
     );
-  };
+  }, [promptAuthForAction, signOut]);
 
   const onPressLike = async () => {
     if (!token) {
@@ -461,65 +476,83 @@ export default function PostDetail() {
     ]);
   };
 
-  const onPressSafetyMenu = () => {
-    // TODO(server: glsoop): add authenticated report-content and block-user APIs
-    // so this surface can submit real moderation actions instead of support fallback.
-    const buttons: Parameters<typeof Alert.alert>[2] = [
-      { text: "취소", style: "cancel" },
-      {
-        text: "가이드라인 보기",
-        onPress: () => {
-          void openExternalUrl(getLegalDocumentUrl("guidelines")).catch(() => {
-            showToast("가이드라인을 열지 못했어요. 잠시 후 다시 시도해주세요.", {
-              tone: "error",
-            });
-          });
-        },
-      },
-    ];
-
-    if (supportEmail || releaseConfig.supportUrl) {
-      buttons.splice(1, 0, {
-        text: "문제 신고/지원 문의",
-        onPress: () => {
-          const postSummary = [
-            "[glsoop-mobile] 게시글 문제 신고/지원 문의",
-            "",
-            `post_id: ${postId || "unknown"}`,
-            `title: ${title || "제목 없음"}`,
-            `author: ${authorName}`,
-            "",
-            "문제 내용을 적어주세요:",
-          ].join("\n");
-
-          if (releaseConfig.supportUrl) {
-            void openExternalUrl(releaseConfig.supportUrl).catch(() => {
-              showToast("문의 경로를 열지 못했어요. 잠시 후 다시 시도해주세요.", {
-                tone: "error",
-              });
-            });
-            return;
-          }
-
-          if (!supportEmail) return;
-          void openSupportMail(supportEmail, {
-            subject: "[glsoop-mobile] 게시글 문제 신고",
-            body: postSummary,
-          }).catch(() => {
-            showToast("메일 앱을 열지 못했어요. 잠시 후 다시 시도해주세요.", {
-              tone: "error",
-            });
-          });
-        },
+  const openGuidelines = React.useCallback(() => {
+    void openExternalUrl(legalGuidelinesUrl).catch(() => {
+      showToast("가이드라인을 열지 못했어요. 잠시 후 다시 시도해주세요.", {
+        tone: "error",
       });
+    });
+  }, [legalGuidelinesUrl, showToast]);
+
+  const submitPostReport = React.useCallback(
+    async (reasonCode: string, detail?: string) => {
+      if (!token) {
+        promptAuthForAction("신고는 로그인한 회원만 할 수 있어요.");
+        return;
+      }
+      if (!postId) return;
+
+      setReportSubmitting(true);
+      try {
+        const result = await reportPost({ postId, reasonCode, detail });
+        setReportReasonVisible(false);
+        showToast(result.message, { tone: "success" });
+      } catch (err) {
+        if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
+          await handleAuthError();
+          return;
+        }
+        showToast(
+          err instanceof Error ? err.message : "신고를 접수하지 못했어요. 잠시 후 다시 시도해주세요.",
+          { tone: "error" }
+        );
+      } finally {
+        setReportSubmitting(false);
+      }
+    },
+    [handleAuthError, postId, promptAuthForAction, showToast, token]
+  );
+
+  const submitBlockAuthor = React.useCallback(async () => {
+    if (!authorId) return;
+    if (!token) {
+      promptAuthForAction("차단은 로그인한 회원만 할 수 있어요.");
+      return;
     }
 
-    Alert.alert(
-      "문제 신고 / 지원 문의",
-      "현재 앱에는 게시글 즉시 신고나 사용자 차단 API가 연결되어 있지 않아요. 대신 운영팀 문의와 커뮤니티 가이드라인 확인 경로를 제공해요.",
-      buttons
-    );
-  };
+    try {
+      const result = await blockUserById({
+        userId: authorId,
+        reasonCode: userSafetyReasons[0]?.code || "harassment",
+        contextPostId: postId,
+      });
+      showToast(result.message, { tone: "success" });
+      router.replace("/(tabs)");
+    } catch (err) {
+      if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
+        await handleAuthError();
+        return;
+      }
+      showToast(
+        err instanceof Error
+          ? err.message
+          : "차단 처리에 실패했어요. 잠시 후 다시 시도해주세요.",
+        { tone: "error" }
+      );
+    }
+  }, [
+    authorId,
+    handleAuthError,
+    postId,
+    promptAuthForAction,
+    showToast,
+    token,
+    userSafetyReasons,
+  ]);
+
+  const onPressSafetyMenu = React.useCallback(() => {
+    setSafetyMenuVisible(true);
+  }, []);
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -529,8 +562,9 @@ export default function PostDetail() {
         styles={styles}
         rightAction={{
           onPress: onPressSafetyMenu,
+          iconName: "ellipsis-vertical",
           testID: "post-safety-menu-btn",
-          accessibilityLabel: "문제 신고 및 지원 메뉴",
+          accessibilityLabel: "더보기 메뉴",
         }}
       />
 
@@ -757,6 +791,132 @@ export default function PostDetail() {
           </View>
         </View>
       </Modal>
+
+      <Modal
+        visible={safetyMenuVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSafetyMenuVisible(false)}
+      >
+        <View style={styles.bookmarkModalOverlay}>
+          <View style={styles.bookmarkModalCard}>
+            <Text style={styles.bookmarkModalTitle}>더보기</Text>
+            <Text style={styles.bookmarkModalDescription}>
+              {canManagePost
+                ? "이 글에서 필요한 메뉴를 선택해 주세요."
+                : "공유, 신고, 차단, 가이드라인 확인을 할 수 있어요."}
+            </Text>
+
+            <View style={styles.modalActionList}>
+              <Pressable
+                onPress={() => {
+                  setSafetyMenuVisible(false);
+                  setShareModalVisible(true);
+                }}
+                style={styles.modalActionBtn}
+              >
+                <Text style={styles.modalActionText}>공유하기</Text>
+              </Pressable>
+
+              {!canManagePost ? (
+                <Pressable
+                  onPress={() => {
+                    setSafetyMenuVisible(false);
+                    setReportReasonVisible(true);
+                  }}
+                  style={styles.modalActionBtn}
+                >
+                  <Text style={styles.modalActionText}>게시글 신고</Text>
+                </Pressable>
+              ) : null}
+
+              {!canManagePost && authorId ? (
+                <Pressable
+                  onPress={() => {
+                    setSafetyMenuVisible(false);
+                    setBlockConfirmVisible(true);
+                  }}
+                  style={[styles.modalActionBtn, styles.modalActionBtnDanger]}
+                >
+                  <Text style={[styles.modalActionText, styles.modalActionTextDanger]}>
+                    작성자 차단
+                  </Text>
+                </Pressable>
+              ) : null}
+
+              <Pressable
+                onPress={() => {
+                  setSafetyMenuVisible(false);
+                  openGuidelines();
+                }}
+                style={[styles.modalActionBtn, styles.modalActionBtnGhost]}
+              >
+                <Text style={styles.modalActionText}>커뮤니티 가이드라인</Text>
+              </Pressable>
+
+              <Pressable
+                onPress={() => setSafetyMenuVisible(false)}
+                style={[styles.modalActionBtn, styles.modalActionBtnGhost]}
+              >
+                <Text style={styles.modalActionText}>닫기</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={blockConfirmVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setBlockConfirmVisible(false)}
+      >
+        <View style={styles.bookmarkModalOverlay}>
+          <View style={styles.bookmarkModalCard}>
+            <Text style={styles.bookmarkModalTitle}>작성자 차단</Text>
+            <Text style={styles.bookmarkModalDescription}>
+              {`${authorName}님의 글과 프로필을 내 화면에서 숨길까요? 나중에 계정 센터에서 차단을 해제할 수 있어요.`}
+            </Text>
+
+            <View style={styles.modalActionList}>
+              <Pressable
+                onPress={() => {
+                  setBlockConfirmVisible(false);
+                  void submitBlockAuthor();
+                }}
+                style={[styles.modalActionBtn, styles.modalActionBtnDanger]}
+              >
+                <Text style={[styles.modalActionText, styles.modalActionTextDanger]}>
+                  차단하기
+                </Text>
+              </Pressable>
+
+              <Pressable
+                onPress={() => setBlockConfirmVisible(false)}
+                style={[styles.modalActionBtn, styles.modalActionBtnGhost]}
+              >
+                <Text style={styles.modalActionText}>취소</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <SafetyReasonModal
+        visible={reportReasonVisible}
+        title="게시글 신고"
+        description="운영 검토 큐에 접수돼요. 기타 사유를 선택하면 자세한 설명을 함께 보낼 수 있어요."
+        reasons={postSafetyReasons}
+        detailMaxLength={reportDetailMaxLength}
+        detailRequiredReasonCodes={reportDetailRequiredReasonCodes}
+        submitLabel="신고 접수"
+        submitting={reportSubmitting}
+        onClose={() => {
+          if (reportSubmitting) return;
+          setReportReasonVisible(false);
+        }}
+        onSubmit={({ reasonCode, detail }) => submitPostReport(reasonCode, detail)}
+      />
     </SafeAreaView>
   );
 }

@@ -13,6 +13,7 @@ import { router, useLocalSearchParams, usePathname } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
 
 import { FeedCard } from "@/components/FeedCard";
+import { SafetyReasonModal } from "@/components/safety/SafetyReasonModal";
 import { useBookmarkSnapshot } from "@/features/bookmarks/bookmarkStore";
 import { PostTopBar } from "@/components/post/PostTopBar";
 import { AppEmpty } from "@/components/state/AppEmpty";
@@ -21,15 +22,21 @@ import { AppLoading } from "@/components/state/AppLoading";
 import { useAuthorPosts, type AuthorPostSort } from "@/features/users/useAuthorPosts";
 import { useAuthorProfile } from "@/features/users/useAuthorProfile";
 import { authorScreenStyles } from "@/screens/Author.styles";
-import { releaseConfig, getLegalDocumentUrl } from "@/config/release";
+import { getLegalDocumentUrl } from "@/config/release";
 import { getLike, setLike, useLikeSnapshot } from "@/features/likes/likeStore";
 import { useToast } from "@/feedback/ToastProvider";
 import { useAuth } from "@/auth/AuthContext";
 import { buildAuthRoute } from "@/lib/authRedirect";
 import { formatKstDateKorean } from "@/lib/dateTime";
-import { openExternalUrl, openSupportMail } from "@/lib/externalLinks";
+import { openExternalUrl } from "@/lib/externalLinks";
 import { normalizePublicDisplayName } from "@/lib/publicDisplayName";
 import { togglePostLike } from "@/services/likeService";
+import {
+  blockUserById,
+  pickSafetyReasons,
+  reportUser,
+} from "@/services/safetyService";
+import { resolveRuntimeLegalDocumentUrl } from "@/services/runtimeConfigService";
 import { toggleFollowUser } from "@/services/userService";
 import { ApiError } from "@/lib/errors";
 import { useRuntimeLegalConfig } from "@/hooks/useRuntimeLegalConfig";
@@ -121,6 +128,8 @@ export default function Author() {
   const [isFollowing, setIsFollowing] = useState(false);
   const [followerCount, setFollowerCount] = useState(0);
   const [overflowOpen, setOverflowOpen] = useState(false);
+  const [reportReasonVisible, setReportReasonVisible] = useState(false);
+  const [reportSubmitting, setReportSubmitting] = useState(false);
 
   const name = normalizePublicDisplayName(user?.display_name, user?.nickname);
   const bio = user?.bio || "소개가 아직 없어요.";
@@ -137,7 +146,14 @@ export default function Author() {
     () => normalizeProfileCosmeticsExpanded(user?.profile_cosmetics ?? null),
     [user?.profile_cosmetics]
   );
-  const supportEmail = runtimeLegalConfig?.contacts.email ?? releaseConfig.supportEmail;
+  const legalGuidelinesUrl = resolveRuntimeLegalDocumentUrl(
+    runtimeLegalConfig,
+    "guidelines",
+    getLegalDocumentUrl("guidelines")
+  );
+  const userSafetyReasons = pickSafetyReasons(runtimeLegalConfig?.safety.reportReasons, "user");
+  const reportDetailMaxLength = runtimeLegalConfig?.safety.detailMaxLength;
+  const reportDetailRequiredReasonCodes = runtimeLegalConfig?.safety.detailRequiredReasonCodes;
 
   const showInitialLoading = profileLoading && !user;
 
@@ -306,35 +322,98 @@ export default function Author() {
     router.push(`/posts/${items[0].id}`);
   }, [items]);
 
-  const handleAuthorSupport = useCallback(async () => {
-    // TODO(server: glsoop): add authenticated report-user and block-user APIs
-    // so author moderation actions can complete in-app instead of using support fallback.
-    const message = [
-      "작가 프로필 관련 문제 신고/지원 문의",
-      "",
-      `user_id: ${userId || "unknown"}`,
-      `name: ${name}`,
-      "",
-      "문제 내용을 적어주세요:",
-    ].join("\n");
+  const openGuidelines = useCallback(() => {
+    void openExternalUrl(legalGuidelinesUrl).catch(() => {
+      showToast("가이드라인을 열지 못했어요. 잠시 후 다시 시도해주세요.", {
+        tone: "error",
+      });
+    });
+  }, [legalGuidelinesUrl, showToast]);
 
-    try {
-      if (releaseConfig.supportUrl) {
-        await openExternalUrl(releaseConfig.supportUrl);
+  const handleReportAuthor = useCallback(
+    async (reasonCode: string, detail?: string) => {
+      if (!token) {
+        promptAuthForAction("신고는 로그인한 회원만 할 수 있어요.");
         return;
       }
-      if (supportEmail) {
-        await openSupportMail(supportEmail, {
-          subject: "[glsoop-mobile] 작가 프로필 문제 신고",
-          body: message,
-        });
-        return;
+      if (!userId) return;
+
+      setReportSubmitting(true);
+      try {
+        const result = await reportUser({ userId, reasonCode, detail });
+        setReportReasonVisible(false);
+        showToast(result.message, { tone: "success" });
+      } catch (err) {
+        if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
+          await handleAuthError();
+          return;
+        }
+        showToast(
+          err instanceof Error ? err.message : "신고를 접수하지 못했어요. 잠시 후 다시 시도해주세요.",
+          { tone: "error" }
+        );
+      } finally {
+        setReportSubmitting(false);
       }
-      showToast("지원 연락처가 아직 앱 설정에 반영되지 않았어요.", { tone: "error" });
-    } catch {
-      showToast("문의 경로를 열지 못했어요. 잠시 후 다시 시도해주세요.", { tone: "error" });
+    },
+    [handleAuthError, promptAuthForAction, showToast, token, userId]
+  );
+
+  const promptReportAuthor = useCallback(() => {
+    setOverflowOpen(false);
+    setReportReasonVisible(true);
+  }, []);
+
+  const promptBlockAuthor = useCallback(() => {
+    if (!userId) return;
+    if (!token) {
+      promptAuthForAction("차단은 로그인한 회원만 할 수 있어요.");
+      return;
     }
-  }, [name, showToast, supportEmail, userId]);
+
+    Alert.alert(
+      "작가 차단",
+      `${name}님의 글과 프로필을 내 화면에서 숨길까요? 나중에 계정 센터에서 차단을 해제할 수 있어요.`,
+      [
+        { text: "취소", style: "cancel" },
+        {
+          text: "차단",
+          style: "destructive",
+          onPress: () => {
+            void (async () => {
+              try {
+                const result = await blockUserById({
+                  userId,
+                  reasonCode: userSafetyReasons[0]?.code || "harassment",
+                });
+                showToast(result.message, { tone: "success" });
+                router.replace("/(tabs)");
+              } catch (err) {
+                if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
+                  await handleAuthError();
+                  return;
+                }
+                showToast(
+                  err instanceof Error
+                    ? err.message
+                    : "차단 처리에 실패했어요. 잠시 후 다시 시도해주세요.",
+                  { tone: "error" }
+                );
+              }
+            })();
+          },
+        },
+      ]
+    );
+  }, [
+    handleAuthError,
+    name,
+    promptAuthForAction,
+    showToast,
+    token,
+    userId,
+    userSafetyReasons,
+  ]);
 
   const listHeader = useMemo(
     () => {
@@ -494,23 +573,32 @@ export default function Author() {
                     <Text style={authorScreenStyles.overflowItemText}>프로필 꾸미기</Text>
                   </Pressable>
                 ) : null}
+                {!showProfileCustomize ? (
+                  <Pressable
+                    onPress={() => {
+                      setOverflowOpen(false);
+                      promptReportAuthor();
+                    }}
+                    style={authorScreenStyles.overflowItem}
+                  >
+                    <Text style={authorScreenStyles.overflowItemText}>작가 신고</Text>
+                  </Pressable>
+                ) : null}
+                {!showProfileCustomize ? (
+                  <Pressable
+                    onPress={() => {
+                      setOverflowOpen(false);
+                      promptBlockAuthor();
+                    }}
+                    style={authorScreenStyles.overflowItem}
+                  >
+                    <Text style={authorScreenStyles.overflowItemText}>작가 차단</Text>
+                  </Pressable>
+                ) : null}
                 <Pressable
                   onPress={() => {
                     setOverflowOpen(false);
-                    void handleAuthorSupport();
-                  }}
-                  style={authorScreenStyles.overflowItem}
-                >
-                  <Text style={authorScreenStyles.overflowItemText}>문제 신고/지원 문의</Text>
-                </Pressable>
-                <Pressable
-                  onPress={() => {
-                    setOverflowOpen(false);
-                    void openExternalUrl(getLegalDocumentUrl("guidelines")).catch(() => {
-                      showToast("가이드라인을 열지 못했어요. 잠시 후 다시 시도해주세요.", {
-                        tone: "error",
-                      });
-                    });
+                    openGuidelines();
                   }}
                   style={authorScreenStyles.overflowItem}
                 >
@@ -575,18 +663,19 @@ export default function Author() {
       followerCount,
       followBusy,
       handleFollowToggle,
-      handleAuthorSupport,
       handleOpenLatestPost,
       handleShareAuthor,
       isFollowing,
       items,
       joinedAtLabel,
       name,
+      openGuidelines,
       postCount,
       profileCosmetics,
+      promptBlockAuthor,
+      promptReportAuthor,
       showProfileCustomize,
       showFollowButton,
-      showToast,
       overflowOpen,
       sort,
       totalLikes,
@@ -679,6 +768,21 @@ export default function Author() {
 
           return null;
         }}
+      />
+      <SafetyReasonModal
+        visible={reportReasonVisible}
+        title="작가 신고"
+        description="운영 검토 큐에 접수돼요. 기타 사유를 선택하면 자세한 설명을 함께 보낼 수 있어요."
+        reasons={userSafetyReasons}
+        detailMaxLength={reportDetailMaxLength}
+        detailRequiredReasonCodes={reportDetailRequiredReasonCodes}
+        submitLabel="신고 접수"
+        submitting={reportSubmitting}
+        onClose={() => {
+          if (reportSubmitting) return;
+          setReportReasonVisible(false);
+        }}
+        onSubmit={({ reasonCode, detail }) => handleReportAuthor(reasonCode, detail)}
       />
     </SafeAreaView>
   );

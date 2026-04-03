@@ -20,6 +20,12 @@ const MENU_ITEMS = [
     icon: "shield-checkmark-outline" as const,
   },
   {
+    title: "차단한 사용자",
+    description: "내 화면에서 숨긴 사용자를 확인하고 차단을 해제해요.",
+    route: "/account-center/blocked-users" as const,
+    icon: "ban-outline" as const,
+  },
+  {
     title: "계정 관리",
     description: "계정 비활성화와 회원 탈퇴를 진행해요.",
     route: "/account-center/account-closure" as const,
