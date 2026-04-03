@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 
-const AUTH_TOKEN_KEY = "glsoop:auth:token:v1";
+const AUTH_TOKEN_KEY = "glsoop_auth_token_v1";
 
 async function setAuthToken(page: Page, token: string) {
   await page.goto("/");

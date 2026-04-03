@@ -188,8 +188,7 @@ test.describe("Write 임시저장 UX", () => {
 
     // A) 취소
     await page.goto("/write");
-    await page.getByTestId("write-title-input").click();
-    await page.keyboard.type("temp title");
+    await page.getByTestId("write-title-input").fill("temp title");
     await page.getByTestId("write-close-btn").click();
     const confirmModal = page.getByTestId("write-confirm-modal");
     await expect(confirmModal).toBeVisible();
@@ -205,10 +204,8 @@ test.describe("Write 임시저장 UX", () => {
 
     // C) 임시 저장하기 -> 홈, draft 생성
     await page.goto("/write");
-    await page.getByTestId("write-title-input").click();
-    await page.keyboard.type("draft title");
-    await page.getByTestId("write-body-input").click();
-    await page.keyboard.type("draft body");
+    await page.getByTestId("write-title-input").fill("draft title");
+    await page.getByTestId("write-body-input").fill("draft body");
     await page.getByTestId("write-close-btn").click();
     await page.getByTestId("confirm-close-save").click();
     await expect(page).toHaveURL(/\/(\(tabs\))?\/?$/);

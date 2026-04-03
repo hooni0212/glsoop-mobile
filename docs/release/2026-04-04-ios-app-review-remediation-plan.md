@@ -123,7 +123,8 @@ Apple이 iPad Air 11-inch (M3)에서 `레이아웃 settings` 등 일부 UI를 �
 - iOS `supportsTablet: false`는 이미 설정되어 있다.
 - 다만 `write` 화면에는 최근까지 iPad 분기 흔적이 있었고, 현재 로컬 변경으로 정리 중이다.
 - `lint`, `typecheck`, `release:ios:verify:config`는 통과했다.
-- `npm run e2e:web`는 현재 Playwright web server 기동 단계에서 `ERR_SOCKET_BAD_PORT`로 실패한다.
+- `npm run e2e:web`는 최근 앱 변경 이후 E2E fixture가 뒤처져 있어
+  인증 토큰 키, 공개 UGC 고지 gate, 공유 모달 흐름을 함께 정리해야 하는 상태다.
 - `npm audit --omit=dev`는 high/moderate 취약점이 남아 있다.
 - 공개/비공개 라우트 정책은 현재 코드와 제품 의도가 어긋날 가능성이 있다.
 
@@ -147,6 +148,13 @@ Apple이 iPad Air 11-inch (M3)에서 `레이아웃 settings` 등 일부 UI를 �
     이용약관, 개인정보 처리방침, 커뮤니티 가이드라인을 먼저 확인하는 전역 고지 gate를 추가했다.
   - 고지는 한 번 확인하면 재노출하지 않고,
     법률 문서 버전이 바뀌면 다시 보이도록 버전 키 기반으로 저장한다.
+- `2026-04-04`: `Track E` 구현 완료
+  - `playwright.config.ts`에서 잘못된 `EXPO_WEB_PORT` 환경값이 들어와도
+    안전한 기본 포트(`8081`)로 fallback 하도록 정리했다.
+  - 웹 E2E 스펙을 현재 auth token 저장 키(`glsoop_auth_token_v1`)와
+    공개 UGC gate / 공유 모달 / Growth fallback UI 기준으로 다시 맞췄다.
+  - 최종 검증으로 `npm run lint`, `npm run typecheck`, `npm run e2e:web`,
+    `npm run release:ios:verify:config`를 모두 통과했다.
 
 ### B. 서버 저장소(glsoop)
 
@@ -386,7 +394,21 @@ Apple이 iPad Air 11-inch (M3)에서 `레이아웃 settings` 등 일부 UI를 �
 
 리스크:
 
-- 지금 `e2e:web`가 서버 기동 전 단계에서 깨져 있어 실제 플로우 품질을 가리는 상태다.
+- 최근 `e2e:web` 실패 원인은 단일 포트 오류보다
+  앱 플로우 변경과 Playwright fixture 불일치가 더 큰 비중을 차지한다.
+
+구현 메모:
+
+- `playwright.config.ts`는 잘못된 `EXPO_WEB_PORT` 환경값이 들어와도
+  안전한 기본 포트(`8081`)로 fallback 하도록 정리한다.
+- 웹 E2E 스펙은 현재 auth token 저장 키(`glsoop_auth_token_v1`)를 기준으로 맞춘다.
+- 글 상세 공유 스펙은 새 공유 방식 선택 모달을 거친 뒤 검증하도록 갱신한다.
+
+구현 결과:
+
+- Playwright web server 기동은 포트 환경값을 정규화해도 안정적으로 올라온다.
+- 웹 E2E 32개가 모두 현재 앱 동작 기준으로 green이다.
+- iOS production config 검증도 build number `14` 기준으로 다시 확인했다.
 
 ---
 
@@ -436,11 +458,11 @@ Apple이 iPad Air 11-inch (M3)에서 `레이아웃 settings` 등 일부 UI를 �
 - [x] UGC 접근 전 고지 UI 추가
 - [x] support 진입점 추가
 - [x] 차단 문구 수정
-- [ ] `playwright.config.ts` 수정
-- [ ] `npm run lint`
-- [ ] `npm run typecheck`
-- [ ] `npm run e2e:web`
-- [ ] `npm run release:ios:verify:config`
+- [x] `playwright.config.ts` 수정
+- [x] `npm run lint`
+- [x] `npm run typecheck`
+- [x] `npm run e2e:web`
+- [x] `npm run release:ios:verify:config`
 
 ### glsoop
 

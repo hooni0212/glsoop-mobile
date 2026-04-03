@@ -179,6 +179,13 @@ async function openPostDetailFromHome(page: Page) {
   await expect(page.getByTestId("post-share-btn")).toBeVisible();
 }
 
+async function chooseShareMode(page: Page, mode: "full" | "title" = "full") {
+  await expect(page.getByText("공유 방식 선택")).toBeVisible();
+  await page.getByText(mode === "full" ? "본문까지 공유" : "제목만 공유", {
+    exact: true,
+  }).click();
+}
+
 test.describe("글 상세 화면", () => {
   test("recent API 실패 시 전체 목록 fallback과 안내 토스트를 표시한다", async ({ page }) => {
     await setupApiRoutes(page, { recentShouldFail: true });
@@ -207,11 +214,12 @@ test.describe("글 상세 화면", () => {
     await openPostDetailFromHome(page);
 
     await page.getByTestId("post-share-btn").click();
+    await chooseShareMode(page, "full");
     await expect(page.getByText("공유가 완료되었어요.")).toBeVisible();
     await expect.poll(() => shareEventRequests.length).toBe(1);
     await expect.poll(() => shareEventRequests[0]?.result).toBe("shared");
     await expect.poll(() => shareEventRequests[0]?.surface).toBe("post_detail");
-    await expect.poll(() => shareEventRequests[0]?.channel).toBe("system_share_sheet");
+    await expect.poll(() => shareEventRequests[0]?.channel).toBe("share_modal_full");
     await expect.poll(() => typeof shareEventRequests[0]?.request_id).toBe("string");
   });
 
@@ -228,6 +236,7 @@ test.describe("글 상세 화면", () => {
     await openPostDetailFromHome(page);
 
     await page.getByTestId("post-share-btn").click();
+    await chooseShareMode(page, "full");
     await expect.poll(() => shareEventRequests.length).toBe(1);
     await expect.poll(() => shareEventRequests[0]?.result).toBe("dismissed");
     await expect(page.getByText("공유가 완료되었어요.")).toHaveCount(0);
@@ -249,6 +258,7 @@ test.describe("글 상세 화면", () => {
     await openPostDetailFromHome(page);
 
     await page.getByTestId("post-share-btn").click();
+    await chooseShareMode(page, "full");
     await expect(page.getByText("공유에 실패했어요. 잠시 후 다시 시도해주세요.")).toBeVisible();
     await expect.poll(() => shareEventRequests.length).toBe(1);
     await expect.poll(() => shareEventRequests[0]?.result).toBe("failed");

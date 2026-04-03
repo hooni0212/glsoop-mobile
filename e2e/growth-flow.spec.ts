@@ -1,6 +1,6 @@
 import { expect, test, type Page, type Route } from "@playwright/test";
 
-const AUTH_TOKEN_KEY = "glsoop:auth:token:v1";
+const AUTH_TOKEN_KEY = "glsoop_auth_token_v1";
 
 function isApiRequest(route: Route, suffix: string) {
   return route.request().url().includes(suffix);
@@ -308,7 +308,8 @@ test.describe("Growth 플로우", () => {
     await page.goto("/growth");
 
     await expect(page.getByText("글숲")).toBeVisible();
-    await expect(page.getByText("로그인")).toBeVisible();
+    await expect(page.getByText("로그인", { exact: true })).toBeVisible();
+    await expect(page.getByText("회원가입", { exact: true })).toBeVisible();
   });
 
   test("로그인 상태에서 성장 메인/상세 이동과 보상 수령이 동작한다", async ({ page }) => {
@@ -352,7 +353,7 @@ test.describe("Growth 플로우", () => {
     await expect(page).toHaveURL(/\/posts\/701$/);
   });
 
-  test("dashboard 요청이 실패하면 fallback 데이터와 인기 글 pending UI를 유지한다", async ({ page }) => {
+  test("dashboard 요청이 실패하면 fallback 데이터와 인기 글 empty UI를 유지한다", async ({ page }) => {
     await mockGrowthApis(page, { dashboardShouldFail: true });
     await setAuthToken(page, "mock-token-for-growth");
 
@@ -360,8 +361,9 @@ test.describe("Growth 플로우", () => {
 
     await expect(page.getByTestId("growth-screen")).toBeVisible();
     await expect(page.getByLabel("데이터 소스: 대체 데이터")).toBeVisible();
-    await expect(page.getByTestId("top-posts-pending")).toBeVisible();
-    await expect(page.getByText("인기 글 추천 기능을 준비 중이에요. 잠시만 기다려 주세요.")).toBeVisible();
+    await expect(page.getByTestId("top-posts-empty")).toBeVisible();
+    await expect(page.getByText("아직 인기 글이 없어요")).toBeVisible();
+    await expect(page.getByText("활동이 더 쌓이면, 여기에서 주목받는 글을 추천해드릴게요.")).toBeVisible();
   });
 
   test("dashboard와 fallback이 모두 실패하면 오류 UI를 노출한다", async ({ page }) => {
@@ -371,8 +373,8 @@ test.describe("Growth 플로우", () => {
     await page.goto("/growth");
 
     await expect(page.getByTestId("growth-screen")).toBeVisible();
-    await expect(page.getByText("문제가 발생했어요")).toBeVisible();
-    await expect(page.getByText("성장 요약을 불러오지 못했어요.")).toBeVisible();
+    await expect(page.getByText("문제가 발생했어요").first()).toBeVisible();
+    await expect(page.getByText("성장 요약을 불러오지 못했어요.").first()).toBeVisible();
   });
 
   test("dashboard top_posts가 빈 배열이면 준비중이 아닌 empty UI를 보여준다", async ({ page }) => {

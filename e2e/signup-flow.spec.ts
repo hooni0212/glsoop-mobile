@@ -1,6 +1,6 @@
 import { expect, test, type Page, type Route } from "@playwright/test";
 
-const AUTH_TOKEN_KEY = "glsoop:auth:token:v1";
+const AUTH_TOKEN_KEY = "glsoop_auth_token_v1";
 const COOKIE_SESSION_TOKEN = "__glsoop_cookie_session__";
 
 function isApiRequest(route: Route, suffix: string) {
