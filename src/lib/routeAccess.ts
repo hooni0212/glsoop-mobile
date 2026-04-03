@@ -1,15 +1,13 @@
 export function isProtectedRoute(pathname: string, segments: string[]) {
   const first = segments[0] ?? "";
+  const second = segments[1] ?? "";
 
   if (first === "(auth)") return false;
 
   if (first === "(tabs)") {
-    return true;
+    return second === "bookmarks" || second === "growth" || second === "me";
   }
 
-  if (first === "search") return true;
-  if (first === "posts") return true;
-  if (first === "users") return true;
   if (first === "growth") return true;
   if (first === "write") return true;
   if (first === "write-drafts") return true;
@@ -17,9 +15,6 @@ export function isProtectedRoute(pathname: string, segments: string[]) {
   if (first === "profile-customize") return true;
 
   return (
-    pathname.startsWith("/search") ||
-    pathname.startsWith("/posts/") ||
-    pathname.startsWith("/users/") ||
     pathname.startsWith("/growth") ||
     pathname.startsWith("/write") ||
     pathname.startsWith("/account-center") ||

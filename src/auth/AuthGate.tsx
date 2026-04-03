@@ -11,8 +11,9 @@ import { isProtectedRoute } from "@/lib/routeAccess";
 
 /**
  * 전역 인증 게이트
- * - 로그인 전에는 (auth) 그룹만 접근 가능
- * - 로그인 후에는 (tabs) 그룹으로 보냄
+ * - 일부 공개 화면(Home/Search/Post/Author)은 비로그인 접근 허용
+ * - 개인화 화면(Growth/Bookmarks/Me/Write 등)은 로그인 필요
+ * - 로그인 후 auth 그룹으로 들어오면 홈으로 돌려보냄
  */
 export function AuthGate() {
   const router = useRouter();
