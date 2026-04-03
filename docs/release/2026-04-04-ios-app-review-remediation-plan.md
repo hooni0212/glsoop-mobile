@@ -9,6 +9,8 @@
 - 관련 문서:
   - `docs/release/mobile-launch-plan.md`
   - `docs/release/ios-app-store-public-release.md`
+  - `docs/release/ios-app-review-notes-draft.md`
+  - `docs/release/ios-app-review-recording-script.md`
   - `docs/release/store-metadata-canonical.md`
   - `../glsoop/docs/운영/2026-04-03-안전-기능-차단-신고-개편-계획.md`
 
@@ -160,6 +162,9 @@ Apple이 iPad Air 11-inch (M3)에서 `레이아웃 settings` 등 일부 UI를 �
   - `write` 화면의 iPad 전용 presentation 분기를 제거했다.
   - iOS 공개 출시 런북에서도 iPad 스크린샷 항목을 제외해
     iPhone-only 제출 전략과 문서 기준을 맞췄다.
+- `2026-04-04`: `Track F` 준비 문서 작성 완료
+  - App Store Connect에 바로 붙여 넣을 `App Review Notes` 초안을 문서로 정리했다.
+  - 실제 iPhone 물리 디바이스 녹화를 위한 순서별 스크립트를 문서로 정리했다.
 
 ### B. 서버 저장소(glsoop)
 
@@ -484,8 +489,8 @@ Apple이 iPad Air 11-inch (M3)에서 `레이아웃 settings` 등 일부 UI를 �
 - [ ] 실제 신고가 admin에 잡히는지 확인
 - [ ] 실제 차단 후 홈/검색/상세/작가 화면 숨김 확인
 - [ ] support URL 200 확인
-- [ ] App Review 녹화 준비
-- [ ] App Review Notes 작성
+- [x] App Review 녹화 준비
+- [x] App Review Notes 작성
 - [ ] 새 iOS 빌드 생성 및 제출
 
 ---
