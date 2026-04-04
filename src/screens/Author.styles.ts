@@ -29,6 +29,9 @@ export const authorScreenStyles = StyleSheet.create({
   },
 
   listContent: {
+    width: "100%",
+    maxWidth: 820,
+    alignSelf: "center",
     paddingHorizontal: tokens.space.xl,
     paddingBottom: tokens.space.xl,
   },

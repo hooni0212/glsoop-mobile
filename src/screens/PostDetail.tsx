@@ -10,7 +10,7 @@ import { AppEmpty } from "@/components/state/AppEmpty";
 import { AppError } from "@/components/state/AppError";
 import { AppLoading } from "@/components/state/AppLoading";
 import { PostTopBar } from "@/components/post/PostTopBar";
-import { getLegalDocumentUrl } from "@/config/release";
+import { getLegalDocumentUrl, getSupportUrl } from "@/config/release";
 import { useAuth } from "@/auth/AuthContext";
 import { setBookmark, useBookmarkSnapshot } from "@/features/bookmarks/bookmarkStore";
 import { useRuntimeLegalConfig } from "@/hooks/useRuntimeLegalConfig";
@@ -484,6 +484,14 @@ export default function PostDetail() {
     });
   }, [legalGuidelinesUrl, showToast]);
 
+  const openSupport = React.useCallback(() => {
+    void openExternalUrl(getSupportUrl()).catch(() => {
+      showToast("지원 페이지를 열지 못했어요. 잠시 후 다시 시도해주세요.", {
+        tone: "error",
+      });
+    });
+  }, [showToast]);
+
   const submitPostReport = React.useCallback(
     async (reasonCode: string, detail?: string) => {
       if (!token) {
@@ -804,7 +812,7 @@ export default function PostDetail() {
             <Text style={styles.bookmarkModalDescription}>
               {canManagePost
                 ? "이 글에서 필요한 메뉴를 선택해 주세요."
-                : "공유, 신고, 차단, 가이드라인 확인을 할 수 있어요."}
+                : "공유, 신고, 차단, 가이드라인, 지원 경로를 확인할 수 있어요."}
             </Text>
 
             <View style={styles.modalActionList}>
@@ -855,6 +863,16 @@ export default function PostDetail() {
               </Pressable>
 
               <Pressable
+                onPress={() => {
+                  setSafetyMenuVisible(false);
+                  openSupport();
+                }}
+                style={[styles.modalActionBtn, styles.modalActionBtnGhost]}
+              >
+                <Text style={styles.modalActionText}>도움말 및 지원</Text>
+              </Pressable>
+
+              <Pressable
                 onPress={() => setSafetyMenuVisible(false)}
                 style={[styles.modalActionBtn, styles.modalActionBtnGhost]}
               >
@@ -875,7 +893,7 @@ export default function PostDetail() {
           <View style={styles.bookmarkModalCard}>
             <Text style={styles.bookmarkModalTitle}>작성자 차단</Text>
             <Text style={styles.bookmarkModalDescription}>
-              {`${authorName}님의 글과 프로필을 내 화면에서 즉시 숨기고 운영 검토 큐에도 접수할까요? 나중에 계정 센터에서 차단을 해제할 수 있어요.`}
+              {`${authorName}님의 글과 프로필을 내 화면에서 즉시 숨기고, 운영팀이 검토 후 필요한 경우 콘텐츠 삭제 또는 계정 제재를 진행할 수 있어요. 나중에 계정 센터에서 차단을 해제할 수 있어요.`}
             </Text>
 
             <View style={styles.modalActionList}>
@@ -905,7 +923,7 @@ export default function PostDetail() {
       <SafetyReasonModal
         visible={reportReasonVisible}
         title="게시글 신고"
-        description="운영 검토 큐에 접수돼요. 기타 사유를 선택하면 자세한 설명을 함께 보낼 수 있어요."
+        description="신고가 접수되면 운영팀이 24시간 내 검토하고, 위반 시 콘텐츠 삭제 및 계정 제재가 이루어질 수 있어요."
         reasons={postSafetyReasons}
         detailMaxLength={reportDetailMaxLength}
         detailRequiredReasonCodes={reportDetailRequiredReasonCodes}

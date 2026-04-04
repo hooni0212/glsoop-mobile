@@ -22,7 +22,7 @@ import { AppLoading } from "@/components/state/AppLoading";
 import { useAuthorPosts, type AuthorPostSort } from "@/features/users/useAuthorPosts";
 import { useAuthorProfile } from "@/features/users/useAuthorProfile";
 import { authorScreenStyles } from "@/screens/Author.styles";
-import { getLegalDocumentUrl } from "@/config/release";
+import { getLegalDocumentUrl, getSupportUrl } from "@/config/release";
 import { getLike, setLike, useLikeSnapshot } from "@/features/likes/likeStore";
 import { useToast } from "@/feedback/ToastProvider";
 import { useAuth } from "@/auth/AuthContext";
@@ -45,6 +45,7 @@ import {
   type CosmeticStickerSlot,
 } from "@/types/cosmetics";
 import type { Post } from "@/types/post";
+import { filterBlockedPosts, useBlockedUserIds } from "@/features/safety/blockedUsersStore";
 
 function toRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
@@ -99,6 +100,7 @@ export default function Author() {
   const pathname = usePathname();
   const userId = params?.id ? String(params.id) : undefined;
   const { config: runtimeLegalConfig } = useRuntimeLegalConfig();
+  const blockedUserIds = useBlockedUserIds();
 
   const [sort, setSort] = useState<AuthorPostSort>("newest");
   const {
@@ -120,6 +122,10 @@ export default function Author() {
     loadMore,
     patchItem,
   } = useAuthorPosts(userId, sort);
+  const visibleItems = useMemo(
+    () => filterBlockedPosts(items, blockedUserIds),
+    [blockedUserIds, items]
+  );
   const { token, signOut } = useAuth();
   const { showToast } = useToast();
   const [likePending, setLikePending] = useState<Record<string, boolean>>({});
@@ -317,10 +323,10 @@ export default function Author() {
   }, [name, showToast, userId]);
 
   const handleOpenLatestPost = useCallback(() => {
-    if (!items[0]?.id) return;
+    if (!visibleItems[0]?.id) return;
     setOverflowOpen(false);
-    router.push(`/posts/${items[0].id}`);
-  }, [items]);
+    router.push(`/posts/${visibleItems[0].id}`);
+  }, [visibleItems]);
 
   const openGuidelines = useCallback(() => {
     void openExternalUrl(legalGuidelinesUrl).catch(() => {
@@ -329,6 +335,14 @@ export default function Author() {
       });
     });
   }, [legalGuidelinesUrl, showToast]);
+
+  const openSupport = useCallback(() => {
+    void openExternalUrl(getSupportUrl()).catch(() => {
+      showToast("지원 페이지를 열지 못했어요. 잠시 후 다시 시도해주세요.", {
+        tone: "error",
+      });
+    });
+  }, [showToast]);
 
   const handleReportAuthor = useCallback(
     async (reasonCode: string, detail?: string) => {
@@ -373,7 +387,7 @@ export default function Author() {
 
     Alert.alert(
       "작가 차단",
-      `${name}님의 글과 프로필을 내 화면에서 즉시 숨기고 운영 검토 큐에도 접수할까요? 나중에 계정 센터에서 차단을 해제할 수 있어요.`,
+      `${name}님의 글과 프로필을 내 화면에서 즉시 숨기고, 운영팀이 검토 후 필요한 경우 콘텐츠 삭제 또는 계정 제재를 진행할 수 있어요. 나중에 계정 센터에서 차단을 해제할 수 있어요.`,
       [
         { text: "취소", style: "cancel" },
         {
@@ -494,9 +508,9 @@ export default function Author() {
               <Text style={authorScreenStyles.joinedAt}>{joinedAtLabel}</Text>
             ) : null}
 
-            {items.length > 0 ? (
+            {visibleItems.length > 0 ? (
               <Pressable
-                onPress={() => router.push(`/posts/${items[0].id}`)}
+                onPress={() => router.push(`/posts/${visibleItems[0].id}`)}
                 style={authorScreenStyles.latestPostBtn}
               >
                 <Text style={authorScreenStyles.latestPostBtnText}>최신 글 읽기</Text>
@@ -554,7 +568,7 @@ export default function Author() {
                 >
                   <Text style={authorScreenStyles.overflowItemText}>작가 페이지 공유</Text>
                 </Pressable>
-                {items.length > 0 ? (
+                {visibleItems.length > 0 ? (
                   <Pressable
                     onPress={handleOpenLatestPost}
                     style={authorScreenStyles.overflowItem}
@@ -595,6 +609,15 @@ export default function Author() {
                     <Text style={authorScreenStyles.overflowItemText}>작가 차단</Text>
                   </Pressable>
                 ) : null}
+                <Pressable
+                  onPress={() => {
+                    setOverflowOpen(false);
+                    openSupport();
+                  }}
+                  style={authorScreenStyles.overflowItem}
+                >
+                  <Text style={authorScreenStyles.overflowItemText}>도움말 및 지원</Text>
+                </Pressable>
                 <Pressable
                   onPress={() => {
                     setOverflowOpen(false);
@@ -666,10 +689,10 @@ export default function Author() {
       handleOpenLatestPost,
       handleShareAuthor,
       isFollowing,
-      items,
       joinedAtLabel,
       name,
       openGuidelines,
+      openSupport,
       postCount,
       profileCosmetics,
       promptBlockAuthor,
@@ -679,6 +702,7 @@ export default function Author() {
       overflowOpen,
       sort,
       totalLikes,
+      visibleItems,
     ]
   );
 
@@ -721,7 +745,7 @@ export default function Author() {
       />
 
       <FlatList<Post>
-        data={items}
+        data={visibleItems}
         keyExtractor={(item) => item.id}
         contentContainerStyle={authorScreenStyles.listContent}
         ListHeaderComponent={listHeader}
@@ -758,7 +782,7 @@ export default function Author() {
             );
           }
 
-          if (postsLoading && items.length > 0) {
+          if (postsLoading && visibleItems.length > 0) {
             return (
               <View style={authorScreenStyles.listFooter}>
                 <AppLoading />
@@ -772,7 +796,7 @@ export default function Author() {
       <SafetyReasonModal
         visible={reportReasonVisible}
         title="작가 신고"
-        description="운영 검토 큐에 접수돼요. 기타 사유를 선택하면 자세한 설명을 함께 보낼 수 있어요."
+        description="신고가 접수되면 운영팀이 24시간 내 검토하고, 위반 시 콘텐츠 삭제 및 계정 제재가 이루어질 수 있어요."
         reasons={userSafetyReasons}
         detailMaxLength={reportDetailMaxLength}
         detailRequiredReasonCodes={reportDetailRequiredReasonCodes}

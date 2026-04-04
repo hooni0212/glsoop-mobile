@@ -12,12 +12,14 @@ type Props = {
   testID?: string;
   likeTestID?: string;
   likeDisabled?: boolean;
+  moreTestID?: string;
 
   // (선택) 액션
   liked?: boolean;
   bookmarked?: boolean;
   onLikePress?: () => void;
   onBookmarkPress?: () => void;
+  onMorePress?: () => void;
 };
 
 export function FeedCard({
@@ -26,10 +28,12 @@ export function FeedCard({
   testID,
   likeTestID,
   likeDisabled,
+  moreTestID,
   liked = false,
   bookmarked = false,
   onLikePress,
   onBookmarkPress,
+  onMorePress,
 }: Props) {
   const author = post.author?.name || "익명";
   const timeLabel = formatRelativeKorean(post.createdAt);
@@ -38,10 +42,27 @@ export function FeedCard({
 
   return (
     <Pressable style={styles.card} onPress={onPress} testID={testID}>
-      {/* 제목 */}
-      <Text style={styles.title} numberOfLines={1}>
-        {post.title || "(제목 없음)"}
-      </Text>
+      <View style={styles.titleRow}>
+        <Text style={styles.title} numberOfLines={1}>
+          {post.title || "(제목 없음)"}
+        </Text>
+        {onMorePress ? (
+          <Pressable
+            onPress={onMorePress}
+            hitSlop={10}
+            style={styles.moreBtn}
+            testID={moreTestID}
+            accessibilityRole="button"
+            accessibilityLabel="게시글 안전 메뉴 열기"
+          >
+            <Ionicons
+              name="ellipsis-horizontal"
+              size={18}
+              color={tokens.colors.textMuted}
+            />
+          </Pressable>
+        ) : null}
+      </View>
 
       {/* 내용 요약 */}
       {!!post.excerpt && (
@@ -104,6 +125,9 @@ export function FeedCard({
 
 const styles = StyleSheet.create({
   card: {
+    width: "100%",
+    maxWidth: 760,
+    alignSelf: "center",
     backgroundColor: tokens.colors.surface,
     borderRadius: tokens.radius.xl,
     paddingVertical: 20,
@@ -114,13 +138,28 @@ const styles = StyleSheet.create({
 
     ...softCardShadowStyle,
   },
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+  },
 
   title: {
+    flex: 1,
     fontSize: 20,
     fontWeight: "800",
     letterSpacing: -0.3,
     color: tokens.colors.text,
     marginBottom: 12,
+  },
+  moreBtn: {
+    width: 34,
+    height: 34,
+    marginTop: -4,
+    marginRight: -4,
+    borderRadius: tokens.radius.pill,
+    alignItems: "center",
+    justifyContent: "center",
   },
 
   excerpt: {

@@ -142,7 +142,7 @@ export function AuthGate() {
     return <Redirect href={buildAuthRoute("/(auth)", pathname)} />;
   }
 
-  return <PublicUgcNoticeGate active={!token && !inAuthGroup && isPublicUgc} />;
+  return <PublicUgcNoticeGate active={!inAuthGroup && isPublicUgc} />;
 }
 
 const styles = StyleSheet.create({

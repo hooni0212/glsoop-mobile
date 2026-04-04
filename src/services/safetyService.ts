@@ -1,4 +1,9 @@
 import { apiDelete, apiGet, apiPost } from "@/lib/api";
+import {
+  addBlockedUserId,
+  removeBlockedUserId,
+  replaceBlockedUserIds,
+} from "@/features/safety/blockedUsersStore";
 
 type ReportResponse = {
   ok?: boolean;
@@ -112,7 +117,9 @@ export async function reportPost(input: {
   );
 
   return {
-    message: response.message ?? "게시글 신고가 운영 검토 큐에 접수되었어요.",
+    message:
+      response.message ??
+      "신고가 접수되었습니다. 운영팀이 검토 후 24시간 내 조치합니다. 위반 시 콘텐츠 삭제 및 계정 제재가 이루어질 수 있습니다.",
     reportId: response.report_id ?? null,
     status: response.status ?? null,
   };
@@ -134,7 +141,9 @@ export async function reportUser(input: {
   );
 
   return {
-    message: response.message ?? "사용자 신고가 운영 검토 큐에 접수되었어요.",
+    message:
+      response.message ??
+      "신고가 접수되었습니다. 운영팀이 검토 후 24시간 내 조치합니다. 위반 시 콘텐츠 삭제 및 계정 제재가 이루어질 수 있습니다.",
     reportId: response.report_id ?? null,
     status: response.status ?? null,
   };
@@ -155,10 +164,12 @@ export async function blockUserById(input: {
     "사용자 차단에 실패했어요."
   );
 
+  addBlockedUserId(String(input.userId));
+
   return {
     message:
       response.message ??
-      "사용자를 차단했어요. 내 화면에서 이 사용자의 글과 프로필이 숨겨지고 운영 검토 큐에도 접수돼요.",
+      "사용자를 차단했어요. 이 사용자의 글과 프로필이 내 화면에서 즉시 숨겨지고, 운영 기준 위반 여부는 검토 후 조치될 수 있어요.",
     hiddenPostCount: Number(response.hidden_post_count ?? 0),
     reportId: response.report_id ?? null,
     alreadyBlocked: Boolean(response.already_blocked),
@@ -170,6 +181,8 @@ export async function unblockUserById(userId: string) {
     await apiDelete<BlockResponse>(`/api/users/${encodeURIComponent(userId)}/block`),
     "사용자 차단 해제에 실패했어요."
   );
+
+  removeBlockedUserId(userId);
 
   return {
     message: response.message ?? "사용자 차단을 해제했어요.",
@@ -183,7 +196,7 @@ export async function listBlockedUsers() {
     "차단 목록을 불러오지 못했어요."
   );
 
-  return Array.isArray(response.blocks)
+  const items = Array.isArray(response.blocks)
     ? response.blocks.map(
         (item): BlockedUser => ({
           userId: String(item.user_id ?? ""),
@@ -195,4 +208,7 @@ export async function listBlockedUsers() {
         })
       )
     : [];
+
+  replaceBlockedUserIds(items.map((item) => item.userId));
+  return items;
 }

@@ -22,7 +22,7 @@
 
 1. `차단(block)`은 개인 기능이다.
 2. `신고(report)`는 운영 검토 큐 접수 기능이다.
-3. 차단 시 더 이상 `safety_reports`에 `source='block'` 신규 레코드를 만들지 않는다.
+3. 현재 서버는 App Review 대응 기준으로 차단 시 `safety_reports`에 `source='block'` 레코드를 함께 생성한다.
 4. 모바일은 서버 응답을 SSOT로 삼고, optimistic UI를 쓰더라도 최종 상태는 서버 응답으로 맞춘다.
 
 ---
@@ -193,8 +193,8 @@
 
 비고:
 
-- `report_id`는 하위호환용 필드이며 항상 `null`로 해석한다.
-- 차단은 운영 신고를 자동 생성하지 않는다.
+- `report_id`는 App Review 대응 기준으로 `source='block'` 운영 검토 큐 레코드 ID를 돌려줄 수 있다.
+- 차단은 개인 숨김 기능이면서 동시에 운영 검토 큐에 참고용 레코드를 생성할 수 있다.
 
 ### DELETE `/api/users/:userId/block`
 

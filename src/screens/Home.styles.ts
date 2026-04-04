@@ -21,6 +21,9 @@ export const homeScreenStyles = StyleSheet.create({
 
 export const homeHeaderStyles = StyleSheet.create({
   header: {
+    width: "100%",
+    maxWidth: 820,
+    alignSelf: "center",
     paddingTop: tokens.space.sm,
     paddingHorizontal: tokens.space.xl,
     paddingBottom: tokens.space.sm,
@@ -77,6 +80,9 @@ export const categoryChipsStyles = StyleSheet.create({
 
 export const feedSectionStyles = StyleSheet.create({
   listContent: {
+    width: "100%",
+    maxWidth: 820,
+    alignSelf: "center",
     paddingHorizontal: tokens.space.lg,
     paddingBottom: tokens.space.lg,
   },

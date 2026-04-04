@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -13,20 +14,41 @@ import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
 import { FeedCard } from "@/components/FeedCard";
+import { SafetyActionSheet } from "@/components/safety/SafetyActionSheet";
+import { SafetyReasonModal } from "@/components/safety/SafetyReasonModal";
 import { AppEmpty } from "@/components/state/AppEmpty";
 import { AppError } from "@/components/state/AppError";
 import { AppLoading } from "@/components/state/AppLoading";
 import { useSearch, type SearchAuthor } from "@/features/search/useSearch";
+import { useRuntimeLegalConfig } from "@/hooks/useRuntimeLegalConfig";
 import { clearRecentSearches, listRecentSearches, saveRecentSearch } from "@/services/searchHistory";
+import { blockUserById, pickSafetyReasons, reportPost } from "@/services/safetyService";
 import { tokens } from "@/theme/tokens";
 import { formatKstDateDot, toTimestampMs } from "@/lib/dateTime";
 import { blurActiveElementBeforeRouteChange } from "@/lib/webFocus";
+import { getLegalDocumentUrl, getSupportUrl } from "@/config/release";
+import { openExternalUrl } from "@/lib/externalLinks";
+import { ApiError } from "@/lib/errors";
+import { buildAuthRoute } from "@/lib/authRedirect";
+import { useAuth } from "@/auth/AuthContext";
+import { useToast } from "@/feedback/ToastProvider";
+import {
+  filterBlockedAuthors,
+  filterBlockedPosts,
+  useBlockedUserIds,
+} from "@/features/safety/blockedUsersStore";
+import { resolveRuntimeLegalDocumentUrl } from "@/services/runtimeConfigService";
+import type { Post } from "@/types/post";
 
 type SearchTabKey = "posts" | "authors";
 type PostSortKey = "popular" | "latest";
 type AuthorSortKey = "activity" | "recent";
 
 export default function SearchScreen() {
+  const { token, signOut } = useAuth();
+  const { showToast } = useToast();
+  const { config: runtimeLegalConfig } = useRuntimeLegalConfig();
+  const blockedUserIds = useBlockedUserIds();
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [activeTab, setActiveTab] = useState<SearchTabKey>("posts");
@@ -34,6 +56,12 @@ export default function SearchScreen() {
   const [postSort, setPostSort] = useState<PostSortKey>("popular");
   const [authorSort, setAuthorSort] = useState<AuthorSortKey>("activity");
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
+  const [selectedSafetyPost, setSelectedSafetyPost] = useState<Post | null>(null);
+  const [safetyMenuVisible, setSafetyMenuVisible] = useState(false);
+  const [reportReasonVisible, setReportReasonVisible] = useState(false);
+  const [blockConfirmVisible, setBlockConfirmVisible] = useState(false);
+  const [reportSubmitting, setReportSubmitting] = useState(false);
+  const [blockSubmitting, setBlockSubmitting] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -94,6 +122,15 @@ export default function SearchScreen() {
     loadMore,
   } = useSearch(debouncedQuery);
   const hasQuery = debouncedQuery.length > 0;
+  const postSafetyReasons = pickSafetyReasons(runtimeLegalConfig?.safety.reportReasons, "post");
+  const userSafetyReasons = pickSafetyReasons(runtimeLegalConfig?.safety.reportReasons, "user");
+  const reportDetailMaxLength = runtimeLegalConfig?.safety.detailMaxLength;
+  const reportDetailRequiredReasonCodes = runtimeLegalConfig?.safety.detailRequiredReasonCodes;
+  const legalGuidelinesUrl = resolveRuntimeLegalDocumentUrl(
+    runtimeLegalConfig,
+    "guidelines",
+    getLegalDocumentUrl("guidelines")
+  );
 
   const displayPosts = useMemo(() => {
     const next = [...posts];
@@ -117,6 +154,10 @@ export default function SearchScreen() {
     });
     return next;
   }, [posts, postSort]);
+  const visiblePosts = useMemo(
+    () => filterBlockedPosts(displayPosts, blockedUserIds),
+    [blockedUserIds, displayPosts]
+  );
 
   const displayAuthors = useMemo(() => {
     const next = [...authors];
@@ -140,26 +181,137 @@ export default function SearchScreen() {
     });
     return next;
   }, [authors, authorSort]);
+  const visibleAuthors = useMemo(
+    () => filterBlockedAuthors(displayAuthors, blockedUserIds),
+    [blockedUserIds, displayAuthors]
+  );
 
-  const activeCount = activeTab === "posts" ? displayPosts.length : displayAuthors.length;
+  const activeCount = activeTab === "posts" ? visiblePosts.length : visibleAuthors.length;
   const activeHasMore = activeTab === "posts" ? hasMorePosts : hasMoreAuthors;
 
   useEffect(() => {
     if (!hasQuery || loading || error || manualTabSelection) return;
 
-    if (activeTab === "posts" && displayPosts.length === 0 && displayAuthors.length > 0) {
+    if (activeTab === "posts" && visiblePosts.length === 0 && visibleAuthors.length > 0) {
       setActiveTab("authors");
       return;
     }
 
-    if (activeTab === "authors" && displayAuthors.length === 0 && displayPosts.length > 0) {
+    if (activeTab === "authors" && visibleAuthors.length === 0 && visiblePosts.length > 0) {
       setActiveTab("posts");
     }
-  }, [activeTab, displayAuthors.length, displayPosts.length, error, hasQuery, loading, manualTabSelection]);
+  }, [activeTab, error, hasQuery, loading, manualTabSelection, visibleAuthors.length, visiblePosts.length]);
 
   useEffect(() => {
     setManualTabSelection(false);
   }, [debouncedQuery]);
+
+  const promptAuthForAction = useCallback(
+    (message: string) => {
+      Alert.alert("로그인이 필요해요", message, [
+        { text: "나중에", style: "cancel" },
+        {
+          text: "로그인",
+          onPress: () => router.push(buildAuthRoute("/(auth)", "/search")),
+        },
+      ]);
+    },
+    []
+  );
+
+  const handleAuthError = useCallback(async () => {
+    await signOut();
+    promptAuthForAction("로그인 상태가 만료되었어요. 다시 로그인하면 이어서 사용할 수 있어요.");
+  }, [promptAuthForAction, signOut]);
+
+  const handleOpenGuidelines = useCallback(() => {
+    void openExternalUrl(legalGuidelinesUrl).catch(() => {
+      showToast("커뮤니티 가이드라인을 열지 못했어요. 잠시 후 다시 시도해주세요.", {
+        tone: "error",
+      });
+    });
+  }, [legalGuidelinesUrl, showToast]);
+
+  const handleOpenSupport = useCallback(() => {
+    void openExternalUrl(getSupportUrl()).catch(() => {
+      showToast("지원 페이지를 열지 못했어요. 잠시 후 다시 시도해주세요.", {
+        tone: "error",
+      });
+    });
+  }, [showToast]);
+
+  const submitPostReport = useCallback(
+    async (reasonCode: string, detail?: string) => {
+      if (!token) {
+        promptAuthForAction("신고는 로그인한 회원만 할 수 있어요.");
+        return;
+      }
+      if (!selectedSafetyPost?.id) return;
+
+      setReportSubmitting(true);
+      try {
+        const result = await reportPost({
+          postId: selectedSafetyPost.id,
+          reasonCode,
+          detail,
+        });
+        setReportReasonVisible(false);
+        showToast(result.message, { tone: "success" });
+      } catch (err) {
+        if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
+          await handleAuthError();
+          return;
+        }
+        showToast(
+          err instanceof Error ? err.message : "신고를 접수하지 못했어요. 잠시 후 다시 시도해주세요.",
+          { tone: "error" }
+        );
+      } finally {
+        setReportSubmitting(false);
+      }
+    },
+    [handleAuthError, promptAuthForAction, selectedSafetyPost?.id, showToast, token]
+  );
+
+  const submitBlockAuthor = useCallback(async () => {
+    if (!selectedSafetyPost?.author?.id) return;
+    if (!token) {
+      promptAuthForAction("차단은 로그인한 회원만 할 수 있어요.");
+      return;
+    }
+
+    setBlockSubmitting(true);
+    try {
+      const result = await blockUserById({
+        userId: selectedSafetyPost.author.id,
+        reasonCode: userSafetyReasons[0]?.code || "harassment",
+        contextPostId: selectedSafetyPost.id,
+      });
+      setBlockConfirmVisible(false);
+      setSafetyMenuVisible(false);
+      showToast(result.message, { tone: "success" });
+      await refetch();
+    } catch (err) {
+      if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
+        await handleAuthError();
+        return;
+      }
+      showToast(
+        err instanceof Error ? err.message : "차단 처리에 실패했어요. 잠시 후 다시 시도해주세요.",
+        { tone: "error" }
+      );
+    } finally {
+      setBlockSubmitting(false);
+    }
+  }, [
+    handleAuthError,
+    promptAuthForAction,
+    refetch,
+    selectedSafetyPost,
+    showToast,
+    token,
+    userSafetyReasons,
+  ]);
 
   const showRecent = !hasQuery && !loading && recentSearches.length > 0;
   const showPrompt = !hasQuery && !loading && recentSearches.length === 0;
@@ -330,8 +482,8 @@ export default function SearchScreen() {
           />
         ) : null}
 
-        {hasQuery && !showLoading && !showError && activeTab === "posts" && displayPosts.length > 0
-          ? displayPosts.map((post) => (
+        {hasQuery && !showLoading && !showError && activeTab === "posts" && visiblePosts.length > 0
+          ? visiblePosts.map((post) => (
               <View key={post.id} style={styles.itemWrap}>
                 <FeedCard
                   post={post}
@@ -341,13 +493,18 @@ export default function SearchScreen() {
                     router.push(`/posts/${post.id}`);
                   }}
                   testID={`search-post-card-${post.id}`}
+                  onMorePress={() => {
+                    setSelectedSafetyPost(post);
+                    setSafetyMenuVisible(true);
+                  }}
+                  moreTestID={`search-post-more-btn-${post.id}`}
                 />
               </View>
             ))
           : null}
 
-        {hasQuery && !showLoading && !showError && activeTab === "authors" && displayAuthors.length > 0
-          ? displayAuthors.map((author) => (
+        {hasQuery && !showLoading && !showError && activeTab === "authors" && visibleAuthors.length > 0
+          ? visibleAuthors.map((author) => (
               <AuthorResultCard
                 key={author.id}
                 author={author}
@@ -375,6 +532,97 @@ export default function SearchScreen() {
           </Pressable>
         ) : null}
       </ScrollView>
+
+      <SafetyActionSheet
+        visible={safetyMenuVisible}
+        title="게시글 안전 메뉴"
+        description="검색 결과 카드에서도 바로 신고, 작성자 차단, 가이드라인, 지원 경로를 확인할 수 있어요."
+        onRequestClose={() => setSafetyMenuVisible(false)}
+        actions={[
+          {
+            label: "게시글 신고",
+            onPress: () => {
+              setSafetyMenuVisible(false);
+              setReportReasonVisible(true);
+            },
+            testID: "search-post-report-btn",
+          },
+          {
+            label: "작성자 차단",
+            variant: "danger",
+            onPress: () => {
+              setSafetyMenuVisible(false);
+              setBlockConfirmVisible(true);
+            },
+            testID: "search-post-block-btn",
+          },
+          {
+            label: "커뮤니티 가이드라인",
+            variant: "ghost",
+            onPress: () => {
+              setSafetyMenuVisible(false);
+              handleOpenGuidelines();
+            },
+          },
+          {
+            label: "도움말 및 지원",
+            variant: "ghost",
+            onPress: () => {
+              setSafetyMenuVisible(false);
+              handleOpenSupport();
+            },
+          },
+          {
+            label: "닫기",
+            variant: "ghost",
+            onPress: () => setSafetyMenuVisible(false),
+          },
+        ]}
+      />
+
+      <SafetyActionSheet
+        visible={blockConfirmVisible}
+        title="작성자 차단"
+        description={`${selectedSafetyPost?.author?.name || "이 사용자"}의 글과 프로필이 내 화면에서 즉시 숨겨집니다. 운영 기준 위반 여부는 검토 후 조치될 수 있어요. 계속할까요?`}
+        onRequestClose={() => {
+          if (blockSubmitting) return;
+          setBlockConfirmVisible(false);
+        }}
+        actions={[
+          {
+            label: blockSubmitting ? "차단 처리 중..." : "차단하기",
+            variant: "danger",
+            disabled: blockSubmitting,
+            onPress: () => {
+              if (blockSubmitting) return;
+              void submitBlockAuthor();
+            },
+            testID: "search-post-block-confirm-btn",
+          },
+          {
+            label: "취소",
+            variant: "ghost",
+            disabled: blockSubmitting,
+            onPress: () => setBlockConfirmVisible(false),
+          },
+        ]}
+      />
+
+      <SafetyReasonModal
+        visible={reportReasonVisible}
+        title="게시글 신고"
+        description="신고가 접수되면 운영팀이 24시간 내 검토하고, 위반 시 콘텐츠 삭제 및 계정 제재가 이루어질 수 있어요."
+        reasons={postSafetyReasons}
+        detailMaxLength={reportDetailMaxLength}
+        detailRequiredReasonCodes={reportDetailRequiredReasonCodes}
+        submitLabel="신고 접수"
+        submitting={reportSubmitting}
+        onClose={() => {
+          if (reportSubmitting) return;
+          setReportReasonVisible(false);
+        }}
+        onSubmit={({ reasonCode, detail }) => submitPostReport(reasonCode, detail)}
+      />
     </SafeAreaView>
   );
 }
@@ -462,6 +710,9 @@ const styles = StyleSheet.create({
     backgroundColor: tokens.colors.bg,
   },
   topBar: {
+    width: "100%",
+    maxWidth: 820,
+    alignSelf: "center",
     paddingHorizontal: tokens.space.lg,
     paddingTop: tokens.space.xs,
     paddingBottom: tokens.space.sm,
@@ -489,6 +740,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   tabRow: {
+    width: "100%",
+    maxWidth: 820,
+    alignSelf: "center",
     flexDirection: "row",
     gap: tokens.space.sm,
     paddingHorizontal: tokens.space.lg,
@@ -524,6 +778,9 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   content: {
+    width: "100%",
+    maxWidth: 820,
+    alignSelf: "center",
     paddingHorizontal: tokens.space.lg,
     paddingBottom: tokens.space.lg,
   },

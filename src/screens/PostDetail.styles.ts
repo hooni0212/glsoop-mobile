@@ -51,6 +51,9 @@ export function createPostDetailStyles(actionBarHeight: number) {
 
     // --- Scroll ---
     scrollContent: {
+      width: "100%",
+      maxWidth: 820,
+      alignSelf: "center",
       paddingHorizontal: tokens.space.xl,
       paddingTop: tokens.space.sm,
       paddingBottom: contentBottomPad,

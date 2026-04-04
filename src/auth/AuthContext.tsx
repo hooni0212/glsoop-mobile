@@ -3,6 +3,7 @@ import React from "react";
 import { clearBookmarks } from "@/features/bookmarks/bookmarkStore";
 import { resetMyCosmeticsSnapshot } from "@/features/cosmetics/useMyCosmetics";
 import { clearLikes } from "@/features/likes/likeStore";
+import { clearBlockedUserIds } from "@/features/safety/blockedUsersStore";
 import { apiPost } from "@/lib/api";
 import { clearAuthToken, getAuthToken, setAuthToken } from "@/lib/authToken";
 
@@ -39,6 +40,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signIn = React.useCallback(async (nextToken: string) => {
     clearLikes();
     clearBookmarks();
+    clearBlockedUserIds();
     resetMyCosmeticsSnapshot();
     await setAuthToken(nextToken);
     setToken(nextToken);
@@ -54,6 +56,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setToken(null);
     clearLikes();
     clearBookmarks();
+    clearBlockedUserIds();
     resetMyCosmeticsSnapshot();
   }, []);
 

@@ -190,12 +190,16 @@ const styles = StyleSheet.create({
     height: 40,
   },
   content: {
+    width: "100%",
+    maxWidth: 760,
+    alignSelf: "center",
     paddingHorizontal: tokens.space.xl,
     paddingTop: tokens.space.md,
     paddingBottom: tokens.space.xl,
     gap: tokens.space.lg as any,
   },
   heroCard: {
+    width: "100%",
     borderWidth: 1,
     borderColor: tokens.colors.border,
     borderRadius: tokens.radius.xl,
@@ -214,6 +218,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   card: {
+    width: "100%",
     borderWidth: 1,
     borderColor: tokens.colors.border,
     borderRadius: tokens.radius.xl,
@@ -328,6 +333,7 @@ const styles = StyleSheet.create({
     color: tokens.colors.text,
   },
   noteCard: {
+    width: "100%",
     borderRadius: tokens.radius.xl,
     backgroundColor: tokens.colors.green050,
     padding: tokens.space.lg,

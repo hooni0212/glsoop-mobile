@@ -28,6 +28,7 @@ type Props<Item extends { id: string | number }> = {
   onPressItem: (id: Item["id"]) => void;
   onLikePress?: (id: Item["id"]) => void;
   onBookmarkPress?: (id: Item["id"]) => void;
+  onMorePress?: (item: Item) => void;
   getLikeDisabled?: (id: Item["id"]) => boolean;
 };
 
@@ -43,6 +44,7 @@ export function FeedSection<Item extends { id: string | number }>({
   onPressItem,
   onLikePress,
   onBookmarkPress,
+  onMorePress,
   getLikeDisabled,
 }: Props<Item>) {
   const dock = useBottomDock();
@@ -91,6 +93,7 @@ export function FeedSection<Item extends { id: string | number }>({
           onPressItem={onPressItem}
           onLikePress={onLikePress}
           onBookmarkPress={onBookmarkPress}
+          onMorePress={onMorePress}
           getLikeDisabled={getLikeDisabled}
         />
       )}
@@ -103,12 +106,14 @@ function FeedSectionItem<Item extends { id: string | number }>({
   onPressItem,
   onLikePress,
   onBookmarkPress,
+  onMorePress,
   getLikeDisabled,
 }: {
   item: Item;
   onPressItem: (id: Item["id"]) => void;
   onLikePress?: (id: Item["id"]) => void;
   onBookmarkPress?: (id: Item["id"]) => void;
+  onMorePress?: (item: Item) => void;
   getLikeDisabled?: (id: Item["id"]) => boolean;
 }) {
   const fallbackLiked = Boolean((item as any).viewer?.isLiked);
@@ -129,7 +134,9 @@ function FeedSectionItem<Item extends { id: string | number }>({
       onPress={() => onPressItem(item.id)}
       onLikePress={() => onLikePress?.(item.id)}
       onBookmarkPress={() => onBookmarkPress?.(item.id)}
+      onMorePress={onMorePress ? () => onMorePress(item) : undefined}
       likeTestID={`feed-like-btn-${item.id}`}
+      moreTestID={`feed-more-btn-${item.id}`}
       likeDisabled={getLikeDisabled ? getLikeDisabled(item.id) : false}
     />
   );

@@ -237,12 +237,16 @@ const styles = StyleSheet.create({
     height: 40,
   },
   content: {
+    width: "100%",
+    maxWidth: 760,
+    alignSelf: "center",
     paddingHorizontal: tokens.space.xl,
     paddingTop: tokens.space.md,
     paddingBottom: tokens.space.xl,
     gap: tokens.space.lg as any,
   },
   heroCard: {
+    width: "100%",
     borderWidth: 1,
     borderColor: tokens.colors.border,
     borderRadius: tokens.radius.xl,
@@ -268,6 +272,7 @@ const styles = StyleSheet.create({
     gap: tokens.space.sm as any,
   },
   card: {
+    width: "100%",
     borderWidth: 1,
     borderColor: tokens.colors.border,
     borderRadius: tokens.radius.xl,
