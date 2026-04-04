@@ -7,6 +7,7 @@ import { AppBootScreen } from "@/components/state/AppBootScreen";
 import { buildAuthRoute } from "@/lib/authRedirect";
 import { apiGet } from "@/lib/api";
 import { ApiError } from "@/lib/errors";
+import { logger } from "@/lib/logger";
 import { isProtectedRoute, isPublicUgcRoute } from "@/lib/routeAccess";
 
 import { PublicUgcNoticeGate } from "./PublicUgcNoticeGate";
@@ -34,7 +35,7 @@ export function AuthGate() {
   const inAuthGroup = segments[0] === "(auth)";
   const needsAuth = isProtectedRoute(pathname, segments as string[]);
   const isPublicUgc = isPublicUgcRoute(pathname, segments as string[]);
-  const shouldBlockForValidation = validating && validatedKey === null;
+  const shouldBlockForValidation = needsAuth && validating && validatedKey === null;
 
   React.useEffect(() => {
     latestRouteRef.current = { inAuthGroup, needsAuth, pathname };
@@ -106,9 +107,13 @@ export function AuthGate() {
           }
           return;
         }
-        if (validatedKey === null && latestRoute.needsAuth) {
-          router.replace(buildAuthRoute("/(auth)", latestRoute.pathname));
-        }
+        logger.warn("[auth] session validation failed without auth error", {
+          pathname: latestRoute.pathname,
+          inAuthGroup: latestRoute.inAuthGroup,
+          needsAuth: latestRoute.needsAuth,
+          status: error instanceof ApiError ? error.status : undefined,
+          error,
+        });
       } finally {
         if (!cancelled) {
           setValidating(false);

@@ -93,12 +93,12 @@ test.describe("웹 인증 세션 유지", () => {
     await page.getByTestId("login-submit-btn").click();
 
     await expect(page).toHaveURL(/\/(\(tabs\))?\/?$/);
-    await expect(page.getByText("글숲")).toBeVisible();
+    await expect(page.getByText("글숲", { exact: true })).toBeVisible();
     await expect.poll(() => getAuthToken(page)).toBe(COOKIE_SESSION_TOKEN);
 
     await page.reload();
     await expect(page).toHaveURL(/\/(\(tabs\))?\/?$/);
-    await expect(page.getByText("글숲")).toBeVisible();
+    await expect(page.getByText("글숲", { exact: true })).toBeVisible();
     await expect.poll(() => getAuthToken(page)).toBe(COOKIE_SESSION_TOKEN);
   });
 
@@ -139,5 +139,46 @@ test.describe("웹 인증 세션 유지", () => {
     await expect(page.getByText("일상의 작은 순간들을 기록하고")).toBeVisible();
     await expect(page).toHaveURL(/\/\?redirect=%2Fprofile-customize$/);
     await expect.poll(() => getAuthToken(page)).toBeNull();
+  });
+
+  test("세션 확인이 500으로 잠시 실패해도 보호 화면에서 로그인으로 튕기지 않는다", async ({
+    page,
+  }) => {
+    await page.route("**/api/**", async (route) => {
+      if (isApiRequest(route, "/api/me")) {
+        await route.fulfill({
+          status: 500,
+          contentType: "application/json",
+          body: JSON.stringify({
+            ok: false,
+            code: "INTERNAL_ERROR",
+            message: "잠시 후 다시 시도해주세요.",
+          }),
+        });
+        return;
+      }
+
+      if (isApiRequest(route, "/api/logout")) {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ ok: true }),
+        });
+        return;
+      }
+
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ ok: true }),
+      });
+    });
+
+    await setAuthToken(page, COOKIE_SESSION_TOKEN);
+    await page.goto("/profile-customize");
+
+    await expect(page.getByTestId("profile-customize-screen")).toBeVisible();
+    await expect(page).toHaveURL(/\/profile-customize$/);
+    await expect.poll(() => getAuthToken(page)).toBe(COOKIE_SESSION_TOKEN);
   });
 });
