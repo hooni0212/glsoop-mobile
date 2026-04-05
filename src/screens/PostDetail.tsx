@@ -635,6 +635,7 @@ export default function PostDetail() {
               type={post.type}
               layout={postLayout}
               versionSeed={`${title}|${content}|${JSON.stringify((post as any)?.layoutJson ?? null)}`}
+              renderImages={post.renderImages ?? null}
             />
 
             {canManagePost ? (

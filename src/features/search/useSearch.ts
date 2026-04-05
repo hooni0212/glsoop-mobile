@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { apiGet } from "@/lib/api";
 import { normalizeApiError, type AppErrorModel } from "@/lib/errors";
 import { normalizePostPreviewText } from "@/lib/postContent";
+import { normalizePostRenderImageFields } from "@/lib/postRenderImages";
 import { normalizePublicDisplayName, pickOptionalText } from "@/lib/publicDisplayName";
 import type { Post, PostType } from "@/types/post";
 
@@ -90,6 +91,7 @@ function normalizeSearchPost(value: unknown): Post | null {
       isLiked: false,
       isBookmarked: false,
     },
+    ...normalizePostRenderImageFields(row, { fallbackPostId: id }),
   };
 }
 

@@ -1,10 +1,12 @@
 import { tokens } from "@/theme/tokens";
 import { softCardShadowStyle } from "@/theme/shadows";
+import { resolvePostRenderImages } from "@/lib/postRenderImages";
 import type { Post } from "@/types/post";
 import { formatRelativeKorean } from "@/lib/dateTime";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Image } from "expo-image";
 
 type Props = {
   post: Post;
@@ -37,8 +39,12 @@ export function FeedCard({
 }: Props) {
   const author = post.author?.name || "익명";
   const timeLabel = formatRelativeKorean(post.createdAt);
-
   const likeCount = post.stats?.likeCount ?? 0;
+  const renderImages = resolvePostRenderImages(post);
+  const primaryImage = renderImages?.primaryImage || "";
+  const pageCount = renderImages?.pageCount ?? 1;
+  const showRenderedImage = Boolean(primaryImage);
+  const showPageBadge = showRenderedImage && pageCount > 1;
 
   return (
     <Pressable style={styles.card} onPress={onPress} testID={testID}>
@@ -64,8 +70,24 @@ export function FeedCard({
         ) : null}
       </View>
 
+      {showRenderedImage ? (
+        <View style={styles.renderedImageWrap}>
+          {showPageBadge ? (
+            <View style={styles.renderedPageBadge}>
+              <Text style={styles.renderedPageBadgeText}>{pageCount}장</Text>
+            </View>
+          ) : null}
+          <Image
+            source={{ uri: primaryImage }}
+            style={styles.renderedImage}
+            contentFit="cover"
+            transition={120}
+          />
+        </View>
+      ) : null}
+
       {/* 내용 요약 */}
-      {!!post.excerpt && (
+      {!showRenderedImage && !!post.excerpt && (
         <Text style={styles.excerpt} numberOfLines={2}>
           {post.excerpt}
         </Text>
@@ -151,6 +173,35 @@ const styles = StyleSheet.create({
     letterSpacing: -0.3,
     color: tokens.colors.text,
     marginBottom: 12,
+  },
+  renderedImageWrap: {
+    position: "relative",
+    marginBottom: 16,
+    borderRadius: tokens.radius.xl,
+    overflow: "hidden",
+    backgroundColor: "#f4ead8",
+    borderWidth: 1,
+    borderColor: "rgba(86,62,32,0.08)",
+  },
+  renderedImage: {
+    width: "100%",
+    aspectRatio: 500 / 666,
+    backgroundColor: "#f4ead8",
+  },
+  renderedPageBadge: {
+    position: "absolute",
+    top: 12,
+    right: 12,
+    zIndex: 2,
+    borderRadius: tokens.radius.pill,
+    backgroundColor: "rgba(63,47,28,0.78)",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  renderedPageBadgeText: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: "#fffaf4",
   },
   moreBtn: {
     width: 34,

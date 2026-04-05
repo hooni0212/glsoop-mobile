@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { apiGet } from "@/lib/api";
 import { normalizeApiError, type AppErrorModel } from "@/lib/errors";
 import { buildPostExcerpt } from "@/lib/postContent";
+import { normalizePostRenderImageFields } from "@/lib/postRenderImages";
 import { normalizePublicDisplayName } from "@/lib/publicDisplayName";
 import type { Post } from "@/types/post";
 
@@ -92,6 +93,7 @@ function normalizeRelatedPost(row: any): Post {
       isLiked: parseFlag(row?.user_liked, row?.liked, row?.isLiked),
       isBookmarked: parseFlag(row?.user_bookmarked, row?.bookmarked, row?.isBookmarked),
     },
+    ...normalizePostRenderImageFields(row, { fallbackPostId: id }),
   };
 }
 

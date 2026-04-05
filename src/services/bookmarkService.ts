@@ -1,5 +1,6 @@
 import { apiDelete, apiGet, apiPatch, apiPost } from "@/lib/api";
 import { buildPostExcerpt } from "@/lib/postContent";
+import { normalizePostRenderImageFields } from "@/lib/postRenderImages";
 import { normalizePublicDisplayName } from "@/lib/publicDisplayName";
 import type { Post } from "@/types/post";
 
@@ -132,6 +133,7 @@ function normalizeBookmarkPost(row: any): Post {
       isLiked: userLiked,
       isBookmarked: userBookmarked,
     },
+    ...normalizePostRenderImageFields(row, { fallbackPostId: id }),
   };
 }
 

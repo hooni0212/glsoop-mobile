@@ -1,6 +1,7 @@
 import { apiGet } from "@/lib/api";
 import { normalizeApiError, type AppErrorModel } from "@/lib/errors";
 import { normalizePostReadText, splitPostParagraphs } from "@/lib/postContent";
+import { normalizePostRenderImageFields } from "@/lib/postRenderImages";
 import { normalizePublicDisplayName } from "@/lib/publicDisplayName";
 import type { Post } from "@/types/post";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -96,6 +97,7 @@ function normalizePostDetail(row: any): any {
     paragraphs: splitPostParagraphs(contentRaw),
     contentRaw,
     layoutJson: row?.layout_json ?? row?.layoutJson ?? null,
+    ...normalizePostRenderImageFields(row, { fallbackPostId: id }),
   };
 
   return post as Post & { content?: string; contentRaw?: string };

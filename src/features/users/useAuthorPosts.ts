@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { apiGet } from "@/lib/api";
 import { normalizeApiError, type AppErrorModel } from "@/lib/errors";
 import { buildPostExcerpt } from "@/lib/postContent";
+import { normalizePostRenderImageFields } from "@/lib/postRenderImages";
 import { normalizePublicDisplayName } from "@/lib/publicDisplayName";
 import type { Post } from "@/types/post";
 
@@ -120,6 +121,7 @@ function normalizePost(row: any): Post {
       isLiked: userLiked,
       isBookmarked: userBookmarked,
     },
+    ...normalizePostRenderImageFields(row, { fallbackPostId: id }),
   };
 
   return post as Post;

@@ -16,6 +16,7 @@ import {
 import { apiGet } from "@/lib/api";
 import { normalizeApiError } from "@/lib/errors";
 import { buildPostExcerpt } from "@/lib/postContent";
+import { normalizePostRenderImageFields } from "@/lib/postRenderImages";
 import { normalizePublicDisplayName, pickOptionalText } from "@/lib/publicDisplayName";
 import { deletePost } from "@/services/postService";
 import { tokens } from "@/theme/tokens";
@@ -110,6 +111,7 @@ function normalizePost(row: any): Post {
       isLiked: parseFlag(row?.user_liked, row?.liked, row?.isLiked),
       isBookmarked: parseFlag(row?.user_bookmarked, row?.bookmarked, row?.isBookmarked),
     },
+    ...normalizePostRenderImageFields(row, { fallbackPostId: id }),
   };
 }
 
