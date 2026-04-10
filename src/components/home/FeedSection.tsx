@@ -136,6 +136,7 @@ function FeedSectionItem<Item extends { id: string | number }>({
       onBookmarkPress={() => onBookmarkPress?.(item.id)}
       onMorePress={onMorePress ? () => onMorePress(item) : undefined}
       likeTestID={`feed-like-btn-${item.id}`}
+      bookmarkTestID={`feed-bookmark-btn-${item.id}`}
       moreTestID={`feed-more-btn-${item.id}`}
       likeDisabled={getLikeDisabled ? getLikeDisabled(item.id) : false}
     />

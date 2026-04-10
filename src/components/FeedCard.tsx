@@ -5,7 +5,13 @@ import type { Post } from "@/types/post";
 import { formatRelativeKorean } from "@/lib/dateTime";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  type GestureResponderEvent,
+} from "react-native";
 import { Image } from "expo-image";
 
 type Props = {
@@ -13,6 +19,7 @@ type Props = {
   onPress?: () => void;
   testID?: string;
   likeTestID?: string;
+  bookmarkTestID?: string;
   likeDisabled?: boolean;
   moreTestID?: string;
 
@@ -29,6 +36,7 @@ export function FeedCard({
   onPress,
   testID,
   likeTestID,
+  bookmarkTestID,
   likeDisabled,
   moreTestID,
   liked = false,
@@ -45,6 +53,10 @@ export function FeedCard({
   const pageCount = renderImages?.pageCount ?? 1;
   const showRenderedImage = Boolean(primaryImage);
   const showPageBadge = showRenderedImage && pageCount > 1;
+  const stopCardPress = (event: GestureResponderEvent, action?: () => void) => {
+    event.stopPropagation?.();
+    action?.();
+  };
 
   return (
     <Pressable style={styles.card} onPress={onPress} testID={testID}>
@@ -54,7 +66,7 @@ export function FeedCard({
         </Text>
         {onMorePress ? (
           <Pressable
-            onPress={onMorePress}
+            onPress={(event) => stopCardPress(event, onMorePress)}
             hitSlop={10}
             style={styles.moreBtn}
             testID={moreTestID}
@@ -107,7 +119,7 @@ export function FeedCard({
 
         <View style={styles.actionsRow}>
           <Pressable
-            onPress={onLikePress}
+            onPress={(event) => stopCardPress(event, onLikePress)}
             hitSlop={10}
             style={styles.actionBtn}
             disabled={likeDisabled}
@@ -129,9 +141,10 @@ export function FeedCard({
           </Pressable>
 
           <Pressable
-            onPress={onBookmarkPress}
+            onPress={(event) => stopCardPress(event, onBookmarkPress)}
             hitSlop={10}
             style={[styles.actionBtn, { marginLeft: 14 }]}
+            testID={bookmarkTestID}
           >
             <Ionicons
               name={bookmarked ? "bookmark" : "bookmark-outline"}

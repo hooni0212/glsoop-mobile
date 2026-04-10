@@ -1,6 +1,5 @@
 import React from "react";
 import {
-  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -11,6 +10,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router, usePathname } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
+import { SafetyActionSheet } from "@/components/safety/SafetyActionSheet";
 import { AppEmpty } from "@/components/state/AppEmpty";
 import { AppError } from "@/components/state/AppError";
 import { AppLoading } from "@/components/state/AppLoading";
@@ -32,6 +32,7 @@ export default function AccountCenterBlockedUsersScreen() {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<ReturnType<typeof normalizeApiError> | null>(null);
   const [busyUserId, setBusyUserId] = React.useState<string | null>(null);
+  const [pendingUnblockUser, setPendingUnblockUser] = React.useState<BlockedUser | null>(null);
 
   const loadBlockedUsers = React.useCallback(async () => {
     setLoading(true);
@@ -51,42 +52,39 @@ export default function AccountCenterBlockedUsersScreen() {
     void loadBlockedUsers();
   }, [loadBlockedUsers]);
 
-  const confirmUnblock = React.useCallback(
-    (item: BlockedUser) => {
-      Alert.alert(
-        "차단 해제",
-        `${item.displayName} 사용자의 차단을 해제할까요?`,
-        [
-          { text: "취소", style: "cancel" },
-          {
-            text: "차단 해제",
-            onPress: () => {
-              void (async () => {
-                setBusyUserId(item.userId);
-                try {
-                  const result = await unblockUserById(item.userId);
-                  setItems((current) =>
-                    current.filter((entry) => entry.userId !== item.userId)
-                  );
-                  showToast(result.message, { tone: "success" });
-                } catch (e) {
-                  const normalized = normalizeApiError(e);
-                  if (normalized.kind === "auth") {
-                    router.replace(buildAuthRoute("/(auth)", pathname));
-                    return;
-                  }
-                  showToast(normalized.description || normalized.title, { tone: "error" });
-                } finally {
-                  setBusyUserId((current) => (current === item.userId ? null : current));
-                }
-              })();
-            },
-          },
-        ]
+  const openUnblockSheet = React.useCallback((item: BlockedUser) => {
+    setPendingUnblockUser(item);
+  }, []);
+
+  const closeUnblockSheet = React.useCallback(() => {
+    if (busyUserId) return;
+    setPendingUnblockUser(null);
+  }, [busyUserId]);
+
+  const confirmUnblock = React.useCallback(async () => {
+    if (!pendingUnblockUser || busyUserId) return;
+
+    setBusyUserId(pendingUnblockUser.userId);
+    try {
+      const result = await unblockUserById(pendingUnblockUser.userId);
+      setItems((current) =>
+        current.filter((entry) => entry.userId !== pendingUnblockUser.userId)
       );
-    },
-    [pathname, showToast]
-  );
+      setPendingUnblockUser(null);
+      showToast(result.message, { tone: "success" });
+    } catch (e) {
+      const normalized = normalizeApiError(e);
+      if (normalized.kind === "auth") {
+        router.replace(buildAuthRoute("/(auth)", pathname));
+        return;
+      }
+      showToast(normalized.description || normalized.title, { tone: "error" });
+    } finally {
+      setBusyUserId((current) =>
+        current === pendingUnblockUser.userId ? null : current
+      );
+    }
+  }, [busyUserId, pathname, pendingUnblockUser, showToast]);
 
   if (loading) {
     return (
@@ -168,12 +166,13 @@ export default function AccountCenterBlockedUsersScreen() {
                   </View>
 
                   <Pressable
-                    onPress={() => confirmUnblock(item)}
+                    onPress={() => openUnblockSheet(item)}
                     style={[
                       styles.unblockBtn,
                       busyUserId === item.userId && styles.disabledBtn,
                     ]}
                     disabled={busyUserId === item.userId}
+                    testID={`blocked-user-unblock-btn-${item.userId}`}
                   >
                     <Text style={styles.unblockBtnText}>
                       {busyUserId === item.userId ? "처리 중..." : "차단 해제"}
@@ -185,6 +184,42 @@ export default function AccountCenterBlockedUsersScreen() {
           </View>
         )}
       </ScrollView>
+
+      <SafetyActionSheet
+        visible={!!pendingUnblockUser}
+        title="차단 해제"
+        description={
+          pendingUnblockUser
+            ? `${pendingUnblockUser.displayName} 사용자의 차단을 해제할까요? 해제하면 이 사용자의 글과 프로필이 다시 보일 수 있어요.`
+            : ""
+        }
+        onRequestClose={closeUnblockSheet}
+        actions={[
+          {
+            label:
+              pendingUnblockUser && busyUserId === pendingUnblockUser.userId
+                ? "차단 해제 중..."
+                : "차단 해제",
+            variant: "danger",
+            disabled:
+              !pendingUnblockUser ||
+              (pendingUnblockUser != null && busyUserId === pendingUnblockUser.userId),
+            onPress: () => {
+              void confirmUnblock();
+            },
+            testID: "blocked-user-unblock-confirm-btn",
+          },
+          {
+            label: "취소",
+            variant: "ghost",
+            disabled:
+              !pendingUnblockUser ||
+              (pendingUnblockUser != null && busyUserId === pendingUnblockUser.userId),
+            onPress: closeUnblockSheet,
+            testID: "blocked-user-unblock-cancel-btn",
+          },
+        ]}
+      />
     </SafeAreaView>
   );
 }

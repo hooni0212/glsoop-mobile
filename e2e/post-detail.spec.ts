@@ -201,6 +201,35 @@ test.describe("글 상세 화면", () => {
     await expect(page.getByText("읽는중", { exact: true })).toBeVisible();
   });
 
+  test("모바일 뷰포트에서도 하단 액션 버튼이 보이고 동작한다", async ({ page }) => {
+    let likeToggleCalls = 0;
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await setupApiRoutes(page);
+    await page.route("**/api/posts/101/toggle-like", async (route) => {
+      likeToggleCalls += 1;
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ ok: true, liked: true, like_count: 5 }),
+      });
+    });
+
+    await setAuthToken(page, "mock-token-post-detail-mobile-actions");
+    await openPostDetailFromHome(page);
+
+    await expect(page.getByTestId("post-like-btn")).toBeVisible();
+    await expect(page.getByTestId("post-bookmark-btn")).toBeVisible();
+    await expect(page.getByTestId("post-share-btn")).toBeVisible();
+
+    await page.getByTestId("post-like-btn").click();
+    await expect.poll(() => likeToggleCalls).toBe(1);
+    await expect(page).toHaveURL(/\/posts\/101/);
+
+    await page.getByTestId("post-bookmark-btn").click();
+    await expect(page.getByText("북마크 폴더 선택")).toBeVisible();
+  });
+
   test("공유 성공 시 성공 토스트를 표시한다", async ({ page }) => {
     const shareEventRequests: Array<Record<string, unknown>> = [];
     await page.addInitScript(() => {

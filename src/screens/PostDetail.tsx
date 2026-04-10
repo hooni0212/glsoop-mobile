@@ -35,12 +35,12 @@ import {
   Modal,
   Platform,
   Pressable,
-  SafeAreaView,
   ScrollView,
   Share,
   Text,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import {
   addPostToBookmarkList,
   BookmarkList,
@@ -563,7 +563,7 @@ export default function PostDetail() {
   }, []);
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
       {/* ✅ 고정 TopBar (기존 UX 유지) */}
       <PostTopBar
         onPressBack={onPressBack}

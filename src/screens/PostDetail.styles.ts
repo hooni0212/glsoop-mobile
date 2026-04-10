@@ -13,6 +13,7 @@ export function createPostDetailStyles(actionBarHeight: number) {
     safe: {
       flex: 1,
       backgroundColor: "#ebe4d8",
+      position: "relative",
     },
 
     // --- Header ---
@@ -206,6 +207,8 @@ export function createPostDetailStyles(actionBarHeight: number) {
       left: 0,
       right: 0,
       bottom: 0,
+      zIndex: 30,
+      elevation: 16,
       paddingHorizontal: tokens.space.xl,
       backgroundColor: tokens.colors.surfaceStrong,
       borderTopWidth: 1,
@@ -213,6 +216,10 @@ export function createPostDetailStyles(actionBarHeight: number) {
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-around",
+      shadowColor: tokens.shadow.color,
+      shadowOpacity: Math.max(tokens.shadow.opacity * 0.6, 0.08),
+      shadowRadius: tokens.shadow.radius,
+      shadowOffset: { width: 0, height: -Math.max(tokens.shadow.offsetY, 4) },
     },
     actionBtn: {
       alignItems: "center",
