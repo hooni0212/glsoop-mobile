@@ -372,9 +372,9 @@ export function createWriteStyles() {
       backgroundColor: "rgba(255,249,241,0.92)",
       borderWidth: 1,
       borderColor: "rgba(86,62,32,0.08)",
+      gap: 10,
     },
     layoutDockHeader: {
-      marginBottom: 8,
       gap: 4,
     },
     layoutDockTitle: {
@@ -388,6 +388,49 @@ export function createWriteStyles() {
       fontWeight: "700",
       color: "rgba(76,57,34,0.62)",
       letterSpacing: -0.2,
+    },
+    layoutSectionCard: {
+      borderRadius: 16,
+      padding: 12,
+      backgroundColor: "rgba(255,255,255,0.74)",
+      borderWidth: 1,
+      borderColor: "rgba(86,62,32,0.08)",
+    },
+    layoutSectionCardMuted: {
+      backgroundColor: "rgba(252,247,239,0.62)",
+      borderColor: "rgba(86,62,32,0.06)",
+    },
+    layoutSectionHeader: {
+      gap: 4,
+      marginBottom: 4,
+    },
+    layoutSectionTitle: {
+      fontSize: 13,
+      fontWeight: "900",
+      color: "#3b2d1d",
+      letterSpacing: -0.2,
+    },
+    layoutSectionHint: {
+      fontSize: 12,
+      fontWeight: "700",
+      color: "rgba(76,57,34,0.62)",
+      letterSpacing: -0.2,
+    },
+    layoutAdvancedToggle: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 12,
+    },
+    layoutAdvancedToggleCopy: {
+      flex: 1,
+      gap: 4,
+    },
+    layoutAdvancedPanel: {
+      marginTop: 10,
+      paddingTop: 10,
+      borderTopWidth: 1,
+      borderTopColor: "rgba(86,62,32,0.08)",
     },
     layoutMetrics: {
       marginTop: 8,

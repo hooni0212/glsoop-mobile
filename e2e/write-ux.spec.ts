@@ -183,6 +183,32 @@ test.describe("Write 임시저장 UX", () => {
     expect(layoutJson?.footer_box?.letter_spacing).toBeUndefined();
   });
 
+  test("S2-2: 세부 조정은 기본 닫힘이며 열면 위치/크기 미세 조정이 가능하다", async ({ page }) => {
+    await clearDrafts(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/write");
+
+    await expect(page.getByTestId("write-layout-advanced-toggle")).toBeVisible();
+    await expect(page.getByTestId("write-layout-advanced-panel")).toHaveCount(0);
+    await expect(page.getByTestId("write-layout-nudge-left")).toHaveCount(0);
+    await expect(page.getByTestId("write-layout-resize-width-dec")).toHaveCount(0);
+
+    const metricsBefore = await page.getByTestId("write-layout-metrics").innerText();
+
+    await page.getByTestId("write-layout-advanced-toggle").click();
+    await expect(page.getByTestId("write-layout-advanced-panel")).toBeVisible();
+    await expect(page.getByTestId("write-layout-nudge-left")).toBeVisible();
+    await expect(page.getByTestId("write-layout-resize-width-dec")).toBeVisible();
+
+    await page.getByTestId("write-layout-nudge-right").click();
+    const metricsAfterNudge = await page.getByTestId("write-layout-metrics").innerText();
+    expect(metricsAfterNudge).not.toBe(metricsBefore);
+
+    await page.getByTestId("write-layout-resize-height-inc").click();
+    const metricsAfterResize = await page.getByTestId("write-layout-metrics").innerText();
+    expect(metricsAfterResize).not.toBe(metricsAfterNudge);
+  });
+
   test("S3: 작성 중 X confirm (취소/그냥 닫기/임시 저장하기)", async ({ page }) => {
     await clearDrafts(page);
 

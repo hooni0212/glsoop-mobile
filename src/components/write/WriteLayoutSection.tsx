@@ -1,4 +1,5 @@
 import React from "react";
+import { Ionicons } from "@expo/vector-icons";
 import { Pressable, Text, View } from "react-native";
 
 import {
@@ -65,7 +66,9 @@ function OptionRow({
     useNearestMatch && typeof selected === "number"
       ? findNearestOptionValue(
           selected,
-          options.filter((item): item is { value: number; label: string } => typeof item.value === "number")
+          options.filter(
+            (item): item is { value: number; label: string } => typeof item.value === "number"
+          )
         )
       : selected;
 
@@ -118,6 +121,7 @@ export function WriteLayoutSection({
   onNudgeBox,
   onResizeBox,
 }: Props) {
+  const [advancedOpen, setAdvancedOpen] = React.useState(false);
   const isTitleBox = activeBoxId === "title_box";
   const activeBox = isTitleBox ? layout.titleBox : layout.bodyBox;
   const activeStyle = getActiveStyle(layout, activeBoxId);
@@ -140,105 +144,170 @@ export function WriteLayoutSection({
         <Text style={styles.layoutDockHint}>{activeLabel} 박스 서식을 조절할 수 있어요.</Text>
       </View>
 
-      <View style={styles.layoutBlock}>
-        <Text style={styles.label}>활성 박스</Text>
-        <View style={styles.layoutOptionRow}>
-          {BOX_ITEMS.map((item) => {
-            const active = item.id === activeBoxId;
-            return (
-              <Pressable
-                key={item.id}
-                onPress={() => onSelectBox(item.id)}
-                style={[styles.layoutOption, active && styles.layoutOptionActive]}
-                testID={`write-layout-box-${item.id}`}
-              >
-                <Text style={[styles.layoutOptionText, active && styles.layoutOptionTextActive]}>
-                  {item.label}
-                </Text>
-              </Pressable>
-            );
-          })}
+      <View style={styles.layoutSectionCard}>
+        <View style={styles.layoutSectionHeader}>
+          <Text style={styles.layoutSectionTitle}>빠른 조정</Text>
+          <Text style={styles.layoutSectionHint}>자주 쓰는 옵션만 먼저 보여줘요.</Text>
         </View>
-        <Text style={styles.layoutMetrics}>
-          x {activeBox.x.toFixed(3)} · y {activeBox.y.toFixed(3)} · w {activeBox.w.toFixed(3)} · h{" "}
-          {activeBox.h.toFixed(3)}
-        </Text>
+
+        <View style={styles.layoutBlock}>
+          <Text style={styles.label}>활성 박스</Text>
+          <View style={styles.layoutOptionRow}>
+            {BOX_ITEMS.map((item) => {
+              const active = item.id === activeBoxId;
+              return (
+                <Pressable
+                  key={item.id}
+                  onPress={() => onSelectBox(item.id)}
+                  style={[styles.layoutOption, active && styles.layoutOptionActive]}
+                  testID={`write-layout-box-${item.id}`}
+                >
+                  <Text style={[styles.layoutOptionText, active && styles.layoutOptionTextActive]}>
+                    {item.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+          <Text style={styles.layoutMetrics} testID="write-layout-metrics">
+            x {activeBox.x.toFixed(3)} · y {activeBox.y.toFixed(3)} · w {activeBox.w.toFixed(3)} · h{" "}
+            {activeBox.h.toFixed(3)}
+          </Text>
+        </View>
+
+        <OptionRow
+          label={`${activeLabel} 정렬`}
+          options={LAYOUT_ALIGN_OPTIONS}
+          selected={activeStyle.align}
+          onSelect={(value) => onChangeAlign(value as LayoutAlign)}
+          styles={styles}
+          testIDPrefix={`write-layout-${isTitleBox ? "title" : "body"}-align`}
+        />
+
+        <OptionRow
+          label={`${activeLabel} 크기`}
+          options={LAYOUT_SCALE_OPTIONS}
+          selected={activeStyle.fontScale}
+          onSelect={(value) => onChangeScale(value as number)}
+          styles={styles}
+          useNearestMatch
+          testIDPrefix={`write-layout-${isTitleBox ? "title" : "body"}-scale`}
+        />
+
+        <OptionRow
+          label={`${activeLabel} 행간`}
+          options={lineHeightOptions}
+          selected={activeStyle.lineHeight}
+          onSelect={(value) => onChangeLineHeight(value as number)}
+          styles={styles}
+          useNearestMatch
+          testIDPrefix={`write-layout-${isTitleBox ? "title" : "body"}-line-height`}
+        />
+
+        <OptionRow
+          label={`${activeLabel} 자간`}
+          options={LAYOUT_LETTER_SPACING_OPTIONS}
+          selected={typeof activeStyle.letterSpacing === "number" ? activeStyle.letterSpacing : 0}
+          onSelect={(value) => onChangeLetterSpacing(value as number)}
+          styles={styles}
+          useNearestMatch
+          testIDPrefix={`write-layout-${isTitleBox ? "title" : "body"}-letter-spacing`}
+        />
       </View>
 
-      <View style={styles.layoutBlock}>
-        <Text style={styles.label}>위치 조절</Text>
-        <View style={styles.layoutOptionRow}>
-          <Pressable style={styles.layoutOption} onPress={() => onNudgeBox(activeBoxId, "x", -0.02)}>
-            <Text style={styles.layoutOptionText}>왼쪽</Text>
-          </Pressable>
-          <Pressable style={styles.layoutOption} onPress={() => onNudgeBox(activeBoxId, "x", 0.02)}>
-            <Text style={styles.layoutOptionText}>오른쪽</Text>
-          </Pressable>
-          <Pressable style={styles.layoutOption} onPress={() => onNudgeBox(activeBoxId, "y", -0.02)}>
-            <Text style={styles.layoutOptionText}>위로</Text>
-          </Pressable>
-          <Pressable style={styles.layoutOption} onPress={() => onNudgeBox(activeBoxId, "y", 0.02)}>
-            <Text style={styles.layoutOptionText}>아래로</Text>
-          </Pressable>
-        </View>
+      <View style={[styles.layoutSectionCard, styles.layoutSectionCardMuted]}>
+        <Pressable
+          onPress={() => setAdvancedOpen((current) => !current)}
+          style={styles.layoutAdvancedToggle}
+          accessibilityRole="button"
+          accessibilityLabel="세부 조정 열기"
+          testID="write-layout-advanced-toggle"
+        >
+          <View style={styles.layoutAdvancedToggleCopy}>
+            <Text style={styles.layoutSectionTitle}>세부 조정</Text>
+            <Text style={styles.layoutSectionHint}>
+              드래그로 부족할 때만 미세 조정해요.
+            </Text>
+          </View>
+          <Ionicons
+            name={advancedOpen ? "chevron-up" : "chevron-down"}
+            size={18}
+            color="rgba(76,57,34,0.82)"
+          />
+        </Pressable>
+
+        {advancedOpen ? (
+          <View style={styles.layoutAdvancedPanel} testID="write-layout-advanced-panel">
+            <View style={styles.layoutBlock}>
+              <Text style={styles.label}>위치 조절</Text>
+              <View style={styles.layoutOptionRow}>
+                <Pressable
+                  style={styles.layoutOption}
+                  onPress={() => onNudgeBox(activeBoxId, "x", -0.02)}
+                  testID="write-layout-nudge-left"
+                >
+                  <Text style={styles.layoutOptionText}>왼쪽</Text>
+                </Pressable>
+                <Pressable
+                  style={styles.layoutOption}
+                  onPress={() => onNudgeBox(activeBoxId, "x", 0.02)}
+                  testID="write-layout-nudge-right"
+                >
+                  <Text style={styles.layoutOptionText}>오른쪽</Text>
+                </Pressable>
+                <Pressable
+                  style={styles.layoutOption}
+                  onPress={() => onNudgeBox(activeBoxId, "y", -0.02)}
+                  testID="write-layout-nudge-up"
+                >
+                  <Text style={styles.layoutOptionText}>위로</Text>
+                </Pressable>
+                <Pressable
+                  style={styles.layoutOption}
+                  onPress={() => onNudgeBox(activeBoxId, "y", 0.02)}
+                  testID="write-layout-nudge-down"
+                >
+                  <Text style={styles.layoutOptionText}>아래로</Text>
+                </Pressable>
+              </View>
+            </View>
+
+            <View style={styles.layoutBlock}>
+              <Text style={styles.label}>크기 조절</Text>
+              <View style={styles.layoutOptionRow}>
+                <Pressable
+                  style={styles.layoutOption}
+                  onPress={() => onResizeBox(activeBoxId, "w", -0.02)}
+                  testID="write-layout-resize-width-dec"
+                >
+                  <Text style={styles.layoutOptionText}>폭 -</Text>
+                </Pressable>
+                <Pressable
+                  style={styles.layoutOption}
+                  onPress={() => onResizeBox(activeBoxId, "w", 0.02)}
+                  testID="write-layout-resize-width-inc"
+                >
+                  <Text style={styles.layoutOptionText}>폭 +</Text>
+                </Pressable>
+                <Pressable
+                  style={styles.layoutOption}
+                  onPress={() => onResizeBox(activeBoxId, "h", -0.02)}
+                  testID="write-layout-resize-height-dec"
+                >
+                  <Text style={styles.layoutOptionText}>높이 -</Text>
+                </Pressable>
+                <Pressable
+                  style={styles.layoutOption}
+                  onPress={() => onResizeBox(activeBoxId, "h", 0.02)}
+                  testID="write-layout-resize-height-inc"
+                >
+                  <Text style={styles.layoutOptionText}>높이 +</Text>
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        ) : null}
       </View>
-
-      <View style={styles.layoutBlock}>
-        <Text style={styles.label}>크기 조절</Text>
-        <View style={styles.layoutOptionRow}>
-          <Pressable style={styles.layoutOption} onPress={() => onResizeBox(activeBoxId, "w", -0.02)}>
-            <Text style={styles.layoutOptionText}>폭 -</Text>
-          </Pressable>
-          <Pressable style={styles.layoutOption} onPress={() => onResizeBox(activeBoxId, "w", 0.02)}>
-            <Text style={styles.layoutOptionText}>폭 +</Text>
-          </Pressable>
-          <Pressable style={styles.layoutOption} onPress={() => onResizeBox(activeBoxId, "h", -0.02)}>
-            <Text style={styles.layoutOptionText}>높이 -</Text>
-          </Pressable>
-          <Pressable style={styles.layoutOption} onPress={() => onResizeBox(activeBoxId, "h", 0.02)}>
-            <Text style={styles.layoutOptionText}>높이 +</Text>
-          </Pressable>
-        </View>
-      </View>
-
-      <OptionRow
-        label={`${activeLabel} 정렬`}
-        options={LAYOUT_ALIGN_OPTIONS}
-        selected={activeStyle.align}
-        onSelect={(value) => onChangeAlign(value as LayoutAlign)}
-        styles={styles}
-        testIDPrefix={`write-layout-${isTitleBox ? "title" : "body"}-align`}
-      />
-
-      <OptionRow
-        label={`${activeLabel} 크기`}
-        options={LAYOUT_SCALE_OPTIONS}
-        selected={activeStyle.fontScale}
-        onSelect={(value) => onChangeScale(value as number)}
-        styles={styles}
-        useNearestMatch
-        testIDPrefix={`write-layout-${isTitleBox ? "title" : "body"}-scale`}
-      />
-
-      <OptionRow
-        label={`${activeLabel} 행간`}
-        options={lineHeightOptions}
-        selected={activeStyle.lineHeight}
-        onSelect={(value) => onChangeLineHeight(value as number)}
-        styles={styles}
-        useNearestMatch
-        testIDPrefix={`write-layout-${isTitleBox ? "title" : "body"}-line-height`}
-      />
-
-      <OptionRow
-        label={`${activeLabel} 자간`}
-        options={LAYOUT_LETTER_SPACING_OPTIONS}
-        selected={typeof activeStyle.letterSpacing === "number" ? activeStyle.letterSpacing : 0}
-        onSelect={(value) => onChangeLetterSpacing(value as number)}
-        styles={styles}
-        useNearestMatch
-        testIDPrefix={`write-layout-${isTitleBox ? "title" : "body"}-letter-spacing`}
-      />
     </View>
   );
 }
