@@ -2,12 +2,15 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { apiGet } from "@/lib/api";
 import { normalizeApiError, type AppErrorModel } from "@/lib/errors";
+import { normalizePostPreviewText } from "@/lib/postContent";
+import { normalizePostRenderImageFields } from "@/lib/postRenderImages";
+import { normalizePublicDisplayName, pickOptionalText } from "@/lib/publicDisplayName";
 import type { Post, PostType } from "@/types/post";
 
 export type SearchAuthor = {
   id: string;
   name: string;
-  nickname: string;
+  nickname: string | null;
   postCount: number;
   followerCount: number;
   latestPostAt: string | null;
@@ -25,6 +28,14 @@ const PAGE_SIZE = 20;
 
 function toText(value: unknown) {
   return typeof value === "string" ? value : "";
+}
+
+function pickFirstText(...values: unknown[]) {
+  for (const value of values) {
+    const next = toText(value);
+    if (next) return next;
+  }
+  return "";
 }
 
 function toIdText(value: unknown) {
@@ -53,15 +64,20 @@ function normalizeSearchPost(value: unknown): Post | null {
   const id = toIdText(row.id);
   if (!id) return null;
 
-  const createdAt = toText(row.created_at) || new Date().toISOString();
-  const authorName = toText(row.author_name) || toText(row.author_nickname) || "익명";
+  const createdAt = pickFirstText(row.createdAt, row.created_at, row.created, row.date) || new Date().toISOString();
+  const authorName = normalizePublicDisplayName(
+    row.display_name,
+    row.author_display_name,
+    row.nickname,
+    row.author_nickname
+  );
   const authorId = toIdText(row.author_id);
 
   return {
     id,
     type: normalizePostCategory(row.category),
     title: toText(row.title) || "(제목 없음)",
-    excerpt: toText(row.excerpt),
+    excerpt: normalizePostPreviewText(row.excerpt),
     createdAt,
     author: {
       id: authorId,
@@ -75,6 +91,7 @@ function normalizeSearchPost(value: unknown): Post | null {
       isLiked: false,
       isBookmarked: false,
     },
+    ...normalizePostRenderImageFields(row, { fallbackPostId: id }),
   };
 }
 
@@ -85,11 +102,11 @@ function normalizeSearchAuthor(value: unknown): SearchAuthor | null {
 
   return {
     id,
-    name: toText(row.name) || "익명 작가",
-    nickname: toText(row.nickname),
+    name: normalizePublicDisplayName(row.display_name, row.nickname),
+    nickname: pickOptionalText(row.nickname),
     postCount: toNumber(row.post_count),
     followerCount: toNumber(row.follower_count),
-    latestPostAt: toText(row.latest_post_at) || null,
+    latestPostAt: pickFirstText(row.latestPostAt, row.latest_post_at) || null,
   };
 }
 

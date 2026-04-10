@@ -1,6 +1,8 @@
 import { apiGet } from "@/lib/api";
 import { normalizeApiError, type AppErrorModel } from "@/lib/errors";
 import { normalizePostReadText, splitPostParagraphs } from "@/lib/postContent";
+import { normalizePostRenderImageFields } from "@/lib/postRenderImages";
+import { normalizePublicDisplayName } from "@/lib/publicDisplayName";
 import type { Post } from "@/types/post";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -57,7 +59,12 @@ function normalizePostDetail(row: any): any {
   const contentRaw = pickFirstString(row?.content, row?.body, row?.html, row?.text);
   const createdAt = pickFirstString(row?.createdAt, row?.created_at, row?.created, row?.date);
 
-  const authorName = pickFirstString(row?.author_name, row?.authorName, row?.nickname, row?.name);
+  const authorName = normalizePublicDisplayName(
+    row?.display_name,
+    row?.author_display_name,
+    row?.nickname,
+    row?.author_nickname
+  );
   const authorId = String(row?.author_id ?? row?.user_id ?? row?.uid ?? "");
 
   const likeCount = pickFirstNumber(row?.like_count, row?.likeCount, row?.likes, row?.likes_count);
@@ -82,7 +89,7 @@ function normalizePostDetail(row: any): any {
     type: category,
     title: title || undefined,
     createdAt,
-    author: { id: authorId || undefined, name: authorName || "익명" },
+    author: { id: authorId || undefined, name: authorName },
     stats: { likeCount, bookmarkCount },
     tags: parseTags(row),
     viewer: { isLiked: userLiked, isBookmarked: userBookmarked },
@@ -90,6 +97,7 @@ function normalizePostDetail(row: any): any {
     paragraphs: splitPostParagraphs(contentRaw),
     contentRaw,
     layoutJson: row?.layout_json ?? row?.layoutJson ?? null,
+    ...normalizePostRenderImageFields(row, { fallbackPostId: id }),
   };
 
   return post as Post & { content?: string; contentRaw?: string };

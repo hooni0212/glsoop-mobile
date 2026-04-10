@@ -1,5 +1,6 @@
 import { StyleSheet } from "react-native";
 
+import { softChipShadowStyle } from "@/theme/shadows";
 import { tokens } from "@/theme/tokens";
 
 /**
@@ -20,6 +21,9 @@ export const homeScreenStyles = StyleSheet.create({
 
 export const homeHeaderStyles = StyleSheet.create({
   header: {
+    width: "100%",
+    maxWidth: 820,
+    alignSelf: "center",
     paddingTop: tokens.space.sm,
     paddingHorizontal: tokens.space.xl,
     paddingBottom: tokens.space.sm,
@@ -62,11 +66,7 @@ export const categoryChipsStyles = StyleSheet.create({
   chipActive: {
     backgroundColor: tokens.colors.green600,
     borderColor: "transparent",
-    shadowColor: tokens.shadow.color,
-    shadowOpacity: tokens.shadow.opacity,
-    shadowRadius: tokens.shadow.radius,
-    shadowOffset: { width: 0, height: tokens.shadow.offsetY },
-    elevation: 1,
+    ...softChipShadowStyle,
   },
   chipText: {
     fontSize: 14,
@@ -80,6 +80,9 @@ export const categoryChipsStyles = StyleSheet.create({
 
 export const feedSectionStyles = StyleSheet.create({
   listContent: {
+    width: "100%",
+    maxWidth: 820,
+    alignSelf: "center",
     paddingHorizontal: tokens.space.lg,
     paddingBottom: tokens.space.lg,
   },

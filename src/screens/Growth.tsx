@@ -16,6 +16,7 @@ import { TopPostsList } from "@/components/growth/TopPostsList";
 import { trackGrowthTelemetry, toGrowthTelemetryError } from "@/features/growth/growthTelemetry";
 import { AppEmpty } from "@/components/state/AppEmpty";
 import { useGrowthData } from "@/features/growth/useGrowthData";
+import { blurActiveElementBeforeRouteChange } from "@/lib/webFocus";
 import { tokens } from "@/theme/tokens";
 
 type ProgressItem = {
@@ -249,6 +250,7 @@ export default function GrowthScreen() {
           error={topPostsError}
           onPressItem={(id) => {
             trackGrowthTelemetry("growth_action_clicked", { action: "open_top_post", postId: id });
+            blurActiveElementBeforeRouteChange();
             router.push(`/posts/${id}`);
           }}
           title="인기 글"

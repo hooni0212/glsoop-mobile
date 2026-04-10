@@ -39,7 +39,6 @@ type EditablePostResponse = {
     category?: PostType;
     hashtags?: string[];
     layout_json?: unknown;
-    content?: string;
   };
 };
 

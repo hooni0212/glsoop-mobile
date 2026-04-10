@@ -2,6 +2,9 @@ import { useCallback, useEffect, useState } from "react";
 
 import { apiGet } from "@/lib/api";
 import { normalizeApiError, type AppErrorModel } from "@/lib/errors";
+import { buildPostExcerpt } from "@/lib/postContent";
+import { normalizePostRenderImageFields } from "@/lib/postRenderImages";
+import { normalizePublicDisplayName } from "@/lib/publicDisplayName";
 import type { Post } from "@/types/post";
 
 type RelatedPostsResponse = {
@@ -9,16 +12,6 @@ type RelatedPostsResponse = {
   message?: string;
   posts?: any[];
 };
-
-function stripHtml(s: string) {
-  return s.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
-}
-
-function toExcerpt(content: any, maxLen = 72) {
-  const raw = typeof content === "string" ? content : "";
-  const plain = stripHtml(raw);
-  return plain.length > maxLen ? `${plain.slice(0, maxLen).trim()}...` : plain;
-}
 
 function pickFirstString(...vals: any[]) {
   for (const value of vals) {
@@ -65,7 +58,12 @@ function normalizeRelatedPost(row: any): Post {
   const title = pickFirstString(row?.title, row?.post_title);
   const content = pickFirstString(row?.content, row?.body, row?.html, row?.text);
   const createdAt = pickFirstString(row?.createdAt, row?.created_at, row?.created, row?.date);
-  const authorName = pickFirstString(row?.author_name, row?.authorName, row?.nickname, row?.name);
+  const authorName = normalizePublicDisplayName(
+    row?.display_name,
+    row?.author_display_name,
+    row?.nickname,
+    row?.author_nickname
+  );
   const authorId = String(row?.author_id ?? row?.user_id ?? row?.uid ?? "");
   const likeCount = pickFirstNumber(row?.like_count, row?.likeCount, row?.likes, row?.likes_count);
   const bookmarkCount = pickFirstNumber(
@@ -80,11 +78,11 @@ function normalizeRelatedPost(row: any): Post {
     id,
     type: category as Post["type"],
     title: title || undefined,
-    excerpt: toExcerpt(content),
+    excerpt: buildPostExcerpt(content, 72),
     createdAt,
     author: {
-      id: authorId || undefined,
-      name: authorName || "익명",
+      id: authorId,
+      name: authorName,
     },
     stats: {
       likeCount,
@@ -95,6 +93,7 @@ function normalizeRelatedPost(row: any): Post {
       isLiked: parseFlag(row?.user_liked, row?.liked, row?.isLiked),
       isBookmarked: parseFlag(row?.user_bookmarked, row?.bookmarked, row?.isBookmarked),
     },
+    ...normalizePostRenderImageFields(row, { fallbackPostId: id }),
   };
 }
 

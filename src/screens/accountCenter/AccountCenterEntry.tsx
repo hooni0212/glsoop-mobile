@@ -1,5 +1,5 @@
 import React from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -20,6 +20,18 @@ const MENU_ITEMS = [
     icon: "shield-checkmark-outline" as const,
   },
   {
+    title: "차단한 사용자",
+    description: "내 화면에서 숨긴 사용자를 확인하고 차단을 해제해요.",
+    route: "/account-center/blocked-users" as const,
+    icon: "ban-outline" as const,
+  },
+  {
+    title: "도움말 및 지원",
+    description: "지원 메일, 지원 페이지, 정책 문서를 한 곳에서 확인해요.",
+    route: "/account-center/support" as const,
+    icon: "help-circle-outline" as const,
+  },
+  {
     title: "계정 관리",
     description: "계정 비활성화와 회원 탈퇴를 진행해요.",
     route: "/account-center/account-closure" as const,
@@ -37,43 +49,49 @@ export default function AccountCenterEntryScreen() {
           style={[styles.sheet, { paddingBottom: Math.max(18, insets.bottom + 8) }]}
           onPress={() => {}}
         >
-          <View style={styles.handle} />
-          <View style={styles.headerRow}>
-            <View style={styles.headerCopy}>
-              <Text style={styles.eyebrow}>ACCOUNT CENTER</Text>
-              <Text style={styles.title}>계정 센터</Text>
-              <Text style={styles.description}>
-                내 정보 화면에서 분리한 설정 항목을 여기서 정리해서 관리해요.
-              </Text>
-            </View>
-            <Pressable
-              onPress={() => router.back()}
-              style={styles.closeBtn}
-              accessibilityRole="button"
-              accessibilityLabel="계정 센터 닫기"
-            >
-              <Ionicons name="close" size={18} color={tokens.colors.text} />
-            </Pressable>
-          </View>
-
-          <View style={styles.menuList}>
-            {MENU_ITEMS.map((item) => (
+          <ScrollView
+            bounces={false}
+            contentContainerStyle={styles.sheetContent}
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.handle} />
+            <View style={styles.headerRow}>
+              <View style={styles.headerCopy}>
+                <Text style={styles.eyebrow}>ACCOUNT CENTER</Text>
+                <Text style={styles.title}>계정 센터</Text>
+                <Text style={styles.description}>
+                  내 정보 화면에서 분리한 설정 항목을 여기서 정리해서 관리해요.
+                </Text>
+              </View>
               <Pressable
-                key={item.route}
-                onPress={() => router.push(item.route)}
-                style={styles.menuItem}
+                onPress={() => router.back()}
+                style={styles.closeBtn}
+                accessibilityRole="button"
+                accessibilityLabel="계정 센터 닫기"
               >
-                <View style={styles.menuIconWrap}>
-                  <Ionicons name={item.icon} size={20} color={tokens.colors.text} />
-                </View>
-                <View style={styles.menuCopy}>
-                  <Text style={styles.menuTitle}>{item.title}</Text>
-                  <Text style={styles.menuDescription}>{item.description}</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={18} color={tokens.colors.textMuted} />
+                <Ionicons name="close" size={18} color={tokens.colors.text} />
               </Pressable>
-            ))}
-          </View>
+            </View>
+
+            <View style={styles.menuList}>
+              {MENU_ITEMS.map((item) => (
+                <Pressable
+                  key={item.route}
+                  onPress={() => router.push(item.route as never)}
+                  style={styles.menuItem}
+                >
+                  <View style={styles.menuIconWrap}>
+                    <Ionicons name={item.icon} size={20} color={tokens.colors.text} />
+                  </View>
+                  <View style={styles.menuCopy}>
+                    <Text style={styles.menuTitle}>{item.title}</Text>
+                    <Text style={styles.menuDescription}>{item.description}</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={18} color={tokens.colors.textMuted} />
+                </Pressable>
+              ))}
+            </View>
+          </ScrollView>
         </Pressable>
       </Pressable>
     </View>
@@ -91,6 +109,10 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.26)",
   },
   sheet: {
+    width: "100%",
+    maxWidth: 560,
+    alignSelf: "center",
+    maxHeight: "88%",
     backgroundColor: tokens.colors.bg,
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
@@ -98,6 +120,9 @@ const styles = StyleSheet.create({
     paddingTop: tokens.space.md,
     gap: tokens.space.lg as any,
     minHeight: 360,
+  },
+  sheetContent: {
+    gap: tokens.space.lg as any,
   },
   handle: {
     alignSelf: "center",

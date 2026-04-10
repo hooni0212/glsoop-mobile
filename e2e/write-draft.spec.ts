@@ -1,7 +1,24 @@
 import { expect, test, type Page } from "@playwright/test";
 
-const AUTH_TOKEN_KEY = "glsoop:auth:token:v1";
+const AUTH_TOKEN = "mock-token-for-write-draft";
+const AUTH_TOKEN_KEY = "glsoop_auth_token_v1";
 const DRAFTS_KEY = "glsoop:write:drafts:v1";
+type CapturedPostPayload = Record<string, any> & {
+  layout_json?: Record<string, any>;
+};
+type DraftSeed = {
+  id: string;
+  title: string;
+  body: string;
+  updatedAt: number;
+  category?: string;
+  layoutJson?: unknown;
+  authNamespace?: string;
+};
+
+function toAuthNamespace(token: string) {
+  return `bearer:${token.slice(0, 16)}`;
+}
 
 async function setAuthToken(page: Page, token: string) {
   await page.goto("/");
@@ -16,7 +33,7 @@ async function setAuthToken(page: Page, token: string) {
 
 async function resetDrafts(
   page: Page,
-  drafts: Array<{ id: string; title: string; body: string; updatedAt: number }> = []
+  drafts: DraftSeed[] = []
 ) {
   await page.goto("/");
   await page.waitForLoadState("domcontentloaded");
@@ -24,7 +41,13 @@ async function resetDrafts(
     ({ key, value }) => {
       localStorage.setItem(key, JSON.stringify(value));
     },
-    { key: DRAFTS_KEY, value: drafts }
+    {
+      key: DRAFTS_KEY,
+      value: drafts.map((draft) => ({
+        ...draft,
+        authNamespace: draft.authNamespace ?? toAuthNamespace(AUTH_TOKEN),
+      })),
+    }
   );
 }
 
@@ -54,7 +77,7 @@ test.describe("글쓰기 임시저장 (웹)", () => {
       });
     });
 
-    await setAuthToken(page, "mock-token-for-write-draft");
+    await setAuthToken(page, AUTH_TOKEN);
   });
 
   test("S1) draft 없음 → 작성 → 자동저장 → 나가기 confirm → 저장하고 닫기 → 복구", async ({ page }) => {
@@ -141,5 +164,84 @@ test.describe("글쓰기 임시저장 (웹)", () => {
     await page.goto("/write-drafts");
     await page.getByTestId("draft-delete-draft-b").click();
     await expect(page.getByTestId("draft-item-draft-b")).toHaveCount(0);
+  });
+
+  test("S4) draft의 행간/자간 layout_json을 복구해서 그대로 전송한다", async ({ page }) => {
+    const capture: { payload?: CapturedPostPayload } = {};
+    await page.route("**/api/posts", async (route) => {
+      if (route.request().method() !== "POST") {
+        await route.fallback();
+        return;
+      }
+
+      capture.payload = route.request().postDataJSON() as CapturedPostPayload;
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ ok: true, post_id: "post-e2e-draft-layout" }),
+      });
+    });
+
+    const now = Date.now();
+    await resetDrafts(page, [
+      {
+        id: "draft-layout",
+        title: "레이아웃 초안",
+        body: "행간 자간이 저장된 본문",
+        category: "essay",
+        layoutJson: {
+          layout_version: 1,
+          unit: "normalized",
+          title_box: {
+            x: 0.336,
+            y: 0.256,
+            w: 0.424,
+            h: 0.122,
+            align: "left",
+            font_scale: 1,
+            line_height: 1.3,
+            letter_spacing: 0.04,
+            hidden: false,
+          },
+          text_box: {
+            x: 0.336,
+            y: 0.364,
+            w: 0.424,
+            h: 0.346,
+            align: "left",
+            font_scale: 1,
+            line_height: 1.45,
+            letter_spacing: -0.02,
+            hidden: false,
+          },
+          footer_box: {
+            x: 0.78,
+            y: 0.9,
+            w: 0.16,
+            h: 0.06,
+            align: "right",
+            font_scale: 1,
+            line_height: 1.1,
+            hidden: false,
+          },
+        },
+        updatedAt: now,
+      },
+    ]);
+
+    await page.goto("/write?draftId=draft-layout");
+    await expect(page.getByTestId("write-title-input")).toHaveValue("레이아웃 초안");
+    await expect(page.getByTestId("write-body-input")).toHaveValue("행간 자간이 저장된 본문");
+
+    const submitBtn = page.getByTestId("write-submit-btn");
+    await submitBtn.click();
+    await submitBtn.click();
+
+    await expect(page.getByText("완료되었어요")).toBeVisible();
+    const layoutJson = capture.payload?.layout_json;
+    expect(layoutJson?.title_box?.line_height).toBe(1.3);
+    expect(layoutJson?.title_box?.letter_spacing).toBe(0.04);
+    expect(layoutJson?.text_box?.line_height).toBe(1.45);
+    expect(layoutJson?.text_box?.letter_spacing).toBe(-0.02);
   });
 });

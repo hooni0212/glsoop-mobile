@@ -17,6 +17,7 @@ export type PostTopBarProps = {
   styles: {
     topBar: any;
     backBtn: any;
+    rightActionBtn?: any;
     topBarSpacer: any;
   };
 };
@@ -41,8 +42,8 @@ export function PostTopBar({
       {rightAction ? (
         <Pressable
           onPress={rightAction.onPress}
-          hitSlop={12}
-          style={styles.backBtn}
+          hitSlop={16}
+          style={styles.rightActionBtn ?? styles.backBtn}
           testID={rightAction.testID}
           accessibilityRole="button"
           accessibilityLabel={rightAction.accessibilityLabel}

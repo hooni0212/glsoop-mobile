@@ -2,6 +2,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { apiGet } from "@/lib/api";
 import { normalizeApiError, type AppErrorModel } from "@/lib/errors";
+import { buildPostExcerpt } from "@/lib/postContent";
+import { normalizePostRenderImageFields } from "@/lib/postRenderImages";
+import { normalizePublicDisplayName } from "@/lib/publicDisplayName";
 import type { Post } from "@/types/post";
 
 type AuthorPostsResponse = {
@@ -17,16 +20,6 @@ type AuthorPostsResponse = {
 
 const PAGE_SIZE = 10;
 export type AuthorPostSort = "newest" | "oldest" | "likes";
-
-function stripHtml(s: string) {
-  return s.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
-}
-
-function toExcerpt(content: any, maxLen = 90) {
-  const raw = typeof content === "string" ? content : "";
-  const plain = stripHtml(raw);
-  return plain.length > maxLen ? plain.slice(0, maxLen) + "…" : plain;
-}
 
 function pickFirstString(...vals: any[]) {
   for (const v of vals) {
@@ -79,11 +72,11 @@ function normalizePost(row: any): Post {
     row?.created,
     row?.date
   );
-  const authorName = pickFirstString(
-    row?.author_name,
-    row?.authorName,
+  const authorName = normalizePublicDisplayName(
+    row?.display_name,
+    row?.author_display_name,
     row?.nickname,
-    row?.name
+    row?.author_nickname
   );
   const authorId = String(row?.author_id ?? row?.user_id ?? row?.uid ?? "");
 
@@ -113,11 +106,11 @@ function normalizePost(row: any): Post {
     id,
     type: category,
     title: title || undefined,
-    excerpt: toExcerpt(content),
+    excerpt: buildPostExcerpt(content, 90),
     createdAt,
     author: {
       id: authorId || undefined,
-      name: authorName || "익명",
+      name: authorName,
     },
     stats: {
       likeCount,
@@ -128,6 +121,7 @@ function normalizePost(row: any): Post {
       isLiked: userLiked,
       isBookmarked: userBookmarked,
     },
+    ...normalizePostRenderImageFields(row, { fallbackPostId: id }),
   };
 
   return post as Post;

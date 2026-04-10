@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Alert, Pressable, RefreshControl, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { usePathname, useRouter } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { GrowthDetailTopBar } from "@/components/growth/GrowthDetailTopBar";
 import { AppEmpty } from "@/components/state/AppEmpty";
@@ -12,6 +13,7 @@ import { refreshMyCosmetics } from "@/features/cosmetics/useMyCosmetics";
 import { trackGrowthTelemetry, toGrowthTelemetryError } from "@/features/growth/growthTelemetry";
 import type { GrowthQuest } from "@/features/growth/useGrowthData";
 import { useGrowthData } from "@/features/growth/useGrowthData";
+import { toTimestampMs } from "@/lib/dateTime";
 import { ApiError, normalizeApiError } from "@/lib/errors";
 import { tokens } from "@/theme/tokens";
 
@@ -95,8 +97,8 @@ export default function QuestsScreen() {
         }),
       }))
       .sort((a, b) => {
-        const aTime = a.startAt ? new Date(a.startAt).getTime() : 0;
-        const bTime = b.startAt ? new Date(b.startAt).getTime() : 0;
+        const aTime = a.startAt ? toTimestampMs(a.startAt) || 0 : 0;
+        const bTime = b.startAt ? toTimestampMs(b.startAt) || 0 : 0;
         return bTime - aTime;
       });
   }, [campaigns]);

@@ -1,6 +1,17 @@
 import { defineConfig } from "@playwright/test";
 
-const webPort = process.env.EXPO_WEB_PORT || "8081";
+function resolveWebPort() {
+  const rawPort = process.env.EXPO_WEB_PORT?.trim();
+  const parsedPort = Number.parseInt(rawPort ?? "", 10);
+
+  if (!Number.isInteger(parsedPort) || parsedPort < 1 || parsedPort > 65_535) {
+    return 8081;
+  }
+
+  return parsedPort;
+}
+
+const webPort = resolveWebPort();
 
 export default defineConfig({
   testDir: "./e2e",
@@ -21,7 +32,7 @@ export default defineConfig({
     timeout: 120_000,
     env: {
       ...process.env,
-      EXPO_WEB_PORT: webPort,
+      EXPO_WEB_PORT: String(webPort),
     },
   },
 });

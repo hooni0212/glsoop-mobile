@@ -1,7 +1,7 @@
 import React, { useMemo, type ReactNode } from "react";
 import { Text, View } from "react-native";
 
-import type { WriteLayoutModel } from "@/lib/postLayout";
+import { toLayoutLetterSpacingPx, type WriteLayoutModel } from "@/lib/postLayout";
 import type { PostType } from "@/types/post";
 
 import { PaperSurface, paperSurfaceStyles } from "./PaperSurface";
@@ -53,6 +53,10 @@ export function PaperReadingCard({
   const bodyAlign = layout.bodyStyle.align;
   const titleAlign = layout.titleStyle.align;
   const footerAlign = layout.footerStyle.align;
+  const titleFontSize = preset.titleSize * layout.titleStyle.fontScale;
+  const bodyFontSize = preset.bodySize * layout.bodyStyle.fontScale;
+  const titleLetterSpacing = toLayoutLetterSpacingPx(titleFontSize, layout.titleStyle.letterSpacing);
+  const bodyLetterSpacing = toLayoutLetterSpacingPx(bodyFontSize, layout.bodyStyle.letterSpacing);
 
   return (
     <PaperSurface eyebrow={eyebrow} hint={hint}>
@@ -71,8 +75,11 @@ export function PaperReadingCard({
               paperSurfaceStyles.serifText,
               {
                 textAlign: titleAlign,
-                fontSize: preset.titleSize * layout.titleStyle.fontScale,
+                fontSize: titleFontSize,
                 lineHeight: Math.round(preset.titleSize * 1.28 * layout.titleStyle.lineHeight),
+                ...(typeof titleLetterSpacing === "number"
+                  ? { letterSpacing: titleLetterSpacing }
+                  : {}),
               },
             ]}
           >
@@ -95,8 +102,11 @@ export function PaperReadingCard({
                   index > 0 ? styles.bodyParagraphGap : null,
                   {
                     textAlign: bodyAlign,
-                    fontSize: preset.bodySize * layout.bodyStyle.fontScale,
+                    fontSize: bodyFontSize,
                     lineHeight: Math.round(preset.bodyLine * layout.bodyStyle.lineHeight),
+                    ...(typeof bodyLetterSpacing === "number"
+                      ? { letterSpacing: bodyLetterSpacing }
+                      : {}),
                   },
                 ]}
               >

@@ -1,9 +1,13 @@
 import React from "react";
-import { Pressable, SafeAreaView, StyleSheet, Text, View } from "react-native";
+import { Image } from "expo-image";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { buildAuthRoute } from "@/lib/authRedirect";
 import { tokens } from "@/theme/tokens";
+
+const glsoopIcon = require("../../assets/images/icon.png");
 
 export default function AuthWelcome() {
   const router = useRouter();
@@ -11,11 +15,11 @@ export default function AuthWelcome() {
   const redirect = params?.redirect ? String(params.redirect) : undefined;
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={styles.safe} edges={["top"]} testID="auth-welcome-screen">
       <View style={styles.container}>
         <View style={styles.hero}>
-          <View style={styles.logo}>
-            <Text style={styles.logoText}>글</Text>
+          <View style={styles.logoFrame}>
+            <Image source={glsoopIcon} style={styles.logoImage} contentFit="cover" transition={120} />
           </View>
           <Text style={styles.title}>글숲</Text>
           <Text style={styles.subtitle}>
@@ -27,6 +31,7 @@ export default function AuthWelcome() {
           <Pressable
             onPress={() => router.push(buildAuthRoute("/(auth)/login", redirect))}
             style={({ pressed }) => [styles.primaryBtn, pressed && styles.primaryBtnPressed]}
+            testID="auth-welcome-login-btn"
           >
             <Text style={styles.primaryText}>로그인</Text>
           </Pressable>
@@ -34,6 +39,7 @@ export default function AuthWelcome() {
           <Pressable
             onPress={() => router.push(buildAuthRoute("/(auth)/signup", redirect))}
             style={({ pressed }) => [styles.secondaryBtn, pressed && styles.secondaryBtnPressed]}
+            testID="auth-welcome-signup-btn"
           >
             <Text style={styles.secondaryText}>회원가입</Text>
           </Pressable>
@@ -54,22 +60,26 @@ const styles = StyleSheet.create({
   },
   hero: {
     alignItems: "center",
-    marginTop: tokens.space.xl,
+    marginTop: tokens.space.xl * 1.4,
     gap: tokens.space.md as any,
   },
-  logo: {
-    width: 88,
-    height: 88,
-    borderRadius: tokens.radius.lg,
-    backgroundColor: tokens.colors.green700,
-    alignItems: "center",
-    justifyContent: "center",
+  logoFrame: {
+    width: 122,
+    height: 122,
+    borderRadius: 30,
+    overflow: "hidden",
+    backgroundColor: "#f4eedf",
+    borderWidth: 1,
+    borderColor: "rgba(45,90,61,0.08)",
     shadowColor: tokens.shadow.color,
     shadowOpacity: tokens.shadow.opacity,
     shadowRadius: tokens.shadow.radius,
     shadowOffset: { width: 0, height: tokens.shadow.offsetY },
   },
-  logoText: { color: "white", fontSize: 34, fontWeight: "900" },
+  logoImage: {
+    width: "100%",
+    height: "100%",
+  },
   title: { fontSize: tokens.font.title, fontWeight: "900", color: tokens.colors.text },
   subtitle: {
     fontSize: tokens.font.body,

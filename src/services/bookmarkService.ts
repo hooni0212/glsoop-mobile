@@ -1,4 +1,7 @@
 import { apiDelete, apiGet, apiPatch, apiPost } from "@/lib/api";
+import { buildPostExcerpt } from "@/lib/postContent";
+import { normalizePostRenderImageFields } from "@/lib/postRenderImages";
+import { normalizePublicDisplayName } from "@/lib/publicDisplayName";
 import type { Post } from "@/types/post";
 
 type ApiResultBase = {
@@ -62,16 +65,6 @@ function parseFlag(...vals: any[]) {
   return false;
 }
 
-function stripHtml(s: string) {
-  return s.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
-}
-
-function toExcerpt(content: any, maxLen = 90) {
-  const raw = typeof content === "string" ? content : "";
-  const plain = stripHtml(raw);
-  return plain.length > maxLen ? plain.slice(0, maxLen) + "…" : plain;
-}
-
 function parseTags(row: any) {
   if (Array.isArray(row?.tags)) return row.tags.map(String).filter(Boolean);
 
@@ -101,7 +94,12 @@ function normalizeBookmarkPost(row: any): Post {
   const title = pickFirstString(row?.title, row?.post_title);
   const content = pickFirstString(row?.content, row?.body, row?.html, row?.text);
   const createdAt = pickFirstString(row?.createdAt, row?.created_at, row?.created, row?.date);
-  const authorName = pickFirstString(row?.author_name, row?.authorName, row?.nickname, row?.name);
+  const authorName = normalizePublicDisplayName(
+    row?.display_name,
+    row?.author_display_name,
+    row?.nickname,
+    row?.author_nickname
+  );
   const authorId = String(row?.author_id ?? row?.user_id ?? row?.uid ?? "");
 
   const likeCount = pickFirstNumber(row?.like_count, row?.likeCount, row?.likes);
@@ -120,12 +118,12 @@ function normalizeBookmarkPost(row: any): Post {
     id,
     type: type as Post["type"],
     title: title || undefined,
-    excerpt: toExcerpt(content),
+    excerpt: buildPostExcerpt(content, 90),
     tags: parseTags(row),
     createdAt,
     author: {
       id: authorId || "",
-      name: authorName || "익명",
+      name: authorName,
     },
     stats: {
       likeCount,
@@ -135,6 +133,7 @@ function normalizeBookmarkPost(row: any): Post {
       isLiked: userLiked,
       isBookmarked: userBookmarked,
     },
+    ...normalizePostRenderImageFields(row, { fallbackPostId: id }),
   };
 }
 

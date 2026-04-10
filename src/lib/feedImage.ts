@@ -1,4 +1,4 @@
-import { buildApiUrl } from "@/lib/api";
+import { apiPost, buildApiUrl } from "@/lib/api";
 import { withPostFontMeta, type PostFontKey } from "@/lib/postContent";
 import { buildLayoutPayload, type WriteLayoutModel } from "@/lib/postLayout";
 
@@ -10,6 +10,48 @@ type PreviewInput = {
   layout: WriteLayoutModel;
   template?: "paper01" | "paper02";
   fontKey?: PostFontKey;
+};
+
+type PreviewSessionResponse = {
+  ok?: boolean;
+  message?: string;
+  image_url?: string;
+  primary_image?: string;
+  images?: string[];
+  has_multiple?: boolean;
+  render_images?: {
+    primary_image?: string;
+    images?: string[];
+    has_multiple?: boolean;
+    page_count?: number;
+    page_cap?: number;
+    is_truncated?: boolean;
+    template?: string;
+    scale?: number;
+    version?: string;
+    preview_session_id?: string;
+    expires_at?: string;
+  };
+};
+
+export type FeedPreviewRenderImages = {
+  imageUrl: string;
+  primaryImage: string;
+  images: string[];
+  hasMultiple: boolean;
+  renderImages: {
+    primaryImage: string;
+    images: string[];
+    hasMultiple: boolean;
+    pageCount: number;
+    pageCap: number;
+    isTruncated: boolean;
+    template?: string;
+    scale?: number;
+    version?: string;
+    previewSessionId?: string;
+    expiresAt?: string;
+  };
 };
 
 function simpleHash(seed: string) {
@@ -50,6 +92,9 @@ export function buildFeedPreviewUrl({
   query.set("layout_align", String(payload.text_box.align));
   query.set("layout_font_scale", String(payload.text_box.font_scale));
   query.set("layout_line_height", String(payload.text_box.line_height));
+  if (typeof payload.text_box.letter_spacing === "number") {
+    query.set("layout_letter_spacing", String(payload.text_box.letter_spacing));
+  }
 
   query.set("layout_title_x", String(payload.title_box.x));
   query.set("layout_title_y", String(payload.title_box.y));
@@ -58,6 +103,9 @@ export function buildFeedPreviewUrl({
   query.set("layout_title_align", String(payload.title_box.align));
   query.set("layout_title_font_scale", String(payload.title_box.font_scale));
   query.set("layout_title_line_height", String(payload.title_box.line_height));
+  if (typeof payload.title_box.letter_spacing === "number") {
+    query.set("layout_title_letter_spacing", String(payload.title_box.letter_spacing));
+  }
 
   query.set("layout_footer_x", String(payload.footer_box.x));
   query.set("layout_footer_y", String(payload.footer_box.y));
@@ -68,6 +116,112 @@ export function buildFeedPreviewUrl({
   query.set("layout_footer_line_height", String(payload.footer_box.line_height));
 
   return buildApiUrl(`/api/feed-images/preview?${query.toString()}`);
+}
+
+function toAbsoluteApiUrl(value: unknown) {
+  const raw = typeof value === "string" ? value.trim() : "";
+  if (!raw) return "";
+  if (/^https?:\/\//i.test(raw)) return raw;
+  if (raw.startsWith("/")) return buildApiUrl(raw);
+  return buildApiUrl(`/${raw}`);
+}
+
+function normalizePreviewImageList(values: unknown) {
+  if (!Array.isArray(values)) return [];
+
+  const seen = new Set<string>();
+  const items: string[] = [];
+
+  for (const value of values) {
+    const next = toAbsoluteApiUrl(value);
+    if (!next || seen.has(next)) continue;
+    seen.add(next);
+    items.push(next);
+  }
+
+  return items;
+}
+
+function parsePositiveInt(value: unknown, fallback: number) {
+  const parsed = Number.parseInt(String(value ?? ""), 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+export async function createFeedPreviewSession({
+  title,
+  content,
+  category,
+  createdAt,
+  layout,
+  template = "paper01",
+  fontKey = "serif",
+}: PreviewInput): Promise<FeedPreviewRenderImages> {
+  const payload = buildLayoutPayload(layout);
+  const response = await apiPost<PreviewSessionResponse>("/api/feed-images/preview/sessions", {
+    title: title || "미리보기 제목",
+    content: withPostFontMeta(content || "", fontKey),
+    content_format: "plain",
+    category: category || "short",
+    template,
+    scale: 1,
+    created_at: createdAt || new Date().toISOString(),
+    layout_json: payload,
+  });
+
+  if (!response?.ok) {
+    throw new Error(response?.message || "미리보기를 불러오지 못했어요.");
+  }
+
+  const primaryImage = toAbsoluteApiUrl(
+    response.primary_image || response.image_url || response.render_images?.primary_image
+  );
+  const topLevelImages = normalizePreviewImageList(response.images);
+  const nestedImages = normalizePreviewImageList(response.render_images?.images);
+  const images =
+    topLevelImages.length > 0
+      ? topLevelImages
+      : nestedImages.length > 0
+        ? nestedImages
+        : primaryImage
+          ? [primaryImage]
+          : [];
+
+  if (!primaryImage && images.length === 0) {
+    throw new Error("미리보기 이미지가 비어 있어요.");
+  }
+
+  const pageCount = Math.max(
+    1,
+    parsePositiveInt(response.render_images?.page_count, images.length || (primaryImage ? 1 : 0))
+  );
+
+  return {
+    imageUrl: primaryImage || images[0] || "",
+    primaryImage: primaryImage || images[0] || "",
+    images: images.length > 0 ? images : primaryImage ? [primaryImage] : [],
+    hasMultiple:
+      response.has_multiple === true ||
+      response.render_images?.has_multiple === true ||
+      pageCount > 1 ||
+      images.length > 1,
+    renderImages: {
+      primaryImage: primaryImage || images[0] || "",
+      images: images.length > 0 ? images : primaryImage ? [primaryImage] : [],
+      hasMultiple:
+        response.has_multiple === true ||
+        response.render_images?.has_multiple === true ||
+        pageCount > 1 ||
+        images.length > 1,
+      pageCount,
+      pageCap: Math.max(1, parsePositiveInt(response.render_images?.page_cap, 8)),
+      isTruncated: response.render_images?.is_truncated === true,
+      template: response.render_images?.template,
+      scale: response.render_images?.scale,
+      version: response.render_images?.version,
+      previewSessionId: response.render_images?.preview_session_id,
+      expiresAt: response.render_images?.expires_at,
+    },
+  };
 }
 
 export function buildRenderedPostImageUrl(postId: string, versionSeed?: unknown) {

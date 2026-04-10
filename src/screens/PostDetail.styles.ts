@@ -13,10 +13,13 @@ export function createPostDetailStyles(actionBarHeight: number) {
     safe: {
       flex: 1,
       backgroundColor: "#ebe4d8",
+      position: "relative",
     },
 
     // --- Header ---
     topBar: {
+      position: "relative",
+      zIndex: 10,
       paddingTop: tokens.space.xs,
       paddingHorizontal: tokens.space.md,
       paddingBottom: tokens.space.xs,
@@ -31,6 +34,16 @@ export function createPostDetailStyles(actionBarHeight: number) {
       alignItems: "center",
       justifyContent: "center",
     },
+    rightActionBtn: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: "rgba(255,250,244,0.84)",
+      borderWidth: 1,
+      borderColor: "rgba(86,62,32,0.12)",
+    },
 
     topBarSpacer: {
       width: 40,
@@ -39,6 +52,9 @@ export function createPostDetailStyles(actionBarHeight: number) {
 
     // --- Scroll ---
     scrollContent: {
+      width: "100%",
+      maxWidth: 820,
+      alignSelf: "center",
       paddingHorizontal: tokens.space.xl,
       paddingTop: tokens.space.sm,
       paddingBottom: contentBottomPad,
@@ -142,16 +158,16 @@ export function createPostDetailStyles(actionBarHeight: number) {
     manageDeleteBtn: {
       flex: 1,
       borderWidth: 1,
-      borderColor: tokens.colors.red300,
+      borderColor: tokens.colors.dangerBorder,
       borderRadius: tokens.radius.lg,
-      backgroundColor: tokens.colors.red100,
+      backgroundColor: tokens.colors.dangerSoft,
       alignItems: "center",
       paddingVertical: 12,
     },
     manageDeleteBtnText: {
       fontSize: tokens.font.small,
       fontWeight: "800",
-      color: tokens.colors.red700,
+      color: tokens.colors.danger,
     },
     relatedHint: {
       fontSize: tokens.font.small,
@@ -191,6 +207,8 @@ export function createPostDetailStyles(actionBarHeight: number) {
       left: 0,
       right: 0,
       bottom: 0,
+      zIndex: 30,
+      elevation: 16,
       paddingHorizontal: tokens.space.xl,
       backgroundColor: tokens.colors.surfaceStrong,
       borderTopWidth: 1,
@@ -198,6 +216,10 @@ export function createPostDetailStyles(actionBarHeight: number) {
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-around",
+      shadowColor: tokens.shadow.color,
+      shadowOpacity: Math.max(tokens.shadow.opacity * 0.6, 0.08),
+      shadowRadius: tokens.shadow.radius,
+      shadowOffset: { width: 0, height: -Math.max(tokens.shadow.offsetY, 4) },
     },
     actionBtn: {
       alignItems: "center",
@@ -249,6 +271,34 @@ export function createPostDetailStyles(actionBarHeight: number) {
       fontSize: tokens.font.small,
       color: tokens.colors.textMuted,
       fontWeight: "700",
+    },
+    modalActionList: {
+      marginTop: 16,
+      gap: 10,
+    },
+    modalActionBtn: {
+      borderRadius: tokens.radius.lg,
+      borderWidth: 1,
+      borderColor: tokens.colors.borderStrong,
+      backgroundColor: tokens.colors.surfaceStrong,
+      alignItems: "center",
+      paddingVertical: 13,
+      paddingHorizontal: tokens.space.md,
+    },
+    modalActionBtnDanger: {
+      borderColor: tokens.colors.dangerBorder,
+      backgroundColor: tokens.colors.dangerSoft,
+    },
+    modalActionBtnGhost: {
+      backgroundColor: tokens.colors.surface,
+    },
+    modalActionText: {
+      fontSize: tokens.font.small,
+      fontWeight: "800",
+      color: tokens.colors.text,
+    },
+    modalActionTextDanger: {
+      color: tokens.colors.danger,
     },
     bookmarkModalLoadingWrap: {
       marginTop: 14,

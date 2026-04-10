@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 
-const AUTH_TOKEN_KEY = "glsoop:auth:token:v1";
+const AUTH_TOKEN_KEY = "glsoop_auth_token_v1";
 
 const HOME_POSTS = [
   {
@@ -179,6 +179,13 @@ async function openPostDetailFromHome(page: Page) {
   await expect(page.getByTestId("post-share-btn")).toBeVisible();
 }
 
+async function chooseShareMode(page: Page, mode: "full" | "title" = "full") {
+  await expect(page.getByText("공유 방식 선택")).toBeVisible();
+  await page.getByText(mode === "full" ? "본문까지 공유" : "제목만 공유", {
+    exact: true,
+  }).click();
+}
+
 test.describe("글 상세 화면", () => {
   test("recent API 실패 시 전체 목록 fallback과 안내 토스트를 표시한다", async ({ page }) => {
     await setupApiRoutes(page, { recentShouldFail: true });
@@ -194,6 +201,35 @@ test.describe("글 상세 화면", () => {
     await expect(page.getByText("읽는중", { exact: true })).toBeVisible();
   });
 
+  test("모바일 뷰포트에서도 하단 액션 버튼이 보이고 동작한다", async ({ page }) => {
+    let likeToggleCalls = 0;
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await setupApiRoutes(page);
+    await page.route("**/api/posts/101/toggle-like", async (route) => {
+      likeToggleCalls += 1;
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ ok: true, liked: true, like_count: 5 }),
+      });
+    });
+
+    await setAuthToken(page, "mock-token-post-detail-mobile-actions");
+    await openPostDetailFromHome(page);
+
+    await expect(page.getByTestId("post-like-btn")).toBeVisible();
+    await expect(page.getByTestId("post-bookmark-btn")).toBeVisible();
+    await expect(page.getByTestId("post-share-btn")).toBeVisible();
+
+    await page.getByTestId("post-like-btn").click();
+    await expect.poll(() => likeToggleCalls).toBe(1);
+    await expect(page).toHaveURL(/\/posts\/101/);
+
+    await page.getByTestId("post-bookmark-btn").click();
+    await expect(page.getByText("북마크 폴더 선택")).toBeVisible();
+  });
+
   test("공유 성공 시 성공 토스트를 표시한다", async ({ page }) => {
     const shareEventRequests: Array<Record<string, unknown>> = [];
     await page.addInitScript(() => {
@@ -207,11 +243,12 @@ test.describe("글 상세 화면", () => {
     await openPostDetailFromHome(page);
 
     await page.getByTestId("post-share-btn").click();
+    await chooseShareMode(page, "full");
     await expect(page.getByText("공유가 완료되었어요.")).toBeVisible();
     await expect.poll(() => shareEventRequests.length).toBe(1);
     await expect.poll(() => shareEventRequests[0]?.result).toBe("shared");
     await expect.poll(() => shareEventRequests[0]?.surface).toBe("post_detail");
-    await expect.poll(() => shareEventRequests[0]?.channel).toBe("system_share_sheet");
+    await expect.poll(() => shareEventRequests[0]?.channel).toBe("share_modal_full");
     await expect.poll(() => typeof shareEventRequests[0]?.request_id).toBe("string");
   });
 
@@ -228,6 +265,7 @@ test.describe("글 상세 화면", () => {
     await openPostDetailFromHome(page);
 
     await page.getByTestId("post-share-btn").click();
+    await chooseShareMode(page, "full");
     await expect.poll(() => shareEventRequests.length).toBe(1);
     await expect.poll(() => shareEventRequests[0]?.result).toBe("dismissed");
     await expect(page.getByText("공유가 완료되었어요.")).toHaveCount(0);
@@ -249,8 +287,90 @@ test.describe("글 상세 화면", () => {
     await openPostDetailFromHome(page);
 
     await page.getByTestId("post-share-btn").click();
+    await chooseShareMode(page, "full");
     await expect(page.getByText("공유에 실패했어요. 잠시 후 다시 시도해주세요.")).toBeVisible();
     await expect.poll(() => shareEventRequests.length).toBe(1);
     await expect.poll(() => shareEventRequests[0]?.result).toBe("failed");
+  });
+
+  test("서버 이미지 실패 시 layout_json 행간/자간으로 fallback 카드와 KST 날짜를 유지한다", async ({ page }) => {
+    await setupApiRoutes(page);
+
+    await page.route("**/api/posts/101", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          post: {
+            ...DETAIL_POST,
+            category: "short",
+            hashtags: [],
+            layout_json: {
+              layout_version: 1,
+              unit: "normalized",
+              title_box: {
+                x: 0.336,
+                y: 0.256,
+                w: 0.424,
+                h: 0.122,
+                align: "center",
+                font_scale: 1,
+                line_height: 1.3,
+                letter_spacing: 0.04,
+                hidden: false,
+              },
+              text_box: {
+                x: 0.336,
+                y: 0.364,
+                w: 0.424,
+                h: 0.346,
+                align: "center",
+                font_scale: 1,
+                line_height: 1.45,
+                letter_spacing: -0.02,
+                hidden: false,
+              },
+              footer_box: {
+                x: 0.78,
+                y: 0.9,
+                w: 0.16,
+                h: 0.06,
+                align: "right",
+                font_scale: 1,
+                line_height: 1.1,
+                hidden: false,
+              },
+            },
+          },
+        }),
+      });
+    });
+
+    await page.route("**/api/feed-images/post/101**", async (route) => {
+      await route.fulfill({
+        status: 500,
+        contentType: "application/json",
+        body: JSON.stringify({ ok: false, message: "render failed" }),
+      });
+    });
+
+    await setAuthToken(page, "mock-token-post-detail-fallback");
+    await openPostDetailFromHome(page);
+
+    await expect(page.getByText("이미지 렌더를 불러오지 못해 텍스트 카드로 보여줘요.")).toBeVisible();
+    await expect(page.getByText("2026년 2월 10일").first()).toBeVisible();
+
+    const titleLetterSpacing = await page
+      .getByText("북마크 모달 테스트 글")
+      .last()
+      .evaluate((node) => Number.parseFloat(window.getComputedStyle(node).letterSpacing || "0"));
+    expect(titleLetterSpacing).toBeGreaterThan(1);
+
+    const bodyLetterSpacing = await page
+      .getByText("북마크 recent fallback과 공유 토스트를 검증하기 위한 본문입니다.")
+      .last()
+      .evaluate((node) => Number.parseFloat(window.getComputedStyle(node).letterSpacing || "0"));
+    expect(bodyLetterSpacing).toBeLessThan(0);
   });
 });

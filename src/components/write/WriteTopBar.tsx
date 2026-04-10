@@ -8,9 +8,10 @@ type Props = {
   canSubmit: boolean;
   onPressClose: () => void;
   onPressSubmit: () => void;
+  submitLabel?: string;
+  submitAccessibilityLabel?: string;
   onPressDrafts?: () => void;
   previewOpen?: boolean;
-  onPressPreview?: () => void;
   isKeyboardVisible?: boolean;
   onPressHideKeyboard?: () => void;
   styles: any;
@@ -21,9 +22,10 @@ export function WriteTopBar({
   canSubmit,
   onPressClose,
   onPressSubmit,
+  submitLabel = "완료",
+  submitAccessibilityLabel = submitLabel,
   onPressDrafts,
   previewOpen,
-  onPressPreview,
   isKeyboardVisible,
   onPressHideKeyboard,
   styles,
@@ -35,10 +37,14 @@ export function WriteTopBar({
         hitSlop={12}
         style={styles.iconBtn}
         accessibilityRole="button"
-        accessibilityLabel="글쓰기 닫기"
+        accessibilityLabel={previewOpen ? "이전 화면으로 돌아가기" : "글쓰기 닫기"}
         testID="write-close-btn"
       >
-        <Ionicons name="close" size={22} color={tokens.colors.text} />
+        <Ionicons
+          name={previewOpen ? "arrow-back" : "close"}
+          size={22}
+          color={tokens.colors.text}
+        />
       </Pressable>
 
       <Text style={styles.screenTitle}>{title}</Text>
@@ -54,23 +60,6 @@ export function WriteTopBar({
             testID="write-drafts-btn"
           >
             <Ionicons name="file-tray-outline" size={20} color={tokens.colors.text} />
-          </Pressable>
-        )}
-
-        {!!onPressPreview && (
-          <Pressable
-            onPress={onPressPreview}
-            hitSlop={12}
-            style={styles.iconBtn}
-            accessibilityRole="button"
-            accessibilityLabel={previewOpen ? "편집 화면으로 전환" : "미리보기 열기"}
-            testID="write-preview-btn"
-          >
-            <Ionicons
-              name={previewOpen ? "create-outline" : "eye-outline"}
-              size={20}
-              color={tokens.colors.text}
-            />
           </Pressable>
         )}
 
@@ -97,11 +86,11 @@ export function WriteTopBar({
           hitSlop={12}
           style={[styles.doneBtn, !canSubmit && styles.doneBtnDisabled]}
           accessibilityRole="button"
-          accessibilityLabel="글쓰기 완료"
+          accessibilityLabel={submitAccessibilityLabel}
           testID="write-submit-btn"
         >
           <Text style={[styles.doneText, !canSubmit && styles.doneTextDisabled]}>
-            완료
+            {submitLabel}
           </Text>
         </Pressable>
       </View>

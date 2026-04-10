@@ -4,6 +4,8 @@ import { trackGrowthTelemetry, toGrowthTelemetryError } from "@/features/growth/
 import { apiGet, apiPost } from "@/lib/api";
 import { normalizeApiError, type AppErrorModel } from "@/lib/errors";
 import { logger } from "@/lib/logger";
+import { normalizePostPreviewText } from "@/lib/postContent";
+import { normalizePublicDisplayName } from "@/lib/publicDisplayName";
 
 export type GrowthLoadSource = "dashboard" | "fallback" | null;
 export type GrowthTopPostsMode = "ready" | "empty" | "error";
@@ -311,8 +313,13 @@ function normalizeTopPost(input: unknown): GrowthTopPost | null {
   return {
     id,
     title,
-    excerpt: toText(row.excerpt),
-    authorName: toText(row.author_name),
+    excerpt: normalizePostPreviewText(row.excerpt),
+    authorName: normalizePublicDisplayName(
+      row.display_name,
+      row.author_display_name,
+      row.nickname,
+      row.author_nickname
+    ),
     category: toText(row.category),
     createdAt: toNullableText(row.created_at),
     likeCount: toNumber(row.like_count),
@@ -410,13 +417,14 @@ async function fetchDashboard() {
   if (!res?.ok) throw new Error(res?.message || "성장 대시보드를 불러오지 못했어요.");
 
   const topPosts = normalizeTopPosts(res.top_posts);
+  const topPostsMode: GrowthTopPostsMode = topPosts.length > 0 ? "ready" : "empty";
 
   return {
     summary: normalizeSummary(res.summary),
     achievements: normalizeAchievements(res.achievements),
     campaigns: normalizeCampaigns(res.campaigns),
     topPosts,
-    topPostsMode: (topPosts.length > 0 ? "ready" : "empty") as const,
+    topPostsMode,
   };
 }
 
@@ -439,13 +447,14 @@ async function fetchFallback() {
   }
 
   const topPosts = topPostsRes?.ok ? normalizeTopPosts(topPostsRes.top_posts) : [];
+  const topPostsMode: GrowthTopPostsMode = topPosts.length > 0 ? "ready" : "empty";
 
   return {
     summary: normalizeSummary(summaryRes.summary),
     achievements: normalizeAchievements(achievementsRes.achievements),
     campaigns: normalizeCampaigns(campaignsRes.campaigns),
     topPosts,
-    topPostsMode: (topPosts.length > 0 ? "ready" : "empty") as const,
+    topPostsMode,
   };
 }
 

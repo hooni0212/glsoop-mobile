@@ -11,6 +11,7 @@ const RAW_BASE = process.env.EXPO_PUBLIC_API_BASE_URL;
 const API_DEBUG =
   typeof process !== "undefined" && process?.env?.EXPO_PUBLIC_API_DEBUG === "true";
 const LOCAL_API_HOSTS = new Set(["localhost", "127.0.0.1", "0.0.0.0"]);
+const DEFAULT_NATIVE_RELEASE_API_BASE = "https://glsoop.com";
 
 function trimTrailingSlash(value: string) {
   return value.replace(/\/+$/, "");
@@ -57,7 +58,19 @@ function resolveApiBase(rawBase?: string) {
     }
   }
 
-  if (!__DEV__ || !isNativeApp) {
+  if (!__DEV__ && isNativeApp) {
+    if (!trimmed) {
+      return DEFAULT_NATIVE_RELEASE_API_BASE;
+    }
+
+    if (trimmed.startsWith("/")) {
+      return `${DEFAULT_NATIVE_RELEASE_API_BASE}${trimmed}`;
+    }
+
+    return trimmed;
+  }
+
+  if (!isNativeApp) {
     return trimmed;
   }
 

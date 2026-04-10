@@ -7,7 +7,9 @@ import {
   Platform,
   SafeAreaView,
   Pressable,
+  ScrollView,
   Text,
+  useWindowDimensions,
   View,
   Modal,
 } from "react-native";
@@ -50,6 +52,8 @@ export default function Write() {
   const styles = useMemo(() => createWriteStyles(), []);
   const params = useLocalSearchParams();
   const navigation = useNavigation();
+  const { width } = useWindowDimensions();
+  const isLargeScreen = width >= 768;
 
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
@@ -86,16 +90,19 @@ export default function Write() {
   const hasChanges = title.trim().length > 0 || body.trim().length > 0 || selectedType !== null;
   const canSubmit =
     title.trim().length > 0 && body.trim().length > 0 && selectedType !== null;
-
-  const categoryLabel = useMemo(() => {
-    if (selectedType === "poem") return "시";
-    if (selectedType === "essay") return "에세이";
-    return "짧은 구절";
-  }, [selectedType]);
-
-  const footerText = useMemo(() => {
-    return hashtagChips.length > 0 ? hashtagChips.map((item) => `#${item}`).join(" ") : categoryLabel;
-  }, [categoryLabel, hashtagChips]);
+  const submissionLayout = useMemo(
+    () => ({
+      ...layout,
+      showFooter: true,
+    }),
+    [layout]
+  );
+  const primaryActionLabel = previewOpen ? "제출" : "미리보기";
+  const primaryActionAccessibilityLabel = previewOpen
+    ? "글 제출"
+    : "미리보기로 이동";
+  const canAdvanceToPreview = title.trim().length > 0 || body.trim().length > 0;
+  const canPrimaryAction = previewOpen ? canSubmit : canAdvanceToPreview;
 
   const closeDraftPrompt = useCallback(() => setDraftPrompt(null), []);
   const dismissKeyboard = useCallback(() => Keyboard.dismiss(), []);
@@ -123,11 +130,12 @@ export default function Write() {
       body: trimmedBody,
       category: selectedType ?? undefined,
       fontKey,
+      layoutJson: buildLayoutPayload(layout),
       mode: editPostId ? "edit" : "create",
       postId: editPostId,
     });
     if (!draftId) setDraftId(id);
-  }, [title, body, draftId, editPostId, selectedType, fontKey]);
+  }, [title, body, draftId, editPostId, selectedType, fontKey, layout]);
 
   const { confirm: leaveConfirm, requestLeave, allowNextLeave } = useConfirmBeforeLeave({
     hasChanges,
@@ -180,6 +188,11 @@ export default function Write() {
     requestLeave();
   }, [requestLeave]);
 
+  const onPressBackFromPreview = useCallback(() => {
+    dismissKeyboard();
+    setPreviewOpen(false);
+  }, [dismissKeyboard]);
+
   const onPressDrafts = useCallback(() => {
     logger.debug("[write] open draft list");
     router.push("/write-drafts");
@@ -224,10 +237,31 @@ export default function Write() {
     }));
   }, []);
 
-  const toggleFooter = useCallback(() => {
+  const updateTitleLineHeight = useCallback((value: number) => {
     setLayout((current) => ({
       ...current,
-      showFooter: !current.showFooter,
+      titleStyle: { ...current.titleStyle, lineHeight: value },
+    }));
+  }, []);
+
+  const updateBodyLineHeight = useCallback((value: number) => {
+    setLayout((current) => ({
+      ...current,
+      bodyStyle: { ...current.bodyStyle, lineHeight: value },
+    }));
+  }, []);
+
+  const updateTitleLetterSpacing = useCallback((value: number) => {
+    setLayout((current) => ({
+      ...current,
+      titleStyle: { ...current.titleStyle, letterSpacing: value },
+    }));
+  }, []);
+
+  const updateBodyLetterSpacing = useCallback((value: number) => {
+    setLayout((current) => ({
+      ...current,
+      bodyStyle: { ...current.bodyStyle, letterSpacing: value },
     }));
   }, []);
 
@@ -256,6 +290,12 @@ export default function Write() {
   }, []);
 
   const onPressSubmit = useCallback(async () => {
+    if (!previewOpen) {
+      dismissKeyboard();
+      setPreviewOpen(true);
+      return;
+    }
+
     if (!selectedType) return;
 
     logger.debug("[write] submit start", { draftId, titleLen: title.length, bodyLen: body.length });
@@ -280,7 +320,7 @@ export default function Write() {
           title: trimmedTitle || undefined,
           content: trimmedBody,
           hashtags: hashtagChips,
-          layoutJson: buildLayoutPayload(layout),
+          layoutJson: buildLayoutPayload(submissionLayout),
           fontKey,
         });
         setCreatedPostId(editPostId);
@@ -293,7 +333,7 @@ export default function Write() {
           content: trimmedBody,
           contentFormat: "plain",
           hashtags: hashtagChips,
-          layoutJson: buildLayoutPayload(layout),
+          layoutJson: buildLayoutPayload(submissionLayout),
           fontKey,
         });
 
@@ -311,7 +351,18 @@ export default function Write() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [selectedType, draftId, editPostId, hashtagChips, layout, title, body, fontKey]);
+  }, [
+    selectedType,
+    draftId,
+    editPostId,
+    hashtagChips,
+    submissionLayout,
+    title,
+    body,
+    fontKey,
+    previewOpen,
+    dismissKeyboard,
+  ]);
 
   const onSuccessGoHome = useCallback(() => {
     setSubmitSuccess(false);
@@ -386,6 +437,8 @@ export default function Write() {
           setSelectedType(d.category ?? null);
           setHashtagsInput("");
           setFontKey(d.fontKey ?? "serif");
+          setLayout(parseLayoutJson(d.layoutJson));
+          setActiveBoxId("text_box");
         }
         return;
       }
@@ -446,43 +499,51 @@ export default function Write() {
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <WriteTopBar
-          title={isEditMode ? "글 수정" : "글쓰기"}
-          canSubmit={canSubmit}
-          onPressClose={onPressClose}
+          title={previewOpen ? "미리보기" : isEditMode ? "글 수정" : "글쓰기"}
+          canSubmit={canPrimaryAction}
+          onPressClose={previewOpen ? onPressBackFromPreview : onPressClose}
           onPressSubmit={onPressSubmit}
+          submitLabel={primaryActionLabel}
+          submitAccessibilityLabel={primaryActionAccessibilityLabel}
           onPressDrafts={onPressDrafts}
           previewOpen={previewOpen}
-          onPressPreview={() => setPreviewOpen((current) => !current)}
           isKeyboardVisible={isKeyboardVisible}
           onPressHideKeyboard={dismissKeyboard}
           styles={styles}
         />
 
-        <View style={styles.container}>
-          {submitError ? (
-            <View style={styles.center}>
-              <AppError
-                error={submitError}
-                onRetry={submitError.canRetry ? onPressSubmit : undefined}
+        <ScrollView
+          style={styles.container}
+          contentContainerStyle={[
+            styles.scrollContent,
+            isLargeScreen && styles.scrollContentWide,
+          ]}
+          contentInsetAdjustmentBehavior="automatic"
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={[styles.contentStack, isLargeScreen && styles.contentStackWide]}>
+            {submitError ? (
+              <View style={styles.center}>
+                <AppError
+                  error={submitError}
+                  onRetry={submitError.canRetry ? onPressSubmit : undefined}
+                />
+              </View>
+            ) : null}
+            {previewOpen ? (
+              <WritePreviewCard
+                title={title}
+                body={body}
+                selectedType={selectedType}
+                layout={submissionLayout}
+                fontKey={fontKey}
               />
-            </View>
-          ) : null}
-          {previewOpen ? (
-            <WritePreviewCard
-              title={title}
-              body={body}
-              hashtags={hashtagChips}
-              categoryLabel={categoryLabel}
-              selectedType={selectedType}
-              layout={layout}
-              fontKey={fontKey}
-            />
-          ) : (
-            <>
+            ) : (
               <WriteEditor
                 title={title}
                 body={body}
-                footerText={footerText}
                 fontKey={fontKey}
                 layout={layout}
                 activeBoxId={activeBoxId}
@@ -502,38 +563,46 @@ export default function Write() {
                   onChangeBodyAlign={updateBodyAlign}
                   onChangeTitleScale={updateTitleScale}
                   onChangeBodyScale={updateBodyScale}
-                  onToggleFooter={toggleFooter}
+                  onChangeTitleLineHeight={updateTitleLineHeight}
+                  onChangeBodyLineHeight={updateBodyLineHeight}
+                  onChangeTitleLetterSpacing={updateTitleLetterSpacing}
+                  onChangeBodyLetterSpacing={updateBodyLetterSpacing}
                   onNudgeBox={nudgeBox}
                   onResizeBox={resizeBox}
                 />
               </WriteEditor>
+            )}
 
-              <WritePreviewCard
-                title={title}
-                body={body}
-                hashtags={hashtagChips}
-                categoryLabel={categoryLabel}
+            {!previewOpen ? (
+              <WriteMetaSection
+                styles={styles}
                 selectedType={selectedType}
-                layout={layout}
+                onSelectType={setSelectedType}
+                hashtagsInput={hashtagsInput}
+                hashtagChips={hashtagChips}
+                onChangeHashtagsInput={setHashtagsInput}
                 fontKey={fontKey}
-                compact
+                onChangeFontKey={setFontKey}
+                showCategory={false}
               />
-            </>
-          )}
+            ) : (
+              <WriteMetaSection
+                styles={styles}
+                selectedType={selectedType}
+                onSelectType={setSelectedType}
+                hashtagsInput={hashtagsInput}
+                hashtagChips={hashtagChips}
+                onChangeHashtagsInput={setHashtagsInput}
+                fontKey={fontKey}
+                onChangeFontKey={setFontKey}
+                showFont={false}
+                showHashtags={false}
+              />
+            )}
 
-          <WriteMetaSection
-            styles={styles}
-            selectedType={selectedType}
-            onSelectType={setSelectedType}
-            hashtagsInput={hashtagsInput}
-            hashtagChips={hashtagChips}
-            onChangeHashtagsInput={setHashtagsInput}
-            fontKey={fontKey}
-            onChangeFontKey={setFontKey}
-          />
-
-          <WriteStates styles={styles} confirm={activeConfirm} />
-        </View>
+            <WriteStates styles={styles} confirm={activeConfirm} />
+          </View>
+        </ScrollView>
 
         {/* ✅ 키보드 ON 시 ActionBar 숨김 */}
         {!isKeyboardVisible && <WriteActionBar styles={styles} />}

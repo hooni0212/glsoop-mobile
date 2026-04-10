@@ -12,14 +12,11 @@ import {
 import { useLocalSearchParams, useRouter } from "expo-router";
 
 import { useAuth } from "@/auth/AuthContext";
+import { AuthLegalLinks } from "@/components/auth/AuthLegalLinks";
 import { AppError } from "@/components/state/AppError";
 import { extractAuthToken } from "@/lib/authResponse";
 import { buildAuthRoute, resolvePostAuthRedirect } from "@/lib/authRedirect";
 import { apiGet, apiPost } from "@/lib/api";
-import {
-  buildEmailVerificationNotice,
-  isEmailVerificationRequired,
-} from "@/lib/authMessages";
 import { COOKIE_SESSION_TOKEN } from "@/lib/authToken";
 import { ApiError, normalizeApiError } from "@/lib/errors";
 import { tokens } from "@/theme/tokens";
@@ -148,14 +145,11 @@ export default function AuthSignup() {
             err.payload?.field_errors ??
             {}) as SignupFieldErrors;
           setFieldErrors(nextFieldErrors);
-          const rawMessage = err.message || "요청을 처리할 수 없어요.";
-          if (isEmailVerificationRequired(rawMessage)) {
-            setMessage(buildEmailVerificationNotice(email));
-          } else if (Object.keys(nextFieldErrors).length > 0) {
-            setMessage(Object.values(nextFieldErrors)[0] ?? rawMessage);
-          } else {
-            setMessage(rawMessage);
-          }
+          setMessage(
+            Object.keys(nextFieldErrors).length > 0
+              ? (Object.values(nextFieldErrors)[0] ?? err.message ?? "요청을 처리할 수 없어요.")
+              : (err.message || "요청을 처리할 수 없어요.")
+          );
           if (err.status === 429) {
             const retryAfter = Number(err.payload?.retry_after ?? err.payload?.resend_after);
             if (Number.isFinite(retryAfter)) {
@@ -167,7 +161,7 @@ export default function AuthSignup() {
       }
       setError(normalizeApiError(err));
     },
-    [email, setError]
+    [setError]
   );
 
   function resetOtpState() {
@@ -210,12 +204,7 @@ export default function AuthSignup() {
       });
 
       if (!res?.ok) {
-        const rawMessage = res?.message || "회원가입에 실패했어요.";
-        if (isEmailVerificationRequired(rawMessage)) {
-          setMessage(buildEmailVerificationNotice(email));
-        } else {
-          setMessage(rawMessage);
-        }
+        setMessage(res?.message || "회원가입에 실패했어요.");
         return;
       }
 
@@ -251,23 +240,13 @@ export default function AuthSignup() {
       });
 
       if (!res?.ok) {
-        const rawMessage = res?.message || "인증번호 확인에 실패했어요.";
-        if (isEmailVerificationRequired(rawMessage)) {
-          setMessage(buildEmailVerificationNotice(email));
-        } else {
-          setMessage(rawMessage);
-        }
+        setMessage(res?.message || "인증번호 확인에 실패했어요.");
         return;
       }
 
       const loginRes = await apiPost<LoginResponse>("/api/login", { email, pw });
       if (!loginRes?.ok) {
-        const rawMessage = loginRes?.message || "로그인에 실패했어요.";
-        if (isEmailVerificationRequired(rawMessage)) {
-          setMessage(buildEmailVerificationNotice(email));
-        } else {
-          setMessage(rawMessage);
-        }
+        setMessage(loginRes?.message || "로그인에 실패했어요.");
         return;
       }
       const nextAuthToken =
@@ -346,6 +325,12 @@ export default function AuthSignup() {
             {step === "form" ? "이메일로 간단히 시작해요." : "인증번호를 입력해 주세요."}
           </Text>
 
+          {step === "form" ? (
+            <View style={styles.block}>
+              <AuthLegalLinks compact showAgreementHint={false} />
+            </View>
+          ) : null}
+
           {error ? (
             <View style={styles.block}>
               <AppError error={error} />
@@ -358,39 +343,49 @@ export default function AuthSignup() {
                 <TextInput
                   value={name}
                   onChangeText={setName}
-                  placeholder="이름"
+                  placeholder="이름을 입력해 주세요"
                   style={styles.input}
                   testID="signup-name-input"
                 />
+                <Text style={styles.fieldHint}>본명을 입력해 주세요. 예: 홍길동</Text>
                 {fieldErrors.name ? <Text style={styles.fieldError}>{fieldErrors.name}</Text> : null}
                 <TextInput
                   value={nickname}
                   onChangeText={setNickname}
-                  placeholder="닉네임"
+                  placeholder="닉네임을 입력해 주세요"
                   style={styles.input}
                   testID="signup-nickname-input"
                 />
+                <Text style={styles.fieldHint}>
+                  앱에서 표시될 이름이에요. 예: 글숲러
+                </Text>
                 {fieldErrors.nickname ? (
                   <Text style={styles.fieldError}>{fieldErrors.nickname}</Text>
                 ) : null}
                 <TextInput
                   value={email}
                   onChangeText={setEmail}
-                  placeholder="이메일"
+                  placeholder="이메일 주소를 입력해 주세요"
                   autoCapitalize="none"
                   keyboardType="email-address"
                   style={styles.input}
                   testID="signup-email-input"
                 />
+                <Text style={styles.fieldHint}>
+                  로그인과 인증번호 수신에 사용할 이메일이에요. 예: user@example.com
+                </Text>
                 {fieldErrors.email ? <Text style={styles.fieldError}>{fieldErrors.email}</Text> : null}
                 <TextInput
                   value={pw}
                   onChangeText={setPw}
-                  placeholder="비밀번호"
+                  placeholder="비밀번호를 입력해 주세요"
                   secureTextEntry
                   style={styles.input}
                   testID="signup-password-input"
                 />
+                <Text style={styles.fieldHint}>
+                  영문, 숫자 포함 8자 이상으로 설정해 주세요.
+                </Text>
                 {fieldErrors.pw ? <Text style={styles.fieldError}>{fieldErrors.pw}</Text> : null}
 
                 <View style={styles.consentGroup}>
@@ -598,6 +593,13 @@ const styles = StyleSheet.create({
     fontSize: tokens.font.small,
     color: tokens.colors.danger,
     marginTop: -2,
+  },
+  fieldHint: {
+    fontSize: tokens.font.small,
+    color: tokens.colors.textMuted,
+    marginTop: -2,
+    marginBottom: 4,
+    paddingHorizontal: 4,
   },
   primaryBtn: {
     backgroundColor: tokens.colors.green700,

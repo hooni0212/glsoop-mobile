@@ -1,5 +1,17 @@
 export type PostType = 'poem' | 'essay' | 'short';
 
+export type PostRenderImages = {
+  primaryImage: string;
+  images: string[];
+  hasMultiple: boolean;
+  pageCount: number;
+  pageCap: number;
+  isTruncated: boolean;
+  template?: string;
+  scale?: number;
+  version?: string;
+};
+
 export type Post = {
   id: string;
   type: PostType;
@@ -22,6 +34,13 @@ export type Post = {
     isLiked?: boolean;
     isBookmarked?: boolean;
   };
+
+  imageUrl?: string | null;
+  primaryImage?: string | null;
+  images?: string[];
+  hasMultiple?: boolean;
+  renderImages?: PostRenderImages | null;
+  layoutJson?: unknown;
 };
 
 export type CursorPage<T> = {
