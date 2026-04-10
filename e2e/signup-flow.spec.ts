@@ -123,6 +123,22 @@ async function mockSignupFlowApis(page: Page) {
 }
 
 test.describe("회원가입 인증 흐름", () => {
+  test("인증 랜딩에서는 법률 링크를 숨기고 회원가입 화면에서만 노출한다", async ({ page }) => {
+    await mockSignupFlowApis(page);
+
+    await page.goto("/?redirect=%2Fme");
+    await expect(page.getByTestId("auth-welcome-screen")).toBeVisible();
+    await expect(page.getByTestId("auth-legal-link-terms")).toHaveCount(0);
+    await expect(page.getByTestId("auth-legal-link-privacy")).toHaveCount(0);
+    await expect(page.getByTestId("auth-legal-link-guidelines")).toHaveCount(0);
+
+    await page.getByTestId("auth-welcome-signup-btn").click();
+    await expect(page.getByTestId("auth-signup-screen")).toBeVisible();
+    await expect(page.getByTestId("auth-legal-link-terms")).toBeVisible();
+    await expect(page.getByTestId("auth-legal-link-privacy")).toBeVisible();
+    await expect(page.getByTestId("auth-legal-link-guidelines")).toBeVisible();
+  });
+
   test("회원가입 -> OTP -> 자동 로그인 후 홈으로 이동한다", async ({ page }) => {
     await mockSignupFlowApis(page);
 

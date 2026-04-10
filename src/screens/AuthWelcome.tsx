@@ -5,7 +5,6 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { buildAuthRoute } from "@/lib/authRedirect";
-import { AuthLegalLinks } from "@/components/auth/AuthLegalLinks";
 import { tokens } from "@/theme/tokens";
 
 const glsoopIcon = require("../../assets/images/icon.png");
@@ -16,7 +15,7 @@ export default function AuthWelcome() {
   const redirect = params?.redirect ? String(params.redirect) : undefined;
 
   return (
-    <SafeAreaView style={styles.safe} edges={["top"]}>
+    <SafeAreaView style={styles.safe} edges={["top"]} testID="auth-welcome-screen">
       <View style={styles.container}>
         <View style={styles.hero}>
           <View style={styles.logoFrame}>
@@ -26,13 +25,13 @@ export default function AuthWelcome() {
           <Text style={styles.subtitle}>
             일상의 작은 순간들을 기록하고{"\n"}나누는 공간
           </Text>
-          <AuthLegalLinks />
         </View>
 
         <View style={styles.actions}>
           <Pressable
             onPress={() => router.push(buildAuthRoute("/(auth)/login", redirect))}
             style={({ pressed }) => [styles.primaryBtn, pressed && styles.primaryBtnPressed]}
+            testID="auth-welcome-login-btn"
           >
             <Text style={styles.primaryText}>로그인</Text>
           </Pressable>
@@ -40,6 +39,7 @@ export default function AuthWelcome() {
           <Pressable
             onPress={() => router.push(buildAuthRoute("/(auth)/signup", redirect))}
             style={({ pressed }) => [styles.secondaryBtn, pressed && styles.secondaryBtnPressed]}
+            testID="auth-welcome-signup-btn"
           >
             <Text style={styles.secondaryText}>회원가입</Text>
           </Pressable>
