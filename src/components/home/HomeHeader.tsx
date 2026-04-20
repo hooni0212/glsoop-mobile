@@ -12,10 +12,7 @@ type Props = {
 export function HomeHeader({ onPressSearch }: Props) {
   return (
     <View style={homeHeaderStyles.header}>
-      <View style={homeHeaderStyles.brandBlock}>
-        <Text style={homeHeaderStyles.brand}>글숲</Text>
-        <Text style={homeHeaderStyles.brandSubtitle}>기록을 이어가는 오늘의 문장</Text>
-      </View>
+      <Text style={homeHeaderStyles.brand}>글숲</Text>
 
       <Pressable
         onPress={onPressSearch}

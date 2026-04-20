@@ -31,15 +31,6 @@ export const homeHeaderStyles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
   },
-  brandBlock: {
-    gap: 2,
-  },
-  brandSubtitle: {
-    fontSize: tokens.font.small,
-    color: tokens.colors.textMuted,
-    fontWeight: "600",
-    letterSpacing: -0.1,
-  },
   brand: {
     fontSize: tokens.font.title,
     fontWeight: "900",
