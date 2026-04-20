@@ -3,7 +3,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -11,6 +10,7 @@ import {
   View,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { buildAuthRoute } from "@/lib/authRedirect";
 import { AppEmpty } from "@/components/state/AppEmpty";
@@ -154,41 +154,55 @@ export default function AuthResetPassword() {
 
             <Text style={styles.sub}>새 비밀번호를 입력하고 다시 로그인해주세요.</Text>
 
-            {error ? (
-              <View style={styles.block}>
-                <AppError error={error} />
-              </View>
-            ) : null}
-
-            <View style={styles.form}>
-              <TextInput
-                value={newPw}
-                onChangeText={setNewPw}
-                placeholder="새 비밀번호"
-                secureTextEntry
-                style={styles.input}
-              />
-
-              <Pressable
-                onPress={onSubmit}
-                disabled={busy || !newPw.trim()}
-                style={[
-                  styles.primaryBtn,
-                  (busy || !newPw.trim()) && styles.primaryBtnDisabled,
-                ]}
-              >
-                <Text style={styles.primaryBtnText}>
-                  {busy ? "변경 중..." : "비밀번호 변경"}
-                </Text>
-              </Pressable>
-
-              {message ? <Text style={styles.helper}>{message}</Text> : null}
-
-              {message ? (
-                <Pressable onPress={() => router.replace(buildAuthRoute("/(auth)/login", redirect))}>
-                  <Text style={styles.link}>로그인 하러가기</Text>
-                </Pressable>
+            <View style={styles.panel}>
+              {error ? (
+                <View style={styles.block}>
+                  <AppError error={error} />
+                </View>
               ) : null}
+
+              <View style={styles.form}>
+                <TextInput
+                  value={newPw}
+                  onChangeText={setNewPw}
+                  placeholder="새 비밀번호"
+                  secureTextEntry
+                  autoComplete="new-password"
+                  textContentType="newPassword"
+                  returnKeyType="go"
+                  onSubmitEditing={() => {
+                    if (!busy && newPw.trim()) {
+                      void onSubmit();
+                    }
+                  }}
+                  style={styles.input}
+                />
+
+                <Pressable
+                  onPress={onSubmit}
+                  disabled={busy || !newPw.trim()}
+                  style={({ pressed }) => [
+                    styles.primaryBtn,
+                    (busy || !newPw.trim()) && styles.primaryBtnDisabled,
+                    pressed && !busy && styles.primaryBtnPressed,
+                  ]}
+                >
+                  <Text style={styles.primaryBtnText}>
+                    {busy ? "변경 중..." : "비밀번호 변경"}
+                  </Text>
+                </Pressable>
+
+                {message ? <Text style={styles.helper}>{message}</Text> : null}
+
+                {message ? (
+                  <Pressable
+                    onPress={() => router.replace(buildAuthRoute("/(auth)/login", redirect))}
+                    style={styles.linkButton}
+                  >
+                    <Text style={styles.link}>로그인 하러가기</Text>
+                  </Pressable>
+                ) : null}
+              </View>
             </View>
           </View>
         </ScrollView>
@@ -210,7 +224,7 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: 420,
     alignSelf: "center",
-    gap: tokens.space.lg as any,
+    gap: tokens.space.md as any,
   },
   center: {
     flex: 1,
@@ -237,12 +251,20 @@ const styles = StyleSheet.create({
   backText: { fontSize: 18, fontWeight: "900", color: tokens.colors.text },
   h1: { fontSize: tokens.font.h1, fontWeight: "900", color: tokens.colors.text },
   sub: { fontSize: tokens.font.body, color: tokens.colors.textMuted, lineHeight: 22 },
-  block: { marginTop: tokens.space.sm },
+  panel: {
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+    borderRadius: tokens.radius.xl,
+    backgroundColor: tokens.colors.surfaceStrong,
+    padding: tokens.space.lg,
+    gap: tokens.space.sm as any,
+  },
+  block: { marginBottom: tokens.space.xs },
   form: { gap: tokens.space.sm as any },
   input: {
     borderWidth: 1,
     borderColor: tokens.colors.borderStrong,
-    backgroundColor: tokens.colors.surfaceStrong,
+    backgroundColor: tokens.colors.white,
     borderRadius: tokens.radius.lg,
     paddingHorizontal: tokens.space.lg,
     paddingVertical: 12,
@@ -256,13 +278,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: tokens.space.sm,
   },
+  primaryBtnPressed: { opacity: 0.92 },
   primaryBtnDisabled: { opacity: 0.5 },
   primaryBtnText: { color: "white", fontSize: 15, fontWeight: "800" },
   helper: { fontSize: tokens.font.small, color: tokens.colors.textMuted, lineHeight: 20 },
+  linkButton: {
+    alignItems: "center",
+    paddingVertical: tokens.space.xs,
+  },
   link: {
     fontSize: tokens.font.small,
     color: tokens.colors.green900,
     fontWeight: "800",
-    marginTop: tokens.space.sm,
   },
 });

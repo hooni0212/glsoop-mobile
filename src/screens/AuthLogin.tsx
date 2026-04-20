@@ -165,57 +165,76 @@ export default function AuthLogin() {
 
             <Text style={styles.sub}>이메일로 로그인해요.</Text>
 
-            {error ? (
-              <View style={styles.block}>
-                <AppError error={error} />
+            <View style={styles.panel}>
+              {error ? (
+                <View style={styles.block}>
+                  <AppError error={error} />
+                </View>
+              ) : null}
+
+              <View style={styles.form}>
+                <TextInput
+                  value={email}
+                  onChangeText={setEmail}
+                  placeholder="이메일"
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  autoComplete="email"
+                  textContentType="emailAddress"
+                  returnKeyType="next"
+                  style={styles.input}
+                  editable={!busy && !reactivationBusy}
+                  testID="login-email-input"
+                />
+                <TextInput
+                  value={pw}
+                  onChangeText={setPw}
+                  placeholder="비밀번호"
+                  secureTextEntry
+                  autoComplete="password"
+                  textContentType="password"
+                  returnKeyType="go"
+                  onSubmitEditing={() => {
+                    if (!busy && !reactivationBusy && email && pw) {
+                      void onLogin();
+                    }
+                  }}
+                  style={styles.input}
+                  editable={!busy && !reactivationBusy}
+                  testID="login-password-input"
+                />
+
+                <Pressable
+                  onPress={onLogin}
+                  disabled={busy || reactivationBusy || !email || !pw}
+                  testID="login-submit-btn"
+                  style={({ pressed }) => [
+                    styles.primaryBtn,
+                    (busy || reactivationBusy || !email || !pw) && styles.primaryBtnDisabled,
+                    pressed && !busy && styles.primaryBtnPressed,
+                  ]}
+                >
+                  <Text style={styles.primaryBtnText}>{busy ? "로그인 중..." : "로그인"}</Text>
+                </Pressable>
+
+                {message ? <Text style={styles.helper}>{message}</Text> : null}
+
+                <View style={styles.linkGroup}>
+                  <Pressable
+                    onPress={() => router.push(buildAuthRoute("/(auth)/forgot-password", redirect))}
+                    style={styles.linkButton}
+                  >
+                    <Text style={styles.link}>비밀번호를 잊으셨나요?</Text>
+                  </Pressable>
+
+                  <Pressable
+                    onPress={() => router.push(buildAuthRoute("/(auth)/signup", redirect))}
+                    style={styles.linkButton}
+                  >
+                    <Text style={styles.link}>회원가입</Text>
+                  </Pressable>
+                </View>
               </View>
-            ) : null}
-
-            <View style={styles.form}>
-              <TextInput
-                value={email}
-                onChangeText={setEmail}
-                placeholder="이메일"
-                autoCapitalize="none"
-                keyboardType="email-address"
-                style={styles.input}
-                editable={!busy && !reactivationBusy}
-                testID="login-email-input"
-              />
-              <TextInput
-                value={pw}
-                onChangeText={setPw}
-                placeholder="비밀번호"
-                secureTextEntry
-                style={styles.input}
-                editable={!busy && !reactivationBusy}
-                testID="login-password-input"
-              />
-
-              <Pressable
-                onPress={onLogin}
-                disabled={busy || reactivationBusy || !email || !pw}
-                testID="login-submit-btn"
-                style={({ pressed }) => [
-                  styles.primaryBtn,
-                  (busy || reactivationBusy || !email || !pw) && styles.primaryBtnDisabled,
-                  pressed && !busy && styles.primaryBtnPressed,
-                ]}
-              >
-                <Text style={styles.primaryBtnText}>{busy ? "로그인 중..." : "로그인"}</Text>
-              </Pressable>
-
-              {message ? <Text style={styles.helper}>{message}</Text> : null}
-
-              <Pressable
-                onPress={() => router.push(buildAuthRoute("/(auth)/forgot-password", redirect))}
-              >
-                <Text style={styles.link}>비밀번호를 잊으셨나요?</Text>
-              </Pressable>
-
-              <Pressable onPress={() => router.push(buildAuthRoute("/(auth)/signup", redirect))}>
-                <Text style={styles.link}>회원가입</Text>
-              </Pressable>
             </View>
           </View>
         </ScrollView>
@@ -283,7 +302,7 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: 420,
     alignSelf: "center",
-    gap: tokens.space.lg as any,
+    gap: tokens.space.md as any,
   },
   headerRow: {
     flexDirection: "row",
@@ -303,13 +322,21 @@ const styles = StyleSheet.create({
   },
   backText: { fontSize: 18, fontWeight: "900", color: tokens.colors.text },
   h1: { fontSize: tokens.font.h1, fontWeight: "900", color: tokens.colors.text },
-  sub: { fontSize: tokens.font.body, color: tokens.colors.textMuted },
-  block: { marginTop: tokens.space.sm },
+  sub: { fontSize: tokens.font.body, color: tokens.colors.textMuted, lineHeight: 22 },
+  panel: {
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+    borderRadius: tokens.radius.xl,
+    backgroundColor: tokens.colors.surfaceStrong,
+    padding: tokens.space.lg,
+    gap: tokens.space.sm as any,
+  },
+  block: { marginBottom: tokens.space.xs },
   form: { gap: tokens.space.sm as any },
   input: {
     borderWidth: 1,
     borderColor: tokens.colors.borderStrong,
-    backgroundColor: tokens.colors.surfaceStrong,
+    backgroundColor: tokens.colors.white,
     borderRadius: tokens.radius.lg,
     paddingHorizontal: tokens.space.lg,
     paddingVertical: 12,
@@ -327,15 +354,22 @@ const styles = StyleSheet.create({
   primaryBtnDisabled: { opacity: 0.5 },
   primaryBtnText: { color: "white", fontSize: 15, fontWeight: "800" },
   helper: { fontSize: tokens.font.small, color: tokens.colors.textMuted, marginTop: 4 },
+  linkGroup: {
+    marginTop: tokens.space.xs,
+    gap: tokens.space.xs as any,
+  },
+  linkButton: {
+    alignItems: "center",
+    paddingVertical: tokens.space.xs,
+  },
   link: {
     fontSize: tokens.font.small,
     color: tokens.colors.green900,
     fontWeight: "800",
-    marginTop: tokens.space.sm,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(17, 24, 39, 0.4)",
+    backgroundColor: tokens.colors.overlay,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: tokens.space.lg,
