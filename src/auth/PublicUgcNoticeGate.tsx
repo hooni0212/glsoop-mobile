@@ -1,5 +1,5 @@
 import React from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { AppBootScreen } from "@/components/state/AppBootScreen";
@@ -182,7 +182,14 @@ export function PublicUgcNoticeGate({ active }: Props) {
   return (
     <View pointerEvents="auto" style={styles.overlay}>
       <SafeAreaView style={styles.safe} testID="public-ugc-notice-gate">
-        <View style={styles.backdrop}>
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.scrollContent}
+          contentInsetAdjustmentBehavior="automatic"
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          testID="public-ugc-notice-scroll"
+        >
           <View style={styles.card} testID="public-ugc-notice-card">
             <Text style={styles.eyebrow}>BEFORE YOU READ</Text>
             <Text style={styles.title}>공개 글을 보기 전에 확인해 주세요</Text>
@@ -252,7 +259,7 @@ export function PublicUgcNoticeGate({ active }: Props) {
                   {legalAcknowledged ? <Text style={styles.checkboxMark}>✓</Text> : null}
                 </View>
                 <Text style={styles.checkText}>
-                  이용약관, 개인정보 처리방침, 커뮤니티 가이드라인을 확인했습니다.
+                  이용약관, 개인정보 처리방침, 커뮤니티 가이드라인을 확인하고 동의합니다.
                 </Text>
               </Pressable>
 
@@ -277,11 +284,11 @@ export function PublicUgcNoticeGate({ active }: Props) {
               testID="public-ugc-notice-continue"
             >
               <Text style={styles.continueBtnText}>
-                {submitting ? "저장 중..." : "확인했고 공개 글 보기를 시작할게요"}
+                {submitting ? "저장 중..." : "확인 및 동의 후 공개 글 보기를 시작할게요"}
               </Text>
             </Pressable>
           </View>
-        </View>
+        </ScrollView>
       </SafeAreaView>
     </View>
   );
@@ -297,8 +304,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "rgba(12, 18, 14, 0.38)",
   },
-  backdrop: {
+  scroll: {
     flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
     justifyContent: "center",
     paddingHorizontal: tokens.space.xl,
     paddingVertical: tokens.space.xl,

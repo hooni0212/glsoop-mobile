@@ -1,3 +1,7 @@
+> Canonical moved: 공통 release / app-review 문서는 `glsoop-ops/docs/release/mobile` 및 `glsoop-ops/docs/app-review/ios`를 기준으로 관리합니다.
+>
+> 이 파일은 기존 링크 호환을 위해 임시 유지합니다.
+
 # iOS App Store 공개 출시 런북
 
 - 문서 타입: `Runbook`
@@ -22,6 +26,7 @@ build를 버전에 연결한 뒤 App Review에 직접 제출해야 한다.
 - bundle identifier: `com.glsoop.app`
 - latest uploaded build: `1.0.0 (9)`
 - `eas.json` submit profile에 `ascAppId`가 연결되어 있다.
+- 다음 공개 제출 빌드는 `iPad portrait full-screen` 지원을 포함해야 한다.
 
 이번 런북의 범위:
 
@@ -74,6 +79,7 @@ App Store Connect에서 아래를 완료한다.
 공개 제출 전 아래를 준비한다.
 
 - iPhone 스크린샷
+- iPad portrait full-screen 스크린샷
 - 심사용 연락처
 - 심사용 테스트 계정
 - 심사 메모
@@ -116,6 +122,7 @@ App Store Version Release 옵션은 아래 중 하나를 고른다.
 - [ ] `내 정보`의 정책/지원 링크 확인
 - [ ] 비활성화/즉시 탈퇴 흐름 확인
 - [ ] 앱 아이콘/스플래시/기본 브랜딩 확인
+- [ ] iPad 11-inch / 13-inch portrait full-screen에서 동일 흐름 확인
 
 ### App Store Connect 입력 확인
 
@@ -124,7 +131,7 @@ App Store Version Release 옵션은 아래 중 하나를 고른다.
 - [ ] App Privacy 완료
 - [ ] Pricing and Availability 설정
 - [ ] 공개 국가/지역 설정
-- [ ] 스크린샷 업로드
+- [ ] iPhone + iPad 스크린샷 업로드
 - [ ] 심사용 계정/메모 입력
 
 ### 제출 후
@@ -143,6 +150,7 @@ App Store Version Release 옵션은 아래 중 하나를 고른다.
 - 서버 운영 계약은 최신 상태이며 로그인은 실기기에서 이미 검증됐다.
 - 이번 단계는 App Review 제출과 공개 배포 준비까지다.
 - 첫 공개 출시는 수동 공개가 더 안전하다.
+- iPad는 `portrait + full-screen`만 지원하고 새 바이너리 빌드가 필요하다.
 
 ---
 

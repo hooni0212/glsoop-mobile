@@ -812,8 +812,8 @@ export default function PostDetail() {
             <Text style={styles.bookmarkModalTitle}>더보기</Text>
             <Text style={styles.bookmarkModalDescription}>
               {canManagePost
-                ? "이 글에서 필요한 메뉴를 선택해 주세요."
-                : "공유, 신고, 차단, 가이드라인, 지원 경로를 확인할 수 있어요."}
+                ? "필요한 메뉴를 선택해 주세요."
+                : "공유, 신고, 차단, 가이드라인을 확인할 수 있어요."}
             </Text>
 
             <View style={styles.modalActionList}>
@@ -894,7 +894,7 @@ export default function PostDetail() {
           <View style={styles.bookmarkModalCard}>
             <Text style={styles.bookmarkModalTitle}>작성자 차단</Text>
             <Text style={styles.bookmarkModalDescription}>
-              {`${authorName}님의 글과 프로필을 내 화면에서 즉시 숨기고, 운영팀이 검토 후 필요한 경우 콘텐츠 삭제 또는 계정 제재를 진행할 수 있어요. 나중에 계정 센터에서 차단을 해제할 수 있어요.`}
+              {`${authorName}님의 글과 프로필을 숨길까요? 계정 센터에서 다시 해제할 수 있어요.`}
             </Text>
 
             <View style={styles.modalActionList}>
@@ -924,11 +924,11 @@ export default function PostDetail() {
       <SafetyReasonModal
         visible={reportReasonVisible}
         title="게시글 신고"
-        description="신고가 접수되면 운영팀이 24시간 내 검토하고, 위반 시 콘텐츠 삭제 및 계정 제재가 이루어질 수 있어요."
+        description="접수된 신고는 운영 기준에 따라 검토돼요."
         reasons={postSafetyReasons}
         detailMaxLength={reportDetailMaxLength}
         detailRequiredReasonCodes={reportDetailRequiredReasonCodes}
-        submitLabel="신고 접수"
+        submitLabel="신고하기"
         submitting={reportSubmitting}
         onClose={() => {
           if (reportSubmitting) return;

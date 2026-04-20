@@ -22,9 +22,7 @@ export default function AuthWelcome() {
             <Image source={glsoopIcon} style={styles.logoImage} contentFit="cover" transition={120} />
           </View>
           <Text style={styles.title}>글숲</Text>
-          <Text style={styles.subtitle}>
-            일상의 작은 순간들을 기록하고{"\n"}나누는 공간
-          </Text>
+          <Text style={styles.subtitle}>기록하고 나누는 글의 숲</Text>
         </View>
 
         <View style={styles.actions}>
@@ -53,6 +51,9 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: tokens.colors.bg },
   container: {
     flex: 1,
+    width: "100%",
+    maxWidth: 480,
+    alignSelf: "center",
     paddingHorizontal: tokens.space.xl,
     paddingTop: tokens.space.xl,
     paddingBottom: tokens.space.xl,

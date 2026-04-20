@@ -4,6 +4,7 @@ import {
   Platform,
   Pressable,
   SafeAreaView,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -136,54 +137,61 @@ export default function AuthResetPassword() {
         style={styles.flex}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <View style={styles.container}>
-          <View style={styles.headerRow}>
-            <Pressable onPress={() => router.back()} style={styles.backBtn}>
-              <Text style={styles.backText}>←</Text>
-            </Pressable>
-            <Text style={styles.h1}>비밀번호 재설정</Text>
-            <View style={styles.headerSpacer} />
-          </View>
-
-          <Text style={styles.sub}>새 비밀번호를 입력하고 다시 로그인해주세요.</Text>
-
-          {error ? (
-            <View style={styles.block}>
-              <AppError error={error} />
-            </View>
-          ) : null}
-
-          <View style={styles.form}>
-            <TextInput
-              value={newPw}
-              onChangeText={setNewPw}
-              placeholder="새 비밀번호"
-              secureTextEntry
-              style={styles.input}
-            />
-
-            <Pressable
-              onPress={onSubmit}
-              disabled={busy || !newPw.trim()}
-              style={[
-                styles.primaryBtn,
-                (busy || !newPw.trim()) && styles.primaryBtnDisabled,
-              ]}
-            >
-              <Text style={styles.primaryBtnText}>
-                {busy ? "변경 중..." : "비밀번호 변경"}
-              </Text>
-            </Pressable>
-
-            {message ? <Text style={styles.helper}>{message}</Text> : null}
-
-            {message ? (
-              <Pressable onPress={() => router.replace(buildAuthRoute("/(auth)/login", redirect))}>
-                <Text style={styles.link}>로그인 하러가기</Text>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          contentInsetAdjustmentBehavior="automatic"
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.container}>
+            <View style={styles.headerRow}>
+              <Pressable onPress={() => router.back()} style={styles.backBtn}>
+                <Text style={styles.backText}>←</Text>
               </Pressable>
+              <Text style={styles.h1}>비밀번호 재설정</Text>
+              <View style={styles.headerSpacer} />
+            </View>
+
+            <Text style={styles.sub}>새 비밀번호를 입력하고 다시 로그인해주세요.</Text>
+
+            {error ? (
+              <View style={styles.block}>
+                <AppError error={error} />
+              </View>
             ) : null}
+
+            <View style={styles.form}>
+              <TextInput
+                value={newPw}
+                onChangeText={setNewPw}
+                placeholder="새 비밀번호"
+                secureTextEntry
+                style={styles.input}
+              />
+
+              <Pressable
+                onPress={onSubmit}
+                disabled={busy || !newPw.trim()}
+                style={[
+                  styles.primaryBtn,
+                  (busy || !newPw.trim()) && styles.primaryBtnDisabled,
+                ]}
+              >
+                <Text style={styles.primaryBtnText}>
+                  {busy ? "변경 중..." : "비밀번호 변경"}
+                </Text>
+              </Pressable>
+
+              {message ? <Text style={styles.helper}>{message}</Text> : null}
+
+              {message ? (
+                <Pressable onPress={() => router.replace(buildAuthRoute("/(auth)/login", redirect))}>
+                  <Text style={styles.link}>로그인 하러가기</Text>
+                </Pressable>
+              ) : null}
+            </View>
           </View>
-        </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -192,10 +200,16 @@ export default function AuthResetPassword() {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   safe: { flex: 1, backgroundColor: tokens.colors.bg },
-  container: {
-    flex: 1,
+  scrollContent: {
+    flexGrow: 1,
     paddingHorizontal: tokens.space.xl,
     paddingTop: tokens.space.lg,
+    paddingBottom: tokens.space.xl * 1.5,
+  },
+  container: {
+    width: "100%",
+    maxWidth: 420,
+    alignSelf: "center",
     gap: tokens.space.lg as any,
   },
   center: {

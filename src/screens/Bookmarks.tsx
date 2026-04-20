@@ -641,6 +641,9 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 16 },
 
   header: {
+    width: "100%",
+    maxWidth: 820,
+    alignSelf: "center",
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
@@ -660,7 +663,10 @@ const styles = StyleSheet.create({
   headerBtnText: { fontSize: 12, fontWeight: "800", color: tokens.colors.text },
 
   createBox: {
-    marginHorizontal: tokens.space.lg,
+    width: "100%",
+    maxWidth: 820,
+    alignSelf: "center",
+    paddingHorizontal: tokens.space.md,
     marginBottom: tokens.space.md,
     borderWidth: 1,
     borderColor: tokens.colors.border,
@@ -690,6 +696,9 @@ const styles = StyleSheet.create({
   createBtnText: { fontSize: 13, fontWeight: "800", color: "#fff" },
 
   listScroll: {
+    width: "100%",
+    maxWidth: 820,
+    alignSelf: "center",
     paddingHorizontal: tokens.space.lg,
     paddingBottom: 32,
     gap: 10,
@@ -764,6 +773,9 @@ const styles = StyleSheet.create({
   editPrimaryBtnText: { fontSize: 13, fontWeight: "800", color: "#fff" },
 
   detailHeader: {
+    width: "100%",
+    maxWidth: 820,
+    alignSelf: "center",
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
@@ -786,6 +798,9 @@ const styles = StyleSheet.create({
   detailTitle: { flex: 1, textAlign: "center", fontSize: 17, fontWeight: "900", color: tokens.colors.text },
 
   itemsScroll: {
+    width: "100%",
+    maxWidth: 820,
+    alignSelf: "center",
     paddingHorizontal: tokens.space.lg,
     paddingBottom: 32,
     gap: 10,

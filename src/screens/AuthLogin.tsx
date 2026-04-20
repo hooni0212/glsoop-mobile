@@ -4,6 +4,7 @@ import {
   Modal,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -147,68 +148,77 @@ export default function AuthLogin() {
         style={styles.flex}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <View style={styles.container}>
-          <View style={styles.headerRow}>
-            <Pressable onPress={() => router.back()} style={styles.backBtn}>
-              <Text style={styles.backText}>←</Text>
-            </Pressable>
-            <Text style={styles.h1}>로그인</Text>
-            <View style={{ width: 36 }} />
-          </View>
-
-          <Text style={styles.sub}>이메일과 비밀번호로 로그인해요.</Text>
-
-          {error ? (
-            <View style={styles.block}>
-              <AppError error={error} />
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          contentInsetAdjustmentBehavior="automatic"
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.container}>
+            <View style={styles.headerRow}>
+              <Pressable onPress={() => router.back()} style={styles.backBtn}>
+                <Text style={styles.backText}>←</Text>
+              </Pressable>
+              <Text style={styles.h1}>로그인</Text>
+              <View style={styles.headerSpacer} />
             </View>
-          ) : null}
 
-          <View style={styles.form}>
-            <TextInput
-              value={email}
-              onChangeText={setEmail}
-              placeholder="이메일"
-              autoCapitalize="none"
-              keyboardType="email-address"
-              style={styles.input}
-              editable={!busy && !reactivationBusy}
-              testID="login-email-input"
-            />
-            <TextInput
-              value={pw}
-              onChangeText={setPw}
-              placeholder="비밀번호"
-              secureTextEntry
-              style={styles.input}
-              editable={!busy && !reactivationBusy}
-              testID="login-password-input"
-            />
+            <Text style={styles.sub}>이메일로 로그인해요.</Text>
 
-            <Pressable
-              onPress={onLogin}
-              disabled={busy || reactivationBusy || !email || !pw}
-              testID="login-submit-btn"
-              style={({ pressed }) => [
-                styles.primaryBtn,
-                (busy || reactivationBusy || !email || !pw) && styles.primaryBtnDisabled,
-                pressed && !busy && styles.primaryBtnPressed,
-              ]}
-            >
-              <Text style={styles.primaryBtnText}>{busy ? "로그인 중..." : "로그인"}</Text>
-            </Pressable>
+            {error ? (
+              <View style={styles.block}>
+                <AppError error={error} />
+              </View>
+            ) : null}
 
-            {message ? <Text style={styles.helper}>{message}</Text> : null}
+            <View style={styles.form}>
+              <TextInput
+                value={email}
+                onChangeText={setEmail}
+                placeholder="이메일"
+                autoCapitalize="none"
+                keyboardType="email-address"
+                style={styles.input}
+                editable={!busy && !reactivationBusy}
+                testID="login-email-input"
+              />
+              <TextInput
+                value={pw}
+                onChangeText={setPw}
+                placeholder="비밀번호"
+                secureTextEntry
+                style={styles.input}
+                editable={!busy && !reactivationBusy}
+                testID="login-password-input"
+              />
 
-            <Pressable onPress={() => router.push(buildAuthRoute("/(auth)/forgot-password", redirect))}>
-              <Text style={styles.link}>비밀번호를 잊으셨나요?</Text>
-            </Pressable>
+              <Pressable
+                onPress={onLogin}
+                disabled={busy || reactivationBusy || !email || !pw}
+                testID="login-submit-btn"
+                style={({ pressed }) => [
+                  styles.primaryBtn,
+                  (busy || reactivationBusy || !email || !pw) && styles.primaryBtnDisabled,
+                  pressed && !busy && styles.primaryBtnPressed,
+                ]}
+              >
+                <Text style={styles.primaryBtnText}>{busy ? "로그인 중..." : "로그인"}</Text>
+              </Pressable>
 
-            <Pressable onPress={() => router.push(buildAuthRoute("/(auth)/signup", redirect))}>
-              <Text style={styles.link}>계정이 없나요? 회원가입</Text>
-            </Pressable>
+              {message ? <Text style={styles.helper}>{message}</Text> : null}
+
+              <Pressable
+                onPress={() => router.push(buildAuthRoute("/(auth)/forgot-password", redirect))}
+              >
+                <Text style={styles.link}>비밀번호를 잊으셨나요?</Text>
+              </Pressable>
+
+              <Pressable onPress={() => router.push(buildAuthRoute("/(auth)/signup", redirect))}>
+                <Text style={styles.link}>회원가입</Text>
+              </Pressable>
+            </View>
           </View>
-        </View>
+        </ScrollView>
       </KeyboardAvoidingView>
 
       <Modal transparent visible={!!pendingReactivation} animationType="fade">
@@ -263,10 +273,16 @@ export default function AuthLogin() {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   safe: { flex: 1, backgroundColor: tokens.colors.bg },
-  container: {
-    flex: 1,
+  scrollContent: {
+    flexGrow: 1,
     paddingHorizontal: tokens.space.xl,
     paddingTop: tokens.space.lg,
+    paddingBottom: tokens.space.xl * 1.5,
+  },
+  container: {
+    width: "100%",
+    maxWidth: 420,
+    alignSelf: "center",
     gap: tokens.space.lg as any,
   },
   headerRow: {
@@ -274,6 +290,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
   },
+  headerSpacer: { width: 36, height: 36 },
   backBtn: {
     width: 36,
     height: 36,
@@ -326,6 +343,7 @@ const styles = StyleSheet.create({
   modalCard: {
     width: "100%",
     maxWidth: 360,
+    maxHeight: "84%",
     backgroundColor: tokens.colors.surfaceStrong,
     borderRadius: tokens.radius.xl,
     borderWidth: 1,

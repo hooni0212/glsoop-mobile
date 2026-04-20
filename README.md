@@ -2,6 +2,20 @@
 
 글숲(`glsoop`) 서버와 연동되는 Expo Router 기반 모바일/웹 클라이언트입니다.
 
+## 문서 경계
+
+- 로컬 모바일 문서 인덱스: `docs/README.md`
+- 모바일 API 문서: `docs/api/README.md`
+- 작업 시작용 canonical 문서: `../glsoop-ops/docs/operations/agent-start-here.md`
+- 공통 release canonical: `../glsoop-ops/docs/release/mobile/`
+- App Review canonical: `../glsoop-ops/docs/app-review/ios/`
+- 문서 표준 canonical: `../glsoop-ops/docs/operations/documentation-standard.md`
+- Notion sync 표준 canonical: `../glsoop-ops/docs/operations/notion-sync-standard.md`
+- QA taxonomy canonical: `../glsoop-ops/docs/qa/README.md`
+- 공통 운영/아카이브 canonical: `../glsoop-ops/docs/operations/glsoop-mobile/`, `../glsoop-ops/docs/archive/glsoop-mobile/`
+
+실행/빌드와 직접 연결된 Expo/EAS 설정, 앱 자산, runtime URL 관련 코드는 이 저장소를 기준으로 유지합니다.
+
 ## 서비스/기능 요약
 
 - 인증: 로그인/회원가입/세션 기반 사용자 진입
@@ -90,6 +104,47 @@ npm run e2e:web
 npx playwright test e2e/post-detail.spec.ts
 npx playwright test e2e/search.spec.ts
 ```
+
+## iOS 시뮬레이터 캡처
+
+네이티브 iOS 시뮬레이터에서 대표 화면을 캡처해 `glsoop-ops` archive 경로에 날짜별로 저장할 수 있습니다.
+
+사전 준비:
+
+- Maestro CLI 설치 및 PATH 등록
+- sibling repo `../glsoop-ops` 존재
+- QA 계정 env 설정
+
+```bash
+export IOS_SCREENSHOT_QA_EMAIL='qa@example.com'
+export IOS_SCREENSHOT_QA_PASSWORD='your-password'
+```
+
+실행:
+
+```bash
+npm run ops:ios:screenshots
+```
+
+옵션 예시:
+
+```bash
+npm run ops:ios:screenshots -- --device=iphone
+IOS_SCREENSHOT_OUTPUT_ROOT=../glsoop-ops/docs/archive/glsoop-mobile/ios-simulator-screenshots npm run ops:ios:screenshots
+IOS_SCREENSHOT_APP_BINARY=/absolute/path/to/Glsoop.app npm run ops:ios:screenshots
+```
+
+기본 동작:
+
+- 디바이스: `iPhone 16e`, `iPad Air 11-inch (M3)`
+- 출력 루트: `../glsoop-ops/docs/archive/glsoop-mobile/ios-simulator-screenshots/YYYY-MM-DD/run-HHMMSS/`
+- 공개 최신 글 기준으로 글 상세/작가 화면 캡처
+- 앱이 설치되어 있지 않으면 `npx expo run:ios`로 빌드/설치를 시도
+
+참고:
+
+- `IOS_SCREENSHOT_APP_BINARY`는 시뮬레이터용 `.app` 경로를 권장합니다.
+- 첫 `expo run:ios` 실행 시 로컬 `ios/` 폴더가 생성될 수 있으며, 이 repo에서는 `.gitignore`로 제외됩니다.
 
 ## 노션 동기화
 

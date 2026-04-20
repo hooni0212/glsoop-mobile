@@ -1,0 +1,8 @@
+appId: com.glsoop.app
+---
+- extendedWaitUntil:
+    visible:
+      id: "profile-customize-screen"
+    timeout: 60000
+- assertVisible:
+    id: "profile-customize-screen"

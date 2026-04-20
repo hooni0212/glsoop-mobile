@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
+  Platform,
   StyleSheet,
   Text,
   View,
@@ -11,12 +12,16 @@ import {
 } from "react-native";
 import { Image } from "expo-image";
 
+import { useAuth } from "@/auth/AuthContext";
+import { COOKIE_SESSION_TOKEN } from "@/lib/authToken";
 import { createFeedPreviewSession, type FeedPreviewRenderImages } from "@/lib/feedImage";
+import { logger } from "@/lib/logger";
 import type { PostFontKey } from "@/lib/postContent";
 import type { WriteLayoutModel } from "@/lib/postLayout";
 import type { PostType } from "@/types/post";
 
 const PREVIEW_REQUEST_DEBOUNCE_MS = 450;
+const PREVIEW_SESSION_PATH = "/api/feed-images/preview/sessions/";
 
 type Props = {
   title: string;
@@ -32,6 +37,10 @@ function resolveErrorMessage(error: unknown) {
   return "미리보기를 불러오지 못했어요. 저장은 계속할 수 있습니다.";
 }
 
+function isPreviewSessionImageUrl(uri: string) {
+  return uri.includes(PREVIEW_SESSION_PATH);
+}
+
 export function WritePreviewCard({
   title,
   body,
@@ -40,11 +49,13 @@ export function WritePreviewCard({
   fontKey,
   compact = false,
 }: Props) {
+  const { token } = useAuth();
   const previewTitle = title.trim() || "제목 미리보기";
   const previewBody = body.trim() || "본문이 여기에 보여요.";
   const [preview, setPreview] = useState<FeedPreviewRenderImages | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [imageLoadError, setImageLoadError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(0);
   const [viewportWidth, setViewportWidth] = useState(0);
 
@@ -108,6 +119,10 @@ export function WritePreviewCard({
   }, [preview]);
 
   useEffect(() => {
+    setImageLoadError(null);
+  }, [preview?.renderImages.previewSessionId]);
+
+  useEffect(() => {
     if (!preview?.renderImages.previewSessionId) return;
     if (!listRef.current) return;
     if (viewportWidth <= 0) return;
@@ -115,11 +130,31 @@ export function WritePreviewCard({
   }, [currentPage, preview?.renderImages.previewSessionId, viewportWidth]);
 
   const images = preview?.images ?? [];
+  const requiresAuthorizedImages = images.some(isPreviewSessionImageUrl);
+  const previewImageHeaders = useMemo<Record<string, string> | undefined>(() => {
+    if (!requiresAuthorizedImages) return undefined;
+    if (token && token !== COOKIE_SESSION_TOKEN) {
+      return { Authorization: `Bearer ${token}` };
+    }
+    if (Platform.OS === "web") {
+      // expo-image on web uses fetch when headers is present, which preserves same-origin cookies.
+      return {} as Record<string, string>;
+    }
+    return undefined;
+  }, [requiresAuthorizedImages, token]);
   const totalPages = Math.max(
     1,
     preview?.renderImages.pageCount ?? images.length ?? 1
   );
   const isTruncated = Boolean(preview?.renderImages.isTruncated);
+  const visibleError = error || imageLoadError;
+
+  const buildPreviewImageSource = (uri: string) => {
+    if (!isPreviewSessionImageUrl(uri) || !previewImageHeaders) {
+      return { uri };
+    }
+    return { uri, headers: previewImageHeaders };
+  };
 
   const onLayoutViewport = (event: LayoutChangeEvent) => {
     const nextWidth = Math.round(event.nativeEvent.layout.width);
@@ -156,11 +191,20 @@ export function WritePreviewCard({
                   ]}
                 >
                   <Image
-                    source={{ uri: item }}
+                    source={buildPreviewImageSource(item)}
                     style={[styles.image, compact && styles.imageCompact]}
                     contentFit="contain"
                     cachePolicy="none"
                     transition={120}
+                    onError={() => {
+                      logger.warn("[write-preview] image load failed", {
+                        platform: Platform.OS,
+                        requiresAuthorizedImages,
+                        hasToken: Boolean(token && token !== COOKIE_SESSION_TOKEN),
+                        uri: item,
+                      });
+                      setImageLoadError("미리보기 이미지를 불러오지 못했어요. 다시 열어 주세요.");
+                    }}
                   />
                 </View>
               )}
@@ -168,7 +212,7 @@ export function WritePreviewCard({
           ) : (
             <View style={[styles.emptyState, compact && styles.imageCompact]}>
               <Text style={styles.emptyStateText}>
-                {error || "미리보기를 준비하고 있어요."}
+                {visibleError || "미리보기를 준비하고 있어요."}
               </Text>
             </View>
           )}
@@ -188,9 +232,9 @@ export function WritePreviewCard({
           </View>
         ) : null}
 
-        {error ? (
+        {visibleError ? (
           <View style={styles.errorBox}>
-            <Text style={styles.errorText}>{error}</Text>
+            <Text style={styles.errorText}>{visibleError}</Text>
           </View>
         ) : null}
 

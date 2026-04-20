@@ -1,0 +1,8 @@
+appId: com.glsoop.app
+---
+- extendedWaitUntil:
+    visible:
+      id: "author-screen"
+    timeout: 60000
+- assertVisible:
+    id: "author-screen"

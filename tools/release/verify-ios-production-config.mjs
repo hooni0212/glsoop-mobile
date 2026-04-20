@@ -3,6 +3,8 @@ import { execFileSync } from "node:child_process";
 const EXPECTED = {
   bundleIdentifier: "com.glsoop.app",
   version: "1.0.0",
+  supportsTablet: true,
+  requireFullScreen: true,
   env: {
     EXPO_PUBLIC_API_BASE_URL: "https://glsoop.com",
     EXPO_PUBLIC_API_DEBUG: "false",
@@ -29,6 +31,8 @@ const config = getExpoConfig();
 const bundleIdentifier = config?.ios?.bundleIdentifier;
 const version = config?.version;
 const buildNumber = config?.ios?.buildNumber;
+const supportsTablet = config?.ios?.supportsTablet;
+const requireFullScreen = config?.ios?.requireFullScreen;
 
 if (bundleIdentifier !== EXPECTED.bundleIdentifier) {
   fail(`ios.bundleIdentifier mismatch: expected ${EXPECTED.bundleIdentifier}, received ${bundleIdentifier ?? "(missing)"}`);
@@ -42,10 +46,24 @@ if (typeof buildNumber !== "string" || buildNumber.trim() === "") {
   fail("ios.buildNumber is missing.");
 }
 
+if (supportsTablet !== EXPECTED.supportsTablet) {
+  fail(
+    `ios.supportsTablet mismatch: expected ${String(EXPECTED.supportsTablet)}, received ${String(supportsTablet)}`
+  );
+}
+
+if (requireFullScreen !== EXPECTED.requireFullScreen) {
+  fail(
+    `ios.requireFullScreen mismatch: expected ${String(EXPECTED.requireFullScreen)}, received ${String(requireFullScreen)}`
+  );
+}
+
 console.log("Verified Expo public config:");
 console.log(`- ios.bundleIdentifier=${bundleIdentifier}`);
 console.log(`- version=${version}`);
 console.log(`- ios.buildNumber=${buildNumber}`);
+console.log(`- ios.supportsTablet=${String(supportsTablet)}`);
+console.log(`- ios.requireFullScreen=${String(requireFullScreen)}`);
 
 if (!checkEnv) {
   process.exit(0);

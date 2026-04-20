@@ -1,3 +1,7 @@
+> Canonical moved: 공통 release / app-review 문서는 `glsoop-ops/docs/release/mobile` 및 `glsoop-ops/docs/app-review/ios`를 기준으로 관리합니다.
+>
+> 이 파일은 기존 링크 호환을 위해 임시 유지합니다.
+
 # 스토어 공통 메타데이터 기준
 
 - 문서 타입: `Canonical Metadata`

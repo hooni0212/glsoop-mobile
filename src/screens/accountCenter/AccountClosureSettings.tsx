@@ -295,6 +295,9 @@ const styles = StyleSheet.create({
     height: 40,
   },
   content: {
+    width: "100%",
+    maxWidth: 760,
+    alignSelf: "center",
     paddingHorizontal: tokens.space.xl,
     paddingTop: tokens.space.md,
     paddingBottom: tokens.space.xl,

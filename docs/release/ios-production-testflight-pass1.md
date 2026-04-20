@@ -1,3 +1,7 @@
+> Canonical moved: 공통 release / app-review 문서는 `glsoop-ops/docs/release/mobile` 및 `glsoop-ops/docs/app-review/ios`를 기준으로 관리합니다.
+>
+> 이 파일은 기존 링크 호환을 위해 임시 유지합니다.
+
 # EAS Production iOS -> 내부 TestFlight 1차 런북
 
 - 문서 타입: `Runbook`
@@ -11,7 +15,7 @@
 
 ## Summary
 
-이번 1차 목표는 `production` iOS 빌드를 만들고, 그 빌드가 App Store Connect와 내부 TestFlight를 통해 실제 iPhone에 설치되는지 확인하는 것이다.
+이번 1차 목표는 `production` iOS 빌드를 만들고, 그 빌드가 App Store Connect와 내부 TestFlight를 통해 실제 iPhone과 iPad portrait full-screen에 설치되는지 확인하는 것이다.
 
 완료 기준:
 
@@ -19,6 +23,7 @@
 - App Store Connect 반영 확인
 - 내부 TestFlight 설치 확인
 - 핵심 플로우 스모크 통과
+- iPad portrait full-screen 설치/조작 확인
 
 이번 범위에 포함하지 않는 것:
 
@@ -62,6 +67,8 @@ npm run release:ios:verify:config
 - `ios.bundleIdentifier = com.glsoop.app`
 - `version = 1.0.0`
 - `ios.buildNumber` 존재
+- `ios.supportsTablet = true`
+- `ios.requireFullScreen = true`
 
 #### EAS production env 검증
 
@@ -198,6 +205,7 @@ npx eas-cli submit --platform ios --latest --groups "<internal-group>"
 - 북마크 기본 동작
 - 성장 탭 기본 진입
 - `내 정보` 정책/지원 링크 진입
+- iPad 11-inch / 13-inch portrait full-screen에서 동일 시나리오 반복
 
 ### 실패 분기
 

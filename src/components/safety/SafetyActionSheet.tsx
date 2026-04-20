@@ -1,5 +1,5 @@
 import React from "react";
-import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { tokens } from "@/theme/tokens";
 
@@ -36,37 +36,44 @@ export function SafetyActionSheet({
       <View style={styles.overlay}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onRequestClose} />
         <View style={styles.card}>
-          <Text style={styles.title}>{title}</Text>
-          <Text style={styles.description}>{description}</Text>
+          <ScrollView
+            bounces={false}
+            contentContainerStyle={styles.cardContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            <Text style={styles.title}>{title}</Text>
+            <Text style={styles.description}>{description}</Text>
 
-          <View style={styles.actionList}>
-            {actions.map((action) => {
-              const variant = action.variant ?? "default";
-              return (
-                <Pressable
-                  key={`${action.label}-${variant}`}
-                  onPress={action.onPress}
-                  disabled={action.disabled}
-                  style={[
-                    styles.actionBtn,
-                    variant === "danger" && styles.actionBtnDanger,
-                    variant === "ghost" && styles.actionBtnGhost,
-                    action.disabled && styles.actionBtnDisabled,
-                  ]}
-                  testID={action.testID}
-                >
-                  <Text
+            <View style={styles.actionList}>
+              {actions.map((action) => {
+                const variant = action.variant ?? "default";
+                return (
+                  <Pressable
+                    key={`${action.label}-${variant}`}
+                    onPress={action.onPress}
+                    disabled={action.disabled}
                     style={[
-                      styles.actionText,
-                      variant === "danger" && styles.actionTextDanger,
+                      styles.actionBtn,
+                      variant === "danger" && styles.actionBtnDanger,
+                      variant === "ghost" && styles.actionBtnGhost,
+                      action.disabled && styles.actionBtnDisabled,
                     ]}
+                    testID={action.testID}
                   >
-                    {action.label}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
+                    <Text
+                      style={[
+                        styles.actionText,
+                        variant === "danger" && styles.actionTextDanger,
+                      ]}
+                    >
+                      {action.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </ScrollView>
         </View>
       </View>
     </Modal>
@@ -83,11 +90,14 @@ const styles = StyleSheet.create({
   card: {
     width: "100%",
     maxWidth: 420,
+    maxHeight: "84%",
     alignSelf: "center",
     borderRadius: tokens.radius.xl,
     backgroundColor: tokens.colors.surfaceStrong,
     borderWidth: 1,
     borderColor: tokens.colors.border,
+  },
+  cardContent: {
     padding: tokens.space.lg,
     gap: tokens.space.md as any,
   },

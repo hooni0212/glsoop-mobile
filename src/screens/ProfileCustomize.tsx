@@ -196,7 +196,7 @@ export default function ProfileCustomizeScreen() {
         {error ? (
           <View style={styles.notice}>
             <Text style={styles.noticeText}>
-              일부 데이터를 새로고침하지 못했어요. 선택 후 저장은 계속할 수 있어요.
+              일부 데이터를 새로고침하지 못했어요. 저장은 계속할 수 있어요.
             </Text>
           </View>
         ) : null}
@@ -233,7 +233,7 @@ export default function ProfileCustomizeScreen() {
           <Text style={styles.sectionTitle}>
             쇼케이스 뱃지 {selection.showcase_badge_keys.length}/{MAX_SHOWCASE_BADGES}
           </Text>
-          <Text style={styles.sectionHint}>작가 카드에 최대 6개까지 노출돼요.</Text>
+          <Text style={styles.sectionHint}>작가 카드에 최대 6개까지 보여요.</Text>
 
           {inventory.badges.length === 0 ? (
             <Text style={styles.emptyText}>쇼케이스에 올릴 뱃지가 없어요.</Text>
@@ -254,7 +254,7 @@ export default function ProfileCustomizeScreen() {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>헤더 스티커</Text>
-          <Text style={styles.sectionHint}>좌상단/우상단/우하단 슬롯을 각각 고를 수 있어요.</Text>
+          <Text style={styles.sectionHint}>세 슬롯을 각각 고를 수 있어요.</Text>
 
           {inventory.stickers.length === 0 ? (
             <Text style={styles.emptyText}>보유한 스티커가 아직 없어요.</Text>
@@ -289,16 +289,16 @@ export default function ProfileCustomizeScreen() {
 
         <Pressable
           onPress={saveProfileCosmetics}
-          disabled={saving || loading}
+          disabled={saving || loading || !dirty}
           style={({ pressed }) => [
             styles.saveButton,
-            (saving || loading) && styles.saveButtonDisabled,
-            pressed && !(saving || loading) && styles.saveButtonPressed,
+            (saving || loading || !dirty) && styles.saveButtonDisabled,
+            pressed && !(saving || loading || !dirty) && styles.saveButtonPressed,
           ]}
           testID="profile-cosmetics-save-btn"
         >
           <Text style={styles.saveButtonText}>
-            {saving ? "저장 중..." : dirty ? "저장하기" : "변경사항 저장"}
+            {saving ? "저장 중..." : "저장"}
           </Text>
         </Pressable>
       </ScrollView>
@@ -416,6 +416,9 @@ const styles = StyleSheet.create({
     height: 40,
   },
   content: {
+    width: "100%",
+    maxWidth: 760,
+    alignSelf: "center",
     paddingHorizontal: tokens.space.xl,
     paddingTop: tokens.space.sm,
     paddingBottom: tokens.space.xl,

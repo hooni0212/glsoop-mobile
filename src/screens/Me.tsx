@@ -250,7 +250,7 @@ export default function MeScreen() {
             <View style={styles.profileHomeCopy}>
               <Text style={styles.profileHomeTitle}>프로필 홈</Text>
               <Text style={styles.profileHomeDescription}>
-                활동은 여기서 보고, 보안과 계정 정리는 계정 센터에서 따로 관리해요.
+                계정 설정은 계정 센터에서 관리해요.
               </Text>
             </View>
             <Pressable onPress={() => router.push("/account-center")} style={styles.accountCenterBtn}>
@@ -265,14 +265,14 @@ export default function MeScreen() {
               testID="me-profile-customize-btn"
             >
               <Text style={styles.quickActionBtnTitle}>프로필 꾸미기</Text>
-              <Text style={styles.quickActionBtnDescription}>뱃지와 스티커를 정리해요</Text>
+              <Text style={styles.quickActionBtnDescription}>뱃지와 스티커</Text>
             </Pressable>
             <Pressable
               onPress={() => router.push("/account-center")}
               style={styles.quickActionBtn}
             >
               <Text style={styles.quickActionBtnTitle}>계정 센터</Text>
-              <Text style={styles.quickActionBtnDescription}>프로필, 보안, 탈퇴를 관리해요</Text>
+              <Text style={styles.quickActionBtnDescription}>프로필과 보안 설정</Text>
             </Pressable>
           </View>
         </View>
@@ -486,6 +486,9 @@ export default function MeScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: tokens.colors.bg },
   container: {
+    width: "100%",
+    maxWidth: 820,
+    alignSelf: "center",
     paddingHorizontal: tokens.space.xl,
     paddingTop: tokens.space.lg,
     paddingBottom: tokens.space.xl,

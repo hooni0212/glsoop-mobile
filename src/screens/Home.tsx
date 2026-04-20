@@ -390,7 +390,7 @@ export default function Home() {
       <SafetyActionSheet
         visible={safetyMenuVisible}
         title="게시글 안전 메뉴"
-        description="이 글에서 신고, 작성자 차단, 가이드라인, 지원 경로를 바로 확인할 수 있어요."
+        description="신고, 차단, 가이드라인을 확인할 수 있어요."
         onRequestClose={() => setSafetyMenuVisible(false)}
         actions={[
           {
@@ -437,7 +437,7 @@ export default function Home() {
       <SafetyActionSheet
         visible={blockConfirmVisible}
         title="작성자 차단"
-        description={`${selectedSafetyPost?.author?.name || "이 사용자"}의 글과 프로필이 내 화면에서 즉시 숨겨집니다. 운영 기준 위반 여부는 검토 후 조치될 수 있어요. 계속할까요?`}
+        description={`${selectedSafetyPost?.author?.name || "이 사용자"}님의 글과 프로필을 숨길까요?`}
         onRequestClose={() => {
           if (blockSubmitting) return;
           setBlockConfirmVisible(false);
@@ -465,11 +465,11 @@ export default function Home() {
       <SafetyReasonModal
         visible={reportReasonVisible}
         title="게시글 신고"
-        description="신고가 접수되면 운영팀이 24시간 내 검토하고, 위반 시 콘텐츠 삭제 및 계정 제재가 이루어질 수 있어요."
+        description="접수된 신고는 운영 기준에 따라 검토돼요."
         reasons={postSafetyReasons}
         detailMaxLength={reportDetailMaxLength}
         detailRequiredReasonCodes={reportDetailRequiredReasonCodes}
-        submitLabel="신고 접수"
+        submitLabel="신고하기"
         submitting={reportSubmitting}
         onClose={() => {
           if (reportSubmitting) return;

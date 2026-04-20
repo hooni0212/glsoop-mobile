@@ -1,0 +1,8 @@
+appId: com.glsoop.app
+---
+- extendedWaitUntil:
+    visible:
+      id: "write-submit-btn"
+    timeout: 60000
+- assertVisible:
+    id: "write-submit-btn"

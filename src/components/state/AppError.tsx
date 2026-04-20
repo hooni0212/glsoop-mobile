@@ -2,7 +2,6 @@ import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import type { AppErrorModel } from "@/lib/errors";
-import { softPanelShadowStyle } from "@/theme/shadows";
 import { tokens } from "@/theme/tokens";
 
 type AppErrorDisplay = Pick<AppErrorModel, "title" | "description">;
@@ -36,20 +35,22 @@ export function AppError({ error, onRetry, retryLabel = "다시 시도" }: Props
 
 const styles = StyleSheet.create({
   container: {
-    paddingVertical: tokens.space.lg,
-    paddingHorizontal: tokens.space.xl,
+    width: "100%",
+    maxWidth: 440,
+    alignSelf: "center",
+    paddingVertical: tokens.space.lg + 2,
+    paddingHorizontal: tokens.space.lg,
     borderRadius: tokens.radius.xl,
-    backgroundColor: tokens.colors.surfaceStrong,
+    backgroundColor: tokens.colors.surface,
     borderWidth: 1,
     borderColor: tokens.colors.border,
     alignItems: "center",
     justifyContent: "center",
-    gap: tokens.space.sm as any,
-    ...softPanelShadowStyle,
+    gap: tokens.space.xs as any,
   },
   title: {
-    fontSize: tokens.font.body,
-    fontWeight: "800",
+    fontSize: 16,
+    fontWeight: "900",
     color: tokens.colors.text,
     textAlign: "center",
   },
@@ -57,15 +58,17 @@ const styles = StyleSheet.create({
     fontSize: tokens.font.small,
     color: tokens.colors.textMuted,
     textAlign: "center",
+    lineHeight: 18,
   },
   retryButton: {
-    marginTop: tokens.space.sm,
+    marginTop: tokens.space.xs,
+    minHeight: 36,
     paddingHorizontal: tokens.space.md,
-    paddingVertical: tokens.space.sm,
+    paddingVertical: 8,
     borderRadius: tokens.radius.pill,
-    backgroundColor: tokens.colors.green100,
+    backgroundColor: tokens.colors.green050,
     borderWidth: 1,
-    borderColor: tokens.colors.borderStrong,
+    borderColor: tokens.colors.green100,
   },
   retryText: {
     fontSize: tokens.font.small,

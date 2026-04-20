@@ -103,8 +103,7 @@ export default function GrowthScreen() {
   }, [achievements]);
 
   const topPostsEmptyTitle = "아직 인기 글이 없어요";
-  const topPostsEmptyDescription =
-    "활동이 더 쌓이면, 여기에서 주목받는 글을 추천해드릴게요.";
+  const topPostsEmptyDescription = "활동이 쌓이면 여기에 표시돼요.";
   const topPostsError = topPostsMode === "error" ? error : null;
 
   useEffect(() => {
@@ -178,11 +177,11 @@ export default function GrowthScreen() {
             <View style={styles.heroTitleBlock}>
               <Text style={styles.heroEyebrow}>오늘의 리포트</Text>
               <Text style={styles.h1}>성장</Text>
-              <Text style={styles.subtitle}>오늘의 성장 신호를 한눈에 확인해요.</Text>
+              <Text style={styles.subtitle}>지금 진행 중인 흐름을 확인해요.</Text>
               <Text style={styles.heroQuickStatus}>
                 {summary
                   ? `Lv.${summary.level} · 오늘 +${summary.todayXp} XP`
-                  : "성장 데이터를 준비하고 있어요."}
+                  : "데이터를 불러오는 중이에요."}
               </Text>
             </View>
           </View>
@@ -204,7 +203,7 @@ export default function GrowthScreen() {
         <View style={styles.actionRow}>
           <ActionCard
             title="업적 보기"
-            description={`전체 ${achievementSummary.total}개`}
+            description={`${achievementSummary.total}개`}
             icon="trophy-outline"
             onPress={() => {
               trackGrowthTelemetry("growth_action_clicked", { action: "open_achievements" });
@@ -215,7 +214,7 @@ export default function GrowthScreen() {
           />
           <ActionCard
             title="퀘스트 보기"
-            description={`전체 ${questSummary.total}개`}
+            description={`${questSummary.total}개`}
             icon="trail-sign-outline"
             onPress={() => {
               trackGrowthTelemetry("growth_action_clicked", { action: "open_quests" });
@@ -230,7 +229,7 @@ export default function GrowthScreen() {
           title="업적 하이라이트"
           caption={`${achievementSummary.inProgress}개 진행 중`}
           items={achievementHighlights}
-          emptyText="진행 중인 업적이 없어요. 활동을 시작하면 자동으로 채워져요."
+          emptyText="진행 중인 업적이 없어요."
           onPressMore={() => router.push("/growth/achievements")}
           moreButtonTestID="growth-achievements-more"
         />
@@ -239,7 +238,7 @@ export default function GrowthScreen() {
           title="퀘스트 진행 하이라이트"
           caption={`${questSummary.inProgress}개 진행 중`}
           items={questHighlights}
-          emptyText="진행 중인 퀘스트가 없어요. 새 캠페인이 열리면 표시돼요."
+          emptyText="진행 중인 퀘스트가 없어요."
           onPressMore={() => router.push("/growth/quests")}
           moreButtonTestID="growth-quests-more"
         />
@@ -254,7 +253,7 @@ export default function GrowthScreen() {
             router.push(`/posts/${id}`);
           }}
           title="인기 글"
-          description="반응이 좋은 글을 모아 보여주는 영역이에요."
+          description="반응이 좋은 글"
           emptyTitle={topPostsEmptyTitle}
           emptyDescription={topPostsEmptyDescription}
         />
@@ -374,6 +373,9 @@ const styles = StyleSheet.create({
     backgroundColor: tokens.colors.bg,
   },
   content: {
+    width: "100%",
+    maxWidth: 820,
+    alignSelf: "center",
     paddingHorizontal: tokens.space.xl,
     paddingTop: tokens.space.lg,
     paddingBottom: 120,

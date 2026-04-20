@@ -21,7 +21,7 @@ function clampPercent(value: number) {
 
 function getSourceLabel(source?: GrowthLoadSource) {
   if (source === "dashboard") return "기본 데이터";
-  if (source === "fallback") return "대체 데이터";
+  if (source === "fallback") return "임시 데이터";
   return "";
 }
 
@@ -43,7 +43,7 @@ export function GrowthChart({
     return (
       <AppEmpty
         title="아직 성장 데이터가 없어요"
-        description="활동을 시작하면 레벨과 XP가 이곳에 표시돼요."
+        description="활동이 쌓이면 여기에 표시돼요."
       />
     );
   }
@@ -60,7 +60,7 @@ export function GrowthChart({
       <View style={styles.headerRow}>
         <View>
           <Text style={styles.headerTitle}>레벨 진행 현황</Text>
-          <Text style={styles.headerMeta}>XP와 스트릭을 기준으로 성장 흐름을 요약해요.</Text>
+          <Text style={styles.headerMeta}>XP와 스트릭</Text>
         </View>
         {sourceLabel ? (
           <Text style={styles.sourceBadge} accessibilityLabel={`데이터 소스: ${sourceLabel}`}>
@@ -84,7 +84,7 @@ export function GrowthChart({
         <View style={styles.progressTrack}>
           <View style={[styles.progressBar, { width: `${xpPercent}%` }]} />
         </View>
-        <Text style={styles.progressHint}>다음 레벨까지 {remainingXp} XP 남았어요</Text>
+        <Text style={styles.progressHint}>다음 레벨까지 {remainingXp} XP</Text>
       </View>
 
       <View style={styles.statsRow}>
@@ -106,7 +106,9 @@ export function GrowthChart({
 
       {error ? (
         <View style={styles.noticeRow}>
-          <Text style={styles.noticeText}>일부 데이터가 최신 상태가 아닐 수 있어요. 화면을 아래로 당겨 갱신해 주세요.</Text>
+          <Text style={styles.noticeText}>
+            일부 데이터가 최신이 아닐 수 있어요. 아래로 당겨 새로고침해 주세요.
+          </Text>
         </View>
       ) : null}
     </View>
