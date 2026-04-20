@@ -15,7 +15,7 @@ import { tokens } from "@/theme/tokens";
 export const homeScreenStyles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: tokens.colors.bg,
+    backgroundColor: tokens.colors.bgMuted,
   },
 });
 
@@ -80,7 +80,7 @@ export const categoryChipsStyles = StyleSheet.create({
     color: tokens.colors.textMuted,
   },
   chipTextActive: {
-    color: "#FFFFFF",
+    color: tokens.colors.textInverse,
   },
 });
 
@@ -104,10 +104,10 @@ export const feedSectionStyles = StyleSheet.create({
     paddingVertical: tokens.space.lg,
   },
   headerSpacerTop: {
-    height: tokens.space.md,
+    height: tokens.space.sm,
   },
   headerSpacerAfterLabel: {
-    height: 8,
+    height: tokens.space.xs,
   },
   itemSeparator: {
     height: tokens.space.md,

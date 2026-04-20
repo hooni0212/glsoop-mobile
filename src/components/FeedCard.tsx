@@ -70,7 +70,7 @@ export function FeedCard({
       accessibilityLabel={`게시글 열기: ${cardTitle}`}
     >
       <View style={styles.titleRow}>
-        <Text style={styles.title} numberOfLines={1}>
+        <Text style={styles.title} numberOfLines={2}>
           {cardTitle}
         </Text>
         {onMorePress ? (
@@ -109,7 +109,7 @@ export function FeedCard({
 
       {/* 내용 요약 */}
       {!showRenderedImage && !!post.excerpt && (
-        <Text style={styles.excerpt} numberOfLines={2}>
+        <Text style={styles.excerpt} numberOfLines={3}>
           {post.excerpt}
         </Text>
       )}
@@ -209,11 +209,12 @@ const styles = StyleSheet.create({
 
   title: {
     flex: 1,
-    fontSize: 20,
-    fontWeight: "800",
-    letterSpacing: -0.3,
+    fontSize: 19,
+    fontWeight: "900",
+    letterSpacing: -0.2,
+    lineHeight: 27,
     color: tokens.colors.text,
-    marginBottom: 12,
+    marginBottom: 10,
   },
   renderedImageWrap: {
     position: "relative",
@@ -259,10 +260,9 @@ const styles = StyleSheet.create({
   moreBtnPressed: { opacity: 0.78 },
 
   excerpt: {
-    fontSize: 14.5,
-    lineHeight: 21,
-    color: tokens.colors.text,
-    opacity: 0.82,
+    fontSize: 14,
+    lineHeight: 22,
+    color: tokens.colors.textMuted,
     marginBottom: 16,
   },
 
