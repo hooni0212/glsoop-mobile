@@ -23,7 +23,7 @@ export function createWriteStyles() {
 
     safe: {
       flex: 1,
-      backgroundColor: "#ebe4d8",
+      backgroundColor: tokens.colors.bgMuted,
     },
 
     topBar: {
@@ -33,8 +33,8 @@ export function createWriteStyles() {
       alignItems: "center",
       justifyContent: "space-between",
       borderBottomWidth: 1,
-      borderBottomColor: "rgba(79,58,33,0.10)",
-      backgroundColor: "rgba(250,246,238,0.92)",
+      borderBottomColor: tokens.colors.border,
+      backgroundColor: tokens.colors.surfaceStrong,
     },
     topBarActions: {
       flexDirection: "row",
@@ -125,9 +125,9 @@ export function createWriteStyles() {
       marginBottom: 14,
       borderRadius: 24,
       padding: 14,
-      backgroundColor: "rgba(92,69,42,0.10)",
+      backgroundColor: tokens.colors.surfaceStrong,
       borderWidth: 1,
-      borderColor: "rgba(86,62,32,0.08)",
+      borderColor: tokens.colors.border,
       shadowColor: "#4d3920",
       shadowOpacity: 0.12,
       shadowRadius: 24,
@@ -142,12 +142,12 @@ export function createWriteStyles() {
       fontSize: 11,
       letterSpacing: 1.4,
       fontWeight: "900",
-      color: "rgba(80,58,32,0.55)",
+      color: tokens.colors.textFaint,
     },
     editorStageHint: {
       fontSize: 12,
       fontWeight: "700",
-      color: "rgba(80,58,32,0.64)",
+      color: tokens.colors.textMuted,
       letterSpacing: -0.2,
     },
     bookCanvas: {
@@ -155,9 +155,9 @@ export function createWriteStyles() {
       aspectRatio: 500 / 666,
       borderRadius: 22,
       overflow: "hidden",
-      backgroundColor: "#f7efdf",
+      backgroundColor: tokens.colors.bg,
       borderWidth: 1,
-      borderColor: "rgba(88,63,35,0.10)",
+      borderColor: tokens.colors.border,
       shadowColor: "#8c6a3c",
       shadowOpacity: 0.08,
       shadowRadius: 12,
@@ -215,9 +215,9 @@ export function createWriteStyles() {
       height: 18,
       paddingHorizontal: 8,
       borderRadius: 999,
-      backgroundColor: "rgba(255,250,244,0.72)",
+      backgroundColor: tokens.colors.surfaceStrong,
       borderWidth: 1,
-      borderColor: "rgba(79,58,33,0.18)",
+      borderColor: tokens.colors.border,
       flexDirection: "row",
       alignItems: "center",
       gap: 3,
@@ -230,8 +230,8 @@ export function createWriteStyles() {
       left: 6,
     },
     dragHandleActive: {
-      backgroundColor: "rgba(237,250,241,0.92)",
-      borderColor: "rgba(24,96,58,0.5)",
+      backgroundColor: tokens.colors.green100,
+      borderColor: tokens.colors.green700,
     },
     dragHandleGrip: {
       width: 3,
@@ -300,9 +300,9 @@ export function createWriteStyles() {
       marginTop: 12,
       borderRadius: 14,
       padding: 12,
-      backgroundColor: "rgba(255,250,244,0.86)",
+      backgroundColor: tokens.colors.surfaceStrong,
       borderWidth: 1,
-      borderColor: "rgba(86,62,32,0.08)",
+      borderColor: tokens.colors.border,
     },
     metaChipRow: {
       flexDirection: "row",
@@ -369,9 +369,9 @@ export function createWriteStyles() {
     layoutDock: {
       borderRadius: 18,
       padding: 14,
-      backgroundColor: "rgba(255,249,241,0.92)",
+      backgroundColor: tokens.colors.surfaceStrong,
       borderWidth: 1,
-      borderColor: "rgba(86,62,32,0.08)",
+      borderColor: tokens.colors.border,
       gap: 10,
     },
     layoutDockHeader: {
@@ -392,13 +392,13 @@ export function createWriteStyles() {
     layoutSectionCard: {
       borderRadius: 16,
       padding: 12,
-      backgroundColor: "rgba(255,255,255,0.74)",
+      backgroundColor: tokens.colors.white,
       borderWidth: 1,
-      borderColor: "rgba(86,62,32,0.08)",
+      borderColor: tokens.colors.border,
     },
     layoutSectionCardMuted: {
-      backgroundColor: "rgba(252,247,239,0.62)",
-      borderColor: "rgba(86,62,32,0.06)",
+      backgroundColor: tokens.colors.surface,
+      borderColor: tokens.colors.border,
     },
     layoutSectionHeader: {
       gap: 4,
@@ -467,9 +467,9 @@ export function createWriteStyles() {
     previewStage: {
       borderRadius: 24,
       padding: 14,
-      backgroundColor: "rgba(92,69,42,0.10)",
+      backgroundColor: tokens.colors.surfaceStrong,
       borderWidth: 1,
-      borderColor: "rgba(86,62,32,0.08)",
+      borderColor: tokens.colors.border,
       marginBottom: 12,
     },
     previewStageHeader: {
@@ -491,13 +491,13 @@ export function createWriteStyles() {
     previewPaper: {
       minHeight: 320,
       borderRadius: 22,
-      backgroundColor: "#f7efdf",
+      backgroundColor: tokens.colors.bg,
       paddingHorizontal: 22,
       paddingVertical: 26,
       justifyContent: "space-between",
       gap: 16,
       borderWidth: 1,
-      borderColor: "rgba(88,63,35,0.10)",
+      borderColor: tokens.colors.border,
     },
     previewTitle: {
       color: "#2e2418",
