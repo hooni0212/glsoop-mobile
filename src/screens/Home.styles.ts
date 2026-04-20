@@ -24,17 +24,26 @@ export const homeHeaderStyles = StyleSheet.create({
     width: "100%",
     maxWidth: 820,
     alignSelf: "center",
-    paddingTop: tokens.space.sm,
+    paddingTop: tokens.space.xs,
     paddingHorizontal: tokens.space.xl,
-    paddingBottom: tokens.space.sm,
+    paddingBottom: tokens.space.md,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
+  brandBlock: {
+    gap: 2,
+  },
+  brandSubtitle: {
+    fontSize: tokens.font.small,
+    color: tokens.colors.textMuted,
+    fontWeight: "600",
+    letterSpacing: -0.1,
+  },
   brand: {
-    fontSize: tokens.font.h1,
-    fontWeight: "800",
-    letterSpacing: -0.6,
+    fontSize: tokens.font.title,
+    fontWeight: "900",
+    letterSpacing: -0.7,
     color: tokens.colors.green900,
   },
   iconBtn: {
@@ -43,6 +52,9 @@ export const homeHeaderStyles = StyleSheet.create({
     borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor: tokens.colors.surfaceStrong,
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
   },
 });
 
@@ -68,6 +80,9 @@ export const categoryChipsStyles = StyleSheet.create({
     borderColor: "transparent",
     ...softChipShadowStyle,
   },
+  chipPressed: {
+    opacity: 0.82,
+  },
   chipText: {
     fontSize: 14,
     fontWeight: "700",
@@ -88,11 +103,11 @@ export const feedSectionStyles = StyleSheet.create({
   },
   sectionLabel: {
     fontSize: tokens.font.small,
-    fontWeight: "700",
-    color: tokens.colors.textFaint,
+    fontWeight: "800",
+    color: tokens.colors.textMuted,
     marginBottom: tokens.space.sm,
     marginLeft: 4,
-    letterSpacing: -0.2,
+    letterSpacing: -0.1,
   },
   footer: {
     paddingVertical: tokens.space.lg,

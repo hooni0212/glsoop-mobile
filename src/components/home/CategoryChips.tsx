@@ -27,7 +27,11 @@ export function CategoryChips<T extends string>({
             <Pressable
               key={c}
               onPress={() => onChange(c)}
-              style={[styles.chip, isActive && styles.chipActive]}
+              style={({ pressed }) => [
+                styles.chip,
+                isActive && styles.chipActive,
+                pressed && styles.chipPressed,
+              ]}
               accessibilityRole="button"
               accessibilityState={{ selected: isActive }}
             >

@@ -57,18 +57,27 @@ export function FeedCard({
     event.stopPropagation?.();
     action?.();
   };
+  const cardTitle = post.title || "(제목 없음)";
+  const canLike = Boolean(onLikePress);
+  const canBookmark = Boolean(onBookmarkPress);
 
   return (
-    <Pressable style={styles.card} onPress={onPress} testID={testID}>
+    <Pressable
+      style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
+      onPress={onPress}
+      testID={testID}
+      accessibilityRole="button"
+      accessibilityLabel={`게시글 열기: ${cardTitle}`}
+    >
       <View style={styles.titleRow}>
         <Text style={styles.title} numberOfLines={1}>
-          {post.title || "(제목 없음)"}
+          {cardTitle}
         </Text>
         {onMorePress ? (
           <Pressable
             onPress={(event) => stopCardPress(event, onMorePress)}
             hitSlop={10}
-            style={styles.moreBtn}
+            style={({ pressed }) => [styles.moreBtn, pressed && styles.moreBtnPressed]}
             testID={moreTestID}
             accessibilityRole="button"
             accessibilityLabel="게시글 안전 메뉴 열기"
@@ -121,9 +130,16 @@ export function FeedCard({
           <Pressable
             onPress={(event) => stopCardPress(event, onLikePress)}
             hitSlop={10}
-            style={styles.actionBtn}
-            disabled={likeDisabled}
+            style={({ pressed }) => [
+              styles.actionBtn,
+              pressed && !likeDisabled && canLike && styles.actionBtnPressed,
+              likeDisabled && styles.actionBtnDisabled,
+            ]}
+            disabled={likeDisabled || !canLike}
             testID={likeTestID}
+            accessibilityRole="button"
+            accessibilityLabel={liked ? "좋아요 취소" : "좋아요"}
+            accessibilityState={{ disabled: Boolean(likeDisabled || !canLike), selected: liked }}
           >
             <Ionicons
               name={liked ? "heart" : "heart-outline"}
@@ -143,8 +159,17 @@ export function FeedCard({
           <Pressable
             onPress={(event) => stopCardPress(event, onBookmarkPress)}
             hitSlop={10}
-            style={[styles.actionBtn, { marginLeft: 14 }]}
+            style={({ pressed }) => [
+              styles.actionBtn,
+              styles.bookmarkBtn,
+              pressed && canBookmark && styles.actionBtnPressed,
+              !canBookmark && styles.actionBtnDisabled,
+            ]}
+            disabled={!canBookmark}
             testID={bookmarkTestID}
+            accessibilityRole="button"
+            accessibilityLabel={bookmarked ? "북마크 해제" : "북마크 저장"}
+            accessibilityState={{ disabled: !canBookmark, selected: bookmarked }}
           >
             <Ionicons
               name={bookmarked ? "bookmark" : "bookmark-outline"}
@@ -173,6 +198,9 @@ const styles = StyleSheet.create({
 
     ...softCardShadowStyle,
   },
+  cardPressed: {
+    opacity: 0.92,
+  },
   titleRow: {
     flexDirection: "row",
     alignItems: "flex-start",
@@ -192,14 +220,14 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     borderRadius: tokens.radius.xl,
     overflow: "hidden",
-    backgroundColor: "#f4ead8",
+    backgroundColor: tokens.colors.bgMuted,
     borderWidth: 1,
-    borderColor: "rgba(86,62,32,0.08)",
+    borderColor: tokens.colors.border,
   },
   renderedImage: {
     width: "100%",
     aspectRatio: 500 / 666,
-    backgroundColor: "#f4ead8",
+    backgroundColor: tokens.colors.bgMuted,
   },
   renderedPageBadge: {
     position: "absolute",
@@ -207,14 +235,14 @@ const styles = StyleSheet.create({
     right: 12,
     zIndex: 2,
     borderRadius: tokens.radius.pill,
-    backgroundColor: "rgba(63,47,28,0.78)",
+    backgroundColor: tokens.colors.overlaySoft,
     paddingHorizontal: 10,
     paddingVertical: 6,
   },
   renderedPageBadgeText: {
     fontSize: 12,
     fontWeight: "800",
-    color: "#fffaf4",
+    color: tokens.colors.textInverse,
   },
   moreBtn: {
     width: 34,
@@ -224,7 +252,11 @@ const styles = StyleSheet.create({
     borderRadius: tokens.radius.pill,
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor: tokens.colors.surfaceStrong,
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
   },
+  moreBtnPressed: { opacity: 0.78 },
 
   excerpt: {
     fontSize: 14.5,
@@ -264,11 +296,23 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
   },
+  bookmarkBtn: {
+    marginLeft: 10,
+  },
 
   actionBtn: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
+    minHeight: 32,
+    paddingHorizontal: 4,
+    borderRadius: tokens.radius.pill,
+  },
+  actionBtnPressed: {
+    backgroundColor: tokens.colors.bgMuted,
+  },
+  actionBtnDisabled: {
+    opacity: 0.45,
   },
 
   actionText: {
