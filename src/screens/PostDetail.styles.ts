@@ -347,6 +347,9 @@ export function createPostDetailStyles(actionBarHeight: number) {
       borderColor: tokens.colors.green900,
       backgroundColor: tokens.colors.green100,
     },
+    bookmarkModalListItemDisabled: {
+      opacity: 0.55,
+    },
     bookmarkModalListItemName: {
       color: tokens.colors.text,
       fontSize: 13,

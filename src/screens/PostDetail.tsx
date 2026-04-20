@@ -10,7 +10,7 @@ import { AppEmpty } from "@/components/state/AppEmpty";
 import { AppError } from "@/components/state/AppError";
 import { AppLoading } from "@/components/state/AppLoading";
 import { PostTopBar } from "@/components/post/PostTopBar";
-import { getLegalDocumentUrl, getSupportUrl } from "@/config/release";
+import { getLegalDocumentUrl, getSupportUrl, releaseConfig } from "@/config/release";
 import { useAuth } from "@/auth/AuthContext";
 import { setBookmark, useBookmarkSnapshot } from "@/features/bookmarks/bookmarkStore";
 import { useRuntimeLegalConfig } from "@/hooks/useRuntimeLegalConfig";
@@ -25,9 +25,12 @@ import { resolveRuntimeLegalDocumentUrl } from "@/services/runtimeConfigService"
 import { buildAuthRoute } from "@/lib/authRedirect";
 import { formatKstDateKorean } from "@/lib/dateTime";
 import { ApiError } from "@/lib/errors";
+import { buildRenderedPostShareImageUrl } from "@/lib/feedImage";
 import { logger } from "@/lib/logger";
 import { resolvePostLayout } from "@/lib/postLayout";
+import * as FileSystem from "expo-file-system/legacy";
 import { router, useLocalSearchParams, usePathname } from "expo-router";
+import * as Sharing from "expo-sharing";
 import React, { useMemo, useState } from "react";
 import {
   Alert,
@@ -80,6 +83,41 @@ function createShareRequestId(postId: string) {
   return `share_${postId}_${Date.now()}_${randomPart}`.slice(0, 120);
 }
 
+function buildPostPermalink(postId: string) {
+  const encodedPostId = encodeURIComponent(postId);
+  if (Platform.OS === "web" && typeof window !== "undefined" && window.location?.origin) {
+    return `${window.location.origin}/html/post.html?postId=${encodedPostId}`;
+  }
+  return `${releaseConfig.siteUrl}/html/post.html?postId=${encodedPostId}`;
+}
+
+function buildShareText({
+  mode,
+  title,
+  content,
+  permalink,
+}: {
+  mode: "title" | "full" | "link";
+  title: string;
+  content: string;
+  permalink: string;
+}) {
+  if (mode === "link") {
+    return `${title}\n${permalink}`;
+  }
+
+  if (mode === "full" && content) {
+    return `${title}\n\n${content}\n\n${permalink}`;
+  }
+
+  return `${title}\n${permalink}`;
+}
+
+function createShareFileName(postId: string) {
+  const safePostId = postId.replace(/[^a-zA-Z0-9_-]/g, "-") || "card";
+  return `glsoop_post_${safePostId}_${Date.now()}.png`;
+}
+
 export default function PostDetail() {
   // ✅ safe-area 계산은 navigation layer(BottomDockProvider)에서만 수행
   // 상세 화면은 Tab 도크가 아닌 Action 도크 규격을 사용
@@ -109,6 +147,7 @@ export default function PostDetail() {
   const [bookmarkLoading, setBookmarkLoading] = useState(false);
   const [bookmarkLists, setBookmarkLists] = useState<BookmarkList[]>([]);
   const [bookmarkPending, setBookmarkPending] = useState<Record<string, boolean>>({});
+  const [shareSubmitting, setShareSubmitting] = useState<"image" | "link" | "full" | "title" | null>(null);
   const [canManagePost, setCanManagePost] = useState(false);
   const [manageBusy, setManageBusy] = useState(false);
 
@@ -358,18 +397,32 @@ export default function PostDetail() {
     }
   };
 
-  const sharePost = async (mode: "title" | "full") => {
+  const sharePost = async (mode: "image" | "link" | "title" | "full") => {
     if (!post) return;
+    if (shareSubmitting) return;
 
     const shareTitle = title || "글숲";
     const shareContent = content.trim();
-    const shareMessage =
-      mode === "full" && shareContent ? `${shareTitle}\n\n${shareContent}` : shareTitle;
+    const permalink = buildPostPermalink(post.id);
+    const textMode = mode === "image" ? "link" : mode;
+    const shareMessage = buildShareText({
+      mode: textMode,
+      title: shareTitle,
+      content: shareContent,
+      permalink,
+    });
     const requestId = createShareRequestId(post.id);
     const platform = Platform.OS === "web" ? "web" : "mobile";
     const dismissedAction =
       (Share as { dismissedAction?: string }).dismissedAction ?? "dismissedAction";
-    const channel = mode === "full" ? "share_modal_full" : "share_modal_title_only";
+    const channel =
+      mode === "image"
+        ? "share_modal_image_png"
+        : mode === "link"
+          ? "share_modal_link"
+          : mode === "full"
+            ? "share_modal_full"
+            : "share_modal_title_only";
 
     const logShareEventSafely = (result: "shared" | "dismissed" | "failed", meta?: Record<string, unknown>) => {
       void logShareEvent({
@@ -387,20 +440,63 @@ export default function PostDetail() {
       });
     };
 
+    const baseMeta = {
+      title_length: shareTitle.length,
+      content_length: shareContent.length,
+      share_mode: mode,
+      permalink,
+    };
+
     try {
+      setShareSubmitting(mode);
       setShareModalVisible(false);
+
+      if (mode === "image" && Platform.OS !== "web") {
+        const cacheDirectory = FileSystem.cacheDirectory;
+        if (!cacheDirectory) {
+          throw new Error("File cache directory is unavailable.");
+        }
+
+        const canShareFile = await Sharing.isAvailableAsync();
+        if (!canShareFile) {
+          throw new Error("Native file sharing is unavailable.");
+        }
+
+        const imageUrl = buildRenderedPostShareImageUrl(post.id, { format: "png" });
+        const downloaded = await FileSystem.downloadAsync(
+          imageUrl,
+          `${cacheDirectory}${createShareFileName(post.id)}`
+        );
+
+        if (downloaded.status < 200 || downloaded.status >= 300) {
+          throw new Error(`Image download failed: ${downloaded.status}`);
+        }
+
+        await Sharing.shareAsync(downloaded.uri, {
+          dialogTitle: shareTitle,
+          mimeType: "image/png",
+          UTI: "public.png",
+        });
+        logShareEventSafely("shared", {
+          ...baseMeta,
+          image_format: "png",
+          image_url: imageUrl,
+        });
+        showToast("이미지 공유가 완료되었어요.", { tone: "success" });
+        return;
+      }
+
       const result = await Share.share({
         title: shareTitle,
         message: shareMessage,
+        url: permalink,
       });
 
       if (result.action === Share.sharedAction) {
         logShareEventSafely("shared", {
+          ...baseMeta,
           action: result.action,
           activity_type: result.activityType || null,
-          title_length: shareTitle.length,
-          content_length: shareContent.length,
-          share_mode: mode,
         });
         showToast("공유가 완료되었어요.", { tone: "success" });
         return;
@@ -408,29 +504,29 @@ export default function PostDetail() {
 
       if (result.action === dismissedAction) {
         logShareEventSafely("dismissed", {
+          ...baseMeta,
           action: result.action,
           activity_type: result.activityType || null,
-          title_length: shareTitle.length,
-          content_length: shareContent.length,
-          share_mode: mode,
         });
         return;
       }
 
       logShareEventSafely("dismissed", {
+        ...baseMeta,
         action: result.action || "unknown",
         activity_type: result.activityType || null,
-        title_length: shareTitle.length,
-        content_length: shareContent.length,
-        share_mode: mode,
       });
-    } catch {
+    } catch (shareError) {
       logShareEventSafely("failed", {
-        title_length: shareTitle.length,
-        content_length: shareContent.length,
-        share_mode: mode,
+        ...baseMeta,
+        error: shareError instanceof Error ? shareError.message : "unknown",
       });
+      if (__DEV__) {
+        logger.warn("[share] post share failed", shareError);
+      }
       showToast("공유에 실패했어요. 잠시 후 다시 시도해주세요.", { tone: "error" });
+    } finally {
+      setShareSubmitting(null);
     }
   };
 
@@ -771,28 +867,74 @@ export default function PostDetail() {
           <View style={styles.bookmarkModalCard}>
             <Text style={styles.bookmarkModalTitle}>공유 방식 선택</Text>
             <Text style={styles.bookmarkModalDescription}>
-              제목만 보낼지, 본문까지 함께 보낼지 선택할 수 있어요.
+              이미지, 링크, 본문 중 원하는 방식으로 보낼 수 있어요.
             </Text>
 
             <View style={styles.bookmarkModalList}>
+              {Platform.OS !== "web" ? (
+                <>
+                  <Pressable
+                    onPress={() => void sharePost("image")}
+                    disabled={Boolean(shareSubmitting)}
+                    style={[
+                      styles.bookmarkModalListItem,
+                      shareSubmitting && styles.bookmarkModalListItemDisabled,
+                    ]}
+                  >
+                    <Text style={styles.bookmarkModalListItemName}>이미지 저장/공유</Text>
+                    <Text style={styles.bookmarkModalListItemStatus}>
+                      {shareSubmitting === "image" ? "준비 중" : "PNG"}
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => void sharePost("link")}
+                    disabled={Boolean(shareSubmitting)}
+                    style={[
+                      styles.bookmarkModalListItem,
+                      shareSubmitting && styles.bookmarkModalListItemDisabled,
+                    ]}
+                  >
+                    <Text style={styles.bookmarkModalListItemName}>링크 공유</Text>
+                    <Text style={styles.bookmarkModalListItemStatus}>
+                      {shareSubmitting === "link" ? "공유 중" : "추천"}
+                    </Text>
+                  </Pressable>
+                </>
+              ) : null}
               <Pressable
                 onPress={() => void sharePost("full")}
-                style={styles.bookmarkModalListItem}
+                disabled={Boolean(shareSubmitting)}
+                style={[
+                  styles.bookmarkModalListItem,
+                  shareSubmitting && styles.bookmarkModalListItemDisabled,
+                ]}
               >
                 <Text style={styles.bookmarkModalListItemName}>본문까지 공유</Text>
-                <Text style={styles.bookmarkModalListItemStatus}>추천</Text>
+                <Text style={styles.bookmarkModalListItemStatus}>
+                  {shareSubmitting === "full" ? "공유 중" : Platform.OS === "web" ? "추천" : "텍스트"}
+                </Text>
               </Pressable>
               <Pressable
                 onPress={() => void sharePost("title")}
-                style={styles.bookmarkModalListItem}
+                disabled={Boolean(shareSubmitting)}
+                style={[
+                  styles.bookmarkModalListItem,
+                  shareSubmitting && styles.bookmarkModalListItemDisabled,
+                ]}
               >
                 <Text style={styles.bookmarkModalListItemName}>제목만 공유</Text>
-                <Text style={styles.bookmarkModalListItemStatus}>간단히</Text>
+                <Text style={styles.bookmarkModalListItemStatus}>
+                  {shareSubmitting === "title" ? "공유 중" : "간단히"}
+                </Text>
               </Pressable>
             </View>
 
             <Pressable
-              onPress={() => setShareModalVisible(false)}
+              onPress={() => {
+                if (shareSubmitting) return;
+                setShareModalVisible(false);
+              }}
+              disabled={Boolean(shareSubmitting)}
               style={styles.bookmarkModalCloseBtn}
             >
               <Text style={styles.bookmarkModalCloseBtnText}>닫기</Text>

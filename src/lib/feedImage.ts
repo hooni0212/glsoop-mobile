@@ -233,3 +233,25 @@ export function buildRenderedPostImageUrl(postId: string, versionSeed?: unknown)
   }
   return buildApiUrl(`/api/feed-images/post/${encodeURIComponent(postId)}?${query.toString()}`);
 }
+
+export type RenderedPostImageFormat = "webp" | "png";
+
+type RenderedPostShareImageOptions = {
+  format?: RenderedPostImageFormat;
+  template?: "paper01" | "paper02";
+  scale?: 1 | 2;
+};
+
+export function buildRenderedPostShareImageUrl(
+  postId: string,
+  options: RenderedPostShareImageOptions = {}
+) {
+  const query = new URLSearchParams();
+  query.set("template", options.template || "paper01");
+  query.set("scale", String(options.scale || 2));
+  if (options.format) {
+    query.set("format", options.format);
+  }
+
+  return buildApiUrl(`/api/feed-images/share/post/${encodeURIComponent(postId)}?${query.toString()}`);
+}
