@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
 const AUTH_TOKEN_KEY = "glsoop_auth_token_v1";
+const PUBLIC_UGC_NOTICE_STORAGE_KEY = "glsoop.public_ugc_notice_ack";
 
 const HOME_POSTS = [
   {
@@ -50,13 +51,39 @@ const BOOKMARK_LISTS = [
 ];
 
 async function setAuthToken(page: Page, token: string) {
+  const storagePayload = {
+    key: AUTH_TOKEN_KEY,
+    value: token,
+    noticeKey: PUBLIC_UGC_NOTICE_STORAGE_KEY,
+  };
+
+  await page.addInitScript(
+    ({ key, value, noticeKey }) => {
+      localStorage.setItem(key, value);
+      localStorage.setItem(
+        noticeKey,
+        JSON.stringify({
+          versionKey: "public-ugc-notice.v1",
+          acknowledgedAt: "2026-04-20T00:00:00.000Z",
+        })
+      );
+    },
+    storagePayload
+  );
   await page.goto("/");
   await page.waitForLoadState("domcontentloaded");
   await page.evaluate(
-    ({ key, value }) => {
+    ({ key, value, noticeKey }) => {
       localStorage.setItem(key, value);
+      localStorage.setItem(
+        noticeKey,
+        JSON.stringify({
+          versionKey: "public-ugc-notice.v1",
+          acknowledgedAt: "2026-04-20T00:00:00.000Z",
+        })
+      );
     },
-    { key: AUTH_TOKEN_KEY, value: token }
+    storagePayload
   );
 }
 
@@ -70,6 +97,26 @@ async function setupApiRoutes(page: Page, options?: SetupApiRoutesOptions) {
   const recentShouldFail = Boolean(options?.recentShouldFail);
   const shareEventStatus = options?.shareEventStatus ?? 201;
   const shareEventRequests = options?.shareEventRequests;
+
+  await page.route("**/api/runtime-config", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        ok: true,
+        legal: { versions: {} },
+        safety: {
+          report_enabled: true,
+          block_enabled: true,
+          moderation_sla_hours: 24,
+          report_reasons: [
+            { code: "spam", label: "스팸", target_types: ["post"] },
+            { code: "harassment", label: "괴롭힘", target_types: ["user"] },
+          ],
+        },
+      }),
+    });
+  });
 
   await page.route("**/api/me", async (route) => {
     await route.fulfill({
@@ -172,6 +219,14 @@ async function setupApiRoutes(page: Page, options?: SetupApiRoutesOptions) {
 
 async function openPostDetailFromHome(page: Page) {
   await page.goto("/");
+  const publicUgcNoticeGate = page.getByTestId("public-ugc-notice-gate");
+  const noticeVisible = await publicUgcNoticeGate.isVisible({ timeout: 1500 }).catch(() => false);
+  if (noticeVisible) {
+    await page.getByTestId("public-ugc-notice-check-legal").click();
+    await page.getByTestId("public-ugc-notice-check-safety").click();
+    await page.getByTestId("public-ugc-notice-continue").click();
+    await expect(publicUgcNoticeGate).toBeHidden();
+  }
   const homeTitle = page.getByText("북마크 모달 테스트 글").first();
   await expect(homeTitle).toBeVisible();
   await homeTitle.click();
