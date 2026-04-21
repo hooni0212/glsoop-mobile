@@ -2,6 +2,7 @@ import React from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
 
 import { FeedCard } from "@/components/FeedCard";
 import { AppEmpty } from "@/components/state/AppEmpty";
@@ -19,6 +20,7 @@ import { buildPostExcerpt } from "@/lib/postContent";
 import { normalizePostRenderImageFields } from "@/lib/postRenderImages";
 import { normalizePublicDisplayName, pickOptionalText } from "@/lib/publicDisplayName";
 import { deletePost } from "@/services/postService";
+import { softPanelShadowStyle } from "@/theme/shadows";
 import { tokens } from "@/theme/tokens";
 import type { Post } from "@/types/post";
 
@@ -221,39 +223,84 @@ export default function MeScreen() {
 
   const renderSummaryBody = () => {
     const displayName = me?.nickname || me?.name || "익명";
+    const initial = displayName.trim().slice(0, 1).toUpperCase() || "글";
     const followerCount = pickFirstNumber(me?.follower_count);
     const followingCount = pickFirstNumber(me?.following_count);
+    const verified = Boolean(me?.is_verified);
 
     return (
       <View style={styles.summaryActions}>
         <View style={styles.card}>
-          <Text style={styles.name}>{displayName}</Text>
-          <Text style={styles.meta}>{me?.email}</Text>
-          <Text style={styles.meta}>
-            {me?.is_verified ? "✅ 이메일 인증 완료" : "⚠️ 이메일 미인증"}
-          </Text>
-          <View style={styles.row}>
-            <Text style={styles.badge}>Lv. {pickFirstNumber(me?.level)}</Text>
-            <Text style={styles.badge}>XP {pickFirstNumber(me?.xp)}</Text>
-            <Text style={styles.badge}>연속 {pickFirstNumber(me?.streak_days)}일</Text>
+          <View style={styles.profileTopRow}>
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>{initial}</Text>
+            </View>
+            <View style={styles.identityBlock}>
+              <Text style={styles.name} numberOfLines={1}>
+                {displayName}
+              </Text>
+              {me?.email ? (
+                <Text style={styles.meta} numberOfLines={1}>
+                  {me.email}
+                </Text>
+              ) : null}
+              <View style={[styles.statusChip, !verified && styles.statusChipWarn]}>
+                <Ionicons
+                  name={verified ? "checkmark-circle" : "alert-circle-outline"}
+                  size={15}
+                  color={verified ? tokens.colors.green900 : tokens.colors.danger}
+                />
+                <Text style={[styles.statusChipText, !verified && styles.statusChipTextWarn]}>
+                  {verified ? "이메일 인증 완료" : "이메일 미인증"}
+                </Text>
+              </View>
+            </View>
           </View>
-          <View style={styles.row}>
-            <Text style={styles.badge}>팔로워 {followerCount}</Text>
-            <Text style={styles.badge}>팔로잉 {followingCount}</Text>
+
+          <View style={styles.statGrid}>
+            <View style={styles.statTile}>
+              <Text style={styles.statValue}>Lv. {pickFirstNumber(me?.level)}</Text>
+              <Text style={styles.statLabel}>레벨</Text>
+            </View>
+            <View style={styles.statTile}>
+              <Text style={styles.statValue}>{pickFirstNumber(me?.xp)}</Text>
+              <Text style={styles.statLabel}>XP</Text>
+            </View>
+            <View style={styles.statTile}>
+              <Text style={styles.statValue}>{pickFirstNumber(me?.streak_days)}일</Text>
+              <Text style={styles.statLabel}>연속 기록</Text>
+            </View>
+            <View style={styles.statTile}>
+              <Text style={styles.statValue}>{followerCount}</Text>
+              <Text style={styles.statLabel}>팔로워</Text>
+            </View>
+            <View style={styles.statTile}>
+              <Text style={styles.statValue}>{followingCount}</Text>
+              <Text style={styles.statLabel}>팔로잉</Text>
+            </View>
           </View>
+
           {me?.bio ? <Text style={styles.bodyText}>{me.bio}</Text> : null}
           {me?.about ? <Text style={styles.bodyText}>{me.about}</Text> : null}
         </View>
 
         <View style={styles.profileHomeCard}>
           <View style={styles.profileHomeHeader}>
+            <View style={styles.profileHomeIcon}>
+              <Ionicons name="person-circle-outline" size={22} color={tokens.colors.green900} />
+            </View>
             <View style={styles.profileHomeCopy}>
               <Text style={styles.profileHomeTitle}>프로필 홈</Text>
               <Text style={styles.profileHomeDescription}>
                 계정 설정은 계정 센터에서 관리해요.
               </Text>
             </View>
-            <Pressable onPress={() => router.push("/account-center")} style={styles.accountCenterBtn}>
+            <Pressable
+              onPress={() => router.push("/account-center")}
+              style={({ pressed }) => [styles.accountCenterBtn, pressed && styles.controlPressed]}
+              accessibilityRole="button"
+              accessibilityLabel="계정 센터 열기"
+            >
               <Text style={styles.accountCenterBtnText}>계정 센터</Text>
             </Pressable>
           </View>
@@ -261,18 +308,34 @@ export default function MeScreen() {
           <View style={styles.quickActionRow}>
             <Pressable
               onPress={() => router.push("/profile-customize")}
-              style={styles.quickActionBtn}
+              style={({ pressed }) => [styles.quickActionBtn, pressed && styles.quickActionBtnPressed]}
               testID="me-profile-customize-btn"
+              accessibilityRole="button"
+              accessibilityLabel="프로필 꾸미기 열기"
             >
-              <Text style={styles.quickActionBtnTitle}>프로필 꾸미기</Text>
-              <Text style={styles.quickActionBtnDescription}>뱃지와 스티커</Text>
+              <View style={styles.quickActionIcon}>
+                <Ionicons name="sparkles-outline" size={18} color={tokens.colors.green900} />
+              </View>
+              <View style={styles.quickActionCopy}>
+                <Text style={styles.quickActionBtnTitle}>프로필 꾸미기</Text>
+                <Text style={styles.quickActionBtnDescription}>뱃지와 스티커</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={tokens.colors.textFaint} />
             </Pressable>
             <Pressable
               onPress={() => router.push("/account-center")}
-              style={styles.quickActionBtn}
+              style={({ pressed }) => [styles.quickActionBtn, pressed && styles.quickActionBtnPressed]}
+              accessibilityRole="button"
+              accessibilityLabel="계정 센터 열기"
             >
-              <Text style={styles.quickActionBtnTitle}>계정 센터</Text>
-              <Text style={styles.quickActionBtnDescription}>프로필과 보안 설정</Text>
+              <View style={styles.quickActionIcon}>
+                <Ionicons name="settings-outline" size={18} color={tokens.colors.green900} />
+              </View>
+              <View style={styles.quickActionCopy}>
+                <Text style={styles.quickActionBtnTitle}>계정 센터</Text>
+                <Text style={styles.quickActionBtnDescription}>프로필과 보안 설정</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={tokens.colors.textFaint} />
             </Pressable>
           </View>
         </View>
@@ -286,7 +349,12 @@ export default function MeScreen() {
                   Lv.{pickFirstNumber(growthSummary.level)} {pickFirstString(growthSummary.title)}
                 </Text>
               </View>
-              <Pressable onPress={() => router.push("/growth")} style={styles.growthShortcutBtn}>
+              <Pressable
+                onPress={() => router.push("/growth")}
+                style={({ pressed }) => [styles.growthShortcutBtn, pressed && styles.controlPressed]}
+                accessibilityRole="button"
+                accessibilityLabel="성장 상세 열기"
+              >
                 <Text style={styles.growthShortcutBtnText}>자세히</Text>
               </Pressable>
             </View>
@@ -355,15 +423,25 @@ export default function MeScreen() {
                 <View style={styles.postActionRow}>
                   <Pressable
                     onPress={() => router.push({ pathname: "/write", params: { postId: item.id } })}
-                    style={styles.secondaryBtn}
+                    style={({ pressed }) => [styles.secondaryBtn, pressed && styles.controlPressed]}
+                    accessibilityRole="button"
+                    accessibilityLabel="내 글 수정"
                   >
+                    <Ionicons name="create-outline" size={16} color={tokens.colors.text} />
                     <Text style={styles.secondaryBtnText}>수정</Text>
                   </Pressable>
                   <Pressable
                     onPress={() => onDeleteMyPost(item.id)}
-                    style={styles.dangerBtn}
+                    style={({ pressed }) => [
+                      styles.dangerBtn,
+                      deletingPostId === item.id && styles.disabledBtn,
+                      pressed && deletingPostId !== item.id && styles.controlPressed,
+                    ]}
                     disabled={deletingPostId === item.id}
+                    accessibilityRole="button"
+                    accessibilityLabel="내 글 삭제"
                   >
+                    <Ionicons name="trash-outline" size={16} color={tokens.colors.danger} />
                     <Text style={styles.dangerBtnText}>
                       {deletingPostId === item.id ? "삭제 중..." : "삭제"}
                     </Text>
@@ -390,12 +468,22 @@ export default function MeScreen() {
           <Pressable
             key={item.id}
             onPress={() => router.push(`/users/${item.id}`)}
-            style={styles.followingCard}
+            style={({ pressed }) => [styles.followingCard, pressed && styles.followingCardPressed]}
+            accessibilityRole="button"
+            accessibilityLabel={`팔로잉 프로필 열기: ${item.name}`}
           >
-            <Text style={styles.followingName}>{item.name}</Text>
-            {item.bio ? <Text style={styles.followingBody}>{item.bio}</Text> : null}
-            {item.about ? <Text style={styles.followingBody}>{item.about}</Text> : null}
-            <Text style={styles.followingFoot}>팔로워 {item.followerCount}</Text>
+            <View style={styles.followingAvatar}>
+              <Ionicons name="person-outline" size={17} color={tokens.colors.green900} />
+            </View>
+            <View style={styles.followingCopy}>
+              <Text style={styles.followingName} numberOfLines={1}>
+                {item.name}
+              </Text>
+              {item.bio ? <Text style={styles.followingBody} numberOfLines={2}>{item.bio}</Text> : null}
+              {item.about ? <Text style={styles.followingBody} numberOfLines={2}>{item.about}</Text> : null}
+              <Text style={styles.followingFoot}>팔로워 {item.followerCount}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={17} color={tokens.colors.textFaint} />
           </Pressable>
         ))}
       </View>
@@ -469,7 +557,13 @@ export default function MeScreen() {
               <Pressable
                 key={value}
                 onPress={() => setActiveTab(value)}
-                style={[styles.tabBtn, active && styles.tabBtnActive]}
+                style={({ pressed }) => [
+                  styles.tabBtn,
+                  active && styles.tabBtnActive,
+                  pressed && styles.controlPressed,
+                ]}
+                accessibilityRole="button"
+                accessibilityState={{ selected: active }}
               >
                 <Text style={[styles.tabBtnText, active && styles.tabBtnTextActive]}>{label}</Text>
               </Pressable>
@@ -484,7 +578,7 @@ export default function MeScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: tokens.colors.bg },
+  safe: { flex: 1, backgroundColor: tokens.colors.bgMuted },
   container: {
     width: "100%",
     maxWidth: 820,
@@ -507,14 +601,89 @@ const styles = StyleSheet.create({
     borderColor: tokens.colors.border,
     borderRadius: tokens.radius.xl,
     padding: tokens.space.lg,
-    gap: tokens.space.sm as any,
+    gap: tokens.space.md as any,
+    ...softPanelShadowStyle,
+  },
+  profileTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: tokens.space.md as any,
+  },
+  avatar: {
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: tokens.colors.green050,
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+  },
+  avatarText: {
+    fontSize: 22,
+    fontWeight: "900",
+    color: tokens.colors.green900,
+  },
+  identityBlock: {
+    flex: 1,
+    gap: 5,
   },
   name: { fontSize: 20, fontWeight: "900", color: tokens.colors.text },
   meta: { fontSize: tokens.font.small, color: tokens.colors.textMuted },
+  statusChip: {
+    alignSelf: "flex-start",
+    minHeight: 28,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    borderRadius: tokens.radius.pill,
+    paddingHorizontal: 10,
+    backgroundColor: tokens.colors.green050,
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+  },
+  statusChipWarn: {
+    backgroundColor: tokens.colors.dangerSoft,
+    borderColor: tokens.colors.dangerBorder,
+  },
+  statusChipText: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: tokens.colors.green900,
+  },
+  statusChipTextWarn: {
+    color: tokens.colors.danger,
+  },
   bodyText: {
     fontSize: tokens.font.small,
     color: tokens.colors.textMuted,
     lineHeight: 20,
+  },
+  statGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: tokens.space.xs as any,
+  },
+  statTile: {
+    minWidth: 96,
+    flexGrow: 1,
+    borderRadius: tokens.radius.lg,
+    backgroundColor: tokens.colors.white,
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+    paddingHorizontal: tokens.space.md,
+    paddingVertical: tokens.space.sm,
+    gap: 3,
+  },
+  statValue: {
+    fontSize: 14,
+    fontWeight: "900",
+    color: tokens.colors.text,
+  },
+  statLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: tokens.colors.textMuted,
   },
   row: { flexDirection: "row", gap: tokens.space.sm as any, flexWrap: "wrap" },
   badge: {
@@ -532,8 +701,9 @@ const styles = StyleSheet.create({
     gap: tokens.space.xs as any,
   },
   tabBtn: {
+    minHeight: 44,
     borderWidth: 1,
-    borderColor: tokens.colors.borderStrong,
+    borderColor: tokens.colors.border,
     borderRadius: tokens.radius.pill,
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -551,6 +721,9 @@ const styles = StyleSheet.create({
   tabBtnTextActive: {
     color: tokens.colors.green900,
   },
+  controlPressed: {
+    opacity: 0.82,
+  },
   summaryActions: { gap: tokens.space.sm as any },
   profileHomeCard: {
     borderWidth: 1,
@@ -559,12 +732,23 @@ const styles = StyleSheet.create({
     backgroundColor: tokens.colors.surfaceStrong,
     padding: tokens.space.md,
     gap: tokens.space.md as any,
+    ...softPanelShadowStyle,
   },
   profileHomeHeader: {
     flexDirection: "row",
     alignItems: "flex-start",
     justifyContent: "space-between",
     gap: tokens.space.sm as any,
+  },
+  profileHomeIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: tokens.radius.lg,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: tokens.colors.green050,
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
   },
   profileHomeCopy: {
     flex: 1,
@@ -581,6 +765,9 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   accountCenterBtn: {
+    minHeight: 38,
+    alignItems: "center",
+    justifyContent: "center",
     borderWidth: 1,
     borderColor: tokens.colors.green700,
     borderRadius: tokens.radius.pill,
@@ -597,11 +784,29 @@ const styles = StyleSheet.create({
     gap: tokens.space.sm as any,
   },
   quickActionBtn: {
+    minHeight: 68,
+    flexDirection: "row",
+    alignItems: "center",
     borderWidth: 1,
     borderColor: tokens.colors.border,
     borderRadius: tokens.radius.lg,
     backgroundColor: tokens.colors.surface,
     padding: tokens.space.md,
+    gap: tokens.space.sm as any,
+  },
+  quickActionBtnPressed: {
+    backgroundColor: tokens.colors.bgMuted,
+  },
+  quickActionIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: tokens.radius.md,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: tokens.colors.green050,
+  },
+  quickActionCopy: {
+    flex: 1,
     gap: 4,
   },
   quickActionBtnTitle: {
@@ -621,6 +826,7 @@ const styles = StyleSheet.create({
     backgroundColor: tokens.colors.green050,
     padding: tokens.space.md,
     gap: tokens.space.sm as any,
+    ...softPanelShadowStyle,
   },
   growthHeaderRow: {
     flexDirection: "row",
@@ -642,6 +848,9 @@ const styles = StyleSheet.create({
     color: tokens.colors.textMuted,
   },
   growthShortcutBtn: {
+    minHeight: 38,
+    alignItems: "center",
+    justifyContent: "center",
     borderWidth: 1,
     borderColor: tokens.colors.green700,
     borderRadius: tokens.radius.pill,
@@ -677,12 +886,33 @@ const styles = StyleSheet.create({
   },
   followingList: { gap: tokens.space.sm as any },
   followingCard: {
+    minHeight: 76,
+    flexDirection: "row",
+    alignItems: "center",
     borderWidth: 1,
     borderColor: tokens.colors.border,
-    borderRadius: tokens.radius.lg,
+    borderRadius: tokens.radius.xl,
     backgroundColor: tokens.colors.surfaceStrong,
     padding: tokens.space.md,
-    gap: 6,
+    gap: tokens.space.sm as any,
+    ...softPanelShadowStyle,
+  },
+  followingCardPressed: {
+    opacity: 0.92,
+  },
+  followingAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: tokens.colors.green050,
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+  },
+  followingCopy: {
+    flex: 1,
+    gap: 4,
   },
   followingName: { fontSize: 15, fontWeight: "900", color: tokens.colors.text },
   followingMeta: { fontSize: tokens.font.small, color: tokens.colors.textMuted },
@@ -690,22 +920,33 @@ const styles = StyleSheet.create({
   followingFoot: { fontSize: tokens.font.small, color: tokens.colors.green900, fontWeight: "800" },
   secondaryBtn: {
     flex: 1,
+    minHeight: 44,
+    flexDirection: "row",
+    gap: 6,
     backgroundColor: tokens.colors.surfaceStrong,
     borderWidth: 1,
-    borderColor: tokens.colors.borderStrong,
+    borderColor: tokens.colors.border,
     borderRadius: tokens.radius.lg,
-    paddingVertical: 14,
+    paddingVertical: 12,
     alignItems: "center",
+    justifyContent: "center",
   },
   secondaryBtnText: { color: tokens.colors.text, fontSize: 15, fontWeight: "800" },
   dangerBtn: {
     flex: 1,
+    minHeight: 44,
+    flexDirection: "row",
+    gap: 6,
     backgroundColor: tokens.colors.dangerSoft,
     borderWidth: 1,
     borderColor: tokens.colors.dangerBorder,
     borderRadius: tokens.radius.lg,
     paddingVertical: 12,
     alignItems: "center",
+    justifyContent: "center",
+  },
+  disabledBtn: {
+    opacity: 0.55,
   },
   dangerBtnText: {
     color: tokens.colors.danger,
