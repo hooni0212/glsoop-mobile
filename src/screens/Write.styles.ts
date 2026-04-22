@@ -440,6 +440,7 @@ export function createWriteStyles() {
     backgroundOption: {
       flex: 1,
       minHeight: 132,
+      position: "relative",
       borderRadius: 14,
       borderWidth: 1,
       borderColor: tokens.colors.borderStrong,
@@ -473,6 +474,24 @@ export function createWriteStyles() {
     backgroundPreviewWash: {
       ...StyleSheet.absoluteFillObject,
       backgroundColor: "rgba(255,255,255,0.08)",
+    },
+    backgroundSelectedBadge: {
+      position: "absolute",
+      top: 12,
+      right: 12,
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: tokens.colors.green900,
+      borderWidth: 2,
+      borderColor: tokens.colors.white,
+      shadowColor: "#264632",
+      shadowOpacity: 0.18,
+      shadowRadius: 6,
+      shadowOffset: { width: 0, height: 3 },
+      elevation: 2,
     },
     backgroundOptionTitle: {
       marginTop: 8,

@@ -1,10 +1,12 @@
 import React from "react";
+import { Ionicons } from "@expo/vector-icons";
 import { Image, Pressable, Text, View } from "react-native";
 
 import {
   POST_BACKGROUND_TEMPLATES,
   type PostBackgroundTemplateId,
 } from "@/lib/postBackgroundTemplates";
+import { tokens } from "@/theme/tokens";
 
 const BACKGROUND_PREVIEW_HEIGHT = 72;
 
@@ -57,6 +59,11 @@ export function WriteBackgroundSection({ styles, selectedId, onSelect }: Props) 
                 />
                 <View style={styles.backgroundPreviewWash} />
               </View>
+              {active ? (
+                <View style={styles.backgroundSelectedBadge}>
+                  <Ionicons name="checkmark" size={13} color={tokens.colors.textInverse} />
+                </View>
+              ) : null}
               <Text style={[styles.backgroundOptionTitle, active && styles.backgroundOptionTitleActive]}>
                 {template.label}
               </Text>
