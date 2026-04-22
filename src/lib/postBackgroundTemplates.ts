@@ -37,7 +37,7 @@ export const POST_BACKGROUND_TEMPLATES: PostBackgroundTemplate[] = [
     backgroundColor: "#f4efe4",
     imageAspectRatio: 580 / 723,
     imageWidthScale: 1.08,
-    imageOffsetYRatio: -0.4,
+    imageOffsetYRatio: -0.08,
   },
 ];
 
