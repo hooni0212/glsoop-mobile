@@ -44,6 +44,28 @@ function boxFrameStyle(box: { x: number; y: number; w: number; h: number }) {
   };
 }
 
+const FEED_RENDER_FONT_RATIOS = {
+  oneLine: 0.041,
+  short: 0.035,
+  medium: 0.0325,
+  long: 0.03,
+  xlong: 0.0275,
+} as const;
+
+function selectFeedRenderPreset(textLength: number): keyof typeof FEED_RENDER_FONT_RATIOS {
+  if (textLength <= 20) return "oneLine";
+  if (textLength <= 70) return "short";
+  if (textLength <= 170) return "medium";
+  if (textLength <= 260) return "long";
+  return "xlong";
+}
+
+function countPreviewLines(text: string) {
+  const normalized = text.trim();
+  if (!normalized) return 1;
+  return Math.max(1, normalized.split(/\n+/).filter((line) => line.trim()).length);
+}
+
 function DragHandle({
   boxId,
   active,
@@ -186,10 +208,23 @@ export function WriteEditor({
     setCanvasSize({ width, height });
   };
 
-  const titleFontSize = 18 * layout.titleStyle.fontScale;
-  const bodyFontSize = 13 * layout.bodyStyle.fontScale;
+  const contentLength = (body.trim() || title.trim() || " ").length;
+  const renderPreset = selectFeedRenderPreset(contentLength);
+  const renderFontRatio = FEED_RENDER_FONT_RATIOS[renderPreset];
+  const baseWidth = canvasSize.width || 320;
+  const titleFontSize = baseWidth * renderFontRatio * 0.9 * layout.titleStyle.fontScale;
+  const bodyFontSize = baseWidth * renderFontRatio * layout.bodyStyle.fontScale;
   const titleLetterSpacing = toLayoutLetterSpacingPx(titleFontSize, layout.titleStyle.letterSpacing);
   const bodyLetterSpacing = toLayoutLetterSpacingPx(bodyFontSize, layout.bodyStyle.letterSpacing);
+  const titleLineHeight = titleFontSize * layout.titleStyle.lineHeight;
+  const bodyLineHeight = bodyFontSize * layout.bodyStyle.lineHeight;
+  const bodyBoxHeight = (canvasSize.height || 0) * layout.bodyBox.h;
+  const shouldCenterBody = renderPreset === "oneLine" || renderPreset === "short";
+  const bodyLineCount = countPreviewLines(body);
+  const bodyVerticalPaddingTop =
+    shouldCenterBody && bodyBoxHeight > 0
+      ? Math.max(0, (bodyBoxHeight - bodyLineHeight * bodyLineCount) / 2)
+      : 0;
   const backgroundImageScale = backgroundTemplate.imageWidthScale;
   const backgroundImageStyle = [
     styles.bookCanvasImage,
@@ -247,7 +282,7 @@ export function WriteEditor({
                 {
                   textAlign: layout.titleStyle.align,
                   fontSize: titleFontSize,
-                  lineHeight: 22 * layout.titleStyle.lineHeight,
+                  lineHeight: titleLineHeight,
                   ...(typeof titleLetterSpacing === "number"
                     ? { letterSpacing: titleLetterSpacing }
                     : {}),
@@ -280,7 +315,8 @@ export function WriteEditor({
                 {
                   textAlign: layout.bodyStyle.align,
                   fontSize: bodyFontSize,
-                  lineHeight: 20 * layout.bodyStyle.lineHeight,
+                  lineHeight: bodyLineHeight,
+                  paddingTop: bodyVerticalPaddingTop,
                   ...(typeof bodyLetterSpacing === "number"
                     ? { letterSpacing: bodyLetterSpacing }
                     : {}),

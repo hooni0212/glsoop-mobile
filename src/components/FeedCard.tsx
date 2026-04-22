@@ -10,7 +10,6 @@ import {
   StyleSheet,
   Text,
   View,
-  type GestureResponderEvent,
 } from "react-native";
 import { Image } from "expo-image";
 
@@ -53,29 +52,34 @@ export function FeedCard({
   const pageCount = renderImages?.pageCount ?? 1;
   const showRenderedImage = Boolean(primaryImage);
   const showPageBadge = showRenderedImage && pageCount > 1;
-  const stopCardPress = (event: GestureResponderEvent, action?: () => void) => {
-    event.stopPropagation?.();
-    action?.();
-  };
   const cardTitle = post.title || "(제목 없음)";
   const canLike = Boolean(onLikePress);
   const canBookmark = Boolean(onBookmarkPress);
 
   return (
-    <Pressable
-      style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
-      onPress={onPress}
-      testID={testID}
-      accessibilityRole="button"
-      accessibilityLabel={`게시글 열기: ${cardTitle}`}
-    >
+    <View style={styles.card} testID={testID}>
       <View style={styles.titleRow}>
-        <Text style={styles.title} numberOfLines={2}>
-          {cardTitle}
-        </Text>
+        {onPress ? (
+          <Pressable
+            onPress={onPress}
+            style={({ pressed }) => [styles.openTitleArea, pressed && styles.cardPressed]}
+            accessibilityRole="button"
+            accessibilityLabel={`게시글 열기: ${cardTitle}`}
+          >
+            <Text style={styles.title} numberOfLines={2}>
+              {cardTitle}
+            </Text>
+          </Pressable>
+        ) : (
+          <View style={styles.openTitleArea}>
+            <Text style={styles.title} numberOfLines={2}>
+              {cardTitle}
+            </Text>
+          </View>
+        )}
         {onMorePress ? (
           <Pressable
-            onPress={(event) => stopCardPress(event, onMorePress)}
+            onPress={onMorePress}
             hitSlop={10}
             style={({ pressed }) => [styles.moreBtn, pressed && styles.moreBtnPressed]}
             testID={moreTestID}
@@ -91,27 +95,59 @@ export function FeedCard({
         ) : null}
       </View>
 
-      {showRenderedImage ? (
-        <View style={styles.renderedImageWrap}>
-          {showPageBadge ? (
-            <View style={styles.renderedPageBadge}>
-              <Text style={styles.renderedPageBadgeText}>{pageCount}장</Text>
+      {onPress ? (
+        <Pressable
+          onPress={onPress}
+          style={({ pressed }) => [styles.openContentArea, pressed && styles.cardPressed]}
+          accessibilityRole="button"
+          accessibilityLabel={`게시글 열기: ${cardTitle}`}
+        >
+          {showRenderedImage ? (
+            <View style={styles.renderedImageWrap}>
+              {showPageBadge ? (
+                <View style={styles.renderedPageBadge}>
+                  <Text style={styles.renderedPageBadgeText}>{pageCount}장</Text>
+                </View>
+              ) : null}
+              <Image
+                source={{ uri: primaryImage }}
+                style={styles.renderedImage}
+                contentFit="cover"
+                transition={120}
+              />
             </View>
           ) : null}
-          <Image
-            source={{ uri: primaryImage }}
-            style={styles.renderedImage}
-            contentFit="cover"
-            transition={120}
-          />
-        </View>
-      ) : null}
 
-      {/* 내용 요약 */}
-      {!showRenderedImage && !!post.excerpt && (
-        <Text style={styles.excerpt} numberOfLines={3}>
-          {post.excerpt}
-        </Text>
+          {!showRenderedImage && !!post.excerpt ? (
+            <Text style={styles.excerpt} numberOfLines={3}>
+              {post.excerpt}
+            </Text>
+          ) : null}
+        </Pressable>
+      ) : (
+        <View style={styles.openContentArea}>
+          {showRenderedImage ? (
+            <View style={styles.renderedImageWrap}>
+              {showPageBadge ? (
+                <View style={styles.renderedPageBadge}>
+                  <Text style={styles.renderedPageBadgeText}>{pageCount}장</Text>
+                </View>
+              ) : null}
+              <Image
+                source={{ uri: primaryImage }}
+                style={styles.renderedImage}
+                contentFit="cover"
+                transition={120}
+              />
+            </View>
+          ) : null}
+
+          {!showRenderedImage && !!post.excerpt ? (
+            <Text style={styles.excerpt} numberOfLines={3}>
+              {post.excerpt}
+            </Text>
+          ) : null}
+        </View>
       )}
 
       {/* 하단 메타 + 액션 */}
@@ -128,7 +164,7 @@ export function FeedCard({
 
         <View style={styles.actionsRow}>
           <Pressable
-            onPress={(event) => stopCardPress(event, onLikePress)}
+            onPress={onLikePress}
             hitSlop={10}
             style={({ pressed }) => [
               styles.actionBtn,
@@ -157,7 +193,7 @@ export function FeedCard({
           </Pressable>
 
           <Pressable
-            onPress={(event) => stopCardPress(event, onBookmarkPress)}
+            onPress={onBookmarkPress}
             hitSlop={10}
             style={({ pressed }) => [
               styles.actionBtn,
@@ -179,7 +215,7 @@ export function FeedCard({
           </Pressable>
         </View>
       </View>
-    </Pressable>
+    </View>
   );
 }
 
@@ -200,6 +236,12 @@ const styles = StyleSheet.create({
   },
   cardPressed: {
     opacity: 0.92,
+  },
+  openTitleArea: {
+    flex: 1,
+  },
+  openContentArea: {
+    width: "100%",
   },
   titleRow: {
     flexDirection: "row",
