@@ -88,6 +88,7 @@ export function WritePreviewCard({
             content: previewBody,
             category: selectedType ?? "short",
             layout: previewLayout,
+            template: previewLayout.presetId,
             fontKey,
             createdAt: previewCreatedAtRef.current,
           });

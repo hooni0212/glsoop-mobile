@@ -15,6 +15,7 @@ import {
 } from "react-native";
 
 import { WriteActionBar } from "@/components/write/WriteActionBar";
+import { WriteBackgroundSection } from "@/components/write/WriteBackgroundSection";
 import { WriteEditor } from "@/components/write/WriteEditor";
 import { WriteLayoutSection } from "@/components/write/WriteLayoutSection";
 import { WriteMetaSection } from "@/components/write/WriteMetaSection";
@@ -25,6 +26,7 @@ import { AppError } from "@/components/state/AppError";
 import { AppLoading } from "@/components/state/AppLoading";
 import { normalizeApiError, type AppErrorModel } from "@/lib/errors";
 import { logger } from "@/lib/logger";
+import type { PostBackgroundTemplateId } from "@/lib/postBackgroundTemplates";
 import type { PostFontKey } from "@/lib/postContent";
 import {
   DEFAULT_WRITE_LAYOUT,
@@ -87,7 +89,11 @@ export default function Write() {
       .slice(0, 12);
   }, [hashtagsInput]);
 
-  const hasChanges = title.trim().length > 0 || body.trim().length > 0 || selectedType !== null;
+  const hasChanges =
+    title.trim().length > 0 ||
+    body.trim().length > 0 ||
+    selectedType !== null ||
+    layout.presetId !== DEFAULT_WRITE_LAYOUT.presetId;
   const canSubmit =
     title.trim().length > 0 && body.trim().length > 0 && selectedType !== null;
   const submissionLayout = useMemo(
@@ -115,7 +121,10 @@ export default function Write() {
   const saveDraftExplicit = useCallback(async () => {
     const trimmedTitle = title.trim();
     const trimmedBody = body.trim();
-    if (!trimmedTitle && !trimmedBody) return;
+    const hasDraftableChanges =
+      Boolean(trimmedTitle || trimmedBody || selectedType) ||
+      layout.presetId !== DEFAULT_WRITE_LAYOUT.presetId;
+    if (!hasDraftableChanges) return;
 
     logger.debug("[write] draft explicit save", {
       draftId,
@@ -262,6 +271,13 @@ export default function Write() {
     setLayout((current) => ({
       ...current,
       bodyStyle: { ...current.bodyStyle, letterSpacing: value },
+    }));
+  }, []);
+
+  const updateBackgroundTemplate = useCallback((presetId: PostBackgroundTemplateId) => {
+    setLayout((current) => ({
+      ...current,
+      presetId,
     }));
   }, []);
 
@@ -554,6 +570,11 @@ export default function Write() {
                 onPressBackground={dismissKeyboard}
                 styles={styles}
               >
+                <WriteBackgroundSection
+                  styles={styles}
+                  selectedId={layout.presetId}
+                  onSelect={updateBackgroundTemplate}
+                />
                 <WriteLayoutSection
                   styles={styles}
                   layout={layout}

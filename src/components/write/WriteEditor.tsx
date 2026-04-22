@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 import {
-  ImageBackground,
+  Image,
   Keyboard,
   PanResponder,
   Pressable,
@@ -12,14 +12,13 @@ import {
 } from "react-native";
 
 import type { PostFontKey } from "@/lib/postContent";
+import { getPostBackgroundTemplate } from "@/lib/postBackgroundTemplates";
 import {
   toLayoutLetterSpacingPx,
   type LayoutBox,
   type LayoutBoxId,
   type WriteLayoutModel,
 } from "@/lib/postLayout";
-
-const PAPER_SOURCE = require("../../../assets/images/feed-templates/paper-source-01.jpg");
 
 type Props = {
   title: string;
@@ -171,6 +170,10 @@ export function WriteEditor({
   children,
 }: Props) {
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
+  const backgroundTemplate = useMemo(
+    () => getPostBackgroundTemplate(layout.presetId),
+    [layout.presetId]
+  );
 
   const fontFamily = useMemo(() => {
     if (fontKey === "sans") return styles.bookFontSans;
@@ -187,18 +190,35 @@ export function WriteEditor({
   const bodyFontSize = 13 * layout.bodyStyle.fontScale;
   const titleLetterSpacing = toLayoutLetterSpacingPx(titleFontSize, layout.titleStyle.letterSpacing);
   const bodyLetterSpacing = toLayoutLetterSpacingPx(bodyFontSize, layout.bodyStyle.letterSpacing);
+  const backgroundImageScale = backgroundTemplate.imageWidthScale;
+  const backgroundImageStyle = [
+    styles.bookCanvasImage,
+    backgroundTemplate.resizeMode === "cover"
+      ? styles.bookCanvasImageCover
+      : styles.bookCanvasImageContainTop,
+    backgroundTemplate.resizeMode === "contain"
+      ? {
+          aspectRatio: backgroundTemplate.imageAspectRatio,
+          left: `${((1 - backgroundImageScale) / 2) * 100}%`,
+          top: canvasSize.height * backgroundTemplate.imageOffsetYRatio,
+          width: `${backgroundImageScale * 100}%`,
+        }
+      : null,
+  ];
 
   return (
     <View style={styles.editorWrap}>
       <View style={styles.editorStage}>
         <Pressable onPress={onPressBackground} style={styles.bookCanvasPressable}>
-          <ImageBackground
-            source={PAPER_SOURCE}
-            resizeMode="cover"
-            style={styles.bookCanvas}
-            imageStyle={styles.bookCanvasImage}
+          <View
+            style={[styles.bookCanvas, { backgroundColor: backgroundTemplate.backgroundColor }]}
             onLayout={onCanvasLayout}
           >
+            <Image
+              source={backgroundTemplate.source}
+              resizeMode={backgroundTemplate.resizeMode}
+              style={backgroundImageStyle}
+            />
             <EditableBox
               boxId="title_box"
               box={layout.titleBox}
@@ -265,7 +285,7 @@ export function WriteEditor({
                 testID="write-body-input"
               />
             </EditableBox>
-          </ImageBackground>
+          </View>
         </Pressable>
       </View>
 

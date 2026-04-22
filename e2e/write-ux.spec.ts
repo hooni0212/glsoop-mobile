@@ -122,7 +122,7 @@ test.describe("Write 임시저장 UX", () => {
     const submitBtn = page.getByTestId("write-submit-btn");
     await expect(submitBtn).toBeEnabled();
     await submitBtn.click();
-    await expect(page.getByText("미리보기")).toBeVisible();
+    await expect(page.getByText("미리보기", { exact: true })).toBeVisible();
     await page.getByTestId("write-category-short").click();
     await submitBtn.click();
 
@@ -136,7 +136,7 @@ test.describe("Write 임시저장 UX", () => {
     await expect(await getDrafts(page)).toHaveLength(0);
   });
 
-  test("S2-1: 행간/자간 설정을 layout_json으로 전송한다", async ({ page }) => {
+  test("S2-1: 배경/행간/자간 설정을 layout_json으로 전송한다", async ({ page }) => {
     await clearDrafts(page);
 
     const capture: { payload?: CapturedPostPayload } = {};
@@ -157,6 +157,7 @@ test.describe("Write 임시저장 UX", () => {
     await page.goto("/write");
     await page.getByTestId("write-title-input").fill("행간 자간 제목");
     await page.getByTestId("write-body-input").fill("행간 자간 본문");
+    await page.getByTestId("write-background-paper02").click();
 
     await page.getByTestId("write-layout-box-title_box").click();
     await page.getByTestId("write-layout-title-line-height-1_3").click();
@@ -168,7 +169,7 @@ test.describe("Write 임시저장 UX", () => {
 
     const submitBtn = page.getByTestId("write-submit-btn");
     await submitBtn.click();
-    await expect(page.getByText("미리보기")).toBeVisible();
+    await expect(page.getByText("미리보기", { exact: true })).toBeVisible();
     await page.getByTestId("write-category-short").click();
     await submitBtn.click();
 
@@ -176,6 +177,7 @@ test.describe("Write 임시저장 UX", () => {
     expect(capture.payload).toBeTruthy();
 
     const layoutJson = capture.payload?.layout_json;
+    expect(layoutJson?.canvas?.presetId).toBe("paper02");
     expect(layoutJson?.title_box?.line_height).toBe(1.3);
     expect(layoutJson?.title_box?.letter_spacing).toBe(0.04);
     expect(layoutJson?.text_box?.line_height).toBe(1.45);

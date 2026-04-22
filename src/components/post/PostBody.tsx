@@ -4,6 +4,7 @@ import { Image } from "expo-image";
 
 import { PaperReadingCard } from "@/components/paper/PaperReadingCard";
 import { buildRenderedPostImageUrl } from "@/lib/feedImage";
+import { normalizePostBackgroundTemplateId } from "@/lib/postBackgroundTemplates";
 import type { WriteLayoutModel } from "@/lib/postLayout";
 import { paperFrameShadowStyle, softCardShadowStyle } from "@/theme/shadows";
 import type { PostRenderImages, PostType } from "@/types/post";
@@ -38,8 +39,11 @@ export function PostBody({
   const scrollRef = useRef<ScrollView | null>(null);
   const fallbackImageUrl = useMemo(() => {
     if (!postId) return null;
-    return buildRenderedPostImageUrl(postId, versionSeed);
-  }, [postId, versionSeed]);
+    return buildRenderedPostImageUrl(postId, {
+      versionSeed,
+      template: normalizePostBackgroundTemplateId(renderImages?.template ?? layout.presetId),
+    });
+  }, [layout.presetId, postId, renderImages?.template, versionSeed]);
   const imageUrls = useMemo(() => {
     const explicit = Array.isArray(renderImages?.images)
       ? renderImages.images.map((item) => String(item || "").trim()).filter(Boolean)

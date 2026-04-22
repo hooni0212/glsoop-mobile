@@ -168,7 +168,16 @@ export function createWriteStyles() {
       width: "100%",
     },
     bookCanvasImage: {
+      position: "absolute",
       borderRadius: 22,
+    },
+    bookCanvasImageCover: {
+      ...StyleSheet.absoluteFillObject,
+    },
+    bookCanvasImageContainTop: {
+      top: 0,
+      left: 0,
+      width: "100%",
     },
     bookBox: {
       position: "absolute",
@@ -415,6 +424,73 @@ export function createWriteStyles() {
       fontWeight: "700",
       color: "rgba(76,57,34,0.62)",
       letterSpacing: -0.2,
+    },
+    backgroundSection: {
+      borderRadius: 16,
+      padding: 12,
+      backgroundColor: tokens.colors.white,
+      borderWidth: 1,
+      borderColor: tokens.colors.border,
+      gap: 10,
+    },
+    backgroundOptionRow: {
+      flexDirection: "row",
+      gap: 10,
+    },
+    backgroundOption: {
+      flex: 1,
+      minHeight: 132,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: tokens.colors.borderStrong,
+      backgroundColor: tokens.colors.surface,
+      padding: 8,
+    },
+    backgroundOptionActive: {
+      borderColor: tokens.colors.green900,
+      backgroundColor: tokens.colors.green050,
+    },
+    backgroundPreview: {
+      height: 72,
+      borderRadius: 10,
+      overflow: "hidden",
+      backgroundColor: tokens.colors.bg,
+      borderWidth: 1,
+      borderColor: "rgba(79,58,33,0.08)",
+    },
+    backgroundPreviewImage: {
+      position: "absolute",
+      borderRadius: 10,
+    },
+    backgroundPreviewImageCover: {
+      ...StyleSheet.absoluteFillObject,
+    },
+    backgroundPreviewImageContainTop: {
+      top: 0,
+      left: 0,
+      width: "100%",
+    },
+    backgroundPreviewWash: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: "rgba(255,255,255,0.08)",
+    },
+    backgroundOptionTitle: {
+      marginTop: 8,
+      fontSize: 13,
+      fontWeight: "900",
+      color: tokens.colors.text,
+      letterSpacing: 0,
+    },
+    backgroundOptionTitleActive: {
+      color: tokens.colors.green900,
+    },
+    backgroundOptionDescription: {
+      marginTop: 2,
+      fontSize: 11,
+      lineHeight: 15,
+      fontWeight: "700",
+      color: tokens.colors.textMuted,
+      letterSpacing: 0,
     },
     layoutAdvancedToggle: {
       flexDirection: "row",
