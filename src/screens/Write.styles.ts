@@ -125,9 +125,9 @@ export function createWriteStyles() {
       marginBottom: 14,
       borderRadius: 24,
       padding: 14,
-      backgroundColor: tokens.colors.surfaceStrong,
+      backgroundColor: "rgba(92,69,42,0.10)",
       borderWidth: 1,
-      borderColor: tokens.colors.border,
+      borderColor: "rgba(86,62,32,0.08)",
       shadowColor: "#4d3920",
       shadowOpacity: 0.12,
       shadowRadius: 24,
@@ -155,9 +155,9 @@ export function createWriteStyles() {
       aspectRatio: 500 / 666,
       borderRadius: 22,
       overflow: "hidden",
-      backgroundColor: tokens.colors.bg,
+      backgroundColor: "#f7efdf",
       borderWidth: 1,
-      borderColor: tokens.colors.border,
+      borderColor: "rgba(88,63,35,0.10)",
       shadowColor: "#8c6a3c",
       shadowOpacity: 0.08,
       shadowRadius: 12,
@@ -166,6 +166,9 @@ export function createWriteStyles() {
     },
     bookCanvasPressable: {
       width: "100%",
+    },
+    bookCanvasDismissLayer: {
+      ...StyleSheet.absoluteFillObject,
     },
     bookCanvasImage: {
       position: "absolute",

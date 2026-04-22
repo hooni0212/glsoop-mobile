@@ -209,84 +209,87 @@ export function WriteEditor({
   return (
     <View style={styles.editorWrap}>
       <View style={styles.editorStage}>
-        <Pressable onPress={onPressBackground} style={styles.bookCanvasPressable}>
-          <View
-            style={[styles.bookCanvas, { backgroundColor: backgroundTemplate.backgroundColor }]}
-            onLayout={onCanvasLayout}
+        <View
+          style={[styles.bookCanvas, { backgroundColor: backgroundTemplate.backgroundColor }]}
+          onLayout={onCanvasLayout}
+        >
+          <Image
+            source={backgroundTemplate.source}
+            resizeMode={backgroundTemplate.resizeMode}
+            style={backgroundImageStyle}
+          />
+          <Pressable
+            onPress={onPressBackground}
+            style={styles.bookCanvasDismissLayer}
+            accessibilityRole="none"
+          />
+          <EditableBox
+            boxId="title_box"
+            box={layout.titleBox}
+            activeBoxId={activeBoxId}
+            canvasWidth={canvasSize.width}
+            canvasHeight={canvasSize.height}
+            onSelectBox={onSelectBox}
+            onDragBox={onDragBox}
+            styles={styles}
           >
-            <Image
-              source={backgroundTemplate.source}
-              resizeMode={backgroundTemplate.resizeMode}
-              style={backgroundImageStyle}
+            <TextInput
+              value={title}
+              onChangeText={onChangeTitle}
+              onSubmitEditing={Keyboard.dismiss}
+              blurOnSubmit
+              placeholder="제목을 입력해줘"
+              placeholderTextColor="rgba(74,62,48,0.35)"
+              multiline
+              style={[
+                styles.bookTitleInput,
+                fontFamily,
+                {
+                  textAlign: layout.titleStyle.align,
+                  fontSize: titleFontSize,
+                  lineHeight: 22 * layout.titleStyle.lineHeight,
+                  ...(typeof titleLetterSpacing === "number"
+                    ? { letterSpacing: titleLetterSpacing }
+                    : {}),
+                },
+              ]}
+              testID="write-title-input"
             />
-            <EditableBox
-              boxId="title_box"
-              box={layout.titleBox}
-              activeBoxId={activeBoxId}
-              canvasWidth={canvasSize.width}
-              canvasHeight={canvasSize.height}
-              onSelectBox={onSelectBox}
-              onDragBox={onDragBox}
-              styles={styles}
-            >
-              <TextInput
-                value={title}
-                onChangeText={onChangeTitle}
-                onSubmitEditing={Keyboard.dismiss}
-                blurOnSubmit
-                placeholder="제목을 입력해줘"
-                placeholderTextColor="rgba(74,62,48,0.35)"
-                multiline
-                style={[
-                  styles.bookTitleInput,
-                  fontFamily,
-                  {
-                    textAlign: layout.titleStyle.align,
-                    fontSize: titleFontSize,
-                    lineHeight: 22 * layout.titleStyle.lineHeight,
-                    ...(typeof titleLetterSpacing === "number"
-                      ? { letterSpacing: titleLetterSpacing }
-                      : {}),
-                  },
-                ]}
-                testID="write-title-input"
-              />
-            </EditableBox>
+          </EditableBox>
 
-            <EditableBox
-              boxId="text_box"
-              box={layout.bodyBox}
-              activeBoxId={activeBoxId}
-              canvasWidth={canvasSize.width}
-              canvasHeight={canvasSize.height}
-              onSelectBox={onSelectBox}
-              onDragBox={onDragBox}
-              styles={styles}
-            >
-              <TextInput
-                value={body}
-                onChangeText={onChangeBody}
-                placeholder="오늘의 글을 남겨줘…"
-                placeholderTextColor="rgba(74,62,48,0.32)"
-                multiline
-                blurOnSubmit={false}
-                style={[
-                  styles.bookBodyInput,
-                  fontFamily,
-                  {
-                    textAlign: layout.bodyStyle.align,
-                    fontSize: bodyFontSize,
-                    lineHeight: 20 * layout.bodyStyle.lineHeight,
-                    ...(typeof bodyLetterSpacing === "number"
-                      ? { letterSpacing: bodyLetterSpacing }
-                      : {}),
-                  },
-                ]}
-                testID="write-body-input"
-              />
-            </EditableBox>
-          </View>
-        </Pressable>
+          <EditableBox
+            boxId="text_box"
+            box={layout.bodyBox}
+            activeBoxId={activeBoxId}
+            canvasWidth={canvasSize.width}
+            canvasHeight={canvasSize.height}
+            onSelectBox={onSelectBox}
+            onDragBox={onDragBox}
+            styles={styles}
+          >
+            <TextInput
+              value={body}
+              onChangeText={onChangeBody}
+              placeholder="오늘의 글을 남겨줘…"
+              placeholderTextColor="rgba(74,62,48,0.32)"
+              multiline
+              blurOnSubmit={false}
+              style={[
+                styles.bookBodyInput,
+                fontFamily,
+                {
+                  textAlign: layout.bodyStyle.align,
+                  fontSize: bodyFontSize,
+                  lineHeight: 20 * layout.bodyStyle.lineHeight,
+                  ...(typeof bodyLetterSpacing === "number"
+                    ? { letterSpacing: bodyLetterSpacing }
+                    : {}),
+                },
+              ]}
+              testID="write-body-input"
+            />
+          </EditableBox>
+        </View>
       </View>
 
       {children ? <View style={styles.editorControlDock}>{children}</View> : null}
