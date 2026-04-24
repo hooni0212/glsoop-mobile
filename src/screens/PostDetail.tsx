@@ -164,6 +164,7 @@ export default function PostDetail() {
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [commentsError, setCommentsError] = useState<string | null>(null);
   const [commentInput, setCommentInput] = useState("");
+  const [commentComposerVisible, setCommentComposerVisible] = useState(false);
   const [commentSubmitting, setCommentSubmitting] = useState(false);
   const [replyTarget, setReplyTarget] = useState<PostComment | null>(null);
   const [deletingCommentId, setDeletingCommentId] = useState<number | null>(null);
@@ -232,6 +233,10 @@ export default function PostDetail() {
           text: "로그인",
           onPress: () => router.push(buildAuthRoute("/(auth)", redirectPath)),
         },
+        {
+          text: "회원가입",
+          onPress: () => router.push(buildAuthRoute("/(auth)/signup", redirectPath)),
+        },
       ]);
     },
     [pathname]
@@ -292,11 +297,27 @@ export default function PostDetail() {
   React.useEffect(() => {
     setComments([]);
     setCommentInput("");
+    setCommentComposerVisible(false);
     setReplyTarget(null);
     setCommentsError(null);
     if (!postId || loading || error || !loadedPostId) return;
     void loadComments();
   }, [error, loadComments, loadedPostId, loading, postId]);
+
+  const openCommentComposer = React.useCallback(() => {
+    if (!token) {
+      promptAuthForAction("댓글은 로그인한 회원만 남길 수 있어요.");
+      return;
+    }
+    setCommentComposerVisible(true);
+  }, [promptAuthForAction, token]);
+
+  const closeCommentComposer = React.useCallback(() => {
+    if (commentSubmitting) return;
+    setCommentComposerVisible(false);
+    setCommentInput("");
+    setReplyTarget(null);
+  }, [commentSubmitting]);
 
   const submitComment = async () => {
     if (!token) {
@@ -325,6 +346,7 @@ export default function PostDetail() {
       setComments((prev) => [...prev, created]);
       setCommentInput("");
       setReplyTarget(null);
+      setCommentComposerVisible(false);
       showToast(replyTarget ? "답글을 남겼어요." : "댓글을 남겼어요.", { tone: "success" });
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
@@ -346,6 +368,7 @@ export default function PostDetail() {
       return;
     }
     setReplyTarget(comment);
+    setCommentComposerVisible(true);
   };
 
   const onPressDeleteComment = (comment: PostComment) => {
@@ -885,63 +908,86 @@ export default function PostDetail() {
             <View style={styles.commentSection} testID="post-comments-section">
               <View style={styles.commentHeaderRow}>
                 <Text style={styles.commentTitle}>댓글 {commentCount}</Text>
-                <Pressable
-                  onPress={() => void loadComments()}
-                  disabled={commentsLoading}
-                  accessibilityRole="button"
-                  testID="post-comments-refresh-btn"
-                >
-                  <Text style={styles.commentRefreshText}>
-                    {commentsLoading ? "새로고침 중" : "새로고침"}
-                  </Text>
-                </Pressable>
-              </View>
-
-              <View style={styles.commentComposer}>
-                {replyTarget ? (
-                  <View style={styles.replyTargetRow}>
-                    <Text style={styles.replyTargetText} numberOfLines={1}>
-                      {replyTarget.author?.displayName || "댓글"}님에게 답글
-                    </Text>
-                    <Pressable
-                      onPress={() => setReplyTarget(null)}
-                      accessibilityRole="button"
-                      testID="post-comment-reply-cancel-btn"
-                    >
-                      <Text style={styles.replyCancelText}>취소</Text>
-                    </Pressable>
-                  </View>
-                ) : null}
-                <TextInput
-                  value={commentInput}
-                  onChangeText={setCommentInput}
-                  placeholder={token ? "댓글을 남겨보세요" : "로그인 후 댓글을 남길 수 있어요"}
-                  placeholderTextColor="#8d938f"
-                  multiline
-                  maxLength={1000}
-                  editable={Boolean(token) && !commentSubmitting}
-                  style={styles.commentInput}
-                  testID="post-comment-input"
-                />
-                <View style={styles.commentComposerFooter}>
-                  <Text style={styles.commentInputCount}>{commentInput.length}/1000</Text>
+                <View style={styles.commentHeaderActions}>
                   <Pressable
-                    onPress={() => void submitComment()}
-                    disabled={!token || commentSubmitting || commentInput.trim().length === 0}
-                    style={[
-                      styles.commentSubmitBtn,
-                      (!token || commentSubmitting || commentInput.trim().length === 0) &&
-                        styles.commentSubmitBtnDisabled,
-                    ]}
+                    onPress={() => void loadComments()}
+                    disabled={commentsLoading}
                     accessibilityRole="button"
-                    testID="post-comment-submit-btn"
+                    testID="post-comments-refresh-btn"
                   >
-                    <Text style={styles.commentSubmitText}>
-                      {commentSubmitting ? "등록 중" : replyTarget ? "답글 등록" : "등록"}
+                    <Text style={styles.commentRefreshText}>
+                      {commentsLoading ? "새로고침 중" : "새로고침"}
                     </Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={openCommentComposer}
+                    accessibilityRole="button"
+                    style={styles.commentOpenBtn}
+                    testID="post-comment-open-btn"
+                  >
+                    <Text style={styles.commentOpenText}>댓글 쓰기</Text>
                   </Pressable>
                 </View>
               </View>
+
+              {commentComposerVisible ? (
+                <View style={styles.commentComposer}>
+                  {replyTarget ? (
+                    <View style={styles.replyTargetRow}>
+                      <Text style={styles.replyTargetText} numberOfLines={1}>
+                        {replyTarget.author?.displayName || "댓글"}님에게 답글
+                      </Text>
+                      <Pressable
+                        onPress={closeCommentComposer}
+                        accessibilityRole="button"
+                        testID="post-comment-reply-cancel-btn"
+                      >
+                        <Text style={styles.replyCancelText}>취소</Text>
+                      </Pressable>
+                    </View>
+                  ) : (
+                    <View style={styles.replyTargetRow}>
+                      <Text style={styles.replyTargetText}>새 댓글 작성</Text>
+                      <Pressable
+                        onPress={closeCommentComposer}
+                        accessibilityRole="button"
+                        testID="post-comment-composer-cancel-btn"
+                      >
+                        <Text style={styles.replyCancelText}>취소</Text>
+                      </Pressable>
+                    </View>
+                  )}
+                  <TextInput
+                    value={commentInput}
+                    onChangeText={setCommentInput}
+                    placeholder={replyTarget ? "답글을 남겨보세요" : "댓글을 남겨보세요"}
+                    placeholderTextColor="#8d938f"
+                    multiline
+                    maxLength={1000}
+                    editable={Boolean(token) && !commentSubmitting}
+                    style={styles.commentInput}
+                    testID="post-comment-input"
+                  />
+                  <View style={styles.commentComposerFooter}>
+                    <Text style={styles.commentInputCount}>{commentInput.length}/1000</Text>
+                    <Pressable
+                      onPress={() => void submitComment()}
+                      disabled={!token || commentSubmitting || commentInput.trim().length === 0}
+                      style={[
+                        styles.commentSubmitBtn,
+                        (!token || commentSubmitting || commentInput.trim().length === 0) &&
+                          styles.commentSubmitBtnDisabled,
+                      ]}
+                      accessibilityRole="button"
+                      testID="post-comment-submit-btn"
+                    >
+                      <Text style={styles.commentSubmitText}>
+                        {commentSubmitting ? "등록 중" : replyTarget ? "답글 등록" : "등록"}
+                      </Text>
+                    </Pressable>
+                  </View>
+                </View>
+              ) : null}
 
               {commentsLoading && comments.length === 0 ? (
                 <View style={styles.commentLoadingRow}>

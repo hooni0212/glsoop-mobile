@@ -210,6 +210,12 @@ export function createPostDetailStyles(actionBarHeight: number) {
       justifyContent: "space-between",
       gap: tokens.space.sm as any,
     },
+    commentHeaderActions: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: tokens.space.sm as any,
+      flexShrink: 0,
+    },
     commentTitle: {
       fontSize: 16,
       fontWeight: "900",
@@ -219,6 +225,17 @@ export function createPostDetailStyles(actionBarHeight: number) {
       fontSize: tokens.font.small,
       fontWeight: "800",
       color: tokens.colors.green700,
+    },
+    commentOpenBtn: {
+      borderRadius: tokens.radius.md,
+      backgroundColor: tokens.colors.green900,
+      paddingHorizontal: tokens.space.md,
+      paddingVertical: 9,
+    },
+    commentOpenText: {
+      fontSize: tokens.font.small,
+      fontWeight: "900",
+      color: tokens.colors.textInverse,
     },
     commentComposer: {
       borderWidth: 1,

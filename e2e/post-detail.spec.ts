@@ -400,12 +400,16 @@ test.describe("글 상세 화면", () => {
     await expect(page.getByText("댓글 2")).toBeVisible();
     await expect(page.getByText("첫 댓글입니다.")).toBeVisible();
     await expect(page.getByText("답글입니다.")).toBeVisible();
+    await expect(page.getByTestId("post-comment-input")).toBeHidden();
 
+    await page.getByTestId("post-comment-open-btn").click();
+    await expect(page.getByText("새 댓글 작성")).toBeVisible();
     await page.getByTestId("post-comment-input").fill("새 댓글입니다.");
     await page.getByTestId("post-comment-submit-btn").click();
     await expect.poll(() => commentRequests.length).toBe(1);
     await expect(commentRequests[0]).toMatchObject({ content: "새 댓글입니다." });
     await expect(page.getByText("새 댓글입니다.")).toBeVisible();
+    await expect(page.getByTestId("post-comment-input")).toBeHidden();
 
     await page.getByTestId("post-comment-reply-btn-501").click();
     await expect(page.getByText("솔님에게 답글")).toBeVisible();
