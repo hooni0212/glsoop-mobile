@@ -19,6 +19,12 @@ import { getLike, setLike, useLikeSnapshot } from "@/features/likes/likeStore";
 import { useToast } from "@/feedback/ToastProvider";
 import { openExternalUrl } from "@/lib/externalLinks";
 import { togglePostLike } from "@/services/likeService";
+import {
+  createPostComment,
+  deleteComment,
+  listPostComments,
+  PostComment,
+} from "@/services/commentService";
 import { deletePost, getEditablePost } from "@/services/postService";
 import { blockUserById, pickSafetyReasons, reportPost } from "@/services/safetyService";
 import { logShareEvent } from "@/services/shareService";
@@ -34,6 +40,7 @@ import { router, useLocalSearchParams, usePathname } from "expo-router";
 import * as Sharing from "expo-sharing";
 import React, { useMemo, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   InteractionManager,
   Modal,
@@ -42,6 +49,7 @@ import {
   ScrollView,
   Share,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -152,6 +160,13 @@ export default function PostDetail() {
   const [canManagePost, setCanManagePost] = useState(false);
   const [manageBusy, setManageBusy] = useState(false);
   const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
+  const [comments, setComments] = useState<PostComment[]>([]);
+  const [commentsLoading, setCommentsLoading] = useState(false);
+  const [commentsError, setCommentsError] = useState<string | null>(null);
+  const [commentInput, setCommentInput] = useState("");
+  const [commentSubmitting, setCommentSubmitting] = useState(false);
+  const [replyTarget, setReplyTarget] = useState<PostComment | null>(null);
+  const [deletingCommentId, setDeletingCommentId] = useState<number | null>(null);
 
   const title = post?.title || "";
   const authorName = post?.author?.name || "익명";
@@ -180,6 +195,7 @@ export default function PostDetail() {
   const fallbackBookmarked = Boolean((post as any)?.viewer?.isBookmarked);
   const bookmarkSnapshot = useBookmarkSnapshot(postId, fallbackBookmarked);
   const isBookmarked = bookmarkSnapshot.bookmarked;
+  const loadedPostId = post?.id ?? null;
   const legalGuidelinesUrl = resolveRuntimeLegalDocumentUrl(
     runtimeLegalConfig,
     "guidelines",
@@ -189,6 +205,21 @@ export default function PostDetail() {
   const userSafetyReasons = pickSafetyReasons(runtimeLegalConfig?.safety.reportReasons, "user");
   const reportDetailMaxLength = runtimeLegalConfig?.safety.detailMaxLength;
   const reportDetailRequiredReasonCodes = runtimeLegalConfig?.safety.detailRequiredReasonCodes;
+  const topLevelComments = useMemo(
+    () => comments.filter((comment) => !comment.parentCommentId),
+    [comments]
+  );
+  const repliesByParentId = useMemo(() => {
+    const map = new Map<number, PostComment[]>();
+    for (const comment of comments) {
+      if (!comment.parentCommentId) continue;
+      const current = map.get(comment.parentCommentId) ?? [];
+      current.push(comment);
+      map.set(comment.parentCommentId, current);
+    }
+    return map;
+  }, [comments]);
+  const commentCount = comments.filter((comment) => comment.status === "active").length;
 
   const onPressBack = () => router.back();
   const showNotFound = error?.kind === "not_found";
@@ -237,6 +268,123 @@ export default function PostDetail() {
       "로그인 상태가 만료되었어요. 다시 로그인하면 이어서 사용할 수 있어요."
     );
   }, [promptAuthForAction, signOut]);
+
+  const loadComments = React.useCallback(async () => {
+    if (!postId) return;
+    setCommentsLoading(true);
+    setCommentsError(null);
+    try {
+      const result = await listPostComments({ postId, limit: 50, offset: 0 });
+      setComments(result.comments);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        setComments([]);
+        return;
+      }
+      setCommentsError(
+        err instanceof Error ? err.message : "댓글을 불러오지 못했어요."
+      );
+    } finally {
+      setCommentsLoading(false);
+    }
+  }, [postId]);
+
+  React.useEffect(() => {
+    setComments([]);
+    setCommentInput("");
+    setReplyTarget(null);
+    setCommentsError(null);
+    if (!postId || loading || error || !loadedPostId) return;
+    void loadComments();
+  }, [error, loadComments, loadedPostId, loading, postId]);
+
+  const submitComment = async () => {
+    if (!token) {
+      promptAuthForAction("댓글은 로그인한 회원만 남길 수 있어요.");
+      return;
+    }
+    if (!postId || commentSubmitting) return;
+
+    const contentToSend = commentInput.trim();
+    if (!contentToSend) {
+      showToast("댓글 내용을 입력해주세요.", { tone: "error" });
+      return;
+    }
+    if (contentToSend.length > 1000) {
+      showToast("댓글은 1000자 이하로 입력해주세요.", { tone: "error" });
+      return;
+    }
+
+    setCommentSubmitting(true);
+    try {
+      const created = await createPostComment({
+        postId,
+        content: contentToSend,
+        parentCommentId: replyTarget?.id ?? null,
+      });
+      setComments((prev) => [...prev, created]);
+      setCommentInput("");
+      setReplyTarget(null);
+      showToast(replyTarget ? "답글을 남겼어요." : "댓글을 남겼어요.", { tone: "success" });
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        await handleAuthError();
+        return;
+      }
+      showToast(
+        err instanceof Error ? err.message : "댓글 작성에 실패했어요. 잠시 후 다시 시도해주세요.",
+        { tone: "error" }
+      );
+    } finally {
+      setCommentSubmitting(false);
+    }
+  };
+
+  const onPressReply = (comment: PostComment) => {
+    if (!token) {
+      promptAuthForAction("답글은 로그인한 회원만 남길 수 있어요.");
+      return;
+    }
+    setReplyTarget(comment);
+  };
+
+  const onPressDeleteComment = (comment: PostComment) => {
+    if (!token || deletingCommentId) return;
+
+    const submit = async () => {
+      setDeletingCommentId(comment.id);
+      try {
+        await deleteComment(comment.id);
+        setComments((prev) =>
+          prev.map((item) =>
+            item.id === comment.id
+              ? {
+                  ...item,
+                  status: "deleted",
+                  content: null,
+                  author: null,
+                  deletedAt: new Date().toISOString(),
+                }
+              : item
+          )
+        );
+        showToast("댓글을 삭제했어요.", { tone: "success" });
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 401) {
+          await handleAuthError();
+          return;
+        }
+        showToast("댓글 삭제에 실패했어요. 잠시 후 다시 시도해주세요.", { tone: "error" });
+      } finally {
+        setDeletingCommentId(null);
+      }
+    };
+
+    Alert.alert("댓글 삭제", "이 댓글을 삭제할까요?", [
+      { text: "취소", style: "cancel" },
+      { text: "삭제", style: "destructive", onPress: () => void submit() },
+    ]);
+  };
 
   const onPressLike = async () => {
     if (!token) {
@@ -733,6 +881,167 @@ export default function PostDetail() {
               versionSeed={`${title}|${content}|${JSON.stringify((post as any)?.layoutJson ?? null)}`}
               renderImages={post.renderImages ?? null}
             />
+
+            <View style={styles.commentSection} testID="post-comments-section">
+              <View style={styles.commentHeaderRow}>
+                <Text style={styles.commentTitle}>댓글 {commentCount}</Text>
+                <Pressable
+                  onPress={() => void loadComments()}
+                  disabled={commentsLoading}
+                  accessibilityRole="button"
+                  testID="post-comments-refresh-btn"
+                >
+                  <Text style={styles.commentRefreshText}>
+                    {commentsLoading ? "새로고침 중" : "새로고침"}
+                  </Text>
+                </Pressable>
+              </View>
+
+              <View style={styles.commentComposer}>
+                {replyTarget ? (
+                  <View style={styles.replyTargetRow}>
+                    <Text style={styles.replyTargetText} numberOfLines={1}>
+                      {replyTarget.author?.displayName || "댓글"}님에게 답글
+                    </Text>
+                    <Pressable
+                      onPress={() => setReplyTarget(null)}
+                      accessibilityRole="button"
+                      testID="post-comment-reply-cancel-btn"
+                    >
+                      <Text style={styles.replyCancelText}>취소</Text>
+                    </Pressable>
+                  </View>
+                ) : null}
+                <TextInput
+                  value={commentInput}
+                  onChangeText={setCommentInput}
+                  placeholder={token ? "댓글을 남겨보세요" : "로그인 후 댓글을 남길 수 있어요"}
+                  placeholderTextColor="#8d938f"
+                  multiline
+                  maxLength={1000}
+                  editable={Boolean(token) && !commentSubmitting}
+                  style={styles.commentInput}
+                  testID="post-comment-input"
+                />
+                <View style={styles.commentComposerFooter}>
+                  <Text style={styles.commentInputCount}>{commentInput.length}/1000</Text>
+                  <Pressable
+                    onPress={() => void submitComment()}
+                    disabled={!token || commentSubmitting || commentInput.trim().length === 0}
+                    style={[
+                      styles.commentSubmitBtn,
+                      (!token || commentSubmitting || commentInput.trim().length === 0) &&
+                        styles.commentSubmitBtnDisabled,
+                    ]}
+                    accessibilityRole="button"
+                    testID="post-comment-submit-btn"
+                  >
+                    <Text style={styles.commentSubmitText}>
+                      {commentSubmitting ? "등록 중" : replyTarget ? "답글 등록" : "등록"}
+                    </Text>
+                  </Pressable>
+                </View>
+              </View>
+
+              {commentsLoading && comments.length === 0 ? (
+                <View style={styles.commentLoadingRow}>
+                  <ActivityIndicator color="#2d5a3d" />
+                  <Text style={styles.commentHint}>댓글을 불러오는 중...</Text>
+                </View>
+              ) : commentsError ? (
+                <View style={styles.commentEmptyBox}>
+                  <Text style={styles.commentHint}>{commentsError}</Text>
+                </View>
+              ) : topLevelComments.length === 0 ? (
+                <View style={styles.commentEmptyBox}>
+                  <Text style={styles.commentHint}>아직 댓글이 없어요.</Text>
+                </View>
+              ) : (
+                <View style={styles.commentList}>
+                  {topLevelComments.map((comment) => {
+                    const replies = repliesByParentId.get(comment.id) ?? [];
+                    return (
+                      <View key={comment.id} style={styles.commentThread}>
+                        <View style={styles.commentItem}>
+                          <View style={styles.commentMetaRow}>
+                            <Text style={styles.commentAuthor}>
+                              {comment.author?.displayName || "삭제된 댓글"}
+                            </Text>
+                            <Text style={styles.commentDate}>
+                              {formatKstDateKorean(comment.createdAt)}
+                            </Text>
+                          </View>
+                          <Text style={styles.commentBody}>
+                            {comment.status === "deleted"
+                              ? "삭제된 댓글입니다."
+                              : comment.content}
+                          </Text>
+                          {comment.status === "active" ? (
+                            <View style={styles.commentActionRow}>
+                              <Pressable
+                                onPress={() => onPressReply(comment)}
+                                accessibilityRole="button"
+                                testID={`post-comment-reply-btn-${comment.id}`}
+                              >
+                                <Text style={styles.commentActionText}>답글</Text>
+                              </Pressable>
+                              {canManagePost ? (
+                                <Pressable
+                                  onPress={() => onPressDeleteComment(comment)}
+                                  disabled={deletingCommentId === comment.id}
+                                  accessibilityRole="button"
+                                  testID={`post-comment-delete-btn-${comment.id}`}
+                                >
+                                  <Text style={styles.commentDangerText}>
+                                    {deletingCommentId === comment.id ? "삭제 중" : "삭제"}
+                                  </Text>
+                                </Pressable>
+                              ) : null}
+                            </View>
+                          ) : null}
+                        </View>
+
+                        {replies.length > 0 ? (
+                          <View style={styles.replyList}>
+                            {replies.map((reply) => (
+                              <View key={reply.id} style={styles.replyItem}>
+                                <View style={styles.commentMetaRow}>
+                                  <Text style={styles.commentAuthor}>
+                                    {reply.author?.displayName || "삭제된 댓글"}
+                                  </Text>
+                                  <Text style={styles.commentDate}>
+                                    {formatKstDateKorean(reply.createdAt)}
+                                  </Text>
+                                </View>
+                                <Text style={styles.commentBody}>
+                                  {reply.status === "deleted"
+                                    ? "삭제된 댓글입니다."
+                                    : reply.content}
+                                </Text>
+                                {canManagePost && reply.status === "active" ? (
+                                  <View style={styles.commentActionRow}>
+                                    <Pressable
+                                      onPress={() => onPressDeleteComment(reply)}
+                                      disabled={deletingCommentId === reply.id}
+                                      accessibilityRole="button"
+                                      testID={`post-comment-delete-btn-${reply.id}`}
+                                    >
+                                      <Text style={styles.commentDangerText}>
+                                        {deletingCommentId === reply.id ? "삭제 중" : "삭제"}
+                                      </Text>
+                                    </Pressable>
+                                  </View>
+                                ) : null}
+                              </View>
+                            ))}
+                          </View>
+                        ) : null}
+                      </View>
+                    );
+                  })}
+                </View>
+              )}
+            </View>
 
             {canManagePost ? (
               <View style={styles.relatedSection}>

@@ -50,6 +50,33 @@ const BOOKMARK_LISTS = [
   },
 ];
 
+const COMMENT_ROWS = [
+  {
+    id: 501,
+    post_id: 101,
+    parent_comment_id: null,
+    status: "active",
+    content: "첫 댓글입니다.",
+    author: { id: 31, nickname: "솔", display_name: "솔" },
+    reply_count: 1,
+    created_at: "2026-02-10T01:00:00.000Z",
+    updated_at: "2026-02-10T01:00:00.000Z",
+    deleted_at: null,
+  },
+  {
+    id: 502,
+    post_id: 101,
+    parent_comment_id: 501,
+    status: "active",
+    content: "답글입니다.",
+    author: { id: 32, nickname: "별", display_name: "별" },
+    reply_count: 0,
+    created_at: "2026-02-10T01:10:00.000Z",
+    updated_at: "2026-02-10T01:10:00.000Z",
+    deleted_at: null,
+  },
+];
+
 async function setAuthToken(page: Page, token: string) {
   const storagePayload = {
     key: AUTH_TOKEN_KEY,
@@ -184,6 +211,47 @@ async function setupApiRoutes(page: Page, options?: SetupApiRoutesOptions) {
     });
   });
 
+  await page.route("**/api/posts/101/comments**", async (route) => {
+    if (route.request().method() === "POST") {
+      const body = route.request().postDataJSON() as Record<string, unknown>;
+      await route.fulfill({
+        status: 201,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          comment: {
+            id: 503,
+            post_id: 101,
+            parent_comment_id: body.parent_comment_id ?? null,
+            status: "active",
+            content: body.content,
+            author: { id: 1, nickname: "tester", display_name: "tester" },
+            reply_count: 0,
+            created_at: "2026-02-10T02:00:00.000Z",
+            updated_at: "2026-02-10T02:00:00.000Z",
+            deleted_at: null,
+          },
+        }),
+      });
+      return;
+    }
+
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        ok: true,
+        comments: COMMENT_ROWS,
+        pagination: {
+          limit: 50,
+          offset: 0,
+          total: COMMENT_ROWS.length,
+          has_more: false,
+        },
+      }),
+    });
+  });
+
   await page.route("**/api/share-events", async (route) => {
     let payload: Record<string, unknown> = {};
     try {
@@ -283,6 +351,72 @@ test.describe("글 상세 화면", () => {
 
     await page.getByTestId("post-bookmark-btn").click();
     await expect(page.getByText("북마크 폴더 선택")).toBeVisible();
+  });
+
+  test("댓글 목록을 표시하고 새 댓글과 답글을 등록한다", async ({ page }) => {
+    const commentRequests: Array<Record<string, unknown>> = [];
+
+    await setupApiRoutes(page);
+    await page.route("**/api/posts/101/comments**", async (route) => {
+      if (route.request().method() === "POST") {
+        const body = route.request().postDataJSON() as Record<string, unknown>;
+        commentRequests.push(body);
+        await route.fulfill({
+          status: 201,
+          contentType: "application/json",
+          body: JSON.stringify({
+            ok: true,
+            comment: {
+              id: body.parent_comment_id ? 504 : 503,
+              post_id: 101,
+              parent_comment_id: body.parent_comment_id ?? null,
+              status: "active",
+              content: body.content,
+              author: { id: 1, nickname: "tester", display_name: "tester" },
+              reply_count: 0,
+              created_at: "2026-02-10T02:00:00.000Z",
+              updated_at: "2026-02-10T02:00:00.000Z",
+              deleted_at: null,
+            },
+          }),
+        });
+        return;
+      }
+
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          comments: COMMENT_ROWS,
+          pagination: { limit: 50, offset: 0, total: COMMENT_ROWS.length, has_more: false },
+        }),
+      });
+    });
+    await setAuthToken(page, "mock-token-post-detail-comments");
+    await openPostDetailFromHome(page);
+
+    await expect(page.getByTestId("post-comments-section")).toBeVisible();
+    await expect(page.getByText("댓글 2")).toBeVisible();
+    await expect(page.getByText("첫 댓글입니다.")).toBeVisible();
+    await expect(page.getByText("답글입니다.")).toBeVisible();
+
+    await page.getByTestId("post-comment-input").fill("새 댓글입니다.");
+    await page.getByTestId("post-comment-submit-btn").click();
+    await expect.poll(() => commentRequests.length).toBe(1);
+    await expect(commentRequests[0]).toMatchObject({ content: "새 댓글입니다." });
+    await expect(page.getByText("새 댓글입니다.")).toBeVisible();
+
+    await page.getByTestId("post-comment-reply-btn-501").click();
+    await expect(page.getByText("솔님에게 답글")).toBeVisible();
+    await page.getByTestId("post-comment-input").fill("새 답글입니다.");
+    await page.getByTestId("post-comment-submit-btn").click();
+    await expect.poll(() => commentRequests.length).toBe(2);
+    await expect(commentRequests[1]).toMatchObject({
+      content: "새 답글입니다.",
+      parent_comment_id: 501,
+    });
+    await expect(page.getByText("새 답글입니다.")).toBeVisible();
   });
 
   test("공유 성공 시 성공 토스트를 표시한다", async ({ page }) => {
