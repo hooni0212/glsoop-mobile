@@ -15,8 +15,8 @@ export const TAB_META = {
 } satisfies Record<TabRouteName, { label: string; icon: IoniconName }>;
 
 export const COLORS = {
-  active: "#2E5A3D",
-  inactive: "#8E95A3",
-  bg: "#FFFFFF",
-  border: "rgba(0,0,0,0.06)",
+  active: "#49805a",
+  inactive: "#6d7771",
+  bg: "#fffefa",
+  border: "#e0e0da",
 } as const;

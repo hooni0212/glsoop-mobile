@@ -22,27 +22,28 @@ export default function AuthWelcome() {
             <Image source={glsoopIcon} style={styles.logoImage} contentFit="cover" transition={120} />
           </View>
           <Text style={styles.title}>글숲</Text>
-          <Text style={styles.subtitle}>
-            일상의 작은 순간들을 기록하고{"\n"}나누는 공간
-          </Text>
+          <Text style={styles.subtitle}>기록하고 나누는 글의 숲</Text>
         </View>
 
-        <View style={styles.actions}>
-          <Pressable
-            onPress={() => router.push(buildAuthRoute("/(auth)/login", redirect))}
-            style={({ pressed }) => [styles.primaryBtn, pressed && styles.primaryBtnPressed]}
-            testID="auth-welcome-login-btn"
-          >
-            <Text style={styles.primaryText}>로그인</Text>
-          </Pressable>
+        <View style={styles.actionPanel}>
+          <View style={styles.actions}>
+            <Pressable
+              onPress={() => router.push(buildAuthRoute("/(auth)/login", redirect))}
+              style={({ pressed }) => [styles.primaryBtn, pressed && styles.primaryBtnPressed]}
+              testID="auth-welcome-login-btn"
+            >
+              <Text style={styles.primaryText}>로그인</Text>
+            </Pressable>
 
-          <Pressable
-            onPress={() => router.push(buildAuthRoute("/(auth)/signup", redirect))}
-            style={({ pressed }) => [styles.secondaryBtn, pressed && styles.secondaryBtnPressed]}
-            testID="auth-welcome-signup-btn"
-          >
-            <Text style={styles.secondaryText}>회원가입</Text>
-          </Pressable>
+            <Pressable
+              onPress={() => router.push(buildAuthRoute("/(auth)/signup", redirect))}
+              style={({ pressed }) => [styles.secondaryBtn, pressed && styles.secondaryBtnPressed]}
+              testID="auth-welcome-signup-btn"
+            >
+              <Text style={styles.secondaryText}>회원가입</Text>
+            </Pressable>
+          </View>
+          <Text style={styles.actionHint}>회원가입 후 바로 글쓰기를 시작할 수 있어요.</Text>
         </View>
       </View>
     </SafeAreaView>
@@ -53,6 +54,9 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: tokens.colors.bg },
   container: {
     flex: 1,
+    width: "100%",
+    maxWidth: 480,
+    alignSelf: "center",
     paddingHorizontal: tokens.space.xl,
     paddingTop: tokens.space.xl,
     paddingBottom: tokens.space.xl,
@@ -60,7 +64,7 @@ const styles = StyleSheet.create({
   },
   hero: {
     alignItems: "center",
-    marginTop: tokens.space.xl * 1.4,
+    marginTop: tokens.space.xl * 1.2,
     gap: tokens.space.md as any,
   },
   logoFrame: {
@@ -68,9 +72,9 @@ const styles = StyleSheet.create({
     height: 122,
     borderRadius: 30,
     overflow: "hidden",
-    backgroundColor: "#f4eedf",
+    backgroundColor: tokens.colors.bg,
     borderWidth: 1,
-    borderColor: "rgba(45,90,61,0.08)",
+    borderColor: tokens.colors.border,
     shadowColor: tokens.shadow.color,
     shadowOpacity: tokens.shadow.opacity,
     shadowRadius: tokens.shadow.radius,
@@ -86,6 +90,14 @@ const styles = StyleSheet.create({
     color: tokens.colors.textMuted,
     textAlign: "center",
     lineHeight: 22,
+  },
+  actionPanel: {
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+    borderRadius: tokens.radius.xl,
+    backgroundColor: tokens.colors.surfaceStrong,
+    padding: tokens.space.lg,
+    gap: tokens.space.md as any,
   },
   actions: { gap: tokens.space.md as any },
   primaryBtn: {
@@ -106,4 +118,10 @@ const styles = StyleSheet.create({
   },
   secondaryBtnPressed: { opacity: 0.92 },
   secondaryText: { color: tokens.colors.text, fontSize: 15, fontWeight: "800" },
+  actionHint: {
+    textAlign: "center",
+    fontSize: tokens.font.small,
+    color: tokens.colors.textMuted,
+    lineHeight: 20,
+  },
 });

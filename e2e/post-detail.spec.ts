@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
 const AUTH_TOKEN_KEY = "glsoop_auth_token_v1";
+const PUBLIC_UGC_NOTICE_STORAGE_KEY = "glsoop.public_ugc_notice_ack";
 
 const HOME_POSTS = [
   {
@@ -50,13 +51,39 @@ const BOOKMARK_LISTS = [
 ];
 
 async function setAuthToken(page: Page, token: string) {
+  const storagePayload = {
+    key: AUTH_TOKEN_KEY,
+    value: token,
+    noticeKey: PUBLIC_UGC_NOTICE_STORAGE_KEY,
+  };
+
+  await page.addInitScript(
+    ({ key, value, noticeKey }) => {
+      localStorage.setItem(key, value);
+      localStorage.setItem(
+        noticeKey,
+        JSON.stringify({
+          versionKey: "public-ugc-notice.v1",
+          acknowledgedAt: "2026-04-20T00:00:00.000Z",
+        })
+      );
+    },
+    storagePayload
+  );
   await page.goto("/");
   await page.waitForLoadState("domcontentloaded");
   await page.evaluate(
-    ({ key, value }) => {
+    ({ key, value, noticeKey }) => {
       localStorage.setItem(key, value);
+      localStorage.setItem(
+        noticeKey,
+        JSON.stringify({
+          versionKey: "public-ugc-notice.v1",
+          acknowledgedAt: "2026-04-20T00:00:00.000Z",
+        })
+      );
     },
-    { key: AUTH_TOKEN_KEY, value: token }
+    storagePayload
   );
 }
 
@@ -70,6 +97,26 @@ async function setupApiRoutes(page: Page, options?: SetupApiRoutesOptions) {
   const recentShouldFail = Boolean(options?.recentShouldFail);
   const shareEventStatus = options?.shareEventStatus ?? 201;
   const shareEventRequests = options?.shareEventRequests;
+
+  await page.route("**/api/runtime-config", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        ok: true,
+        legal: { versions: {} },
+        safety: {
+          report_enabled: true,
+          block_enabled: true,
+          moderation_sla_hours: 24,
+          report_reasons: [
+            { code: "spam", label: "스팸", target_types: ["post"] },
+            { code: "harassment", label: "괴롭힘", target_types: ["user"] },
+          ],
+        },
+      }),
+    });
+  });
 
   await page.route("**/api/me", async (route) => {
     await route.fulfill({
@@ -172,6 +219,14 @@ async function setupApiRoutes(page: Page, options?: SetupApiRoutesOptions) {
 
 async function openPostDetailFromHome(page: Page) {
   await page.goto("/");
+  const publicUgcNoticeGate = page.getByTestId("public-ugc-notice-gate");
+  const noticeVisible = await publicUgcNoticeGate.isVisible({ timeout: 1500 }).catch(() => false);
+  if (noticeVisible) {
+    await page.getByTestId("public-ugc-notice-check-legal").click();
+    await page.getByTestId("public-ugc-notice-check-safety").click();
+    await page.getByTestId("public-ugc-notice-continue").click();
+    await expect(publicUgcNoticeGate).toBeHidden();
+  }
   const homeTitle = page.getByText("북마크 모달 테스트 글").first();
   await expect(homeTitle).toBeVisible();
   await homeTitle.click();
@@ -293,6 +348,55 @@ test.describe("글 상세 화면", () => {
     await expect.poll(() => shareEventRequests[0]?.result).toBe("failed");
   });
 
+  test("내 글 삭제는 앱 내부 확인 시트에서 삭제 요청까지 연결된다", async ({ page }) => {
+    let deleteCalls = 0;
+
+    await setupApiRoutes(page);
+    await setAuthToken(page, "mock-token-post-detail-delete");
+
+    await page.route("**/api/posts/101/edit", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          post: {
+            id: 101,
+            title: DETAIL_POST.title,
+            content: DETAIL_POST.content,
+            category: DETAIL_POST.category,
+            hashtags: [],
+            layout_json: null,
+          },
+        }),
+      });
+    });
+
+    await page.route("**/api/posts/101", async (route) => {
+      if (route.request().method() !== "DELETE") {
+        await route.fallback();
+        return;
+      }
+
+      deleteCalls += 1;
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ ok: true, message: "글이 삭제되었습니다." }),
+      });
+    });
+
+    await openPostDetailFromHome(page);
+
+    await expect(page.getByText("내 글 관리")).toBeVisible();
+    await page.getByTestId("post-manage-delete-btn").click();
+    await expect(page.getByTestId("post-delete-confirm-btn")).toBeVisible();
+    await page.getByTestId("post-delete-confirm-btn").click();
+
+    await expect.poll(() => deleteCalls).toBe(1);
+    await expect(page).toHaveURL(/\/$/);
+  });
+
   test("서버 이미지 실패 시 layout_json 행간/자간으로 fallback 카드와 KST 날짜를 유지한다", async ({ page }) => {
     await setupApiRoutes(page);
 
@@ -358,7 +462,9 @@ test.describe("글 상세 화면", () => {
     await setAuthToken(page, "mock-token-post-detail-fallback");
     await openPostDetailFromHome(page);
 
-    await expect(page.getByText("이미지 렌더를 불러오지 못해 텍스트 카드로 보여줘요.")).toBeVisible();
+    await expect(page.getByText("SERVER RENDER")).toHaveCount(0);
+    await expect(page.getByText("이미지 렌더를 불러오지 못해 텍스트 카드로 보여줘요.")).toHaveCount(0);
+    await expect(page.getByText("북마크 모달 테스트 글").last()).toBeVisible();
     await expect(page.getByText("2026년 2월 10일").first()).toBeVisible();
 
     const titleLetterSpacing = await page

@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
+  Platform,
   StyleSheet,
   Text,
   View,
@@ -11,12 +12,17 @@ import {
 } from "react-native";
 import { Image } from "expo-image";
 
+import { useAuth } from "@/auth/AuthContext";
+import { COOKIE_SESSION_TOKEN } from "@/lib/authToken";
 import { createFeedPreviewSession, type FeedPreviewRenderImages } from "@/lib/feedImage";
+import { logger } from "@/lib/logger";
 import type { PostFontKey } from "@/lib/postContent";
 import type { WriteLayoutModel } from "@/lib/postLayout";
+import { tokens } from "@/theme/tokens";
 import type { PostType } from "@/types/post";
 
 const PREVIEW_REQUEST_DEBOUNCE_MS = 450;
+const PREVIEW_SESSION_PATH = "/api/feed-images/preview/sessions/";
 
 type Props = {
   title: string;
@@ -32,6 +38,10 @@ function resolveErrorMessage(error: unknown) {
   return "미리보기를 불러오지 못했어요. 저장은 계속할 수 있습니다.";
 }
 
+function isPreviewSessionImageUrl(uri: string) {
+  return uri.includes(PREVIEW_SESSION_PATH);
+}
+
 export function WritePreviewCard({
   title,
   body,
@@ -40,11 +50,13 @@ export function WritePreviewCard({
   fontKey,
   compact = false,
 }: Props) {
+  const { token } = useAuth();
   const previewTitle = title.trim() || "제목 미리보기";
   const previewBody = body.trim() || "본문이 여기에 보여요.";
   const [preview, setPreview] = useState<FeedPreviewRenderImages | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [imageLoadError, setImageLoadError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(0);
   const [viewportWidth, setViewportWidth] = useState(0);
 
@@ -77,6 +89,7 @@ export function WritePreviewCard({
             content: previewBody,
             category: selectedType ?? "short",
             layout: previewLayout,
+            template: previewLayout.presetId,
             fontKey,
             createdAt: previewCreatedAtRef.current,
           });
@@ -108,6 +121,10 @@ export function WritePreviewCard({
   }, [preview]);
 
   useEffect(() => {
+    setImageLoadError(null);
+  }, [preview?.renderImages.previewSessionId]);
+
+  useEffect(() => {
     if (!preview?.renderImages.previewSessionId) return;
     if (!listRef.current) return;
     if (viewportWidth <= 0) return;
@@ -115,11 +132,31 @@ export function WritePreviewCard({
   }, [currentPage, preview?.renderImages.previewSessionId, viewportWidth]);
 
   const images = preview?.images ?? [];
+  const requiresAuthorizedImages = images.some(isPreviewSessionImageUrl);
+  const previewImageHeaders = useMemo<Record<string, string> | undefined>(() => {
+    if (!requiresAuthorizedImages) return undefined;
+    if (token && token !== COOKIE_SESSION_TOKEN) {
+      return { Authorization: `Bearer ${token}` };
+    }
+    if (Platform.OS === "web") {
+      // expo-image on web uses fetch when headers is present, which preserves same-origin cookies.
+      return {} as Record<string, string>;
+    }
+    return undefined;
+  }, [requiresAuthorizedImages, token]);
   const totalPages = Math.max(
     1,
     preview?.renderImages.pageCount ?? images.length ?? 1
   );
   const isTruncated = Boolean(preview?.renderImages.isTruncated);
+  const visibleError = error || imageLoadError;
+
+  const buildPreviewImageSource = (uri: string) => {
+    if (!isPreviewSessionImageUrl(uri) || !previewImageHeaders) {
+      return { uri };
+    }
+    return { uri, headers: previewImageHeaders };
+  };
 
   const onLayoutViewport = (event: LayoutChangeEvent) => {
     const nextWidth = Math.round(event.nativeEvent.layout.width);
@@ -136,9 +173,12 @@ export function WritePreviewCard({
   };
 
   return (
-    <View style={styles.wrap}>
-      <View style={styles.frame}>
-        <View style={styles.viewport} onLayout={onLayoutViewport}>
+    <View style={[styles.wrap, compact && styles.wrapCompact]}>
+      <View style={[styles.frame, compact && styles.frameCompact]}>
+        <View
+          style={[styles.viewport, compact && styles.viewportCompact]}
+          onLayout={onLayoutViewport}
+        >
           {images.length > 0 ? (
             <FlatList
               ref={listRef}
@@ -153,22 +193,32 @@ export function WritePreviewCard({
                   style={[
                     styles.page,
                     viewportWidth > 0 ? { width: viewportWidth } : null,
+                    compact && styles.pageCompact,
                   ]}
                 >
                   <Image
-                    source={{ uri: item }}
+                    source={buildPreviewImageSource(item)}
                     style={[styles.image, compact && styles.imageCompact]}
                     contentFit="contain"
                     cachePolicy="none"
                     transition={120}
+                    onError={() => {
+                      logger.warn("[write-preview] image load failed", {
+                        platform: Platform.OS,
+                        requiresAuthorizedImages,
+                        hasToken: Boolean(token && token !== COOKIE_SESSION_TOKEN),
+                        uri: item,
+                      });
+                      setImageLoadError("미리보기 이미지를 불러오지 못했어요. 다시 열어 주세요.");
+                    }}
                   />
                 </View>
               )}
             />
           ) : (
-            <View style={[styles.emptyState, compact && styles.imageCompact]}>
+            <View style={[styles.emptyState, compact && styles.emptyStateCompact]}>
               <Text style={styles.emptyStateText}>
-                {error || "미리보기를 준비하고 있어요."}
+                {visibleError || "미리보기를 준비하고 있어요."}
               </Text>
             </View>
           )}
@@ -188,9 +238,9 @@ export function WritePreviewCard({
           </View>
         ) : null}
 
-        {error ? (
+        {visibleError ? (
           <View style={styles.errorBox}>
-            <Text style={styles.errorText}>{error}</Text>
+            <Text style={styles.errorText}>{visibleError}</Text>
           </View>
         ) : null}
 
@@ -210,42 +260,66 @@ const styles = StyleSheet.create({
   wrap: {
     marginBottom: 12,
   },
+  wrapCompact: {
+    marginBottom: 8,
+  },
   frame: {
     borderRadius: 24,
-    padding: 14,
-    backgroundColor: "rgba(92,69,42,0.10)",
+    padding: 0,
+    backgroundColor: "#f2eddc",
     borderWidth: 1,
-    borderColor: "rgba(86,62,32,0.08)",
+    borderColor: tokens.colors.border,
+    overflow: "hidden",
+  },
+  frameCompact: {
+    borderRadius: 20,
+    paddingVertical: 8,
   },
   viewport: {
     position: "relative",
     overflow: "hidden",
+    borderRadius: 24,
+  },
+  viewportCompact: {
     borderRadius: 20,
   },
   page: {
     width: "100%",
   },
+  pageCompact: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
   image: {
     width: "100%",
     aspectRatio: 500 / 666,
-    borderRadius: 20,
+    borderRadius: 24,
     overflow: "hidden",
-    backgroundColor: "#f4ead8",
+    backgroundColor: "#f2eddc",
   },
   imageCompact: {
-    maxHeight: 300,
+    width: 210,
+    height: 280,
+    alignSelf: "center",
+    borderRadius: 18,
   },
   emptyState: {
     width: "100%",
     aspectRatio: 500 / 666,
-    borderRadius: 20,
+    borderRadius: 24,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 20,
-    backgroundColor: "#f4ead8",
+    backgroundColor: "#f2eddc",
+  },
+  emptyStateCompact: {
+    width: 210,
+    height: 280,
+    alignSelf: "center",
+    borderRadius: 18,
   },
   emptyStateText: {
-    color: "#5f4931",
+    color: tokens.colors.textMuted,
     textAlign: "center",
     lineHeight: 20,
     fontWeight: "700",
@@ -254,7 +328,7 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(244,234,216,0.18)",
+    backgroundColor: "rgba(255,254,250,0.42)",
   },
   pageCounter: {
     marginTop: 12,
@@ -263,19 +337,19 @@ const styles = StyleSheet.create({
   pageCounterText: {
     fontSize: 13,
     fontWeight: "800",
-    color: "#433424",
+    color: tokens.colors.textMuted,
   },
   errorBox: {
     marginTop: 12,
     borderRadius: 16,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    backgroundColor: "rgba(185,28,28,0.08)",
+    backgroundColor: tokens.colors.dangerSoft,
     borderWidth: 1,
-    borderColor: "rgba(185,28,28,0.14)",
+    borderColor: tokens.colors.dangerBorder,
   },
   errorText: {
-    color: "#9f1c1c",
+    color: tokens.colors.danger,
     lineHeight: 20,
     fontWeight: "700",
   },
@@ -284,12 +358,12 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    backgroundColor: "rgba(104,74,37,0.08)",
+    backgroundColor: "#fdfcf7",
     borderWidth: 1,
-    borderColor: "rgba(104,74,37,0.14)",
+    borderColor: tokens.colors.border,
   },
   noticeText: {
-    color: "#5f4931",
+    color: tokens.colors.textMuted,
     lineHeight: 20,
     fontWeight: "700",
   },

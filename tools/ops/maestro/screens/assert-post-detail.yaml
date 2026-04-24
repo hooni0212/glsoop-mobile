@@ -1,0 +1,8 @@
+appId: com.glsoop.app
+---
+- extendedWaitUntil:
+    visible:
+      id: "post-share-btn"
+    timeout: 60000
+- assertVisible:
+    id: "post-share-btn"

@@ -1,3 +1,7 @@
+> Canonical moved: 공통 release / app-review 문서는 `glsoop-ops/docs/release/mobile` 및 `glsoop-ops/docs/app-review/ios`를 기준으로 관리합니다.
+>
+> 이 파일은 기존 링크 호환을 위해 임시 유지합니다.
+
 # iOS 재심 제출 전 상태 점검
 
 - 문서 타입: `Preflight Status`
@@ -18,10 +22,10 @@
 
 ## 확인 완료
 
-- `iPhone-only` 제출 전략
-  - `supportsTablet: false` 설정 존재
-  - `write` 화면의 iPad 전용 presentation 분기 제거 완료
-  - iOS 런북에서도 iPad 스크린샷 기대치 제거 완료
+- `iPad portrait full-screen` 제출 전략
+  - `supportsTablet: true` 설정 존재
+  - `requireFullScreen: true` 설정 존재
+  - 인증/설정/리스트형 화면의 centered max-width + scroll 보강 반영 완료
 - 공개/비공개 접근 정책
   - 공개: Home, Search, Post detail, Author profile
   - 로그인 필요: Growth, Bookmarks, Me, Write
@@ -71,16 +75,23 @@
 - 새 production iOS build는 아직 생성하지 않았다
 - App Store Connect 연결 및 재심 제출도 아직 남아 있다
 
+### 4. iPad QA / 스크린샷 미완료
+
+- iPad 11-inch, 13-inch portrait full-screen 기준 수동 QA는 아직 남아 있다
+- App Store Connect 제출용 iPad 스크린샷도 아직 업로드하지 않았다
+
 ---
 
 ## 권장 실행 순서
 
 1. `../glsoop` 서버 변경을 배포해 `https://www.glsoop.com/support`를 `200`으로 만든다
 2. production에서 테스트 게시글/작성자를 정하고 신고/차단 실검증을 한다
-3. 실제 iPhone에서 `ios-app-review-recording-script.md` 기준으로 녹화를 만든다
-4. `ios-app-review-notes-draft.md`를 App Store Connect Notes에 붙여 넣고 리뷰 계정 값을 채운다
-5. 새 iOS build를 생성해 App Store Connect에 연결한다
-6. 재심 제출 후 상태를 추적한다
+3. 실제 iPhone + iPad portrait full-screen에서 핵심 플로우 QA를 진행한다
+4. iPad 스크린샷 세트를 준비해 App Store Connect에 업로드한다
+5. 실제 iPhone에서 `ios-app-review-recording-script.md` 기준으로 녹화를 만든다
+6. `ios-app-review-notes-draft.md`를 App Store Connect Notes에 붙여 넣고 리뷰 계정 값을 채운다
+7. 새 iOS build를 생성해 App Store Connect에 연결한다
+8. 재심 제출 후 상태를 추적한다
 
 ---
 
@@ -90,6 +101,8 @@
 - [ ] 리뷰 계정으로 앱 로그인 성공
 - [ ] 신고 1회가 admin safety queue에 잡힘
 - [ ] 차단 1회가 즉시 숨김 + admin queue 접수로 동작
+- [ ] iPad 11-inch / 13-inch portrait full-screen QA 완료
+- [ ] iPad 스크린샷 업로드 완료
 - [ ] 물리 iPhone 녹화 파일 준비
 - [ ] App Review Notes 입력 완료
 - [ ] 새 iOS build 업로드 완료

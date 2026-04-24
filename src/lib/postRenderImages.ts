@@ -1,5 +1,6 @@
 import { buildApiUrl } from "@/lib/api";
 import { buildRenderedPostImageUrl } from "@/lib/feedImage";
+import { normalizePostBackgroundTemplateId } from "@/lib/postBackgroundTemplates";
 import type { Post, PostRenderImages } from "@/types/post";
 
 function pickFirstString(...values: unknown[]) {
@@ -61,6 +62,25 @@ function ensurePrimaryImageFirst(images: string[], primaryImage: string) {
   return [primaryImage, ...images.filter((item) => item !== primaryImage)];
 }
 
+function parseLayoutJson(raw: unknown) {
+  if (!raw) return null;
+  if (typeof raw === "object" && !Array.isArray(raw)) return raw as Record<string, any>;
+  if (typeof raw !== "string") return null;
+  try {
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? (parsed as Record<string, any>)
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function extractTemplateFromLayout(raw: unknown) {
+  const parsed = parseLayoutJson(raw);
+  return normalizePostBackgroundTemplateId(parsed?.canvas?.presetId);
+}
+
 export function resolvePostRenderImages(post: Partial<Post> | null | undefined): PostRenderImages | null {
   if (!post) return null;
 
@@ -108,7 +128,11 @@ export function normalizePostRenderImageFields(
   const nested = row?.render_images && typeof row.render_images === "object" ? row.render_images : null;
   const fallbackPrimary =
     options.fallbackPostId && String(options.fallbackPostId).trim()
-      ? buildRenderedPostImageUrl(String(options.fallbackPostId).trim())
+      ? buildRenderedPostImageUrl(String(options.fallbackPostId).trim(), {
+          template: normalizePostBackgroundTemplateId(
+            nested?.template ?? extractTemplateFromLayout(row?.layout_json ?? row?.layoutJson)
+          ),
+        })
       : "";
 
   const primaryImage = pickFirstString(

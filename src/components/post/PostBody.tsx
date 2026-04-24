@@ -4,6 +4,7 @@ import { Image } from "expo-image";
 
 import { PaperReadingCard } from "@/components/paper/PaperReadingCard";
 import { buildRenderedPostImageUrl } from "@/lib/feedImage";
+import { normalizePostBackgroundTemplateId } from "@/lib/postBackgroundTemplates";
 import type { WriteLayoutModel } from "@/lib/postLayout";
 import { paperFrameShadowStyle, softCardShadowStyle } from "@/theme/shadows";
 import type { PostRenderImages, PostType } from "@/types/post";
@@ -38,8 +39,11 @@ export function PostBody({
   const scrollRef = useRef<ScrollView | null>(null);
   const fallbackImageUrl = useMemo(() => {
     if (!postId) return null;
-    return buildRenderedPostImageUrl(postId, versionSeed);
-  }, [postId, versionSeed]);
+    return buildRenderedPostImageUrl(postId, {
+      versionSeed,
+      template: normalizePostBackgroundTemplateId(renderImages?.template ?? layout.presetId),
+    });
+  }, [layout.presetId, postId, renderImages?.template, versionSeed]);
   const imageUrls = useMemo(() => {
     const explicit = Array.isArray(renderImages?.images)
       ? renderImages.images.map((item) => String(item || "").trim()).filter(Boolean)
@@ -66,10 +70,6 @@ export function PostBody({
   if (imageUrls.length > 0 && !renderFailed) {
     return (
       <View style={styles.wrap}>
-        <View style={styles.header}>
-          <Text style={styles.eyebrow}>SERVER RENDER</Text>
-          <Text style={styles.hint}>서버가 생성한 책 페이지 이미지를 그대로 보여줘요.</Text>
-        </View>
         <View style={styles.frame}>
           <View
             style={styles.carouselViewport}
@@ -153,8 +153,6 @@ export function PostBody({
       footerText={footerText}
       type={type}
       layout={layout}
-      eyebrow="READING CARD"
-      hint="이미지 렌더를 불러오지 못해 텍스트 카드로 보여줘요."
     />
   );
 }
@@ -163,21 +161,6 @@ const styles = {
   wrap: {
     marginBottom: 6,
     gap: 14,
-  },
-  header: {
-    gap: 4,
-    paddingHorizontal: 4,
-  },
-  eyebrow: {
-    fontSize: 11,
-    letterSpacing: 1.3,
-    fontWeight: "900" as const,
-    color: "rgba(80,58,32,0.55)",
-  },
-  hint: {
-    fontSize: 12,
-    fontWeight: "700" as const,
-    color: "rgba(80,58,32,0.64)",
   },
   frame: {
     borderRadius: 24,

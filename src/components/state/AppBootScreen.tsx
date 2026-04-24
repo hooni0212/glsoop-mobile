@@ -13,8 +13,8 @@ type Props = {
 };
 
 export function AppBootScreen({
-  title = "글숲을 준비하고 있어요",
-  message = "조금 더 안정적으로 화면을 열고 있어요.",
+  title = "글숲",
+  message = "잠시만 기다려주세요.",
 }: Props) {
   return (
     <SafeAreaView style={styles.safe} testID="app-boot-screen">

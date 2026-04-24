@@ -1,0 +1,68 @@
+appId: com.glsoop.app
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+    permissions:
+      all: allow
+- extendedWaitUntil:
+    visible:
+      id: "public-ugc-notice-gate"
+    timeout: 10000
+    optional: true
+- scrollUntilVisible:
+    element:
+      id: "public-ugc-notice-check-legal"
+    direction: DOWN
+    timeout: 8000
+    optional: true
+- tapOn:
+    id: "public-ugc-notice-check-legal"
+    optional: true
+- tapOn:
+    id: "public-ugc-notice-check-safety"
+    optional: true
+- scrollUntilVisible:
+    element:
+      id: "public-ugc-notice-continue"
+    direction: DOWN
+    timeout: 8000
+    optional: true
+- tapOn:
+    id: "public-ugc-notice-continue"
+    optional: true
+- runFlow: screens/assert-home.yaml
+- tapOn:
+    point: "91%,95%"
+- extendedWaitUntil:
+    visible:
+      id: "auth-welcome-screen"
+    timeout: 15000
+    optional: true
+- tapOn:
+    id: "auth-welcome-login-btn"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      id: "auth-login-screen"
+    timeout: 20000
+- tapOn:
+    id: "login-email-input"
+- inputText: ${QA_EMAIL}
+- tapOn:
+    id: "login-password-input"
+- inputText: ${QA_PASSWORD}
+- tapOn:
+    id: "login-submit-btn"
+- tapOn:
+    text: "지금 안 함"
+- tapOn:
+    id: "login-reactivation-continue-btn"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      id: "me-profile-customize-btn"
+    timeout: 30000
+- tapOn:
+    point: "9%,95%"
+- runFlow: screens/assert-home.yaml

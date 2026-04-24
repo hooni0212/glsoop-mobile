@@ -32,6 +32,7 @@ import { ApiError } from "@/lib/errors";
 import { buildAuthRoute } from "@/lib/authRedirect";
 import { useAuth } from "@/auth/AuthContext";
 import { useToast } from "@/feedback/ToastProvider";
+import { softPanelShadowStyle } from "@/theme/shadows";
 import {
   filterBlockedAuthors,
   filterBlockedPosts,
@@ -389,7 +390,7 @@ export default function SearchScreen() {
         />
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         {showRecent ? (
           <View style={styles.recentSection}>
             <View style={styles.recentHeader}>
@@ -536,7 +537,7 @@ export default function SearchScreen() {
       <SafetyActionSheet
         visible={safetyMenuVisible}
         title="게시글 안전 메뉴"
-        description="검색 결과 카드에서도 바로 신고, 작성자 차단, 가이드라인, 지원 경로를 확인할 수 있어요."
+        description="신고, 차단, 가이드라인을 확인할 수 있어요."
         onRequestClose={() => setSafetyMenuVisible(false)}
         actions={[
           {
@@ -583,7 +584,7 @@ export default function SearchScreen() {
       <SafetyActionSheet
         visible={blockConfirmVisible}
         title="작성자 차단"
-        description={`${selectedSafetyPost?.author?.name || "이 사용자"}의 글과 프로필이 내 화면에서 즉시 숨겨집니다. 운영 기준 위반 여부는 검토 후 조치될 수 있어요. 계속할까요?`}
+        description={`${selectedSafetyPost?.author?.name || "이 사용자"}님의 글과 프로필을 숨길까요?`}
         onRequestClose={() => {
           if (blockSubmitting) return;
           setBlockConfirmVisible(false);
@@ -611,11 +612,11 @@ export default function SearchScreen() {
       <SafetyReasonModal
         visible={reportReasonVisible}
         title="게시글 신고"
-        description="신고가 접수되면 운영팀이 24시간 내 검토하고, 위반 시 콘텐츠 삭제 및 계정 제재가 이루어질 수 있어요."
+        description="접수된 신고는 운영 기준에 따라 검토돼요."
         reasons={postSafetyReasons}
         detailMaxLength={reportDetailMaxLength}
         detailRequiredReasonCodes={reportDetailRequiredReasonCodes}
-        submitLabel="신고 접수"
+        submitLabel="신고하기"
         submitting={reportSubmitting}
         onClose={() => {
           if (reportSubmitting) return;
@@ -641,9 +642,14 @@ function SearchTabButton({
   return (
     <Pressable
       onPress={onPress}
-      style={[styles.tabButton, active && styles.tabButtonActive]}
+      style={({ pressed }) => [
+        styles.tabButton,
+        active && styles.tabButtonActive,
+        pressed && styles.controlPressed,
+      ]}
       accessibilityRole="button"
       accessibilityLabel={label}
+      accessibilityState={{ selected: active }}
       testID={testID}
     >
       <Text style={[styles.tabButtonLabel, active && styles.tabButtonLabelActive]}>
@@ -667,7 +673,13 @@ function SortChip({
   return (
     <Pressable
       onPress={onPress}
-      style={[styles.sortChip, active && styles.sortChipActive]}
+      style={({ pressed }) => [
+        styles.sortChip,
+        active && styles.sortChipActive,
+        pressed && styles.controlPressed,
+      ]}
+      accessibilityRole="button"
+      accessibilityState={{ selected: active }}
       testID={testID}
     >
       <Text style={[styles.sortChipText, active && styles.sortChipTextActive]}>
@@ -686,20 +698,30 @@ function AuthorResultCard({
 }) {
   return (
     <Pressable
-      style={styles.authorCard}
+      style={({ pressed }) => [styles.authorCard, pressed && styles.authorCardPressed]}
       onPress={onPress}
       testID={`search-author-card-${author.id}`}
+      accessibilityRole="button"
+      accessibilityLabel={`작가 프로필 열기: ${author.name}`}
     >
-      <Text style={styles.authorName}>{author.name}</Text>
-      {author.nickname ? <Text style={styles.authorNickname}>@{author.nickname}</Text> : null}
-      <View style={styles.authorMetaRow}>
-        <Text style={styles.authorMetaText}>글 {author.postCount}</Text>
-        <Text style={styles.authorMetaDot}>·</Text>
-        <Text style={styles.authorMetaText}>팔로워 {author.followerCount}</Text>
+      <View style={styles.authorAvatar}>
+        <Ionicons name="person-outline" size={18} color={tokens.colors.green700} />
       </View>
-      <Text style={styles.authorLatestLabel}>
-        최근 글 {formatKstDateDot(author.latestPostAt) || "최근 글 없음"}
-      </Text>
+      <View style={styles.authorCopy}>
+        <Text style={styles.authorName} numberOfLines={1}>
+          {author.name}
+        </Text>
+        {author.nickname ? <Text style={styles.authorNickname}>@{author.nickname}</Text> : null}
+        <View style={styles.authorMetaRow}>
+          <Text style={styles.authorMetaText}>글 {author.postCount}</Text>
+          <Text style={styles.authorMetaDot}>·</Text>
+          <Text style={styles.authorMetaText}>팔로워 {author.followerCount}</Text>
+        </View>
+        <Text style={styles.authorLatestLabel}>
+          최근 글 {formatKstDateDot(author.latestPostAt) || "최근 글 없음"}
+        </Text>
+      </View>
+      <Ionicons name="chevron-forward" size={18} color={tokens.colors.textFaint} />
     </Pressable>
   );
 }
@@ -711,9 +733,9 @@ const styles = StyleSheet.create({
   },
   topBar: {
     width: "100%",
-    maxWidth: 820,
+    maxWidth: 393,
     alignSelf: "center",
-    paddingHorizontal: tokens.space.lg,
+    paddingHorizontal: 24,
     paddingTop: tokens.space.xs,
     paddingBottom: tokens.space.sm,
     flexDirection: "row",
@@ -721,43 +743,50 @@ const styles = StyleSheet.create({
     gap: tokens.space.sm,
   },
   iconBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor: tokens.colors.surfaceStrong,
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
   },
   searchInputWrap: {
     flex: 1,
-    minHeight: 40,
+    minHeight: 46,
     borderRadius: tokens.radius.pill,
     borderWidth: 1,
-    borderColor: tokens.colors.borderStrong,
+    borderColor: tokens.colors.border,
     backgroundColor: tokens.colors.surfaceStrong,
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
+    ...softPanelShadowStyle,
   },
   tabRow: {
     width: "100%",
-    maxWidth: 820,
+    maxWidth: 393,
     alignSelf: "center",
     flexDirection: "row",
     gap: tokens.space.sm,
-    paddingHorizontal: tokens.space.lg,
+    paddingHorizontal: 24,
     paddingBottom: tokens.space.sm,
   },
   tabButton: {
     flex: 1,
-    minHeight: 38,
+    minHeight: 44,
     borderRadius: tokens.radius.pill,
     borderWidth: 1,
-    borderColor: tokens.colors.borderStrong,
+    borderColor: tokens.colors.border,
     backgroundColor: tokens.colors.surfaceStrong,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: tokens.space.md,
+  },
+  controlPressed: {
+    opacity: 0.82,
   },
   tabButtonActive: {
     borderColor: tokens.colors.green700,
@@ -765,11 +794,11 @@ const styles = StyleSheet.create({
   },
   tabButtonLabel: {
     fontSize: 13,
-    fontWeight: "700",
+    fontWeight: "900",
     color: tokens.colors.textMuted,
   },
   tabButtonLabelActive: {
-    color: tokens.colors.green900,
+    color: tokens.colors.green700,
   },
   searchInput: {
     flex: 1,
@@ -779,9 +808,10 @@ const styles = StyleSheet.create({
   },
   content: {
     width: "100%",
-    maxWidth: 820,
+    maxWidth: 393,
     alignSelf: "center",
-    paddingHorizontal: tokens.space.lg,
+    paddingHorizontal: 18,
+    paddingTop: tokens.space.xs,
     paddingBottom: tokens.space.lg,
   },
   recentSection: {
@@ -792,6 +822,7 @@ const styles = StyleSheet.create({
     backgroundColor: tokens.colors.surfaceStrong,
     paddingVertical: tokens.space.md,
     paddingHorizontal: tokens.space.md,
+    ...softPanelShadowStyle,
   },
   recentHeader: {
     flexDirection: "row",
@@ -834,11 +865,10 @@ const styles = StyleSheet.create({
   },
   countLabel: {
     fontSize: tokens.font.small,
-    color: tokens.colors.textFaint,
+    color: tokens.colors.textMuted,
     fontWeight: "700",
     marginBottom: tokens.space.sm,
     marginLeft: 4,
-    letterSpacing: -0.2,
   },
   sortRow: {
     flexDirection: "row",
@@ -847,10 +877,10 @@ const styles = StyleSheet.create({
     marginLeft: 2,
   },
   sortChip: {
-    minHeight: 30,
+    minHeight: 36,
     borderRadius: tokens.radius.pill,
     borderWidth: 1,
-    borderColor: tokens.colors.borderStrong,
+    borderColor: tokens.colors.border,
     backgroundColor: tokens.colors.surfaceStrong,
     alignItems: "center",
     justifyContent: "center",
@@ -866,20 +896,39 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   sortChipTextActive: {
-    color: tokens.colors.green900,
+    color: tokens.colors.green700,
   },
   itemWrap: {
     marginBottom: tokens.space.md,
   },
   authorCard: {
     marginBottom: tokens.space.md,
+    minHeight: 92,
     borderRadius: tokens.radius.xl,
+    backgroundColor: tokens.colors.surface,
+    paddingVertical: tokens.space.lg,
+    paddingHorizontal: tokens.space.lg,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: tokens.space.md,
+    ...softPanelShadowStyle,
+  },
+  authorCardPressed: {
+    opacity: 0.92,
+  },
+  authorAvatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: tokens.colors.green050,
     borderWidth: 1,
     borderColor: tokens.colors.border,
-    backgroundColor: tokens.colors.surfaceStrong,
-    paddingVertical: tokens.space.md,
-    paddingHorizontal: tokens.space.lg,
-    gap: 8,
+  },
+  authorCopy: {
+    flex: 1,
+    gap: 5,
   },
   authorName: {
     fontSize: 16,
@@ -913,7 +962,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   loadMoreButton: {
-    minHeight: 40,
+    minHeight: 44,
     marginTop: tokens.space.sm,
     marginBottom: tokens.space.md,
     borderRadius: tokens.radius.pill,

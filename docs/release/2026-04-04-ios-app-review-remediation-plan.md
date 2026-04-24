@@ -1,3 +1,7 @@
+> Canonical moved: 공통 release / app-review 문서는 `glsoop-ops/docs/release/mobile` 및 `glsoop-ops/docs/app-review/ios`를 기준으로 관리합니다.
+>
+> 이 파일은 기존 링크 호환을 위해 임시 유지합니다.
+
 # iOS App Review 재심 대응 실행 계획
 
 - 문서 타입: `Execution Plan`
@@ -25,7 +29,7 @@
 목표는 단순 기능 추가가 아니라 아래 3가지를 동시에 만족하는 것이다.
 
 1. Apple이 지적한 `UGC safety` 요구사항을 코드와 운영 흐름 모두에서 설명 가능하게 만든다.
-2. iPad 레이아웃 리스크를 제거하고 iPhone-only 출시 전략으로 제출 범위를 명확히 한다.
+2. iPad portrait full-screen에서 조작 가능한 수준으로 레이아웃 리스크를 정리하고 제출 범위에 포함한다.
 3. 새 빌드 제출 전 자동 검증, 실기기 QA, 심사 메모를 한 번에 정리한다.
 
 ---
@@ -54,8 +58,9 @@ Apple이 iPad Air 11-inch (M3)에서 `레이아웃 settings` 등 일부 UI를 �
 
 이번 대응 방향:
 
-- 앱은 더 이상 iPad 지원하지 않는다.
-- iPhone-only 출시 기준으로 배포 설정, 코드 흔적, 제출 문구를 정리한다.
+- 앱은 iPad를 다시 지원한다.
+- 단, `portrait + full-screen`만 허용하고 Split View / Slide Over / Stage Manager는 지원하지 않는다.
+- 기존 phone-first UI를 유지하되, 스크롤/모달/키보드/CTA 접근성이 깨지지 않도록 hardening한다.
 
 ---
 
@@ -63,8 +68,9 @@ Apple이 iPad Air 11-inch (M3)에서 `레이아웃 settings` 등 일부 UI를 �
 
 ### A. 출시 기기 정책
 
-- iOS는 `iPhone-only`로 출시한다.
-- iPad 전용 QA, iPad 스크린샷, iPad UI 대응은 이번 범위에서 제외한다.
+- iOS는 `iPhone + iPad portrait full-screen`으로 출시한다.
+- `ios.supportsTablet: true`, `ios.requireFullScreen: true`, `orientation: portrait`를 유지한다.
+- iPad QA와 iPad 스크린샷도 이번 제출 범위에 포함한다.
 
 ### B. 공개/비공개 화면 범위
 
@@ -123,9 +129,9 @@ Apple이 iPad Air 11-inch (M3)에서 `레이아웃 settings` 등 일부 UI를 �
 
 ### A. 모바일 저장소(glsoop-mobile)
 
-- iOS `supportsTablet: false`는 이미 설정되어 있다.
-- `write` 화면에 남아 있던 iPad 분기 흔적도 제거해
-  iPhone-only 제출 전략과 코드가 일치한다.
+- iOS `supportsTablet: true`, `requireFullScreen: true`를 제출 기준으로 사용한다.
+- 인증/설정/리스트형 화면은 `centered maxWidth + vertical scroll` 패턴으로
+  iPad portrait full-screen 기준을 맞춘다.
 - `lint`, `typecheck`, `release:ios:verify:config`는 통과했다.
 - `npm run e2e:web`는 최근 앱 변경 이후 E2E fixture가 뒤처져 있어
   인증 토큰 키, 공개 UGC 고지 gate, 공유 모달 흐름을 함께 정리해야 하는 상태다.
@@ -159,10 +165,10 @@ Apple이 iPad Air 11-inch (M3)에서 `레이아웃 settings` 등 일부 UI를 �
     공개 UGC gate / 공유 모달 / Growth fallback UI 기준으로 다시 맞췄다.
   - 최종 검증으로 `npm run lint`, `npm run typecheck`, `npm run e2e:web`,
     `npm run release:ios:verify:config`를 모두 통과했다.
-- `2026-04-04`: `iPhone-only` 제출 정리 완료
-  - `write` 화면의 iPad 전용 presentation 분기를 제거했다.
-  - iOS 공개 출시 런북에서도 iPad 스크린샷 항목을 제외해
-    iPhone-only 제출 전략과 문서 기준을 맞췄다.
+- `2026-04-11`: iPad 지원 복구 반영
+  - `supportsTablet: true`, `requireFullScreen: true` 기준으로 iOS 설정을 되돌렸다.
+  - 인증/설정/리스트형 화면을 iPad portrait full-screen 기준으로 스크롤/폭 제약 패턴에 맞췄다.
+  - iOS 공개 출시 런북과 재심 상태판에 iPad QA / iPad 스크린샷 요구사항을 다시 반영했다.
 - `2026-04-04`: `Track F` 준비 문서 작성 완료
   - App Store Connect에 바로 붙여 넣을 `App Review Notes` 초안을 문서로 정리했다.
   - 실제 iPhone 물리 디바이스 녹화를 위한 순서별 스크립트를 문서로 정리했다.
@@ -532,7 +538,7 @@ Apple이 iPad Air 11-inch (M3)에서 `레이아웃 settings` 등 일부 UI를 �
 
 아래를 모두 만족하면 재심 제출 가능으로 본다.
 
-- [x] iPhone-only 제출 전략이 코드/문서/설정에서 일치한다.
+- [ ] iPad portrait full-screen 제출 전략이 코드/문서/설정에서 일치한다.
 - [ ] 공개/비공개 화면 범위가 제품 의도대로 동작한다.
 - [ ] 차단 시 즉시 숨김 + 자동 신고 생성이 production 기준으로 검증된다.
 - [ ] 신고가 admin 검토 큐에 들어가고 24시간 moderation 설명이 가능하다.

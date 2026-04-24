@@ -1,0 +1,8 @@
+appId: com.glsoop.app
+---
+- extendedWaitUntil:
+    visible:
+      id: "growth-screen"
+    timeout: 60000
+- assertVisible:
+    id: "growth-screen"

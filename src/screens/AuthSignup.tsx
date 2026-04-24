@@ -3,13 +3,14 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  SafeAreaView,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useAuth } from "@/auth/AuthContext";
 import { AuthLegalLinks } from "@/components/auth/AuthLegalLinks";
@@ -312,206 +313,241 @@ export default function AuthSignup() {
         style={styles.flex}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <View style={styles.container}>
-          <View style={styles.headerRow}>
-            <Pressable onPress={handleBack} style={styles.backBtn}>
-              <Text style={styles.backText}>←</Text>
-            </Pressable>
-            <Text style={styles.h1}>회원가입</Text>
-            <View style={{ width: 36 }} />
-          </View>
-
-          <Text style={styles.sub}>
-            {step === "form" ? "이메일로 간단히 시작해요." : "인증번호를 입력해 주세요."}
-          </Text>
-
-          {step === "form" ? (
-            <View style={styles.block}>
-              <AuthLegalLinks compact showAgreementHint={false} />
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          contentInsetAdjustmentBehavior="automatic"
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.container}>
+            <View style={styles.headerRow}>
+              <Pressable onPress={handleBack} style={styles.backBtn}>
+                <Text style={styles.backText}>←</Text>
+              </Pressable>
+              <Text style={styles.h1}>회원가입</Text>
+              <View style={styles.headerSpacer} />
             </View>
-          ) : null}
 
-          {error ? (
-            <View style={styles.block}>
-              <AppError error={error} />
+            <Text style={styles.sub}>
+              {step === "form" ? "이메일로 간단히 시작해요." : "인증번호를 입력해 주세요."}
+            </Text>
+
+            <View style={styles.panel}>
+              {step === "form" ? (
+                <View style={styles.block}>
+                  <AuthLegalLinks compact showAgreementHint={false} />
+                </View>
+              ) : null}
+
+              {error ? (
+                <View style={styles.block}>
+                  <AppError error={error} />
+                </View>
+              ) : null}
+
+              <View style={styles.form}>
+                {step === "form" ? (
+                  <>
+                    <TextInput
+                      value={name}
+                      onChangeText={setName}
+                      placeholder="이름을 입력해 주세요"
+                      autoComplete="name"
+                      textContentType="name"
+                      returnKeyType="next"
+                      style={styles.input}
+                      testID="signup-name-input"
+                    />
+                    <Text style={styles.fieldHint}>본명을 입력해 주세요. 예: 홍길동</Text>
+                    {fieldErrors.name ? <Text style={styles.fieldError}>{fieldErrors.name}</Text> : null}
+                    <TextInput
+                      value={nickname}
+                      onChangeText={setNickname}
+                      placeholder="닉네임을 입력해 주세요"
+                      returnKeyType="next"
+                      style={styles.input}
+                      testID="signup-nickname-input"
+                    />
+                    <Text style={styles.fieldHint}>
+                      앱에서 표시될 이름이에요. 예: 글숲러
+                    </Text>
+                    {fieldErrors.nickname ? (
+                      <Text style={styles.fieldError}>{fieldErrors.nickname}</Text>
+                    ) : null}
+                    <TextInput
+                      value={email}
+                      onChangeText={setEmail}
+                      placeholder="이메일 주소를 입력해 주세요"
+                      autoCapitalize="none"
+                      keyboardType="email-address"
+                      autoComplete="email"
+                      textContentType="emailAddress"
+                      returnKeyType="next"
+                      style={styles.input}
+                      testID="signup-email-input"
+                    />
+                    <Text style={styles.fieldHint}>
+                      로그인과 인증번호 수신에 사용할 이메일이에요. 예: user@example.com
+                    </Text>
+                    {fieldErrors.email ? <Text style={styles.fieldError}>{fieldErrors.email}</Text> : null}
+                    <TextInput
+                      value={pw}
+                      onChangeText={setPw}
+                      placeholder="비밀번호를 입력해 주세요"
+                      secureTextEntry
+                      autoComplete="new-password"
+                      textContentType="newPassword"
+                      returnKeyType="go"
+                      onSubmitEditing={() => {
+                        if (!busy && canSubmitForm) {
+                          void onSignup();
+                        }
+                      }}
+                      style={styles.input}
+                      testID="signup-password-input"
+                    />
+                    <Text style={styles.fieldHint}>
+                      영문, 숫자 포함 8자 이상으로 설정해 주세요.
+                    </Text>
+                    {fieldErrors.pw ? <Text style={styles.fieldError}>{fieldErrors.pw}</Text> : null}
+
+                    <View style={styles.consentGroup}>
+                      <Pressable
+                        onPress={() => setAgeConfirmed((current) => !current)}
+                        style={styles.checkboxRow}
+                        testID="signup-age-checkbox"
+                      >
+                        <View style={[styles.checkbox, ageConfirmed && styles.checkboxChecked]}>
+                          {ageConfirmed ? <Text style={styles.checkboxMark}>✓</Text> : null}
+                        </View>
+                        <Text style={styles.checkboxLabel}>만 14세 이상입니다.</Text>
+                      </Pressable>
+                      {fieldErrors.age_confirmed ? (
+                        <Text style={styles.fieldError}>{fieldErrors.age_confirmed}</Text>
+                      ) : null}
+
+                      <Pressable
+                        onPress={() => setTermsAgreed((current) => !current)}
+                        style={styles.checkboxRow}
+                        testID="signup-terms-checkbox"
+                      >
+                        <View style={[styles.checkbox, termsAgreed && styles.checkboxChecked]}>
+                          {termsAgreed ? <Text style={styles.checkboxMark}>✓</Text> : null}
+                        </View>
+                        <Text style={styles.checkboxLabel}>서비스 이용약관에 동의합니다.</Text>
+                      </Pressable>
+                      {fieldErrors.terms_agreed ? (
+                        <Text style={styles.fieldError}>{fieldErrors.terms_agreed}</Text>
+                      ) : null}
+                      {fieldErrors.terms_version ? (
+                        <Text style={styles.fieldError}>{fieldErrors.terms_version}</Text>
+                      ) : null}
+
+                      <Pressable
+                        onPress={() => setPrivacyAgreed((current) => !current)}
+                        style={styles.checkboxRow}
+                        testID="signup-privacy-checkbox"
+                      >
+                        <View style={[styles.checkbox, privacyAgreed && styles.checkboxChecked]}>
+                          {privacyAgreed ? <Text style={styles.checkboxMark}>✓</Text> : null}
+                        </View>
+                        <Text style={styles.checkboxLabel}>개인정보 수집 및 이용에 동의합니다.</Text>
+                      </Pressable>
+                      {fieldErrors.privacy_agreed ? (
+                        <Text style={styles.fieldError}>{fieldErrors.privacy_agreed}</Text>
+                      ) : null}
+                      {fieldErrors.privacy_version ? (
+                        <Text style={styles.fieldError}>{fieldErrors.privacy_version}</Text>
+                      ) : null}
+                    </View>
+
+                    <Pressable
+                      onPress={onSignup}
+                      disabled={busy || !canSubmitForm}
+                      testID="signup-submit-btn"
+                      style={({ pressed }) => [
+                        styles.primaryBtn,
+                        (busy || !canSubmitForm) && styles.primaryBtnDisabled,
+                        pressed && !busy && styles.primaryBtnPressed,
+                      ]}
+                    >
+                      <Text style={styles.primaryBtnText}>{busy ? "가입 중..." : "회원가입"}</Text>
+                    </Pressable>
+
+                    {message ? <Text style={styles.helper}>{message}</Text> : null}
+
+                    <Pressable
+                      onPress={() => router.push(buildAuthRoute("/(auth)/login", redirect))}
+                      style={styles.linkButton}
+                    >
+                      <Text style={styles.link}>이미 계정이 있나요? 로그인</Text>
+                    </Pressable>
+                  </>
+                ) : (
+                  <>
+                    <View style={styles.infoBox}>
+                      <Text style={styles.infoText}>
+                        {emailMasked
+                          ? `${emailMasked}로 전송된 인증번호를 입력해주세요.`
+                          : "이메일로 전송된 인증번호를 입력해주세요."}
+                      </Text>
+                      {otpTtl ? (
+                        <Text style={styles.infoHint}>인증번호 유효시간: {otpTtl}초</Text>
+                      ) : null}
+                    </View>
+                    <TextInput
+                      value={otp}
+                      onChangeText={(value) => setOtp(value.replace(/[^0-9]/g, ""))}
+                      placeholder="6자리 인증번호"
+                      keyboardType="number-pad"
+                      textContentType="oneTimeCode"
+                      autoComplete="sms-otp"
+                      returnKeyType="go"
+                      onSubmitEditing={() => {
+                        if (!busy && canSubmitOtp) {
+                          void onVerifyOtp();
+                        }
+                      }}
+                      maxLength={6}
+                      style={styles.input}
+                      testID="signup-otp-input"
+                    />
+
+                    <Pressable
+                      onPress={onVerifyOtp}
+                      disabled={busy || !canSubmitOtp}
+                      testID="signup-otp-submit-btn"
+                      style={({ pressed }) => [
+                        styles.primaryBtn,
+                        (busy || !canSubmitOtp) && styles.primaryBtnDisabled,
+                        pressed && !busy && styles.primaryBtnPressed,
+                      ]}
+                    >
+                      <Text style={styles.primaryBtnText}>{busy ? "확인 중..." : "인증 확인"}</Text>
+                    </Pressable>
+
+                    <Pressable
+                      onPress={onResendOtp}
+                      disabled={resendCountdown > 0 || resendBusy}
+                      testID="signup-otp-resend-btn"
+                      style={({ pressed }) => [
+                        styles.secondaryBtn,
+                        (resendCountdown > 0 || resendBusy) && styles.secondaryBtnDisabled,
+                        pressed && !resendBusy && resendCountdown === 0 && styles.secondaryBtnPressed,
+                      ]}
+                    >
+                      <Text style={styles.secondaryBtnText}>
+                        {resendCountdown > 0 ? `재발송 (${resendCountdown}초)` : "재발송"}
+                      </Text>
+                    </Pressable>
+
+                    {message ? <Text style={styles.helper}>{message}</Text> : null}
+                  </>
+                )}
+              </View>
             </View>
-          ) : null}
-
-          <View style={styles.form}>
-            {step === "form" ? (
-              <>
-                <TextInput
-                  value={name}
-                  onChangeText={setName}
-                  placeholder="이름을 입력해 주세요"
-                  style={styles.input}
-                  testID="signup-name-input"
-                />
-                <Text style={styles.fieldHint}>본명을 입력해 주세요. 예: 홍길동</Text>
-                {fieldErrors.name ? <Text style={styles.fieldError}>{fieldErrors.name}</Text> : null}
-                <TextInput
-                  value={nickname}
-                  onChangeText={setNickname}
-                  placeholder="닉네임을 입력해 주세요"
-                  style={styles.input}
-                  testID="signup-nickname-input"
-                />
-                <Text style={styles.fieldHint}>
-                  앱에서 표시될 이름이에요. 예: 글숲러
-                </Text>
-                {fieldErrors.nickname ? (
-                  <Text style={styles.fieldError}>{fieldErrors.nickname}</Text>
-                ) : null}
-                <TextInput
-                  value={email}
-                  onChangeText={setEmail}
-                  placeholder="이메일 주소를 입력해 주세요"
-                  autoCapitalize="none"
-                  keyboardType="email-address"
-                  style={styles.input}
-                  testID="signup-email-input"
-                />
-                <Text style={styles.fieldHint}>
-                  로그인과 인증번호 수신에 사용할 이메일이에요. 예: user@example.com
-                </Text>
-                {fieldErrors.email ? <Text style={styles.fieldError}>{fieldErrors.email}</Text> : null}
-                <TextInput
-                  value={pw}
-                  onChangeText={setPw}
-                  placeholder="비밀번호를 입력해 주세요"
-                  secureTextEntry
-                  style={styles.input}
-                  testID="signup-password-input"
-                />
-                <Text style={styles.fieldHint}>
-                  영문, 숫자 포함 8자 이상으로 설정해 주세요.
-                </Text>
-                {fieldErrors.pw ? <Text style={styles.fieldError}>{fieldErrors.pw}</Text> : null}
-
-                <View style={styles.consentGroup}>
-                  <Pressable
-                    onPress={() => setAgeConfirmed((current) => !current)}
-                    style={styles.checkboxRow}
-                    testID="signup-age-checkbox"
-                  >
-                    <View style={[styles.checkbox, ageConfirmed && styles.checkboxChecked]}>
-                      {ageConfirmed ? <Text style={styles.checkboxMark}>✓</Text> : null}
-                    </View>
-                    <Text style={styles.checkboxLabel}>만 14세 이상입니다.</Text>
-                  </Pressable>
-                  {fieldErrors.age_confirmed ? (
-                    <Text style={styles.fieldError}>{fieldErrors.age_confirmed}</Text>
-                  ) : null}
-
-                  <Pressable
-                    onPress={() => setTermsAgreed((current) => !current)}
-                    style={styles.checkboxRow}
-                    testID="signup-terms-checkbox"
-                  >
-                    <View style={[styles.checkbox, termsAgreed && styles.checkboxChecked]}>
-                      {termsAgreed ? <Text style={styles.checkboxMark}>✓</Text> : null}
-                    </View>
-                    <Text style={styles.checkboxLabel}>서비스 이용약관에 동의합니다.</Text>
-                  </Pressable>
-                  {fieldErrors.terms_agreed ? (
-                    <Text style={styles.fieldError}>{fieldErrors.terms_agreed}</Text>
-                  ) : null}
-                  {fieldErrors.terms_version ? (
-                    <Text style={styles.fieldError}>{fieldErrors.terms_version}</Text>
-                  ) : null}
-
-                  <Pressable
-                    onPress={() => setPrivacyAgreed((current) => !current)}
-                    style={styles.checkboxRow}
-                    testID="signup-privacy-checkbox"
-                  >
-                    <View style={[styles.checkbox, privacyAgreed && styles.checkboxChecked]}>
-                      {privacyAgreed ? <Text style={styles.checkboxMark}>✓</Text> : null}
-                    </View>
-                    <Text style={styles.checkboxLabel}>개인정보 수집 및 이용에 동의합니다.</Text>
-                  </Pressable>
-                  {fieldErrors.privacy_agreed ? (
-                    <Text style={styles.fieldError}>{fieldErrors.privacy_agreed}</Text>
-                  ) : null}
-                  {fieldErrors.privacy_version ? (
-                    <Text style={styles.fieldError}>{fieldErrors.privacy_version}</Text>
-                  ) : null}
-                </View>
-
-                <Pressable
-                  onPress={onSignup}
-                  disabled={busy || !canSubmitForm}
-                  testID="signup-submit-btn"
-                  style={({ pressed }) => [
-                    styles.primaryBtn,
-                    (busy || !canSubmitForm) && styles.primaryBtnDisabled,
-                    pressed && !busy && styles.primaryBtnPressed,
-                  ]}
-                >
-                  <Text style={styles.primaryBtnText}>{busy ? "가입 중..." : "회원가입"}</Text>
-                </Pressable>
-
-                {message ? <Text style={styles.helper}>{message}</Text> : null}
-
-                <Pressable onPress={() => router.push(buildAuthRoute("/(auth)/login", redirect))}>
-                  <Text style={styles.link}>이미 계정이 있나요? 로그인</Text>
-                </Pressable>
-              </>
-            ) : (
-              <>
-                <View style={styles.infoBox}>
-                  <Text style={styles.infoText}>
-                    {emailMasked
-                      ? `${emailMasked}로 전송된 인증번호를 입력해주세요.`
-                      : "이메일로 전송된 인증번호를 입력해주세요."}
-                  </Text>
-                  {otpTtl ? (
-                    <Text style={styles.infoHint}>인증번호 유효시간: {otpTtl}초</Text>
-                  ) : null}
-                </View>
-                <TextInput
-                  value={otp}
-                  onChangeText={(value) => setOtp(value.replace(/[^0-9]/g, ""))}
-                  placeholder="6자리 인증번호"
-                  keyboardType="number-pad"
-                  maxLength={6}
-                  style={styles.input}
-                  testID="signup-otp-input"
-                />
-
-                <Pressable
-                  onPress={onVerifyOtp}
-                  disabled={busy || !canSubmitOtp}
-                  testID="signup-otp-submit-btn"
-                  style={({ pressed }) => [
-                    styles.primaryBtn,
-                    (busy || !canSubmitOtp) && styles.primaryBtnDisabled,
-                    pressed && !busy && styles.primaryBtnPressed,
-                  ]}
-                >
-                  <Text style={styles.primaryBtnText}>{busy ? "확인 중..." : "인증 확인"}</Text>
-                </Pressable>
-
-                <Pressable
-                  onPress={onResendOtp}
-                  disabled={resendCountdown > 0 || resendBusy}
-                  testID="signup-otp-resend-btn"
-                  style={({ pressed }) => [
-                    styles.secondaryBtn,
-                    (resendCountdown > 0 || resendBusy) && styles.secondaryBtnDisabled,
-                    pressed && !resendBusy && resendCountdown === 0 && styles.secondaryBtnPressed,
-                  ]}
-                >
-                  <Text style={styles.secondaryBtnText}>
-                    {resendCountdown > 0 ? `재발송 (${resendCountdown}초)` : "재발송"}
-                  </Text>
-                </Pressable>
-
-                {message ? <Text style={styles.helper}>{message}</Text> : null}
-              </>
-            )}
           </View>
-        </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -520,17 +556,24 @@ export default function AuthSignup() {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   safe: { flex: 1, backgroundColor: tokens.colors.bg },
-  container: {
-    flex: 1,
+  scrollContent: {
+    flexGrow: 1,
     paddingHorizontal: tokens.space.xl,
     paddingTop: tokens.space.lg,
-    gap: tokens.space.lg as any,
+    paddingBottom: tokens.space.xl * 1.5,
+  },
+  container: {
+    width: "100%",
+    maxWidth: 520,
+    alignSelf: "center",
+    gap: tokens.space.md as any,
   },
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
+  headerSpacer: { width: 36, height: 36 },
   backBtn: {
     width: 36,
     height: 36,
@@ -543,13 +586,21 @@ const styles = StyleSheet.create({
   },
   backText: { fontSize: 18, fontWeight: "900", color: tokens.colors.text },
   h1: { fontSize: tokens.font.h1, fontWeight: "900", color: tokens.colors.text },
-  sub: { fontSize: tokens.font.body, color: tokens.colors.textMuted },
-  block: { marginTop: tokens.space.sm },
+  sub: { fontSize: tokens.font.body, color: tokens.colors.textMuted, lineHeight: 22 },
+  panel: {
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+    borderRadius: tokens.radius.xl,
+    backgroundColor: tokens.colors.surfaceStrong,
+    padding: tokens.space.lg,
+    gap: tokens.space.sm as any,
+  },
+  block: { marginBottom: tokens.space.xs },
   form: { gap: tokens.space.sm as any },
   input: {
     borderWidth: 1,
     borderColor: tokens.colors.borderStrong,
-    backgroundColor: tokens.colors.surfaceStrong,
+    backgroundColor: tokens.colors.white,
     borderRadius: tokens.radius.lg,
     paddingHorizontal: tokens.space.lg,
     paddingVertical: 12,
@@ -623,11 +674,14 @@ const styles = StyleSheet.create({
   secondaryBtnDisabled: { opacity: 0.6 },
   secondaryBtnText: { color: tokens.colors.text, fontSize: 14, fontWeight: "700" },
   helper: { fontSize: tokens.font.small, color: tokens.colors.textMuted, marginTop: 4 },
+  linkButton: {
+    alignItems: "center",
+    paddingVertical: tokens.space.xs,
+  },
   link: {
     fontSize: tokens.font.small,
     color: tokens.colors.green900,
     fontWeight: "800",
-    marginTop: tokens.space.sm,
   },
   infoBox: {
     padding: tokens.space.md,

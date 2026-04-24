@@ -1,4 +1,8 @@
 import { apiPost, buildApiUrl } from "@/lib/api";
+import {
+  normalizePostBackgroundTemplateId,
+  type PostBackgroundTemplateId,
+} from "@/lib/postBackgroundTemplates";
 import { withPostFontMeta, type PostFontKey } from "@/lib/postContent";
 import { buildLayoutPayload, type WriteLayoutModel } from "@/lib/postLayout";
 
@@ -8,7 +12,7 @@ type PreviewInput = {
   category: string;
   createdAt?: string;
   layout: WriteLayoutModel;
-  template?: "paper01" | "paper02";
+  template?: PostBackgroundTemplateId;
   fontKey?: PostFontKey;
 };
 
@@ -73,15 +77,16 @@ export function buildFeedPreviewUrl({
   category,
   createdAt,
   layout,
-  template = "paper01",
+  template,
   fontKey = "serif",
 }: PreviewInput) {
   const payload = buildLayoutPayload(layout);
+  const templateKey = normalizePostBackgroundTemplateId(template ?? layout.presetId);
   const query = new URLSearchParams();
   query.set("title", title || "미리보기 제목");
   query.set("content", withPostFontMeta(content || "", fontKey));
   query.set("category", category || "short");
-  query.set("template", template);
+  query.set("template", templateKey);
   query.set("scale", "2");
   query.set("created_at", createdAt || new Date().toISOString());
 
@@ -153,16 +158,17 @@ export async function createFeedPreviewSession({
   category,
   createdAt,
   layout,
-  template = "paper01",
+  template,
   fontKey = "serif",
 }: PreviewInput): Promise<FeedPreviewRenderImages> {
   const payload = buildLayoutPayload(layout);
+  const templateKey = normalizePostBackgroundTemplateId(template ?? layout.presetId);
   const response = await apiPost<PreviewSessionResponse>("/api/feed-images/preview/sessions", {
     title: title || "미리보기 제목",
     content: withPostFontMeta(content || "", fontKey),
     content_format: "plain",
     category: category || "short",
-    template,
+    template: templateKey,
     scale: 1,
     created_at: createdAt || new Date().toISOString(),
     layout_json: payload,
@@ -224,12 +230,51 @@ export async function createFeedPreviewSession({
   };
 }
 
-export function buildRenderedPostImageUrl(postId: string, versionSeed?: unknown) {
+type RenderedPostImageUrlOptions = {
+  versionSeed?: unknown;
+  template?: PostBackgroundTemplateId;
+};
+
+export function buildRenderedPostImageUrl(
+  postId: string,
+  versionSeedOrOptions?: unknown | RenderedPostImageUrlOptions
+) {
+  const looksLikeOptions =
+    versionSeedOrOptions != null &&
+    typeof versionSeedOrOptions === "object" &&
+    !Array.isArray(versionSeedOrOptions) &&
+    ("versionSeed" in versionSeedOrOptions || "template" in versionSeedOrOptions);
+  const options = looksLikeOptions
+    ? (versionSeedOrOptions as RenderedPostImageUrlOptions)
+    : { versionSeed: versionSeedOrOptions };
+  const template = normalizePostBackgroundTemplateId(options.template);
   const query = new URLSearchParams();
-  query.set("template", "paper01");
+  query.set("template", template);
   query.set("scale", "2");
-  if (versionSeed != null) {
-    query.set("v", buildFeedImageVersion([postId, versionSeed]));
+  if (options.versionSeed != null) {
+    query.set("v", buildFeedImageVersion([postId, template, options.versionSeed]));
   }
   return buildApiUrl(`/api/feed-images/post/${encodeURIComponent(postId)}?${query.toString()}`);
+}
+
+export type RenderedPostImageFormat = "webp" | "png";
+
+type RenderedPostShareImageOptions = {
+  format?: RenderedPostImageFormat;
+  template?: PostBackgroundTemplateId;
+  scale?: 1 | 2;
+};
+
+export function buildRenderedPostShareImageUrl(
+  postId: string,
+  options: RenderedPostShareImageOptions = {}
+) {
+  const query = new URLSearchParams();
+  query.set("template", normalizePostBackgroundTemplateId(options.template));
+  query.set("scale", String(options.scale || 2));
+  if (options.format) {
+    query.set("format", options.format);
+  }
+
+  return buildApiUrl(`/api/feed-images/share/post/${encodeURIComponent(postId)}?${query.toString()}`);
 }

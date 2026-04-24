@@ -12,7 +12,7 @@ export function createPostDetailStyles(actionBarHeight: number) {
   return StyleSheet.create({
     safe: {
       flex: 1,
-      backgroundColor: "#ebe4d8",
+      backgroundColor: tokens.colors.bg,
       position: "relative",
     },
 
@@ -40,9 +40,9 @@ export function createPostDetailStyles(actionBarHeight: number) {
       borderRadius: 22,
       alignItems: "center",
       justifyContent: "center",
-      backgroundColor: "rgba(255,250,244,0.84)",
+      backgroundColor: tokens.colors.surfaceStrong,
       borderWidth: 1,
-      borderColor: "rgba(86,62,32,0.12)",
+      borderColor: tokens.colors.border,
     },
 
     topBarSpacer: {
@@ -68,7 +68,7 @@ export function createPostDetailStyles(actionBarHeight: number) {
       fontSize: 11,
       letterSpacing: 1.3,
       fontWeight: "900",
-      color: "rgba(80,58,32,0.55)",
+      color: tokens.colors.textFaint,
     },
     metaRow: {
       flexDirection: "row",
@@ -78,17 +78,17 @@ export function createPostDetailStyles(actionBarHeight: number) {
     metaAuthor: {
       fontSize: 13,
       fontWeight: "800",
-      color: "#4b3927",
+      color: tokens.colors.text,
     },
     metaDot: {
       fontSize: 13,
       fontWeight: "700",
-      color: "rgba(75,57,39,0.44)",
+      color: tokens.colors.textFaint,
     },
     metaDate: {
       fontSize: 13,
       fontWeight: "700",
-      color: "rgba(75,57,39,0.52)",
+      color: tokens.colors.textMuted,
     },
 
     // --- Meta bar ---
@@ -104,28 +104,28 @@ export function createPostDetailStyles(actionBarHeight: number) {
       paddingHorizontal: tokens.space.sm,
       paddingVertical: 7,
       borderRadius: tokens.radius.pill,
-      backgroundColor: "rgba(252,248,240,0.88)",
+      backgroundColor: tokens.colors.surfaceStrong,
       borderWidth: 1,
-      borderColor: "rgba(86,62,32,0.09)",
+      borderColor: tokens.colors.border,
     },
     typeChipText: {
       fontSize: 12,
       fontWeight: "800",
-      color: "#5a4732",
+      color: tokens.colors.text,
       letterSpacing: -0.2,
     },
     tagChip: {
       paddingHorizontal: tokens.space.sm,
       paddingVertical: 7,
       borderRadius: tokens.radius.pill,
-      backgroundColor: "rgba(255,250,244,0.82)",
+      backgroundColor: tokens.colors.surface,
       borderWidth: 1,
-      borderColor: "rgba(86,62,32,0.09)",
+      borderColor: tokens.colors.border,
     },
     tagChipText: {
       fontSize: 12,
       fontWeight: "700",
-      color: "rgba(75,57,39,0.70)",
+      color: tokens.colors.textMuted,
       letterSpacing: -0.2,
     },
     relatedSection: {
@@ -210,9 +210,9 @@ export function createPostDetailStyles(actionBarHeight: number) {
       zIndex: 30,
       elevation: 16,
       paddingHorizontal: tokens.space.xl,
-      backgroundColor: tokens.colors.surfaceStrong,
+      backgroundColor: tokens.colors.surface,
       borderTopWidth: 1,
-      borderTopColor: tokens.colors.border,
+      borderTopColor: tokens.colors.borderStrong,
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-around",
@@ -225,6 +225,7 @@ export function createPostDetailStyles(actionBarHeight: number) {
       alignItems: "center",
       justifyContent: "center",
       gap: tokens.space.xs as any,
+      transform: [{ translateY: 5 }],
     },
     actionLabel: {
       fontSize: tokens.font.small,
@@ -346,6 +347,9 @@ export function createPostDetailStyles(actionBarHeight: number) {
     bookmarkModalListItemActive: {
       borderColor: tokens.colors.green900,
       backgroundColor: tokens.colors.green100,
+    },
+    bookmarkModalListItemDisabled: {
+      opacity: 0.55,
     },
     bookmarkModalListItemName: {
       color: tokens.colors.text,

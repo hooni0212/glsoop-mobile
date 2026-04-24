@@ -36,9 +36,9 @@ export function TopPostsList({
   error = null,
   onPressItem,
   title = "인기 글",
-  description = "반응이 좋은 글을 모아 보여주는 영역이에요.",
+  description = "반응이 좋은 글",
   emptyTitle = "아직 인기 글이 없어요",
-  emptyDescription = "활동이 더 쌓이면, 여기에서 주목받는 글을 추천해드릴게요.",
+  emptyDescription = "활동이 쌓이면 여기에 표시돼요.",
 }: Props) {
   if (loading && items.length === 0) {
     return <AppLoading message="인기 글을 불러오는 중..." />;

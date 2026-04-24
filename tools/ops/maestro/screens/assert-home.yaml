@@ -1,0 +1,6 @@
+appId: com.glsoop.app
+---
+- extendedWaitUntil:
+    visible: "오늘의 추천"
+    timeout: 60000
+- assertVisible: "오늘의 추천"

@@ -71,7 +71,7 @@ export function FeedSection<Item extends { id: string | number }>({
           {!loading && items.length === 0 && !error ? (
             <AppEmpty
               title="아직 글이 없어요"
-              description="다른 카테고리를 눌러보거나 새로고침 해보세요."
+              description="다른 카테고리를 보거나 새로고침해 보세요."
               primaryAction={{ label: "새로고침", onPress: onRefresh }}
             />
           ) : null}

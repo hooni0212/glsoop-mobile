@@ -1,3 +1,7 @@
+> Canonical moved: 공통 release / app-review 문서는 `glsoop-ops/docs/release/mobile` 및 `glsoop-ops/docs/app-review/ios`를 기준으로 관리합니다.
+>
+> 이 파일은 기존 링크 호환을 위해 임시 유지합니다.
+
 # 모바일 앱 출시 준비 플랜
 
 - 문서 타입: `Launch Plan`
@@ -49,6 +53,7 @@
 - [ ] App Store Connect 공개 출시용 메타데이터, 스크린샷, 연령등급, 앱 프라이버시 입력이 완료되지 않았다.
 - [ ] Play Console 공개 출시용 store listing, App content, Data safety 입력이 완료되지 않았다.
 - [ ] 실제 디바이스 기준 최종 스모크 QA 결과가 최신 문서로 묶여 있지 않다.
+- [ ] iPad portrait full-screen 지원 빌드 기준 QA와 스크린샷 세트가 아직 최신 기준으로 정리되지 않았다.
 
 ---
 
@@ -90,6 +95,7 @@
 - [ ] iOS 릴리스 빌드 메타데이터에서 bundle identifier가 `com.glsoop.app`인지 확인
 - [ ] Android 릴리스 빌드 메타데이터에서 package name `com.glsoop.app`과 target API 정책 충족 여부를 확인
 - [ ] 실제 스토어 업로드 가능한 빌드를 한 번 생성해본다.
+- [ ] iOS build가 `supportsTablet: true`, `requireFullScreen: true` 기준으로 생성되는지 확인한다.
 
 ### C. 참고용 과거 검증 기록
 
@@ -197,7 +203,8 @@
   - 터치 타겟
   - 텍스트 잘림
 - [ ] SafeArea 경고 이슈 영향도 확인
-- [ ] 태블릿 지원을 유지할지 여부와 화면 품질 확인
+- [ ] iPad 11-inch / 13-inch portrait full-screen에서 핵심 흐름 QA
+- [ ] iPad에서 모달/시트/키보드/스크롤/하단 CTA 접근성 확인
 
 ### F. 스토어 심사 준비
 
@@ -208,7 +215,7 @@
 - [ ] 카테고리 / 연령 등급 / 지역 설정
 - [ ] 앱 프라이버시(App Privacy) 문항 작성
 - [ ] 지원 URL / 개인정보 처리방침 URL / 마케팅 URL 입력
-- [ ] 스크린샷 준비
+- [ ] iPhone + iPad 스크린샷 준비
 - [ ] 심사용 테스트 계정 또는 심사 메모 준비
 - [x] 배포용 빌드 업로드
 - [ ] App Store Connect 버전에 build `1.0.0 (9)` 선택

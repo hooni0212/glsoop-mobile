@@ -82,7 +82,7 @@ test.describe("계정 센터 차단한 사용자", () => {
     await expect(page.getByText("안개숲")).toBeVisible();
 
     await page.getByTestId("blocked-user-unblock-btn-41").click();
-    await expect(page.getByText("차단 해제")).toBeVisible();
+    await expect(page.getByTestId("blocked-user-unblock-confirm-btn")).toBeVisible();
     await expect(
       page.getByText("안개숲 사용자의 차단을 해제할까요? 해제하면 이 사용자의 글과 프로필이 다시 보일 수 있어요.")
     ).toBeVisible();
