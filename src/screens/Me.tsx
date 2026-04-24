@@ -5,9 +5,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 
 import { FeedCard } from "@/components/FeedCard";
+import { SafetyActionSheet } from "@/components/safety/SafetyActionSheet";
 import { AppEmpty } from "@/components/state/AppEmpty";
 import { AppError } from "@/components/state/AppError";
 import { AppLoading } from "@/components/state/AppLoading";
+import { useToast } from "@/feedback/ToastProvider";
 import {
   type MeResponse,
   parseFlag,
@@ -130,6 +132,7 @@ function normalizeFollowing(row: any): FollowingUser {
 
 export default function MeScreen() {
   const router = useRouter();
+  const { showToast } = useToast();
 
   const [me, setMe] = React.useState<MeResponse | null>(null);
   const [loading, setLoading] = React.useState(true);
@@ -142,6 +145,7 @@ export default function MeScreen() {
   const [tabLoading, setTabLoading] = React.useState(false);
   const [tabError, setTabError] = React.useState<ReturnType<typeof normalizeApiError> | null>(null);
   const [deletingPostId, setDeletingPostId] = React.useState<string | null>(null);
+  const [pendingDeletePost, setPendingDeletePost] = React.useState<Post | null>(null);
   const [growthSummary, setGrowthSummary] = React.useState<GrowthSummaryResponse["summary"] | null>(null);
 
   const loadMe = React.useCallback(async () => {
@@ -206,17 +210,28 @@ export default function MeScreen() {
     void loadActiveTab();
   }, [loadActiveTab]);
 
-  function onDeleteMyPost(postId: string) {
-    setDeletingPostId(postId);
+  function openDeleteMyPost(item: Post) {
+    if (deletingPostId) return;
+    setPendingDeletePost(item);
+  }
+
+  function confirmDeleteMyPost() {
+    const target = pendingDeletePost;
+    if (!target || deletingPostId) return;
+
+    setDeletingPostId(target.id);
     void (async () => {
       setTabError(null);
       try {
-        await deletePost(postId);
-        setMyPosts((prev) => prev.filter((item) => item.id !== postId));
+        await deletePost(target.id);
+        setMyPosts((prev) => prev.filter((item) => item.id !== target.id));
+        setPendingDeletePost(null);
+        showToast("글을 삭제했어요.", { tone: "success" });
       } catch (e) {
         setTabError(normalizeApiError(e));
+        showToast("글 삭제에 실패했어요. 잠시 후 다시 시도해주세요.", { tone: "error" });
       } finally {
-        setDeletingPostId((current) => (current === postId ? null : current));
+        setDeletingPostId((current) => (current === target.id ? null : current));
       }
     })();
   }
@@ -248,7 +263,7 @@ export default function MeScreen() {
                 <Ionicons
                   name={verified ? "checkmark-circle" : "alert-circle-outline"}
                   size={15}
-                  color={verified ? tokens.colors.green900 : tokens.colors.danger}
+                  color={verified ? tokens.colors.green700 : tokens.colors.danger}
                 />
                 <Text style={[styles.statusChipText, !verified && styles.statusChipTextWarn]}>
                   {verified ? "이메일 인증 완료" : "이메일 미인증"}
@@ -287,7 +302,7 @@ export default function MeScreen() {
         <View style={styles.profileHomeCard}>
           <View style={styles.profileHomeHeader}>
             <View style={styles.profileHomeIcon}>
-              <Ionicons name="person-circle-outline" size={22} color={tokens.colors.green900} />
+              <Ionicons name="person-circle-outline" size={22} color={tokens.colors.green700} />
             </View>
             <View style={styles.profileHomeCopy}>
               <Text style={styles.profileHomeTitle}>프로필 홈</Text>
@@ -314,7 +329,7 @@ export default function MeScreen() {
               accessibilityLabel="프로필 꾸미기 열기"
             >
               <View style={styles.quickActionIcon}>
-                <Ionicons name="sparkles-outline" size={18} color={tokens.colors.green900} />
+                <Ionicons name="sparkles-outline" size={18} color={tokens.colors.green700} />
               </View>
               <View style={styles.quickActionCopy}>
                 <Text style={styles.quickActionBtnTitle}>프로필 꾸미기</Text>
@@ -329,7 +344,7 @@ export default function MeScreen() {
               accessibilityLabel="계정 센터 열기"
             >
               <View style={styles.quickActionIcon}>
-                <Ionicons name="settings-outline" size={18} color={tokens.colors.green900} />
+                <Ionicons name="settings-outline" size={18} color={tokens.colors.green700} />
               </View>
               <View style={styles.quickActionCopy}>
                 <Text style={styles.quickActionBtnTitle}>계정 센터</Text>
@@ -431,7 +446,7 @@ export default function MeScreen() {
                     <Text style={styles.secondaryBtnText}>수정</Text>
                   </Pressable>
                   <Pressable
-                    onPress={() => onDeleteMyPost(item.id)}
+                    onPress={() => openDeleteMyPost(item)}
                     style={({ pressed }) => [
                       styles.dangerBtn,
                       deletingPostId === item.id && styles.disabledBtn,
@@ -440,6 +455,7 @@ export default function MeScreen() {
                     disabled={deletingPostId === item.id}
                     accessibilityRole="button"
                     accessibilityLabel="내 글 삭제"
+                    testID={`me-post-delete-btn-${item.id}`}
                   >
                     <Ionicons name="trash-outline" size={16} color={tokens.colors.danger} />
                     <Text style={styles.dangerBtnText}>
@@ -473,7 +489,7 @@ export default function MeScreen() {
             accessibilityLabel={`팔로잉 프로필 열기: ${item.name}`}
           >
             <View style={styles.followingAvatar}>
-              <Ionicons name="person-outline" size={17} color={tokens.colors.green900} />
+              <Ionicons name="person-outline" size={17} color={tokens.colors.green700} />
             </View>
             <View style={styles.followingCopy}>
               <Text style={styles.followingName} numberOfLines={1}>
@@ -573,17 +589,45 @@ export default function MeScreen() {
 
         {renderTabBody()}
       </ScrollView>
+      <SafetyActionSheet
+        visible={!!pendingDeletePost}
+        title="글 삭제"
+        description={
+          pendingDeletePost
+            ? `"${pendingDeletePost.title || "제목 없는 글"}"을 삭제할까요? 삭제한 글은 되돌릴 수 없어요.`
+            : ""
+        }
+        onRequestClose={() => {
+          if (!deletingPostId) setPendingDeletePost(null);
+        }}
+        actions={[
+          {
+            label: deletingPostId ? "삭제 중..." : "삭제하기",
+            variant: "danger",
+            disabled: Boolean(deletingPostId),
+            onPress: confirmDeleteMyPost,
+            testID: "me-post-delete-confirm-btn",
+          },
+          {
+            label: "취소",
+            variant: "ghost",
+            disabled: Boolean(deletingPostId),
+            onPress: () => setPendingDeletePost(null),
+            testID: "me-post-delete-cancel-btn",
+          },
+        ]}
+      />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: tokens.colors.bgMuted },
+  safe: { flex: 1, backgroundColor: tokens.colors.bg },
   container: {
     width: "100%",
-    maxWidth: 820,
+    maxWidth: 393,
     alignSelf: "center",
-    paddingHorizontal: tokens.space.xl,
+    paddingHorizontal: 24,
     paddingTop: tokens.space.lg,
     paddingBottom: tokens.space.xl,
     gap: tokens.space.lg as any,
@@ -596,7 +640,7 @@ const styles = StyleSheet.create({
   },
   h1: { fontSize: tokens.font.h1, fontWeight: "900", color: tokens.colors.text },
   card: {
-    backgroundColor: tokens.colors.surfaceStrong,
+    backgroundColor: tokens.colors.surface,
     borderWidth: 1,
     borderColor: tokens.colors.border,
     borderRadius: tokens.radius.xl,
@@ -622,7 +666,7 @@ const styles = StyleSheet.create({
   avatarText: {
     fontSize: 22,
     fontWeight: "900",
-    color: tokens.colors.green900,
+    color: tokens.colors.green700,
   },
   identityBlock: {
     flex: 1,
@@ -649,7 +693,7 @@ const styles = StyleSheet.create({
   statusChipText: {
     fontSize: 12,
     fontWeight: "800",
-    color: tokens.colors.green900,
+    color: tokens.colors.green700,
   },
   statusChipTextWarn: {
     color: tokens.colors.danger,
@@ -688,7 +732,7 @@ const styles = StyleSheet.create({
   row: { flexDirection: "row", gap: tokens.space.sm as any, flexWrap: "wrap" },
   badge: {
     fontSize: tokens.font.small,
-    color: tokens.colors.green900,
+    color: tokens.colors.green700,
     backgroundColor: tokens.colors.green100,
     paddingHorizontal: 10,
     paddingVertical: 6,
@@ -701,13 +745,15 @@ const styles = StyleSheet.create({
     gap: tokens.space.xs as any,
   },
   tabBtn: {
-    minHeight: 44,
+    minHeight: 38,
     borderWidth: 1,
     borderColor: tokens.colors.border,
     borderRadius: tokens.radius.pill,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 13,
+    paddingVertical: 6,
     backgroundColor: tokens.colors.surfaceStrong,
+    alignItems: "center",
+    justifyContent: "center",
   },
   tabBtnActive: {
     backgroundColor: tokens.colors.green100,
@@ -719,7 +765,7 @@ const styles = StyleSheet.create({
     color: tokens.colors.textMuted,
   },
   tabBtnTextActive: {
-    color: tokens.colors.green900,
+    color: tokens.colors.green700,
   },
   controlPressed: {
     opacity: 0.82,
@@ -778,7 +824,7 @@ const styles = StyleSheet.create({
   accountCenterBtnText: {
     fontSize: tokens.font.small,
     fontWeight: "800",
-    color: tokens.colors.green900,
+    color: tokens.colors.green700,
   },
   quickActionRow: {
     gap: tokens.space.sm as any,
@@ -795,7 +841,7 @@ const styles = StyleSheet.create({
     gap: tokens.space.sm as any,
   },
   quickActionBtnPressed: {
-    backgroundColor: tokens.colors.bgMuted,
+    backgroundColor: tokens.colors.green100,
   },
   quickActionIcon: {
     width: 38,
@@ -861,7 +907,7 @@ const styles = StyleSheet.create({
   growthShortcutBtnText: {
     fontSize: tokens.font.small,
     fontWeight: "800",
-    color: tokens.colors.green900,
+    color: tokens.colors.green700,
   },
   growthStatRow: {
     flexDirection: "row",
@@ -871,7 +917,7 @@ const styles = StyleSheet.create({
   growthStatChip: {
     fontSize: tokens.font.small,
     fontWeight: "800",
-    color: tokens.colors.green900,
+    color: tokens.colors.green700,
     backgroundColor: tokens.colors.white,
     borderRadius: tokens.radius.pill,
     paddingHorizontal: 10,
@@ -917,7 +963,7 @@ const styles = StyleSheet.create({
   followingName: { fontSize: 15, fontWeight: "900", color: tokens.colors.text },
   followingMeta: { fontSize: tokens.font.small, color: tokens.colors.textMuted },
   followingBody: { fontSize: tokens.font.small, color: tokens.colors.textMuted, lineHeight: 20 },
-  followingFoot: { fontSize: tokens.font.small, color: tokens.colors.green900, fontWeight: "800" },
+  followingFoot: { fontSize: tokens.font.small, color: tokens.colors.green700, fontWeight: "800" },
   secondaryBtn: {
     flex: 1,
     minHeight: 44,

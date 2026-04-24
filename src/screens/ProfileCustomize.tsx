@@ -470,7 +470,7 @@ const styles = StyleSheet.create({
     borderRadius: tokens.radius.lg,
     borderWidth: 1,
     borderColor: tokens.colors.border,
-    backgroundColor: tokens.colors.bgMuted,
+    backgroundColor: tokens.colors.bg,
     padding: tokens.space.sm,
     gap: tokens.space.xs as any,
   },

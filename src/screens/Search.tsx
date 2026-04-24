@@ -705,7 +705,7 @@ function AuthorResultCard({
       accessibilityLabel={`작가 프로필 열기: ${author.name}`}
     >
       <View style={styles.authorAvatar}>
-        <Ionicons name="person-outline" size={18} color={tokens.colors.green900} />
+        <Ionicons name="person-outline" size={18} color={tokens.colors.green700} />
       </View>
       <View style={styles.authorCopy}>
         <Text style={styles.authorName} numberOfLines={1}>
@@ -729,13 +729,13 @@ function AuthorResultCard({
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: tokens.colors.bgMuted,
+    backgroundColor: tokens.colors.bg,
   },
   topBar: {
     width: "100%",
-    maxWidth: 820,
+    maxWidth: 393,
     alignSelf: "center",
-    paddingHorizontal: tokens.space.lg,
+    paddingHorizontal: 24,
     paddingTop: tokens.space.xs,
     paddingBottom: tokens.space.sm,
     flexDirection: "row",
@@ -767,11 +767,11 @@ const styles = StyleSheet.create({
   },
   tabRow: {
     width: "100%",
-    maxWidth: 820,
+    maxWidth: 393,
     alignSelf: "center",
     flexDirection: "row",
     gap: tokens.space.sm,
-    paddingHorizontal: tokens.space.lg,
+    paddingHorizontal: 24,
     paddingBottom: tokens.space.sm,
   },
   tabButton: {
@@ -794,11 +794,11 @@ const styles = StyleSheet.create({
   },
   tabButtonLabel: {
     fontSize: 13,
-    fontWeight: "700",
+    fontWeight: "900",
     color: tokens.colors.textMuted,
   },
   tabButtonLabelActive: {
-    color: tokens.colors.green900,
+    color: tokens.colors.green700,
   },
   searchInput: {
     flex: 1,
@@ -808,9 +808,9 @@ const styles = StyleSheet.create({
   },
   content: {
     width: "100%",
-    maxWidth: 820,
+    maxWidth: 393,
     alignSelf: "center",
-    paddingHorizontal: tokens.space.lg,
+    paddingHorizontal: 18,
     paddingTop: tokens.space.xs,
     paddingBottom: tokens.space.lg,
   },
@@ -896,7 +896,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   sortChipTextActive: {
-    color: tokens.colors.green900,
+    color: tokens.colors.green700,
   },
   itemWrap: {
     marginBottom: tokens.space.md,

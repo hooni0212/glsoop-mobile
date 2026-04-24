@@ -8,7 +8,7 @@ import {
 } from "@/lib/postBackgroundTemplates";
 import { tokens } from "@/theme/tokens";
 
-const BACKGROUND_PREVIEW_HEIGHT = 72;
+const BACKGROUND_PREVIEW_HEIGHT = 122;
 
 type Props = {
   styles: any;
@@ -21,7 +21,7 @@ export function WriteBackgroundSection({ styles, selectedId, onSelect }: Props) 
     <View style={styles.backgroundSection}>
       <View style={styles.layoutSectionHeader}>
         <Text style={styles.layoutSectionTitle}>배경 선택</Text>
-        <Text style={styles.layoutSectionHint}>글의 분위기에 맞는 실제 책 페이지를 골라요.</Text>
+        <Text style={styles.layoutSectionHint}>모바일은 하단 시트에서 빠르게 선택합니다.</Text>
       </View>
 
       <View style={styles.backgroundOptionRow}>

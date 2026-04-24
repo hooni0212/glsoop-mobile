@@ -72,7 +72,7 @@ const styles = StyleSheet.create({
     height: 122,
     borderRadius: 30,
     overflow: "hidden",
-    backgroundColor: tokens.colors.bgMuted,
+    backgroundColor: tokens.colors.bg,
     borderWidth: 1,
     borderColor: tokens.colors.border,
     shadowColor: tokens.shadow.color,

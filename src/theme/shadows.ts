@@ -23,16 +23,16 @@ export const softCardShadowStyle: ViewStyle =
   Platform.select<ViewStyle>({
     ios: {
       shadowColor: "#000",
-      shadowOpacity: 0.035,
-      shadowRadius: 16,
-      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 0.04,
+      shadowRadius: 20,
+      shadowOffset: { width: 0, height: 8 },
     },
-    android: androidShadow("0px 8px 24px rgba(23, 34, 27, 0.08)", 1),
+    android: androidShadow("0px 8px 20px rgba(22, 34, 28, 0.04)", 1),
     default: {
       shadowColor: "#000",
-      shadowOpacity: 0.035,
-      shadowRadius: 16,
-      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 0.04,
+      shadowRadius: 20,
+      shadowOffset: { width: 0, height: 8 },
     },
   }) ?? {};
 
@@ -40,16 +40,16 @@ export const softPanelShadowStyle: ViewStyle =
   Platform.select<ViewStyle>({
     ios: {
       shadowColor: "#000",
-      shadowOpacity: 0.06,
-      shadowRadius: 12,
-      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 0.04,
+      shadowRadius: 18,
+      shadowOffset: { width: 0, height: 8 },
     },
-    android: androidShadow("0px 8px 18px rgba(23, 34, 27, 0.10)", 2),
+    android: androidShadow("0px 8px 20px rgba(22, 34, 28, 0.06)", 2),
     default: {
       shadowColor: "#000",
-      shadowOpacity: 0.06,
-      shadowRadius: 12,
-      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 0.04,
+      shadowRadius: 18,
+      shadowOffset: { width: 0, height: 8 },
     },
   }) ?? {};
 
@@ -57,14 +57,14 @@ export const softChipShadowStyle: ViewStyle =
   Platform.select<ViewStyle>({
     ios: {
       shadowColor: "#000",
-      shadowOpacity: 0.06,
+      shadowOpacity: 0.04,
       shadowRadius: 12,
       shadowOffset: { width: 0, height: 6 },
     },
-    android: androidShadow("0px 4px 12px rgba(23, 34, 27, 0.10)", 1),
+    android: androidShadow("0px 4px 12px rgba(22, 34, 28, 0.06)", 1),
     default: {
       shadowColor: "#000",
-      shadowOpacity: 0.06,
+      shadowOpacity: 0.04,
       shadowRadius: 12,
       shadowOffset: { width: 0, height: 6 },
     },

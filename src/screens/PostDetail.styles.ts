@@ -12,7 +12,7 @@ export function createPostDetailStyles(actionBarHeight: number) {
   return StyleSheet.create({
     safe: {
       flex: 1,
-      backgroundColor: tokens.colors.bgMuted,
+      backgroundColor: tokens.colors.bg,
       position: "relative",
     },
 
@@ -225,6 +225,7 @@ export function createPostDetailStyles(actionBarHeight: number) {
       alignItems: "center",
       justifyContent: "center",
       gap: tokens.space.xs as any,
+      transform: [{ translateY: 5 }],
     },
     actionLabel: {
       fontSize: tokens.font.small,

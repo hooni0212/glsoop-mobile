@@ -18,6 +18,7 @@ import { createFeedPreviewSession, type FeedPreviewRenderImages } from "@/lib/fe
 import { logger } from "@/lib/logger";
 import type { PostFontKey } from "@/lib/postContent";
 import type { WriteLayoutModel } from "@/lib/postLayout";
+import { tokens } from "@/theme/tokens";
 import type { PostType } from "@/types/post";
 
 const PREVIEW_REQUEST_DEBOUNCE_MS = 450;
@@ -172,9 +173,12 @@ export function WritePreviewCard({
   };
 
   return (
-    <View style={styles.wrap}>
-      <View style={styles.frame}>
-        <View style={styles.viewport} onLayout={onLayoutViewport}>
+    <View style={[styles.wrap, compact && styles.wrapCompact]}>
+      <View style={[styles.frame, compact && styles.frameCompact]}>
+        <View
+          style={[styles.viewport, compact && styles.viewportCompact]}
+          onLayout={onLayoutViewport}
+        >
           {images.length > 0 ? (
             <FlatList
               ref={listRef}
@@ -189,6 +193,7 @@ export function WritePreviewCard({
                   style={[
                     styles.page,
                     viewportWidth > 0 ? { width: viewportWidth } : null,
+                    compact && styles.pageCompact,
                   ]}
                 >
                   <Image
@@ -211,7 +216,7 @@ export function WritePreviewCard({
               )}
             />
           ) : (
-            <View style={[styles.emptyState, compact && styles.imageCompact]}>
+            <View style={[styles.emptyState, compact && styles.emptyStateCompact]}>
               <Text style={styles.emptyStateText}>
                 {visibleError || "미리보기를 준비하고 있어요."}
               </Text>
@@ -255,42 +260,66 @@ const styles = StyleSheet.create({
   wrap: {
     marginBottom: 12,
   },
+  wrapCompact: {
+    marginBottom: 8,
+  },
   frame: {
     borderRadius: 24,
-    padding: 14,
-    backgroundColor: "rgba(92,69,42,0.10)",
+    padding: 0,
+    backgroundColor: "#f2eddc",
     borderWidth: 1,
-    borderColor: "rgba(86,62,32,0.08)",
+    borderColor: tokens.colors.border,
+    overflow: "hidden",
+  },
+  frameCompact: {
+    borderRadius: 20,
+    paddingVertical: 8,
   },
   viewport: {
     position: "relative",
     overflow: "hidden",
+    borderRadius: 24,
+  },
+  viewportCompact: {
     borderRadius: 20,
   },
   page: {
     width: "100%",
   },
+  pageCompact: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
   image: {
     width: "100%",
     aspectRatio: 500 / 666,
-    borderRadius: 20,
+    borderRadius: 24,
     overflow: "hidden",
-    backgroundColor: "#f4ead8",
+    backgroundColor: "#f2eddc",
   },
   imageCompact: {
-    maxHeight: 300,
+    width: 210,
+    height: 280,
+    alignSelf: "center",
+    borderRadius: 18,
   },
   emptyState: {
     width: "100%",
     aspectRatio: 500 / 666,
-    borderRadius: 20,
+    borderRadius: 24,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 20,
-    backgroundColor: "#f4ead8",
+    backgroundColor: "#f2eddc",
+  },
+  emptyStateCompact: {
+    width: 210,
+    height: 280,
+    alignSelf: "center",
+    borderRadius: 18,
   },
   emptyStateText: {
-    color: "#5f4931",
+    color: tokens.colors.textMuted,
     textAlign: "center",
     lineHeight: 20,
     fontWeight: "700",
@@ -299,7 +328,7 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(244,234,216,0.18)",
+    backgroundColor: "rgba(255,254,250,0.42)",
   },
   pageCounter: {
     marginTop: 12,
@@ -308,19 +337,19 @@ const styles = StyleSheet.create({
   pageCounterText: {
     fontSize: 13,
     fontWeight: "800",
-    color: "#433424",
+    color: tokens.colors.textMuted,
   },
   errorBox: {
     marginTop: 12,
     borderRadius: 16,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    backgroundColor: "rgba(185,28,28,0.08)",
+    backgroundColor: tokens.colors.dangerSoft,
     borderWidth: 1,
-    borderColor: "rgba(185,28,28,0.14)",
+    borderColor: tokens.colors.dangerBorder,
   },
   errorText: {
-    color: "#9f1c1c",
+    color: tokens.colors.danger,
     lineHeight: 20,
     fontWeight: "700",
   },
@@ -329,12 +358,12 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    backgroundColor: "rgba(104,74,37,0.08)",
+    backgroundColor: "#fdfcf7",
     borderWidth: 1,
-    borderColor: "rgba(104,74,37,0.14)",
+    borderColor: tokens.colors.border,
   },
   noticeText: {
-    color: "#5f4931",
+    color: tokens.colors.textMuted,
     lineHeight: 20,
     fontWeight: "700",
   },

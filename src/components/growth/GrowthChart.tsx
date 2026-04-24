@@ -21,7 +21,7 @@ function clampPercent(value: number) {
 
 function getSourceLabel(source?: GrowthLoadSource) {
   if (source === "dashboard") return "기본 데이터";
-  if (source === "fallback") return "임시 데이터";
+  if (source === "fallback") return "대체 데이터";
   return "";
 }
 

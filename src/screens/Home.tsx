@@ -35,7 +35,7 @@ import {
   removePostFromBookmarkList,
 } from "@/services/bookmarkService";
 
-const CATEGORIES = ["추천", "팔로잉", "인기", "여행"] as const;
+const CATEGORIES = ["추천", "팔로잉", "인기"] as const;
 type Category = (typeof CATEGORIES)[number];
 
 export default function Home() {

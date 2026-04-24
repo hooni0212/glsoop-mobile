@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
 const AUTH_TOKEN_KEY = "glsoop_auth_token_v1";
+const PUBLIC_UGC_NOTICE_STORAGE_KEY = "glsoop.public_ugc_notice_ack";
 
 const SEARCH_FIXTURE_POSTS = [
   {
@@ -70,18 +71,52 @@ function includesKeyword(value: string, query: string) {
 }
 
 async function setAuthToken(page: Page, token: string) {
+  const storagePayload = {
+    key: AUTH_TOKEN_KEY,
+    value: token,
+    noticeKey: PUBLIC_UGC_NOTICE_STORAGE_KEY,
+  };
+
+  await page.addInitScript(
+    ({ key, value, noticeKey }) => {
+      localStorage.setItem(key, value);
+      localStorage.setItem(
+        noticeKey,
+        JSON.stringify({
+          versionKey: "public-ugc-notice.v1",
+          acknowledgedAt: "2026-04-20T00:00:00.000Z",
+        })
+      );
+    },
+    storagePayload
+  );
   await page.goto("/");
   await page.waitForLoadState("domcontentloaded");
   await page.evaluate(
-    ({ key, value }) => {
+    ({ key, value, noticeKey }) => {
       localStorage.setItem(key, value);
+      localStorage.setItem(
+        noticeKey,
+        JSON.stringify({
+          versionKey: "public-ugc-notice.v1",
+          acknowledgedAt: "2026-04-20T00:00:00.000Z",
+        })
+      );
     },
-    { key: AUTH_TOKEN_KEY, value: token }
+    storagePayload
   );
 }
 
 test.describe("검색 화면", () => {
   test.beforeEach(async ({ page }) => {
+    await page.route("**/api/runtime-config", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ ok: true, legal: { versions: {} } }),
+      });
+    });
+
     await page.route("**/api/me", async (route) => {
       await route.fulfill({
         status: 200,

@@ -465,7 +465,7 @@ export default function BookmarksScreen() {
                 >
                   <View style={styles.folderCardTop}>
                     <View style={styles.folderIcon}>
-                      <Ionicons name="folder-open-outline" size={20} color={tokens.colors.green900} />
+                      <Ionicons name="folder-open-outline" size={20} color={tokens.colors.green700} />
                     </View>
                     <View style={styles.folderTextBlock}>
                       <Text style={styles.folderTitle} numberOfLines={1}>
@@ -483,7 +483,7 @@ export default function BookmarksScreen() {
                   </View>
                   <View style={styles.folderOpenRow}>
                     <Text style={styles.folderOpenHint}>글 보기</Text>
-                    <Ionicons name="chevron-forward" size={16} color={tokens.colors.green900} />
+                    <Ionicons name="chevron-forward" size={16} color={tokens.colors.green700} />
                   </View>
                 </Pressable>
 
@@ -603,7 +603,7 @@ export default function BookmarksScreen() {
               <Ionicons
                 name={showCreate ? "close" : "add"}
                 size={17}
-                color={tokens.colors.green900}
+                color={tokens.colors.green700}
               />
               <Text style={styles.headerBtnText}>{showCreate ? "닫기" : "새 폴더"}</Text>
             </Pressable>
@@ -704,17 +704,17 @@ function BookmarkFeedItem({
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: tokens.colors.bgMuted },
+  safe: { flex: 1, backgroundColor: tokens.colors.bg },
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 16 },
 
   header: {
     width: "100%",
-    maxWidth: 820,
+    maxWidth: 393,
     alignSelf: "center",
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: tokens.space.lg,
+    paddingHorizontal: 24,
     paddingTop: tokens.space.lg,
     paddingBottom: tokens.space.md,
   },
@@ -740,12 +740,12 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     backgroundColor: tokens.colors.surfaceStrong,
   },
-  headerBtnText: { fontSize: 12, fontWeight: "800", color: tokens.colors.green900 },
+  headerBtnText: { fontSize: 12, fontWeight: "800", color: tokens.colors.green700 },
   controlPressed: { opacity: 0.82 },
 
   createBox: {
     width: "100%",
-    maxWidth: 820,
+    maxWidth: 393,
     alignSelf: "center",
     marginHorizontal: tokens.space.lg,
     marginBottom: tokens.space.md,
@@ -784,9 +784,9 @@ const styles = StyleSheet.create({
 
   listScroll: {
     width: "100%",
-    maxWidth: 820,
+    maxWidth: 393,
     alignSelf: "center",
-    paddingHorizontal: tokens.space.lg,
+    paddingHorizontal: 18,
     paddingBottom: 32,
     gap: tokens.space.md,
   },
@@ -807,7 +807,7 @@ const styles = StyleSheet.create({
     gap: tokens.space.sm,
   },
   folderMainBtnPressed: {
-    backgroundColor: tokens.colors.bgMuted,
+    backgroundColor: tokens.colors.green100,
   },
   folderCardTop: {
     flexDirection: "row",
@@ -840,7 +840,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: tokens.colors.border,
   },
-  folderCount: { fontSize: 12, color: tokens.colors.green900, fontWeight: "800" },
+  folderCount: { fontSize: 12, color: tokens.colors.green700, fontWeight: "800" },
   folderDescription: { fontSize: 12, color: tokens.colors.textMuted, fontWeight: "700", lineHeight: 18 },
   folderOpenRow: {
     minHeight: 28,
@@ -849,7 +849,7 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
     gap: 2,
   },
-  folderOpenHint: { fontSize: 12, color: tokens.colors.green900, fontWeight: "800" },
+  folderOpenHint: { fontSize: 12, color: tokens.colors.green700, fontWeight: "800" },
   folderActions: {
     flexDirection: "row",
     justifyContent: "flex-end",
@@ -913,13 +913,13 @@ const styles = StyleSheet.create({
 
   detailHeader: {
     width: "100%",
-    maxWidth: 820,
+    maxWidth: 393,
     alignSelf: "center",
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     gap: 8,
-    paddingHorizontal: tokens.space.lg,
+    paddingHorizontal: 24,
     paddingTop: tokens.space.lg,
     paddingBottom: tokens.space.md,
   },
@@ -943,9 +943,9 @@ const styles = StyleSheet.create({
 
   itemsScroll: {
     width: "100%",
-    maxWidth: 820,
+    maxWidth: 393,
     alignSelf: "center",
-    paddingHorizontal: tokens.space.lg,
+    paddingHorizontal: 18,
     paddingBottom: 32,
     gap: tokens.space.md,
   },

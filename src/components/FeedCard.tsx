@@ -57,7 +57,7 @@ export function FeedCard({
   const canBookmark = Boolean(onBookmarkPress);
 
   return (
-    <View style={styles.card} testID={testID}>
+    <View style={[styles.card, bookmarked && styles.cardSaved]} testID={testID}>
       <View style={styles.titleRow}>
         {onPress ? (
           <Pressable
@@ -103,19 +103,11 @@ export function FeedCard({
           accessibilityLabel={`게시글 열기: ${cardTitle}`}
         >
           {showRenderedImage ? (
-            <View style={styles.renderedImageWrap}>
-              {showPageBadge ? (
-                <View style={styles.renderedPageBadge}>
-                  <Text style={styles.renderedPageBadgeText}>{pageCount}장</Text>
-                </View>
-              ) : null}
-              <Image
-                source={{ uri: primaryImage }}
-                style={styles.renderedImage}
-                contentFit="cover"
-                transition={120}
-              />
-            </View>
+            <RenderedImage
+              primaryImage={primaryImage}
+              showPageBadge={showPageBadge}
+              pageCount={pageCount}
+            />
           ) : null}
 
           {!showRenderedImage && !!post.excerpt ? (
@@ -127,19 +119,11 @@ export function FeedCard({
       ) : (
         <View style={styles.openContentArea}>
           {showRenderedImage ? (
-            <View style={styles.renderedImageWrap}>
-              {showPageBadge ? (
-                <View style={styles.renderedPageBadge}>
-                  <Text style={styles.renderedPageBadgeText}>{pageCount}장</Text>
-                </View>
-              ) : null}
-              <Image
-                source={{ uri: primaryImage }}
-                style={styles.renderedImage}
-                contentFit="cover"
-                transition={120}
-              />
-            </View>
+            <RenderedImage
+              primaryImage={primaryImage}
+              showPageBadge={showPageBadge}
+              pageCount={pageCount}
+            />
           ) : null}
 
           {!showRenderedImage && !!post.excerpt ? (
@@ -212,6 +196,14 @@ export function FeedCard({
               size={18}
               color={bookmarked ? tokens.colors.green700 : tokens.colors.textMuted}
             />
+            <Text
+              style={[
+                styles.actionText,
+                bookmarked && { color: tokens.colors.green700 },
+              ]}
+            >
+              {bookmarked ? "저장됨" : "저장"}
+            </Text>
           </Pressable>
         </View>
       </View>
@@ -219,23 +211,52 @@ export function FeedCard({
   );
 }
 
+function RenderedImage({
+  primaryImage,
+  showPageBadge,
+  pageCount,
+}: {
+  primaryImage: string;
+  showPageBadge: boolean;
+  pageCount: number;
+}) {
+  return (
+    <View style={styles.renderedImageWrap}>
+      {showPageBadge ? (
+        <View style={styles.renderedPageBadge}>
+          <Text style={styles.renderedPageBadgeText}>{pageCount}장</Text>
+        </View>
+      ) : null}
+      <Image
+        source={{ uri: primaryImage }}
+        style={styles.renderedImage}
+        contentFit="cover"
+        transition={120}
+      />
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   card: {
     width: "100%",
-    maxWidth: 760,
+    maxWidth: 357,
     alignSelf: "center",
     backgroundColor: tokens.colors.surface,
     borderRadius: tokens.radius.xl,
-    paddingVertical: 20,
-    paddingHorizontal: 18,
-
-    // 피그마 톤: 테두리 거의 없음
-    borderWidth: 0,
+    paddingVertical: 22,
+    paddingHorizontal: 20,
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
 
     ...softCardShadowStyle,
   },
+  cardSaved: {
+    borderColor: tokens.colors.border,
+  },
   cardPressed: {
-    opacity: 0.92,
+    backgroundColor: tokens.colors.green100,
+    opacity: 0.96,
   },
   openTitleArea: {
     flex: 1,
@@ -251,25 +272,24 @@ const styles = StyleSheet.create({
 
   title: {
     flex: 1,
-    fontSize: 19,
+    fontSize: 22,
     fontWeight: "900",
-    letterSpacing: -0.2,
-    lineHeight: 27,
+    letterSpacing: 0,
+    lineHeight: 30,
     color: tokens.colors.text,
-    marginBottom: 10,
+    marginBottom: 4,
   },
   renderedImageWrap: {
     position: "relative",
-    marginBottom: 16,
-    borderRadius: tokens.radius.xl,
+    marginTop: 4,
+    marginBottom: 14,
+    borderRadius: 20,
     overflow: "hidden",
     backgroundColor: tokens.colors.bgMuted,
-    borderWidth: 1,
-    borderColor: tokens.colors.border,
   },
   renderedImage: {
     width: "100%",
-    aspectRatio: 500 / 666,
+    aspectRatio: 317 / 134,
     backgroundColor: tokens.colors.bgMuted,
   },
   renderedPageBadge: {
@@ -305,7 +325,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 22,
     color: tokens.colors.textMuted,
+    marginTop: 8,
     marginBottom: 16,
+    fontWeight: "600",
   },
 
   bottomRow: {
@@ -323,15 +345,15 @@ const styles = StyleSheet.create({
   },
 
   metaText: {
-    fontSize: 13,
+    fontSize: 12,
     color: tokens.colors.textMuted,
-    fontWeight: "600",
+    fontWeight: "800",
   },
 
   metaDot: {
-    fontSize: 13,
+    fontSize: 12,
     color: tokens.colors.textFaint,
-    fontWeight: "700",
+    fontWeight: "900",
   },
 
   actionsRow: {
@@ -339,13 +361,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   bookmarkBtn: {
-    marginLeft: 10,
+    marginLeft: 6,
   },
 
   actionBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 5,
     minHeight: 32,
     paddingHorizontal: 4,
     borderRadius: tokens.radius.pill,
@@ -358,8 +380,8 @@ const styles = StyleSheet.create({
   },
 
   actionText: {
-    fontSize: 13,
+    fontSize: 12,
     color: tokens.colors.textMuted,
-    fontWeight: "700",
+    fontWeight: "900",
   },
 });
