@@ -103,7 +103,7 @@ export default function GrowthScreen() {
   }, [achievements]);
 
   const topPostsEmptyTitle = "아직 인기 글이 없어요";
-  const topPostsEmptyDescription = "활동이 쌓이면 여기에 표시돼요.";
+  const topPostsEmptyDescription = "활동이 더 쌓이면, 여기에서 주목받는 글을 추천해드릴게요.";
   const topPostsError = topPostsMode === "error" ? error : null;
 
   useEffect(() => {

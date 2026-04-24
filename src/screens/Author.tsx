@@ -322,12 +322,6 @@ export default function Author() {
     }
   }, [name, showToast, userId]);
 
-  const handleOpenLatestPost = useCallback(() => {
-    if (!visibleItems[0]?.id) return;
-    setOverflowOpen(false);
-    router.push(`/posts/${visibleItems[0].id}`);
-  }, [visibleItems]);
-
   const openGuidelines = useCallback(() => {
     void openExternalUrl(legalGuidelinesUrl).catch(() => {
       showToast("가이드라인을 열지 못했어요. 잠시 후 다시 시도해주세요.", {
@@ -508,107 +502,88 @@ export default function Author() {
               <Text style={authorScreenStyles.joinedAt}>{joinedAtLabel}</Text>
             ) : null}
 
-            {visibleItems.length > 0 ? (
-              <Pressable
-                onPress={() => router.push(`/posts/${visibleItems[0].id}`)}
-                style={authorScreenStyles.latestPostBtn}
-              >
-                <Text style={authorScreenStyles.latestPostBtnText}>최신 글 읽기</Text>
-              </Pressable>
-            ) : null}
-
-            <View style={authorScreenStyles.actionRow}>
-              {showFollowButton ? (
-                <>
-                  <Pressable
-                    onPress={() => void handleFollowToggle()}
-                    disabled={followBusy}
-                    style={[
-                      authorScreenStyles.followBtn,
-                      isFollowing && authorScreenStyles.followBtnActive,
-                      followBusy && authorScreenStyles.followBtnDisabled,
-                    ]}
-                    testID="author-follow-btn"
-                  >
-                    <Text
-                      style={[
-                        authorScreenStyles.followBtnText,
-                        isFollowing && authorScreenStyles.followBtnTextActive,
-                      ]}
-                    >
-                      {followBusy ? "처리 중..." : isFollowing ? "팔로잉" : "팔로우"}
-                    </Text>
-                  </Pressable>
-                  <Pressable
-                    onPress={() => void handleShareAuthor()}
-                    style={authorScreenStyles.shareBtn}
-                    testID="author-share-btn"
-                  >
-                    <Text style={authorScreenStyles.shareBtnText}>공유</Text>
-                  </Pressable>
-                </>
-              ) : null}
-              <Pressable
-                onPress={() => setOverflowOpen((current) => !current)}
-                style={authorScreenStyles.shareBtn}
-                testID="author-overflow-btn"
-              >
-                <Text style={authorScreenStyles.shareBtnText}>더보기</Text>
-              </Pressable>
-            </View>
-
-            {overflowOpen ? (
-              <View style={authorScreenStyles.overflowCard}>
-                <Pressable
-                  onPress={() => {
-                    setOverflowOpen(false);
-                    void handleShareAuthor();
-                  }}
-                  style={authorScreenStyles.overflowItem}
-                >
-                  <Text style={authorScreenStyles.overflowItemText}>작가 페이지 공유</Text>
-                </Pressable>
+            {visibleItems.length > 0 || showProfileCustomize ? (
+              <View style={authorScreenStyles.primaryActionRow}>
                 {visibleItems.length > 0 ? (
                   <Pressable
-                    onPress={handleOpenLatestPost}
-                    style={authorScreenStyles.overflowItem}
+                    onPress={() => router.push(`/posts/${visibleItems[0].id}`)}
+                    style={authorScreenStyles.latestPostBtn}
                   >
-                    <Text style={authorScreenStyles.overflowItemText}>최신 글 바로 보기</Text>
+                    <Text style={authorScreenStyles.latestPostBtnText}>최신 글 읽기</Text>
                   </Pressable>
                 ) : null}
                 {showProfileCustomize ? (
                   <Pressable
-                    onPress={() => {
-                      setOverflowOpen(false);
-                      router.push("/profile-customize");
-                    }}
-                    style={authorScreenStyles.overflowItem}
+                    onPress={() => router.push("/profile-customize")}
+                    style={authorScreenStyles.profileCustomizeBtn}
+                    testID="author-profile-customize-btn"
                   >
-                    <Text style={authorScreenStyles.overflowItemText}>프로필 꾸미기</Text>
+                    <Text style={authorScreenStyles.profileCustomizeBtnText}>
+                      프로필 꾸미기
+                    </Text>
                   </Pressable>
                 ) : null}
-                {!showProfileCustomize ? (
-                  <Pressable
-                    onPress={() => {
-                      setOverflowOpen(false);
-                      promptReportAuthor();
-                    }}
-                    style={authorScreenStyles.overflowItem}
+              </View>
+            ) : null}
+
+            {showFollowButton ? (
+              <View style={authorScreenStyles.actionRow}>
+                <Pressable
+                  onPress={() => void handleFollowToggle()}
+                  disabled={followBusy}
+                  style={[
+                    authorScreenStyles.followBtn,
+                    isFollowing && authorScreenStyles.followBtnActive,
+                    followBusy && authorScreenStyles.followBtnDisabled,
+                  ]}
+                  testID="author-follow-btn"
+                >
+                  <Text
+                    style={[
+                      authorScreenStyles.followBtnText,
+                      isFollowing && authorScreenStyles.followBtnTextActive,
+                    ]}
                   >
-                    <Text style={authorScreenStyles.overflowItemText}>작가 신고</Text>
-                  </Pressable>
-                ) : null}
-                {!showProfileCustomize ? (
-                  <Pressable
-                    onPress={() => {
-                      setOverflowOpen(false);
-                      promptBlockAuthor();
-                    }}
-                    style={authorScreenStyles.overflowItem}
-                  >
-                    <Text style={authorScreenStyles.overflowItemText}>작가 차단</Text>
-                  </Pressable>
-                ) : null}
+                    {followBusy ? "처리 중..." : isFollowing ? "팔로잉" : "팔로우"}
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => void handleShareAuthor()}
+                  style={authorScreenStyles.shareBtn}
+                  testID="author-share-btn"
+                >
+                  <Text style={authorScreenStyles.shareBtnText}>공유</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => setOverflowOpen((current) => !current)}
+                  style={authorScreenStyles.shareBtn}
+                  testID="author-overflow-btn"
+                >
+                  <Text style={authorScreenStyles.shareBtnText}>더보기</Text>
+                </Pressable>
+              </View>
+            ) : null}
+
+            {overflowOpen && showFollowButton ? (
+              <View style={authorScreenStyles.overflowCard}>
+                <Pressable
+                  onPress={() => {
+                    setOverflowOpen(false);
+                    promptReportAuthor();
+                  }}
+                  style={authorScreenStyles.overflowItem}
+                >
+                  <Text style={authorScreenStyles.overflowItemText}>작가 신고</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => {
+                    setOverflowOpen(false);
+                    promptBlockAuthor();
+                  }}
+                  style={authorScreenStyles.overflowItem}
+                >
+                  <Text style={authorScreenStyles.overflowItemText}>작가 차단</Text>
+                </Pressable>
                 <Pressable
                   onPress={() => {
                     setOverflowOpen(false);
@@ -628,18 +603,6 @@ export default function Author() {
                   <Text style={authorScreenStyles.overflowItemText}>커뮤니티 가이드라인</Text>
                 </Pressable>
               </View>
-            ) : null}
-
-            {showProfileCustomize ? (
-              <Pressable
-                onPress={() => router.push("/profile-customize")}
-                style={authorScreenStyles.profileCustomizeBtn}
-                testID="author-profile-customize-btn"
-              >
-                <Text style={authorScreenStyles.profileCustomizeBtnText}>
-                  프로필 꾸미기
-                </Text>
-              </Pressable>
             ) : null}
           </View>
 
@@ -686,7 +649,6 @@ export default function Author() {
       followerCount,
       followBusy,
       handleFollowToggle,
-      handleOpenLatestPost,
       handleShareAuthor,
       isFollowing,
       joinedAtLabel,

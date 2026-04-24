@@ -141,78 +141,7 @@ export function WriteLayoutSection({
     <View style={styles.layoutDock}>
       <View style={styles.layoutDockHeader}>
         <Text style={styles.layoutDockTitle}>글 배치</Text>
-        <Text style={styles.layoutDockHint}>{activeLabel} 박스 서식을 조절할 수 있어요.</Text>
-      </View>
-
-      <View style={styles.layoutSectionCard}>
-        <View style={styles.layoutSectionHeader}>
-          <Text style={styles.layoutSectionTitle}>빠른 조정</Text>
-          <Text style={styles.layoutSectionHint}>자주 쓰는 옵션만 먼저 보여줘요.</Text>
-        </View>
-
-        <View style={styles.layoutBlock}>
-          <Text style={styles.label}>활성 박스</Text>
-          <View style={styles.layoutOptionRow}>
-            {BOX_ITEMS.map((item) => {
-              const active = item.id === activeBoxId;
-              return (
-                <Pressable
-                  key={item.id}
-                  onPress={() => onSelectBox(item.id)}
-                  style={[styles.layoutOption, active && styles.layoutOptionActive]}
-                  testID={`write-layout-box-${item.id}`}
-                >
-                  <Text style={[styles.layoutOptionText, active && styles.layoutOptionTextActive]}>
-                    {item.label}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-          <Text style={styles.layoutMetrics} testID="write-layout-metrics">
-            x {activeBox.x.toFixed(3)} · y {activeBox.y.toFixed(3)} · w {activeBox.w.toFixed(3)} · h{" "}
-            {activeBox.h.toFixed(3)}
-          </Text>
-        </View>
-
-        <OptionRow
-          label={`${activeLabel} 정렬`}
-          options={LAYOUT_ALIGN_OPTIONS}
-          selected={activeStyle.align}
-          onSelect={(value) => onChangeAlign(value as LayoutAlign)}
-          styles={styles}
-          testIDPrefix={`write-layout-${isTitleBox ? "title" : "body"}-align`}
-        />
-
-        <OptionRow
-          label={`${activeLabel} 크기`}
-          options={LAYOUT_SCALE_OPTIONS}
-          selected={activeStyle.fontScale}
-          onSelect={(value) => onChangeScale(value as number)}
-          styles={styles}
-          useNearestMatch
-          testIDPrefix={`write-layout-${isTitleBox ? "title" : "body"}-scale`}
-        />
-
-        <OptionRow
-          label={`${activeLabel} 행간`}
-          options={lineHeightOptions}
-          selected={activeStyle.lineHeight}
-          onSelect={(value) => onChangeLineHeight(value as number)}
-          styles={styles}
-          useNearestMatch
-          testIDPrefix={`write-layout-${isTitleBox ? "title" : "body"}-line-height`}
-        />
-
-        <OptionRow
-          label={`${activeLabel} 자간`}
-          options={LAYOUT_LETTER_SPACING_OPTIONS}
-          selected={typeof activeStyle.letterSpacing === "number" ? activeStyle.letterSpacing : 0}
-          onSelect={(value) => onChangeLetterSpacing(value as number)}
-          styles={styles}
-          useNearestMatch
-          testIDPrefix={`write-layout-${isTitleBox ? "title" : "body"}-letter-spacing`}
-        />
+        <Text style={styles.layoutDockHint}>{activeLabel} 박스 위치와 서식을 조절할 수 있어요.</Text>
       </View>
 
       <View style={[styles.layoutSectionCard, styles.layoutSectionCardMuted]}>
@@ -226,7 +155,7 @@ export function WriteLayoutSection({
           <View style={styles.layoutAdvancedToggleCopy}>
             <Text style={styles.layoutSectionTitle}>세부 조정</Text>
             <Text style={styles.layoutSectionHint}>
-              드래그로 부족할 때만 미세 조정해요.
+              필요한 경우 좌표와 크기를 미세 조정해요.
             </Text>
           </View>
           <Ionicons
@@ -307,6 +236,77 @@ export function WriteLayoutSection({
             </View>
           </View>
         ) : null}
+      </View>
+
+      <View style={styles.layoutSectionCard}>
+        <View style={styles.layoutSectionHeader}>
+          <Text style={styles.layoutSectionTitle}>빠른 조정</Text>
+          <Text style={styles.layoutSectionHint}>자주 쓰는 옵션만 먼저 보여줘요.</Text>
+        </View>
+
+        <View style={styles.layoutBlock}>
+          <Text style={styles.label}>활성 박스</Text>
+          <View style={styles.layoutOptionRow}>
+            {BOX_ITEMS.map((item) => {
+              const active = item.id === activeBoxId;
+              return (
+                <Pressable
+                  key={item.id}
+                  onPress={() => onSelectBox(item.id)}
+                  style={[styles.layoutOption, active && styles.layoutOptionActive]}
+                  testID={`write-layout-box-${item.id}`}
+                >
+                  <Text style={[styles.layoutOptionText, active && styles.layoutOptionTextActive]}>
+                    {item.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+          <Text style={styles.layoutMetrics} testID="write-layout-metrics">
+            x {activeBox.x.toFixed(3)} · y {activeBox.y.toFixed(3)} · w {activeBox.w.toFixed(3)} · h{" "}
+            {activeBox.h.toFixed(3)}
+          </Text>
+        </View>
+
+        <OptionRow
+          label={`${activeLabel} 정렬`}
+          options={LAYOUT_ALIGN_OPTIONS}
+          selected={activeStyle.align}
+          onSelect={(value) => onChangeAlign(value as LayoutAlign)}
+          styles={styles}
+          testIDPrefix={`write-layout-${isTitleBox ? "title" : "body"}-align`}
+        />
+
+        <OptionRow
+          label={`${activeLabel} 크기`}
+          options={LAYOUT_SCALE_OPTIONS}
+          selected={activeStyle.fontScale}
+          onSelect={(value) => onChangeScale(value as number)}
+          styles={styles}
+          useNearestMatch
+          testIDPrefix={`write-layout-${isTitleBox ? "title" : "body"}-scale`}
+        />
+
+        <OptionRow
+          label={`${activeLabel} 행간`}
+          options={lineHeightOptions}
+          selected={activeStyle.lineHeight}
+          onSelect={(value) => onChangeLineHeight(value as number)}
+          styles={styles}
+          useNearestMatch
+          testIDPrefix={`write-layout-${isTitleBox ? "title" : "body"}-line-height`}
+        />
+
+        <OptionRow
+          label={`${activeLabel} 자간`}
+          options={LAYOUT_LETTER_SPACING_OPTIONS}
+          selected={typeof activeStyle.letterSpacing === "number" ? activeStyle.letterSpacing : 0}
+          onSelect={(value) => onChangeLetterSpacing(value as number)}
+          styles={styles}
+          useNearestMatch
+          testIDPrefix={`write-layout-${isTitleBox ? "title" : "body"}-letter-spacing`}
+        />
       </View>
     </View>
   );

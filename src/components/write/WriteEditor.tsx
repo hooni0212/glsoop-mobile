@@ -1,275 +1,82 @@
-import React, { useMemo, useState } from "react";
-import {
-  ImageBackground,
-  Keyboard,
-  PanResponder,
-  Pressable,
-  TextInput,
-  View,
-  type GestureResponderEvent,
-  type LayoutChangeEvent,
-  type PanResponderGestureState,
-} from "react-native";
-
-import type { PostFontKey } from "@/lib/postContent";
-import {
-  toLayoutLetterSpacingPx,
-  type LayoutBox,
-  type LayoutBoxId,
-  type WriteLayoutModel,
-} from "@/lib/postLayout";
-
-const PAPER_SOURCE = require("../../../assets/images/feed-templates/paper-source-01.jpg");
+import React from "react";
+import { Keyboard, Pressable, Text, TextInput, View } from "react-native";
+import type { PostType } from "@/types/post";
 
 type Props = {
   title: string;
   body: string;
-  fontKey: PostFontKey;
-  layout: WriteLayoutModel;
-  activeBoxId: LayoutBoxId;
-  onSelectBox: (boxId: LayoutBoxId) => void;
-  onDragBox: (boxId: LayoutBoxId, deltaX: number, deltaY: number) => void;
-  onChangeTitle: (v: string) => void;
-  onChangeBody: (v: string) => void;
-  onPressBackground?: () => void;
+  selectedType: PostType | null;
+  onChangeTitle: (value: string) => void;
+  onChangeBody: (value: string) => void;
+  onSelectType: (type: PostType) => void;
   styles: any;
-  children?: React.ReactNode;
 };
 
-function boxFrameStyle(box: { x: number; y: number; w: number; h: number }) {
-  return {
-    left: `${box.x * 100}%` as const,
-    top: `${box.y * 100}%` as const,
-    width: `${box.w * 100}%` as const,
-    height: `${box.h * 100}%` as const,
-  };
-}
-
-function DragHandle({
-  boxId,
-  active,
-  canvasWidth,
-  canvasHeight,
-  onSelectBox,
-  onDragBox,
-  styles,
-}: {
-  boxId: LayoutBoxId;
-  active: boolean;
-  canvasWidth: number;
-  canvasHeight: number;
-  onSelectBox: (boxId: LayoutBoxId) => void;
-  onDragBox: (boxId: LayoutBoxId, deltaX: number, deltaY: number) => void;
-  styles: any;
-}) {
-  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
-
-  const panResponder = useMemo(
-    () =>
-      PanResponder.create({
-        onStartShouldSetPanResponder: () => true,
-        onMoveShouldSetPanResponder: () => true,
-        onStartShouldSetPanResponderCapture: () => true,
-        onMoveShouldSetPanResponderCapture: () => true,
-        onPanResponderGrant: () => {
-          onSelectBox(boxId);
-          setDragOffset({ x: 0, y: 0 });
-        },
-        onPanResponderMove: (_event: GestureResponderEvent, gesture: PanResponderGestureState) => {
-          setDragOffset({ x: gesture.dx, y: gesture.dy });
-        },
-        onPanResponderRelease: (_event: GestureResponderEvent, gesture: PanResponderGestureState) => {
-          setDragOffset({ x: 0, y: 0 });
-          if (canvasWidth <= 0 || canvasHeight <= 0) return;
-          onDragBox(boxId, gesture.dx / canvasWidth, gesture.dy / canvasHeight);
-        },
-        onPanResponderTerminate: () => {
-          setDragOffset({ x: 0, y: 0 });
-        },
-      }),
-    [boxId, canvasHeight, canvasWidth, onDragBox, onSelectBox]
-  );
-
-  return (
-    <View
-      {...panResponder.panHandlers}
-      hitSlop={{ top: 10, right: 14, bottom: 10, left: 14 }}
-      style={[
-        styles.dragHandle,
-        active && styles.dragHandleActive,
-        boxId === "text_box" && styles.dragHandleBody,
-        {
-          transform: [{ translateX: dragOffset.x }, { translateY: dragOffset.y }],
-        },
-      ]}
-    >
-      <View style={styles.dragHandleGrip} />
-      <View style={styles.dragHandleGrip} />
-      <View style={styles.dragHandleGrip} />
-    </View>
-  );
-}
-
-function EditableBox({
-  boxId,
-  box,
-  activeBoxId,
-  canvasWidth,
-  canvasHeight,
-  onSelectBox,
-  onDragBox,
-  styles,
-  children,
-}: {
-  boxId: LayoutBoxId;
-  box: LayoutBox;
-  activeBoxId: LayoutBoxId;
-  canvasWidth: number;
-  canvasHeight: number;
-  onSelectBox: (boxId: LayoutBoxId) => void;
-  onDragBox: (boxId: LayoutBoxId, deltaX: number, deltaY: number) => void;
-  styles: any;
-  children: React.ReactNode;
-}) {
-  const active = activeBoxId === boxId;
-  return (
-    <Pressable
-      onPress={() => onSelectBox(boxId)}
-      style={[
-        styles.bookBox,
-        boxId === "text_box" && styles.bookBodyBox,
-        boxFrameStyle(box),
-        active && styles.bookBoxActive,
-      ]}
-    >
-      <DragHandle
-        boxId={boxId}
-        active={active}
-        canvasWidth={canvasWidth}
-        canvasHeight={canvasHeight}
-        onSelectBox={onSelectBox}
-        onDragBox={onDragBox}
-        styles={styles}
-      />
-      {children}
-    </Pressable>
-  );
-}
+const CATEGORY_ITEMS: { type: PostType; label: string }[] = [
+  { type: "poem", label: "시" },
+  { type: "essay", label: "에세이" },
+  { type: "short", label: "짧은 구절" },
+];
 
 export function WriteEditor({
   title,
   body,
-  fontKey,
-  layout,
-  activeBoxId,
-  onSelectBox,
-  onDragBox,
+  selectedType,
   onChangeTitle,
   onChangeBody,
-  onPressBackground,
+  onSelectType,
   styles,
-  children,
 }: Props) {
-  const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
-
-  const fontFamily = useMemo(() => {
-    if (fontKey === "sans") return styles.bookFontSans;
-    if (fontKey === "hand") return styles.bookFontHand;
-    return styles.bookFontSerif;
-  }, [fontKey, styles.bookFontHand, styles.bookFontSans, styles.bookFontSerif]);
-
-  const onCanvasLayout = (event: LayoutChangeEvent) => {
-    const { width, height } = event.nativeEvent.layout;
-    setCanvasSize({ width, height });
-  };
-
-  const titleFontSize = 18 * layout.titleStyle.fontScale;
-  const bodyFontSize = 13 * layout.bodyStyle.fontScale;
-  const titleLetterSpacing = toLayoutLetterSpacingPx(titleFontSize, layout.titleStyle.letterSpacing);
-  const bodyLetterSpacing = toLayoutLetterSpacingPx(bodyFontSize, layout.bodyStyle.letterSpacing);
-
   return (
     <View style={styles.editorWrap}>
-      <View style={styles.editorStage}>
-        <Pressable onPress={onPressBackground} style={styles.bookCanvasPressable}>
-          <ImageBackground
-            source={PAPER_SOURCE}
-            resizeMode="cover"
-            style={styles.bookCanvas}
-            imageStyle={styles.bookCanvasImage}
-            onLayout={onCanvasLayout}
-          >
-            <EditableBox
-              boxId="title_box"
-              box={layout.titleBox}
-              activeBoxId={activeBoxId}
-              canvasWidth={canvasSize.width}
-              canvasHeight={canvasSize.height}
-              onSelectBox={onSelectBox}
-              onDragBox={onDragBox}
-              styles={styles}
+      <View style={styles.quickMetaRow}>
+        {CATEGORY_ITEMS.map((item) => {
+          const active = selectedType === item.type;
+          return (
+            <Pressable
+              key={item.type}
+              onPress={() => onSelectType(item.type)}
+              style={[styles.quickMetaChip, active && styles.quickMetaChipActive]}
+              accessibilityRole="button"
+              accessibilityLabel={`${item.label} 카테고리 선택`}
+              accessibilityState={{ selected: active }}
+              testID={`write-category-${item.type}`}
             >
-              <TextInput
-                value={title}
-                onChangeText={onChangeTitle}
-                onSubmitEditing={Keyboard.dismiss}
-                blurOnSubmit
-                placeholder="제목을 입력해줘"
-                placeholderTextColor="rgba(74,62,48,0.35)"
-                multiline
-                style={[
-                  styles.bookTitleInput,
-                  fontFamily,
-                  {
-                    textAlign: layout.titleStyle.align,
-                    fontSize: titleFontSize,
-                    lineHeight: 22 * layout.titleStyle.lineHeight,
-                    ...(typeof titleLetterSpacing === "number"
-                      ? { letterSpacing: titleLetterSpacing }
-                      : {}),
-                  },
-                ]}
-                testID="write-title-input"
-              />
-            </EditableBox>
-
-            <EditableBox
-              boxId="text_box"
-              box={layout.bodyBox}
-              activeBoxId={activeBoxId}
-              canvasWidth={canvasSize.width}
-              canvasHeight={canvasSize.height}
-              onSelectBox={onSelectBox}
-              onDragBox={onDragBox}
-              styles={styles}
-            >
-              <TextInput
-                value={body}
-                onChangeText={onChangeBody}
-                placeholder="오늘의 글을 남겨줘…"
-                placeholderTextColor="rgba(74,62,48,0.32)"
-                multiline
-                blurOnSubmit={false}
-                style={[
-                  styles.bookBodyInput,
-                  fontFamily,
-                  {
-                    textAlign: layout.bodyStyle.align,
-                    fontSize: bodyFontSize,
-                    lineHeight: 20 * layout.bodyStyle.lineHeight,
-                    ...(typeof bodyLetterSpacing === "number"
-                      ? { letterSpacing: bodyLetterSpacing }
-                      : {}),
-                  },
-                ]}
-                testID="write-body-input"
-              />
-            </EditableBox>
-          </ImageBackground>
-        </Pressable>
+              <Text style={[styles.quickMetaChipText, active && styles.quickMetaChipTextActive]}>
+                {item.label}
+              </Text>
+            </Pressable>
+          );
+        })}
       </View>
+      <View style={[styles.card, styles.writeFormCard]}>
+        <Text style={styles.label}>제목</Text>
+        <TextInput
+          value={title}
+          onChangeText={onChangeTitle}
+          onSubmitEditing={Keyboard.dismiss}
+          blurOnSubmit
+          placeholder="제목을 입력해줘"
+          placeholderTextColor="rgba(74,62,48,0.35)"
+          multiline
+          style={styles.inputTitle}
+          testID="write-title-input"
+        />
 
-      {children ? <View style={styles.editorControlDock}>{children}</View> : null}
+        <View style={styles.divider} />
+
+        <Text style={styles.label}>본문</Text>
+        <TextInput
+          value={body}
+          onChangeText={onChangeBody}
+          placeholder="오늘의 글을 남겨줘..."
+          placeholderTextColor="rgba(74,62,48,0.32)"
+          multiline
+          blurOnSubmit={false}
+          style={styles.inputBody}
+          testID="write-body-input"
+        />
+      </View>
     </View>
   );
 }

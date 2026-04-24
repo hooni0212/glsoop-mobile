@@ -226,6 +226,15 @@ async function mockGrowthApis(page: Page, options: GrowthMockOptions = {}) {
       return;
     }
 
+    if (isApiRequest(route, "/api/growth/top-posts")) {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ ok: true, message: "fallback top posts", top_posts: [] }),
+      });
+      return;
+    }
+
     if (isApiRequest(route, "/api/quests/9001/claim")) {
       if (claimEntitlementRequired) {
         await route.fulfill({

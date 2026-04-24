@@ -8,6 +8,7 @@ type Props = {
   canSubmit: boolean;
   onPressClose: () => void;
   onPressSubmit: () => void;
+  onPressSaveDraft?: () => void;
   submitLabel?: string;
   submitAccessibilityLabel?: string;
   onPressDrafts?: () => void;
@@ -22,6 +23,7 @@ export function WriteTopBar({
   canSubmit,
   onPressClose,
   onPressSubmit,
+  onPressSaveDraft,
   submitLabel = "완료",
   submitAccessibilityLabel = submitLabel,
   onPressDrafts,
@@ -50,7 +52,20 @@ export function WriteTopBar({
       <Text style={styles.screenTitle}>{title}</Text>
 
       <View style={styles.topBarActions}>
-        {!!onPressDrafts && (
+        {!previewOpen && !!onPressSaveDraft && (
+          <Pressable
+            onPress={onPressSaveDraft}
+            hitSlop={12}
+            style={styles.secondaryTopBtn}
+            accessibilityRole="button"
+            accessibilityLabel="임시저장"
+            testID="write-save-draft-btn"
+          >
+            <Text style={styles.secondaryTopBtnText}>임시저장</Text>
+          </Pressable>
+        )}
+
+        {!!onPressDrafts && !onPressSaveDraft && (
           <Pressable
             onPress={onPressDrafts}
             hitSlop={12}

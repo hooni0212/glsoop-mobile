@@ -22,20 +22,20 @@ export const homeScreenStyles = StyleSheet.create({
 export const homeHeaderStyles = StyleSheet.create({
   header: {
     width: "100%",
-    maxWidth: 820,
+    maxWidth: 393,
     alignSelf: "center",
-    paddingTop: tokens.space.sm,
-    paddingHorizontal: tokens.space.xl,
-    paddingBottom: tokens.space.sm,
+    paddingTop: 8,
+    paddingHorizontal: 24,
+    paddingBottom: 14,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
   brand: {
-    fontSize: tokens.font.h1,
-    fontWeight: "800",
-    letterSpacing: -0.6,
-    color: tokens.colors.green900,
+    fontSize: 22,
+    fontWeight: "900",
+    letterSpacing: 0,
+    color: tokens.colors.text,
   },
   iconBtn: {
     width: 40,
@@ -43,65 +43,72 @@ export const homeHeaderStyles = StyleSheet.create({
     borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor: tokens.colors.surface,
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
   },
 });
 
 export const categoryChipsStyles = StyleSheet.create({
   wrap: {
     paddingTop: tokens.space.xs,
-    paddingBottom: tokens.space.sm,
+    paddingBottom: 12,
   },
   content: {
-    paddingHorizontal: tokens.space.lg,
-    gap: tokens.space.sm,
+    paddingHorizontal: 24,
+    gap: 10,
   },
   chip: {
-    paddingHorizontal: tokens.space.xl,
-    paddingVertical: tokens.space.sm,
+    minHeight: 34,
+    paddingHorizontal: 18,
+    paddingVertical: 8,
     borderRadius: tokens.radius.pill,
-    backgroundColor: tokens.colors.surfaceStrong,
+    backgroundColor: tokens.colors.surface,
     borderWidth: 1,
     borderColor: tokens.colors.border,
   },
   chipActive: {
-    backgroundColor: tokens.colors.green600,
-    borderColor: "transparent",
+    backgroundColor: tokens.colors.green100,
+    borderColor: tokens.colors.green700,
     ...softChipShadowStyle,
+  },
+  chipPressed: {
+    opacity: 0.82,
   },
   chipText: {
     fontSize: 14,
-    fontWeight: "700",
+    fontWeight: "900",
     color: tokens.colors.textMuted,
   },
   chipTextActive: {
-    color: "#FFFFFF",
+    color: tokens.colors.green700,
   },
 });
 
 export const feedSectionStyles = StyleSheet.create({
   listContent: {
     width: "100%",
-    maxWidth: 820,
+    maxWidth: 393,
     alignSelf: "center",
-    paddingHorizontal: tokens.space.lg,
-    paddingBottom: tokens.space.lg,
+    paddingHorizontal: 18,
+    paddingBottom: 18,
   },
   sectionLabel: {
-    fontSize: tokens.font.small,
-    fontWeight: "700",
-    color: tokens.colors.textFaint,
+    fontSize: 14,
+    fontWeight: "900",
+    color: tokens.colors.textMuted,
     marginBottom: tokens.space.sm,
-    marginLeft: 4,
-    letterSpacing: -0.2,
+    marginLeft: 6,
+    letterSpacing: 0,
   },
   footer: {
     paddingVertical: tokens.space.lg,
   },
   headerSpacerTop: {
-    height: tokens.space.md,
+    height: tokens.space.sm,
   },
   headerSpacerAfterLabel: {
-    height: 8,
+    height: tokens.space.xs,
   },
   itemSeparator: {
     height: tokens.space.md,

@@ -3,7 +3,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -11,6 +10,7 @@ import {
   View,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { buildAuthRoute } from "@/lib/authRedirect";
 import { AppError } from "@/components/state/AppError";
@@ -73,40 +73,54 @@ export default function AuthForgotPassword() {
               가입한 이메일을 입력하면 비밀번호 재설정 안내를 보낼게요.
             </Text>
 
-            {error ? (
-              <View style={styles.block}>
-                <AppError error={error} />
+            <View style={styles.panel}>
+              {error ? (
+                <View style={styles.block}>
+                  <AppError error={error} />
+                </View>
+              ) : null}
+
+              <View style={styles.form}>
+                <TextInput
+                  value={email}
+                  onChangeText={setEmail}
+                  placeholder="이메일"
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  autoComplete="email"
+                  textContentType="emailAddress"
+                  returnKeyType="go"
+                  onSubmitEditing={() => {
+                    if (!busy && email.trim()) {
+                      void onSubmit();
+                    }
+                  }}
+                  style={styles.input}
+                />
+
+                <Pressable
+                  onPress={onSubmit}
+                  disabled={busy || !email.trim()}
+                  style={({ pressed }) => [
+                    styles.primaryBtn,
+                    (busy || !email.trim()) && styles.primaryBtnDisabled,
+                    pressed && !busy && styles.primaryBtnPressed,
+                  ]}
+                >
+                  <Text style={styles.primaryBtnText}>
+                    {busy ? "전송 중..." : "재설정 메일 보내기"}
+                  </Text>
+                </Pressable>
+
+                {message ? <Text style={styles.helper}>{message}</Text> : null}
+
+                <Pressable
+                  onPress={() => router.replace(buildAuthRoute("/(auth)/login", redirect))}
+                  style={styles.linkButton}
+                >
+                  <Text style={styles.link}>로그인으로 돌아가기</Text>
+                </Pressable>
               </View>
-            ) : null}
-
-            <View style={styles.form}>
-              <TextInput
-                value={email}
-                onChangeText={setEmail}
-                placeholder="이메일"
-                autoCapitalize="none"
-                keyboardType="email-address"
-                style={styles.input}
-              />
-
-              <Pressable
-                onPress={onSubmit}
-                disabled={busy || !email.trim()}
-                style={[
-                  styles.primaryBtn,
-                  (busy || !email.trim()) && styles.primaryBtnDisabled,
-                ]}
-              >
-                <Text style={styles.primaryBtnText}>
-                  {busy ? "전송 중..." : "재설정 메일 보내기"}
-                </Text>
-              </Pressable>
-
-              {message ? <Text style={styles.helper}>{message}</Text> : null}
-
-              <Pressable onPress={() => router.replace(buildAuthRoute("/(auth)/login", redirect))}>
-                <Text style={styles.link}>로그인으로 돌아가기</Text>
-              </Pressable>
             </View>
           </View>
         </ScrollView>
@@ -128,7 +142,7 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: 420,
     alignSelf: "center",
-    gap: tokens.space.lg as any,
+    gap: tokens.space.md as any,
   },
   headerRow: {
     flexDirection: "row",
@@ -149,12 +163,20 @@ const styles = StyleSheet.create({
   backText: { fontSize: 18, fontWeight: "900", color: tokens.colors.text },
   h1: { fontSize: tokens.font.h1, fontWeight: "900", color: tokens.colors.text },
   sub: { fontSize: tokens.font.body, color: tokens.colors.textMuted, lineHeight: 22 },
-  block: { marginTop: tokens.space.sm },
+  panel: {
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+    borderRadius: tokens.radius.xl,
+    backgroundColor: tokens.colors.surfaceStrong,
+    padding: tokens.space.lg,
+    gap: tokens.space.sm as any,
+  },
+  block: { marginBottom: tokens.space.xs },
   form: { gap: tokens.space.sm as any },
   input: {
     borderWidth: 1,
     borderColor: tokens.colors.borderStrong,
-    backgroundColor: tokens.colors.surfaceStrong,
+    backgroundColor: tokens.colors.white,
     borderRadius: tokens.radius.lg,
     paddingHorizontal: tokens.space.lg,
     paddingVertical: 12,
@@ -168,13 +190,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: tokens.space.sm,
   },
+  primaryBtnPressed: { opacity: 0.92 },
   primaryBtnDisabled: { opacity: 0.5 },
   primaryBtnText: { color: "white", fontSize: 15, fontWeight: "800" },
   helper: { fontSize: tokens.font.small, color: tokens.colors.textMuted, lineHeight: 20 },
+  linkButton: {
+    alignItems: "center",
+    paddingVertical: tokens.space.xs,
+  },
   link: {
     fontSize: tokens.font.small,
     color: tokens.colors.green900,
     fontWeight: "800",
-    marginTop: tokens.space.sm,
   },
 });

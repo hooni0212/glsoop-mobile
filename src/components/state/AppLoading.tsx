@@ -21,12 +21,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: tokens.space.sm as any,
-    paddingVertical: tokens.space.md,
+    gap: 10,
+    paddingVertical: 18,
+    paddingHorizontal: 20,
   },
   label: {
-    fontSize: tokens.font.small,
-    fontWeight: "700",
+    fontSize: 13,
+    fontWeight: "800",
     color: tokens.colors.textMuted,
   },
 });

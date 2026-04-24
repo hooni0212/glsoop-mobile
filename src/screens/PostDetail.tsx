@@ -5,6 +5,7 @@ import { createPostDetailStyles } from "@/screens/PostDetail.styles";
 import { PostActionBar } from "@/components/post/PostActionBar";
 import { PostBody } from "@/components/post/PostBody";
 import { PostMetaBar } from "@/components/post/PostMetaBar";
+import { SafetyActionSheet } from "@/components/safety/SafetyActionSheet";
 import { SafetyReasonModal } from "@/components/safety/SafetyReasonModal";
 import { AppEmpty } from "@/components/state/AppEmpty";
 import { AppError } from "@/components/state/AppError";
@@ -150,6 +151,7 @@ export default function PostDetail() {
   const [shareSubmitting, setShareSubmitting] = useState<"image" | "link" | "full" | "title" | null>(null);
   const [canManagePost, setCanManagePost] = useState(false);
   const [manageBusy, setManageBusy] = useState(false);
+  const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
 
   const title = post?.title || "";
   const authorName = post?.author?.name || "익명";
@@ -542,34 +544,32 @@ export default function PostDetail() {
 
   const onPressDelete = () => {
     if (!post?.id || manageBusy) return;
+    setDeleteConfirmVisible(true);
+  };
 
-    Alert.alert("글 삭제", "정말 이 글을 삭제할까요?", [
-      { text: "취소", style: "cancel" },
-      {
-        text: "삭제",
-        style: "destructive",
-        onPress: () => {
-          void (async () => {
-            setManageBusy(true);
-            try {
-              await deletePost(post.id);
-              showToast("글을 삭제했어요.", { tone: "success" });
-              router.replace("/(tabs)");
-            } catch (err) {
-              if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
-                await handleAuthError();
-              } else {
-                showToast("글 삭제에 실패했어요. 잠시 후 다시 시도해주세요.", {
-                  tone: "error",
-                });
-              }
-            } finally {
-              setManageBusy(false);
-            }
-          })();
-        },
-      },
-    ]);
+  const submitDelete = () => {
+    if (!post?.id || manageBusy) return;
+
+    void (async () => {
+      setManageBusy(true);
+      try {
+        await deletePost(post.id);
+        setDeleteConfirmVisible(false);
+        showToast("글을 삭제했어요.", { tone: "success" });
+        router.replace("/(tabs)");
+      } catch (err) {
+        if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
+          setDeleteConfirmVisible(false);
+          await handleAuthError();
+        } else {
+          showToast("글 삭제에 실패했어요. 잠시 후 다시 시도해주세요.", {
+            tone: "error",
+          });
+        }
+      } finally {
+        setManageBusy(false);
+      }
+    })();
   };
 
   const openGuidelines = React.useCallback(() => {
@@ -745,6 +745,7 @@ export default function PostDetail() {
                     onPress={onPressDelete}
                     style={styles.manageDeleteBtn}
                     disabled={manageBusy}
+                    testID="post-manage-delete-btn"
                   >
                     <Text style={styles.manageDeleteBtnText}>
                       {manageBusy ? "삭제 중..." : "삭제하기"}
@@ -1025,6 +1026,31 @@ export default function PostDetail() {
           </View>
         </View>
       </Modal>
+
+      <SafetyActionSheet
+        visible={deleteConfirmVisible}
+        title="글 삭제"
+        description="정말 이 글을 삭제할까요? 삭제한 글은 되돌릴 수 없어요."
+        onRequestClose={() => {
+          if (!manageBusy) setDeleteConfirmVisible(false);
+        }}
+        actions={[
+          {
+            label: manageBusy ? "삭제 중..." : "삭제하기",
+            variant: "danger",
+            disabled: manageBusy,
+            onPress: submitDelete,
+            testID: "post-delete-confirm-btn",
+          },
+          {
+            label: "취소",
+            variant: "ghost",
+            disabled: manageBusy,
+            onPress: () => setDeleteConfirmVisible(false),
+            testID: "post-delete-cancel-btn",
+          },
+        ]}
+      />
 
       <Modal
         visible={blockConfirmVisible}
