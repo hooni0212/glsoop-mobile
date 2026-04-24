@@ -33,6 +33,7 @@ import { buildAuthRoute } from "@/lib/authRedirect";
 import { formatKstDateKorean } from "@/lib/dateTime";
 import { ApiError } from "@/lib/errors";
 import { buildRenderedPostShareImageUrl } from "@/lib/feedImage";
+import * as haptics from "@/lib/haptics";
 import { logger } from "@/lib/logger";
 import { resolvePostLayout } from "@/lib/postLayout";
 import * as FileSystem from "expo-file-system/legacy";
@@ -367,12 +368,14 @@ export default function PostDetail() {
       promptAuthForAction("답글은 로그인한 회원만 남길 수 있어요.");
       return;
     }
+    haptics.selection();
     setReplyTarget(comment);
     setCommentComposerVisible(true);
   };
 
   const onPressDeleteComment = (comment: PostComment) => {
     if (!token || deletingCommentId) return;
+    haptics.warning();
 
     const submit = async () => {
       setDeletingCommentId(comment.id);
@@ -415,6 +418,7 @@ export default function PostDetail() {
       return;
     }
     if (!post || likePending) return;
+    haptics.selection();
 
     const stored = getLike(post.id);
     const prevLiked = stored?.liked ?? Boolean(post.viewer?.isLiked);
@@ -471,6 +475,7 @@ export default function PostDetail() {
       return;
     }
     if (!post) return;
+    haptics.selection();
     setBookmarkModalVisible(true);
     setBookmarkLoading(true);
 
@@ -531,6 +536,7 @@ export default function PostDetail() {
       );
       setBookmarkLists(nextLists);
       syncBookmarkSnapshot(nextLists);
+      haptics.success();
     } catch (err) {
       if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
         setBookmarkModalVisible(false);
@@ -555,6 +561,7 @@ export default function PostDetail() {
       const next = [{ ...created, contains: true }, ...bookmarkLists];
       setBookmarkLists(next);
       syncBookmarkSnapshot(next);
+      haptics.success();
     } catch (err) {
       if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
         setBookmarkModalVisible(false);

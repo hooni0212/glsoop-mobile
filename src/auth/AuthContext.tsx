@@ -6,6 +6,7 @@ import { clearLikes } from "@/features/likes/likeStore";
 import { clearBlockedUserIds } from "@/features/safety/blockedUsersStore";
 import { apiPost } from "@/lib/api";
 import { clearAuthToken, getAuthToken, setAuthToken } from "@/lib/authToken";
+import { unregisterStoredPushTokenAsync } from "@/lib/pushNotifications";
 
 type AuthState = {
   /** persisted auth storage 로드 완료 여부 */
@@ -47,6 +48,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signOut = React.useCallback(async () => {
+    try {
+      await unregisterStoredPushTokenAsync();
+    } catch {
+      // push token cleanup is best-effort during logout
+    }
     try {
       await apiPost("/api/logout", {});
     } catch {

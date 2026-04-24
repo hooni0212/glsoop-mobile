@@ -7,6 +7,16 @@ const MOBILE_BUILD_NUMBER = 26;
 
 export default (): ExpoConfig => ({
   ...baseConfig,
+  plugins: [
+    ...(baseConfig.plugins ?? []),
+    [
+      "expo-notifications",
+      {
+        color: "#2D5A3D",
+        defaultChannel: "default",
+      },
+    ],
+  ],
   ios: {
     ...baseConfig.ios,
     buildNumber: String(MOBILE_BUILD_NUMBER),

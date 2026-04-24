@@ -14,6 +14,7 @@ import { getBookmark, setBookmark } from "@/features/bookmarks/bookmarkStore";
 import { getLike, setLike } from "@/features/likes/likeStore";
 import { useAuth } from "@/auth/AuthContext";
 import { buildAuthRoute } from "@/lib/authRedirect";
+import * as haptics from "@/lib/haptics";
 import { togglePostLike } from "@/services/likeService";
 import { ApiError } from "@/lib/errors";
 import { toTimestampMs } from "@/lib/dateTime";
@@ -137,6 +138,7 @@ export default function Home() {
       return;
     }
     if (likePending[postId]) return;
+    haptics.selection();
 
     const target = items.find((item) => item.id === postId);
     if (!target) return;
@@ -187,6 +189,7 @@ export default function Home() {
       return;
     }
     if (bookmarkPending[postId]) return;
+    haptics.selection();
     const target = items.find((item) => item.id === postId);
     if (!target) return;
 

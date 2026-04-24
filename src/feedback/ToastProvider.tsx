@@ -2,6 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useR
 import { Animated, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { tokens } from "@/theme/tokens";
+import * as haptics from "@/lib/haptics";
 
 export type ToastTone = "default" | "success" | "error";
 
@@ -46,6 +47,8 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   const showToast = useCallback(
     (message: string, options?: ToastOptions) => {
       clearToastTimer();
+      if (options?.tone === "success") haptics.success();
+      if (options?.tone === "error") haptics.error();
       setToast({
         message,
         tone: options?.tone ?? "default",
