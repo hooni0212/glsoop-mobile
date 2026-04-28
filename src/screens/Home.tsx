@@ -4,7 +4,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { CategoryChips } from "@/components/home/CategoryChips";
 import { FeedSection } from "@/components/home/FeedSection";
-import { StoryRail } from "@/components/home/StoryRail";
 import { SafetyActionSheet } from "@/components/safety/SafetyActionSheet";
 import { SafetyReasonModal } from "@/components/safety/SafetyReasonModal";
 import { HomeHeader } from "@/components/home/HomeHeader";
@@ -39,27 +38,10 @@ import {
 
 const CATEGORIES = ["추천", "팔로잉", "인기"] as const;
 type Category = (typeof CATEGORIES)[number];
-const GENRE_FILTERS: readonly {
-  key: string;
-  label: string;
-  category?: "poem" | "essay" | "short";
-  tag?: string;
-}[] = [
-  { key: "all", label: "전체" },
-  { key: "poem", label: "시", category: "poem" },
-  { key: "essay", label: "에세이", category: "essay" },
-  { key: "short", label: "짧은글", category: "short" },
-  { key: "comfort", label: "위로", tag: "위로" },
-  { key: "dawn", label: "새벽", tag: "새벽" },
-  { key: "relay", label: "릴레이", tag: "릴레이" },
-] as const;
-const GENRE_LABELS = GENRE_FILTERS.map((item) => item.label);
-type GenreLabel = (typeof GENRE_LABELS)[number];
 
 export default function Home() {
   const pathname = usePathname();
   const [active, setActive] = useState<Category>("추천");
-  const [activeGenre, setActiveGenre] = useState<GenreLabel>("전체");
   const { showToast } = useToast();
   const { token, signOut } = useAuth();
   const { config: runtimeLegalConfig } = useRuntimeLegalConfig();
@@ -72,18 +54,12 @@ export default function Home() {
   const [blockSubmitting, setBlockSubmitting] = useState(false);
 
   const query = useMemo(() => {
-    const genre = GENRE_FILTERS.find((item) => item.label === activeGenre);
-    const genreQuery = genre?.category
-      ? { category: genre.category }
-      : genre?.tag
-        ? { tag: genre.tag }
-        : {};
-    if (active === "인기") return { limit: 10, sort: "popular" as const, ...genreQuery };
+    if (active === "인기") return { limit: 10, sort: "popular" as const };
     if (active === "팔로잉") {
-      return { limit: 10, sort: "latest" as const, type: "following" as const, ...genreQuery };
+      return { limit: 10, sort: "latest" as const, type: "following" as const };
     }
-    return { limit: 10, sort: "latest" as const, ...genreQuery };
-  }, [active, activeGenre]);
+    return { limit: 10, sort: "latest" as const };
+  }, [active]);
 
   const { items, loading, refreshing, error, hasMore, refresh, loadMore, patchItem } =
     useFeed(query);
@@ -106,9 +82,9 @@ export default function Home() {
   const sectionLabel = useMemo(() => {
     if (active === "인기") return "지금 인기";
     if (active === "팔로잉") return "팔로잉 피드";
-    if (active === "추천") return activeGenre === "전체" ? "오늘의 추천" : `${activeGenre} 추천`;
+    if (active === "추천") return "오늘의 추천";
     return `${active} 피드`;
-  }, [active, activeGenre]);
+  }, [active]);
 
   const setPending = (postId: string, pending: boolean) => {
     setLikePending((prev) => ({ ...prev, [postId]: pending }));
@@ -391,11 +367,6 @@ export default function Home() {
         }}
       />
 
-      <StoryRail
-        categories={GENRE_LABELS}
-        active={activeGenre}
-        onChange={setActiveGenre}
-      />
       <CategoryChips
         categories={CATEGORIES}
         active={active}

@@ -68,67 +68,6 @@ export const homeHeaderStyles = StyleSheet.create({
   },
 });
 
-export const storyRailStyles = StyleSheet.create({
-  wrap: {
-    paddingTop: 8,
-    paddingBottom: 10,
-  },
-  content: {
-    paddingHorizontal: 18,
-    gap: 14,
-  },
-  item: {
-    width: 72,
-    alignItems: "center",
-    gap: 7,
-  },
-  itemPressed: {
-    opacity: 0.78,
-  },
-  ring: {
-    width: 66,
-    height: 66,
-    borderRadius: 33,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 2,
-    borderColor: "#f0a03a",
-    backgroundColor: "#fff4e3",
-  },
-  ringActive: {
-    borderColor: tokens.colors.green700,
-    backgroundColor: tokens.colors.green100,
-  },
-  avatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: tokens.colors.surface,
-    borderWidth: 1,
-    borderColor: tokens.colors.border,
-  },
-  avatarText: {
-    fontSize: 15,
-    fontWeight: "900",
-    color: tokens.colors.green900,
-  },
-  avatarTextActive: {
-    color: tokens.colors.green700,
-  },
-  label: {
-    width: "100%",
-    fontSize: 12,
-    fontWeight: "800",
-    color: tokens.colors.textMuted,
-    textAlign: "center",
-  },
-  labelActive: {
-    color: tokens.colors.text,
-  },
-});
-
 export const categoryChipsStyles = StyleSheet.create({
   wrap: {
     paddingTop: tokens.space.xs,
