@@ -4,11 +4,12 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { CategoryChips } from "@/components/home/CategoryChips";
 import { FeedSection } from "@/components/home/FeedSection";
+import { ImmersiveFeedSection } from "@/components/home/ImmersiveFeedSection";
 import { SafetyActionSheet } from "@/components/safety/SafetyActionSheet";
 import { SafetyReasonModal } from "@/components/safety/SafetyReasonModal";
 import { HomeHeader } from "@/components/home/HomeHeader";
 import { blurActiveElementBeforeRouteChange } from "@/lib/webFocus";
-import { homeDiscoveryStyles, homeScreenStyles } from "@/screens/Home.styles";
+import { feedModeStyles, homeScreenStyles } from "@/screens/Home.styles";
 import { useFeed } from "@/features/feed/useFeed";
 import { getBookmark, setBookmark } from "@/features/bookmarks/bookmarkStore";
 import { getLike, setLike } from "@/features/likes/likeStore";
@@ -38,6 +39,7 @@ import {
 
 const CATEGORIES = ["추천", "팔로잉", "인기"] as const;
 type Category = (typeof CATEGORIES)[number];
+type FeedMode = "immersive" | "list";
 const GENRE_FILTERS: readonly {
   key: string;
   label: string;
@@ -59,6 +61,7 @@ export default function Home() {
   const pathname = usePathname();
   const [active, setActive] = useState<Category>("추천");
   const [activeGenre, setActiveGenre] = useState<GenreLabel>("전체");
+  const [feedMode, setFeedMode] = useState<FeedMode>("immersive");
   const { showToast } = useToast();
   const { token, signOut } = useAuth();
   const { config: runtimeLegalConfig } = useRuntimeLegalConfig();
@@ -108,11 +111,6 @@ export default function Home() {
     if (active === "추천") return activeGenre === "전체" ? "오늘의 추천" : `${activeGenre} 추천`;
     return `${active} 피드`;
   }, [active, activeGenre]);
-
-  const immersiveGenre = useMemo(
-    () => GENRE_FILTERS.find((item) => item.label === activeGenre)?.key ?? "all",
-    [activeGenre]
-  );
 
   const setPending = (postId: string, pending: boolean) => {
     setLikePending((prev) => ({ ...prev, [postId]: pending }));
@@ -406,44 +404,76 @@ export default function Home() {
         onChange={setActiveGenre}
       />
 
-      <View style={homeDiscoveryStyles.wrap}>
-        <Pressable
-          onPress={() => {
-            blurActiveElementBeforeRouteChange();
-            router.push({
-              pathname: "/feed/immersive",
-              params: { genre: immersiveGenre },
-            } as any);
-          }}
-          style={({ pressed }) => [
-            homeDiscoveryStyles.immersiveBtn,
-            pressed && { opacity: 0.82 },
-          ]}
-          accessibilityRole="button"
-          testID="home-immersive-feed-btn"
-        >
-          <Text style={homeDiscoveryStyles.immersiveTitle}>한 글씩 넘겨보기</Text>
-          <Text style={homeDiscoveryStyles.immersiveMeta}>{activeGenre}</Text>
-        </Pressable>
+      <View style={feedModeStyles.wrap}>
+        {(["immersive", "list"] as const).map((mode) => {
+          const activeMode = feedMode === mode;
+          const label = mode === "immersive" ? "넘겨보기" : "목록";
+          return (
+            <Pressable
+              key={mode}
+              onPress={() => setFeedMode(mode)}
+              style={({ pressed }) => [
+                feedModeStyles.btn,
+                activeMode && feedModeStyles.btnActive,
+                pressed && { opacity: 0.82 },
+              ]}
+              accessibilityRole="button"
+              accessibilityState={{ selected: activeMode }}
+              testID={`home-feed-mode-${mode}`}
+            >
+              <Text
+                style={[
+                  feedModeStyles.btnText,
+                  activeMode && feedModeStyles.btnTextActive,
+                ]}
+              >
+                {label}
+              </Text>
+            </Pressable>
+          );
+        })}
       </View>
 
-      <FeedSection
-        items={visibleItems}
-        loading={loading}
-        refreshing={refreshing}
-        error={error}
-        hasMore={hasMore}
-        sectionLabel={sectionLabel}
-        onRefresh={refresh}
-        onEndReached={() => {
-          if (!loading && hasMore) loadMore();
-        }}
-        onPressItem={(id) => router.push(`/posts/${String(id)}`)}
-        onLikePress={(id) => handleLike(String(id))}
-        onBookmarkPress={(id) => handleBookmark(String(id))}
-        onMorePress={(item) => openSafetyMenu(item as Post)}
-        getLikeDisabled={(id) => Boolean(likePending[String(id)])}
-      />
+      {feedMode === "immersive" ? (
+        <ImmersiveFeedSection
+          key="immersive"
+          items={visibleItems}
+          loading={loading}
+          refreshing={refreshing}
+          error={error}
+          hasMore={hasMore}
+          sectionLabel={sectionLabel}
+          genreLabel={activeGenre}
+          onRefresh={refresh}
+          onEndReached={() => {
+            if (!loading && hasMore) loadMore();
+          }}
+          onPressItem={(id) => router.push(`/posts/${String(id)}`)}
+          onLikePress={(id) => handleLike(String(id))}
+          onBookmarkPress={(id) => handleBookmark(String(id))}
+          onMorePress={(item) => openSafetyMenu(item as Post)}
+          getLikeDisabled={(id) => Boolean(likePending[String(id)])}
+        />
+      ) : (
+        <FeedSection
+          key="list"
+          items={visibleItems}
+          loading={loading}
+          refreshing={refreshing}
+          error={error}
+          hasMore={hasMore}
+          sectionLabel={sectionLabel}
+          onRefresh={refresh}
+          onEndReached={() => {
+            if (!loading && hasMore) loadMore();
+          }}
+          onPressItem={(id) => router.push(`/posts/${String(id)}`)}
+          onLikePress={(id) => handleLike(String(id))}
+          onBookmarkPress={(id) => handleBookmark(String(id))}
+          onMorePress={(item) => openSafetyMenu(item as Post)}
+          getLikeDisabled={(id) => Boolean(likePending[String(id)])}
+        />
+      )}
 
       <SafetyActionSheet
         visible={safetyMenuVisible}

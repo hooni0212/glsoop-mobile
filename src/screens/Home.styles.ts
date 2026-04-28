@@ -147,3 +147,102 @@ export const homeDiscoveryStyles = StyleSheet.create({
     color: tokens.colors.green700,
   },
 });
+
+export const feedModeStyles = StyleSheet.create({
+  wrap: {
+    width: "100%",
+    maxWidth: 393,
+    alignSelf: "center",
+    paddingHorizontal: 24,
+    paddingBottom: tokens.space.sm,
+    flexDirection: "row",
+    gap: tokens.space.xs,
+  },
+  btn: {
+    flex: 1,
+    minHeight: 36,
+    borderRadius: tokens.radius.pill,
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+    backgroundColor: tokens.colors.surface,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  btnActive: {
+    borderColor: tokens.colors.green700,
+    backgroundColor: tokens.colors.green100,
+  },
+  btnText: {
+    fontSize: tokens.font.small,
+    fontWeight: "900",
+    color: tokens.colors.textMuted,
+  },
+  btnTextActive: {
+    color: tokens.colors.green700,
+  },
+});
+
+export const immersiveFeedSectionStyles = StyleSheet.create({
+  stateWrap: {
+    flex: 1,
+    width: "100%",
+    maxWidth: 393,
+    alignSelf: "center",
+    paddingHorizontal: 18,
+    paddingTop: tokens.space.md,
+  },
+  page: {
+    width: "100%",
+    maxWidth: 393,
+    alignSelf: "center",
+    paddingHorizontal: 18,
+    paddingTop: tokens.space.md,
+    paddingBottom: tokens.space.xl,
+    justifyContent: "center",
+    gap: tokens.space.md,
+  },
+  contextRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: tokens.space.sm,
+    paddingHorizontal: 6,
+  },
+  contextPill: {
+    borderRadius: tokens.radius.pill,
+    borderWidth: 1,
+    borderColor: tokens.colors.green700,
+    backgroundColor: tokens.colors.green100,
+    paddingHorizontal: tokens.space.sm,
+    paddingVertical: 6,
+  },
+  contextPillText: {
+    fontSize: tokens.font.small,
+    fontWeight: "900",
+    color: tokens.colors.green700,
+  },
+  contextMeta: {
+    fontSize: tokens.font.small,
+    fontWeight: "900",
+    color: tokens.colors.textMuted,
+  },
+  readBtn: {
+    width: "100%",
+    maxWidth: 357,
+    alignSelf: "center",
+    minHeight: 44,
+    borderRadius: tokens.radius.md,
+    backgroundColor: tokens.colors.green900,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  readBtnText: {
+    fontSize: tokens.font.body,
+    fontWeight: "900",
+    color: tokens.colors.textInverse,
+  },
+  footer: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+});
