@@ -12,13 +12,12 @@ import { AppEmpty } from "@/components/state/AppEmpty";
 import { AppError } from "@/components/state/AppError";
 import { AppLoading } from "@/components/state/AppLoading";
 import { PostTopBar } from "@/components/post/PostTopBar";
-import { getLegalDocumentUrl, getSupportUrl, releaseConfig } from "@/config/release";
+import { releaseConfig } from "@/config/release";
 import { useAuth } from "@/auth/AuthContext";
 import { setBookmark, useBookmarkSnapshot } from "@/features/bookmarks/bookmarkStore";
 import { useRuntimeLegalConfig } from "@/hooks/useRuntimeLegalConfig";
 import { getLike, setLike, useLikeSnapshot } from "@/features/likes/likeStore";
 import { useToast } from "@/feedback/ToastProvider";
-import { openExternalUrl } from "@/lib/externalLinks";
 import { togglePostLike } from "@/services/likeService";
 import {
   createPostComment,
@@ -30,7 +29,6 @@ import {
 import { deletePost, getEditablePost } from "@/services/postService";
 import { blockUserById, pickSafetyReasons, reportPost } from "@/services/safetyService";
 import { logShareEvent } from "@/services/shareService";
-import { resolveRuntimeLegalDocumentUrl } from "@/services/runtimeConfigService";
 import { buildAuthRoute } from "@/lib/authRedirect";
 import { formatKstDateKorean } from "@/lib/dateTime";
 import { ApiError } from "@/lib/errors";
@@ -170,7 +168,6 @@ export default function PostDetail() {
   const [commentsError, setCommentsError] = useState<string | null>(null);
   const [commentInput, setCommentInput] = useState("");
   const [commentsExpanded, setCommentsExpanded] = useState(false);
-  const [commentComposerVisible, setCommentComposerVisible] = useState(false);
   const [commentSubmitting, setCommentSubmitting] = useState(false);
   const [replyTarget, setReplyTarget] = useState<PostComment | null>(null);
   const [deletingCommentId, setDeletingCommentId] = useState<number | null>(null);
@@ -210,6 +207,7 @@ export default function PostDetail() {
             ? "글쓴이만 댓글을 남길 수 있어요."
             : "댓글을 작성할 권한이 없어요."
       : null;
+  const canWriteComment = Boolean(token) && canCommentOnPost;
   const likeSnapshot = useLikeSnapshot(postId, fallbackIsLiked, fallbackLikeCount);
   const likeCount = likeSnapshot.likeCount;
   const isLiked = likeSnapshot.liked;
@@ -217,11 +215,6 @@ export default function PostDetail() {
   const bookmarkSnapshot = useBookmarkSnapshot(postId, fallbackBookmarked);
   const isBookmarked = bookmarkSnapshot.bookmarked;
   const loadedPostId = post?.id ?? null;
-  const legalGuidelinesUrl = resolveRuntimeLegalDocumentUrl(
-    runtimeLegalConfig,
-    "guidelines",
-    getLegalDocumentUrl("guidelines")
-  );
   const postSafetyReasons = pickSafetyReasons(runtimeLegalConfig?.safety.reportReasons, "post");
   const userSafetyReasons = pickSafetyReasons(runtimeLegalConfig?.safety.reportReasons, "user");
   const reportDetailMaxLength = runtimeLegalConfig?.safety.detailMaxLength;
@@ -317,29 +310,18 @@ export default function PostDetail() {
   React.useEffect(() => {
     setComments([]);
     setCommentInput("");
-    setCommentComposerVisible(false);
     setReplyTarget(null);
     setCommentsError(null);
     if (!postId || loading || error || !loadedPostId) return;
     void loadComments();
   }, [error, loadComments, loadedPostId, loading, postId]);
 
-  const openCommentComposer = React.useCallback(() => {
-    if (!token) {
-      promptAuthForAction("댓글은 로그인한 회원만 남길 수 있어요.");
-      return;
-    }
-    if (!canCommentOnPost) {
-      showToast(commentDisabledReason || "댓글을 작성할 수 없어요.", { tone: "error" });
-      return;
-    }
+  const openCommentsSheet = React.useCallback(() => {
     setCommentsExpanded(true);
-    setCommentComposerVisible(true);
-  }, [canCommentOnPost, commentDisabledReason, promptAuthForAction, showToast, token]);
+  }, []);
 
-  const closeCommentComposer = React.useCallback(() => {
+  const clearCommentDraft = React.useCallback(() => {
     if (commentSubmitting) return;
-    setCommentComposerVisible(false);
     setCommentInput("");
     setReplyTarget(null);
   }, [commentSubmitting]);
@@ -375,7 +357,6 @@ export default function PostDetail() {
       setComments((prev) => [...prev, created]);
       setCommentInput("");
       setReplyTarget(null);
-      setCommentComposerVisible(false);
       showToast(replyTarget ? "답글을 남겼어요." : "댓글을 남겼어요.", { tone: "success" });
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
@@ -401,8 +382,8 @@ export default function PostDetail() {
       return;
     }
     haptics.selection();
+    setCommentsExpanded(true);
     setReplyTarget(comment);
-    setCommentComposerVisible(true);
   };
 
   const onPressDeleteComment = (comment: PostComment) => {
@@ -831,22 +812,6 @@ export default function PostDetail() {
     })();
   };
 
-  const openGuidelines = React.useCallback(() => {
-    void openExternalUrl(legalGuidelinesUrl).catch(() => {
-      showToast("가이드라인을 열지 못했어요. 잠시 후 다시 시도해주세요.", {
-        tone: "error",
-      });
-    });
-  }, [legalGuidelinesUrl, showToast]);
-
-  const openSupport = React.useCallback(() => {
-    void openExternalUrl(getSupportUrl()).catch(() => {
-      showToast("지원 페이지를 열지 못했어요. 잠시 후 다시 시도해주세요.", {
-        tone: "error",
-      });
-    });
-  }, [showToast]);
-
   const submitPostReport = React.useCallback(
     async (reasonCode: string, detail?: string) => {
       if (!token) {
@@ -1012,7 +977,7 @@ export default function PostDetail() {
                 </View>
                 <View style={styles.commentHeaderActions}>
                   <Pressable
-                    onPress={() => setCommentsExpanded(true)}
+                    onPress={openCommentsSheet}
                     accessibilityRole="button"
                     accessibilityLabel="댓글 열기"
                     style={styles.commentIconBtn}
@@ -1024,44 +989,10 @@ export default function PostDetail() {
                       color="#2d5a3d"
                     />
                   </Pressable>
-                  <Pressable
-                    onPress={openCommentComposer}
-                    accessibilityRole="button"
-                    accessibilityLabel="댓글 작성"
-                    disabled={Boolean(commentDisabledReason)}
-                    style={[
-                      styles.commentIconBtn,
-                      commentDisabledReason && styles.commentOpenBtnDisabled,
-                    ]}
-                    testID="post-comment-open-btn"
-                  >
-                    <Ionicons name="create-outline" size={19} color="#2d5a3d" />
-                  </Pressable>
                 </View>
               </View>
 
             </View>
-
-            {canManagePost ? (
-              <View style={styles.relatedSection}>
-                <Text style={styles.relatedTitle}>내 글 관리</Text>
-                <View style={styles.manageActionRow}>
-                  <Pressable onPress={onPressEdit} style={styles.manageEditBtn}>
-                    <Text style={styles.manageEditBtnText}>수정하기</Text>
-                  </Pressable>
-                  <Pressable
-                    onPress={onPressDelete}
-                    style={styles.manageDeleteBtn}
-                    disabled={manageBusy}
-                    testID="post-manage-delete-btn"
-                  >
-                    <Text style={styles.manageDeleteBtnText}>
-                      {manageBusy ? "삭제 중..." : "삭제하기"}
-                    </Text>
-                  </Pressable>
-                </View>
-              </View>
-            ) : null}
 
             <View style={styles.relatedSection}>
               <Text style={styles.relatedTitle}>관련 글</Text>
@@ -1115,7 +1046,6 @@ export default function PostDetail() {
         animationType="slide"
         onRequestClose={() => {
           setCommentsExpanded(false);
-          setCommentComposerVisible(false);
           setReplyTarget(null);
         }}
       >
@@ -1129,22 +1059,8 @@ export default function PostDetail() {
               </View>
               <View style={styles.commentHeaderActions}>
                 <Pressable
-                  onPress={openCommentComposer}
-                  accessibilityRole="button"
-                  accessibilityLabel="댓글 작성"
-                  disabled={Boolean(commentDisabledReason)}
-                  style={[
-                    styles.commentIconBtn,
-                    commentDisabledReason && styles.commentOpenBtnDisabled,
-                  ]}
-                  testID="post-comment-open-btn-sheet"
-                >
-                  <Ionicons name="create-outline" size={19} color="#2d5a3d" />
-                </Pressable>
-                <Pressable
                   onPress={() => {
                     setCommentsExpanded(false);
-                    setCommentComposerVisible(false);
                     setReplyTarget(null);
                   }}
                   accessibilityRole="button"
@@ -1166,7 +1082,7 @@ export default function PostDetail() {
                 />
               }
             >
-              {commentComposerVisible ? (
+              {canWriteComment ? (
                 <View style={styles.commentComposer}>
                   {replyTarget ? (
                     <View style={styles.replyTargetRow}>
@@ -1174,7 +1090,7 @@ export default function PostDetail() {
                         {replyTarget.author?.displayName || "댓글"}님에게 답글
                       </Text>
                       <Pressable
-                        onPress={closeCommentComposer}
+                        onPress={clearCommentDraft}
                         accessibilityRole="button"
                         testID="post-comment-reply-cancel-btn"
                       >
@@ -1182,16 +1098,7 @@ export default function PostDetail() {
                       </Pressable>
                     </View>
                   ) : (
-                    <View style={styles.replyTargetRow}>
-                      <Text style={styles.replyTargetText}>새 댓글 작성</Text>
-                      <Pressable
-                        onPress={closeCommentComposer}
-                        accessibilityRole="button"
-                        testID="post-comment-composer-cancel-btn"
-                      >
-                        <Text style={styles.replyCancelText}>취소</Text>
-                      </Pressable>
-                    </View>
+                    null
                   )}
                   <TextInput
                     value={commentInput}
@@ -1200,7 +1107,7 @@ export default function PostDetail() {
                     placeholderTextColor="#8d938f"
                     multiline
                     maxLength={1000}
-                    editable={Boolean(token) && canCommentOnPost && !commentSubmitting}
+                    editable={!commentSubmitting}
                     style={styles.commentInput}
                     testID="post-comment-input"
                   />
@@ -1208,10 +1115,10 @@ export default function PostDetail() {
                     <Text style={styles.commentInputCount}>{commentInput.length}/1000</Text>
                     <Pressable
                       onPress={() => void submitComment()}
-                      disabled={!token || !canCommentOnPost || commentSubmitting || commentInput.trim().length === 0}
+                      disabled={commentSubmitting || commentInput.trim().length === 0}
                       style={[
                         styles.commentSubmitBtn,
-                        (!token || !canCommentOnPost || commentSubmitting || commentInput.trim().length === 0) &&
+                        (commentSubmitting || commentInput.trim().length === 0) &&
                           styles.commentSubmitBtnDisabled,
                       ]}
                       accessibilityRole="button"
@@ -1541,12 +1448,38 @@ export default function PostDetail() {
           <View style={styles.bookmarkModalCard}>
             <Text style={styles.bookmarkModalTitle}>더보기</Text>
             <Text style={styles.bookmarkModalDescription}>
-              {canManagePost
-                ? "필요한 메뉴를 선택해 주세요."
-                : "공유, 신고, 차단, 가이드라인을 확인할 수 있어요."}
+              {canManagePost ? "글 관리 메뉴를 선택해 주세요." : "게시글 메뉴를 선택해 주세요."}
             </Text>
 
             <View style={styles.modalActionList}>
+              {canManagePost ? (
+                <>
+                  <Pressable
+                    onPress={() => {
+                      setSafetyMenuVisible(false);
+                      onPressEdit();
+                    }}
+                    style={styles.modalActionBtn}
+                  >
+                    <Text style={styles.modalActionText}>수정하기</Text>
+                  </Pressable>
+
+                  <Pressable
+                    onPress={() => {
+                      setSafetyMenuVisible(false);
+                      onPressDelete();
+                    }}
+                    disabled={manageBusy}
+                    style={[styles.modalActionBtn, styles.modalActionBtnDanger]}
+                    testID="post-manage-delete-btn"
+                  >
+                    <Text style={[styles.modalActionText, styles.modalActionTextDanger]}>
+                      {manageBusy ? "삭제 중..." : "삭제하기"}
+                    </Text>
+                  </Pressable>
+                </>
+              ) : null}
+
               <Pressable
                 onPress={() => {
                   setSafetyMenuVisible(false);
@@ -1582,26 +1515,6 @@ export default function PostDetail() {
                   </Text>
                 </Pressable>
               ) : null}
-
-              <Pressable
-                onPress={() => {
-                  setSafetyMenuVisible(false);
-                  openGuidelines();
-                }}
-                style={[styles.modalActionBtn, styles.modalActionBtnGhost]}
-              >
-                <Text style={styles.modalActionText}>커뮤니티 가이드라인</Text>
-              </Pressable>
-
-              <Pressable
-                onPress={() => {
-                  setSafetyMenuVisible(false);
-                  openSupport();
-                }}
-                style={[styles.modalActionBtn, styles.modalActionBtnGhost]}
-              >
-                <Text style={styles.modalActionText}>도움말 및 지원</Text>
-              </Pressable>
 
               <Pressable
                 onPress={() => setSafetyMenuVisible(false)}

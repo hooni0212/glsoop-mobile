@@ -105,7 +105,7 @@ export function resolvePostRenderImages(post: Partial<Post> | null | undefined):
     hasMultiple:
       parseFlag(post.renderImages?.hasMultiple, post.hasMultiple) || pageCount > 1 || images.length > 1,
     pageCount,
-    pageCap: Math.max(1, parsePositiveInt(post.renderImages?.pageCap, 8)),
+    pageCap: Math.max(1, parsePositiveInt(post.renderImages?.pageCap, 24)),
     isTruncated: parseFlag(post.renderImages?.isTruncated),
     template: pickFirstString(post.renderImages?.template) || undefined,
     scale: parsePositiveInt(post.renderImages?.scale) || undefined,
@@ -166,7 +166,7 @@ export function normalizePostRenderImageFields(
       hasMultiple:
         parseFlag(row?.has_multiple, nested?.has_multiple) || pageCount > 1 || images.length > 1,
       pageCount,
-      pageCap: Math.max(1, parsePositiveInt(nested?.page_cap, 8)),
+      pageCap: Math.max(1, parsePositiveInt(nested?.page_cap, 24)),
       isTruncated: parseFlag(nested?.is_truncated, row?.is_truncated),
       template: pickFirstString(nested?.template) || undefined,
       scale: parsePositiveInt(nested?.scale) || undefined,

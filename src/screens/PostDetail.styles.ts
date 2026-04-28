@@ -18,10 +18,13 @@ export function createPostDetailStyles(actionBarHeight: number) {
 
     // --- Header ---
     topBar: {
-      position: "relative",
-      zIndex: 10,
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      zIndex: 40,
       paddingTop: tokens.space.xs,
-      paddingHorizontal: tokens.space.md,
+      paddingHorizontal: tokens.space.sm,
       paddingBottom: tokens.space.xs,
       flexDirection: "row",
       alignItems: "center",
@@ -33,6 +36,7 @@ export function createPostDetailStyles(actionBarHeight: number) {
       borderRadius: 20,
       alignItems: "center",
       justifyContent: "center",
+      backgroundColor: "rgba(255,255,255,0.78)",
     },
     rightActionBtn: {
       width: 44,
@@ -40,9 +44,9 @@ export function createPostDetailStyles(actionBarHeight: number) {
       borderRadius: 22,
       alignItems: "center",
       justifyContent: "center",
-      backgroundColor: tokens.colors.surfaceStrong,
+      backgroundColor: "rgba(255,255,255,0.78)",
       borderWidth: 1,
-      borderColor: tokens.colors.border,
+      borderColor: "rgba(22,34,28,0.08)",
     },
 
     topBarSpacer: {
@@ -55,14 +59,14 @@ export function createPostDetailStyles(actionBarHeight: number) {
       width: "100%",
       maxWidth: 393,
       alignSelf: "center",
-      paddingHorizontal: 8,
-      paddingTop: tokens.space.sm,
+      paddingHorizontal: 0,
+      paddingTop: 0,
       paddingBottom: contentBottomPad,
     },
     detailMetaBlock: {
-      marginTop: tokens.space.sm,
+      marginTop: tokens.space.md,
       marginBottom: tokens.space.lg,
-      paddingHorizontal: tokens.space.sm,
+      paddingHorizontal: tokens.space.md,
       gap: tokens.space.sm as any,
     },
     introWrap: {
@@ -136,44 +140,13 @@ export function createPostDetailStyles(actionBarHeight: number) {
     },
     relatedSection: {
       marginTop: tokens.space.xl,
+      paddingHorizontal: 8,
       gap: tokens.space.sm as any,
     },
     relatedTitle: {
       fontSize: 15,
       fontWeight: "900",
       color: tokens.colors.text,
-    },
-    manageActionRow: {
-      flexDirection: "row",
-      gap: tokens.space.xs as any,
-    },
-    manageEditBtn: {
-      flex: 1,
-      borderWidth: 1,
-      borderColor: tokens.colors.borderStrong,
-      borderRadius: tokens.radius.lg,
-      backgroundColor: tokens.colors.surfaceStrong,
-      alignItems: "center",
-      paddingVertical: 12,
-    },
-    manageEditBtnText: {
-      fontSize: tokens.font.small,
-      fontWeight: "800",
-      color: tokens.colors.text,
-    },
-    manageDeleteBtn: {
-      flex: 1,
-      borderWidth: 1,
-      borderColor: tokens.colors.dangerBorder,
-      borderRadius: tokens.radius.lg,
-      backgroundColor: tokens.colors.dangerSoft,
-      alignItems: "center",
-      paddingVertical: 12,
-    },
-    manageDeleteBtnText: {
-      fontSize: tokens.font.small,
-      fontWeight: "800",
-      color: tokens.colors.danger,
     },
     relatedHint: {
       fontSize: tokens.font.small,
@@ -208,6 +181,7 @@ export function createPostDetailStyles(actionBarHeight: number) {
     },
     commentSection: {
       marginTop: tokens.space.xl,
+      paddingHorizontal: tokens.space.md,
       gap: tokens.space.md as any,
     },
     permissionRow: {
@@ -292,39 +266,6 @@ export function createPostDetailStyles(actionBarHeight: number) {
       color: tokens.colors.textFaint,
       letterSpacing: 0,
       marginBottom: 3,
-    },
-    commentRefreshText: {
-      fontSize: tokens.font.small,
-      fontWeight: "800",
-      color: tokens.colors.green700,
-    },
-    commentOpenBtn: {
-      borderRadius: tokens.radius.md,
-      backgroundColor: tokens.colors.green900,
-      paddingHorizontal: tokens.space.md,
-      paddingVertical: 9,
-    },
-    commentOpenBtnDisabled: {
-      opacity: 0.45,
-    },
-    commentOpenText: {
-      fontSize: tokens.font.small,
-      fontWeight: "900",
-      color: tokens.colors.textInverse,
-    },
-    commentPolicyNotice: {
-      borderWidth: 1,
-      borderColor: tokens.colors.border,
-      borderRadius: tokens.radius.md,
-      backgroundColor: tokens.colors.bgMuted,
-      paddingHorizontal: tokens.space.md,
-      paddingVertical: tokens.space.sm,
-    },
-    commentPolicyNoticeText: {
-      fontSize: tokens.font.small,
-      fontWeight: "800",
-      color: tokens.colors.textMuted,
-      lineHeight: 20,
     },
     commentComposer: {
       borderWidth: 1,

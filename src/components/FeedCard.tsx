@@ -57,7 +57,7 @@ export function FeedCard({
   const showPageBadge = showRenderedImage && pageCount > 1;
   const cardTitle = post.title || "(제목 없음)";
   const primaryBadge = post.author?.profileCosmetics?.primary_badge;
-  const authorMarker = primaryBadge?.icon_emoji?.trim() || author.slice(0, 1) || "?";
+  const authorBadge = primaryBadge?.icon_emoji?.trim();
   const canLike = Boolean(onLikePress);
   const canBookmark = Boolean(onBookmarkPress);
   const showSocialRow = Boolean(canLike || onCommentPress || canBookmark);
@@ -72,13 +72,9 @@ export function FeedCard({
           accessibilityRole={onAuthorPress ? "button" : undefined}
           accessibilityLabel={onAuthorPress ? `작가 페이지 열기: ${author}` : undefined}
         >
-          <View style={[styles.avatarRing, primaryBadge && styles.avatarRingBadge]}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{authorMarker}</Text>
-            </View>
-          </View>
           <View style={styles.authorTextBlock}>
             <Text style={styles.authorName} numberOfLines={1}>
+              {authorBadge ? <Text style={styles.authorBadge}>{authorBadge} </Text> : null}
               {author}
             </Text>
             <Text style={styles.postMeta} numberOfLines={1}>
@@ -211,22 +207,7 @@ export function FeedCard({
 
       <View style={styles.captionBlock}>
         <Text style={styles.likeSummary}>좋아요 {likeCount}</Text>
-        <Pressable
-          onPress={onPress}
-          disabled={!onPress}
-          style={({ pressed }) => [styles.captionPressArea, pressed && styles.cardPressed]}
-          accessibilityRole={onPress ? "button" : undefined}
-          accessibilityLabel={onPress ? `게시글 열기: ${cardTitle}` : undefined}
-        >
-          <Text style={styles.captionText} numberOfLines={2}>
-            <Text style={styles.captionAuthor}>{author}</Text>
-            {" "}
-            {cardTitle}
-            {post.excerpt ? ` ${post.excerpt}` : ""}
-          </Text>
-        </Pressable>
       </View>
-
     </View>
   );
 }
@@ -274,7 +255,7 @@ const styles = StyleSheet.create({
     opacity: 0.78,
   },
   authorRow: {
-    minHeight: 62,
+    minHeight: 58,
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 14,
@@ -285,33 +266,6 @@ const styles = StyleSheet.create({
     minWidth: 0,
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
-  },
-  avatarRing: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 2,
-    borderColor: "#f0a03a",
-  },
-  avatarRingBadge: {
-    borderColor: tokens.colors.green700,
-    backgroundColor: tokens.colors.green050,
-  },
-  avatar: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: tokens.colors.green100,
-  },
-  avatarText: {
-    fontSize: 13,
-    fontWeight: "900",
-    color: tokens.colors.green900,
   },
   authorTextBlock: {
     flex: 1,
@@ -321,6 +275,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "900",
     color: tokens.colors.text,
+  },
+  authorBadge: {
+    fontSize: 13,
+    fontWeight: "900",
+    color: tokens.colors.green700,
   },
   postMeta: {
     marginTop: 2,
@@ -416,24 +375,11 @@ const styles = StyleSheet.create({
 
   captionBlock: {
     paddingHorizontal: 14,
-    gap: 5,
   },
   likeSummary: {
     fontSize: 13,
     lineHeight: 18,
     fontWeight: "900",
     color: tokens.colors.text,
-  },
-  captionPressArea: {
-    borderRadius: 8,
-  },
-  captionText: {
-    fontSize: 13,
-    lineHeight: 19,
-    fontWeight: "700",
-    color: tokens.colors.text,
-  },
-  captionAuthor: {
-    fontWeight: "900",
   },
 });

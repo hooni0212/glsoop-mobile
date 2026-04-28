@@ -219,7 +219,7 @@ export async function createFeedPreviewSession({
         pageCount > 1 ||
         images.length > 1,
       pageCount,
-      pageCap: Math.max(1, parsePositiveInt(response.render_images?.page_cap, 8)),
+      pageCap: Math.max(1, parsePositiveInt(response.render_images?.page_cap, 24)),
       isTruncated: response.render_images?.is_truncated === true,
       template: response.render_images?.template,
       scale: response.render_images?.scale,
