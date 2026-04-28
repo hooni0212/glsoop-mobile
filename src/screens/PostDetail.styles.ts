@@ -204,6 +204,25 @@ export function createPostDetailStyles(actionBarHeight: number) {
       marginTop: tokens.space.xl,
       gap: tokens.space.md as any,
     },
+    permissionRow: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: tokens.space.xs as any,
+      marginTop: tokens.space.sm,
+    },
+    permissionChip: {
+      borderWidth: 1,
+      borderColor: tokens.colors.border,
+      borderRadius: tokens.radius.pill,
+      backgroundColor: tokens.colors.surfaceStrong,
+      paddingHorizontal: tokens.space.sm,
+      paddingVertical: 6,
+    },
+    permissionChipText: {
+      fontSize: 12,
+      fontWeight: "800",
+      color: tokens.colors.textMuted,
+    },
     commentHeaderRow: {
       flexDirection: "row",
       alignItems: "center",
@@ -221,6 +240,13 @@ export function createPostDetailStyles(actionBarHeight: number) {
       fontWeight: "900",
       color: tokens.colors.text,
     },
+    commentKicker: {
+      fontSize: 11,
+      fontWeight: "900",
+      color: tokens.colors.textFaint,
+      letterSpacing: 0,
+      marginBottom: 3,
+    },
     commentRefreshText: {
       fontSize: tokens.font.small,
       fontWeight: "800",
@@ -232,10 +258,27 @@ export function createPostDetailStyles(actionBarHeight: number) {
       paddingHorizontal: tokens.space.md,
       paddingVertical: 9,
     },
+    commentOpenBtnDisabled: {
+      opacity: 0.45,
+    },
     commentOpenText: {
       fontSize: tokens.font.small,
       fontWeight: "900",
       color: tokens.colors.textInverse,
+    },
+    commentPolicyNotice: {
+      borderWidth: 1,
+      borderColor: tokens.colors.border,
+      borderRadius: tokens.radius.md,
+      backgroundColor: tokens.colors.bgMuted,
+      paddingHorizontal: tokens.space.md,
+      paddingVertical: tokens.space.sm,
+    },
+    commentPolicyNoticeText: {
+      fontSize: tokens.font.small,
+      fontWeight: "800",
+      color: tokens.colors.textMuted,
+      lineHeight: 20,
     },
     commentComposer: {
       borderWidth: 1,
@@ -358,6 +401,33 @@ export function createPostDetailStyles(actionBarHeight: number) {
       justifyContent: "space-between",
       gap: tokens.space.sm as any,
     },
+    commentAuthorWrap: {
+      flex: 1,
+      minWidth: 0,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: tokens.space.sm as any,
+    },
+    commentMarker: {
+      width: 34,
+      height: 34,
+      borderRadius: 17,
+      alignItems: "center",
+      justifyContent: "center",
+      borderWidth: 1,
+      borderColor: tokens.colors.green700,
+      backgroundColor: tokens.colors.surface,
+    },
+    replyMarker: {
+      width: 30,
+      height: 30,
+      borderRadius: 15,
+    },
+    commentMarkerText: {
+      fontSize: 12,
+      fontWeight: "900",
+      color: tokens.colors.green700,
+    },
     commentAuthor: {
       flex: 1,
       fontSize: tokens.font.small,
@@ -379,9 +449,18 @@ export function createPostDetailStyles(actionBarHeight: number) {
       alignItems: "center",
       gap: tokens.space.md as any,
     },
+    commentIconAction: {
+      minHeight: 30,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+    },
     commentActionText: {
       fontSize: tokens.font.small,
       fontWeight: "900",
+      color: tokens.colors.green700,
+    },
+    commentActionTextActive: {
       color: tokens.colors.green700,
     },
     commentDangerText: {

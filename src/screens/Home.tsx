@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { Alert } from "react-native";
+import { Alert, Pressable, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { CategoryChips } from "@/components/home/CategoryChips";
@@ -8,7 +8,7 @@ import { SafetyActionSheet } from "@/components/safety/SafetyActionSheet";
 import { SafetyReasonModal } from "@/components/safety/SafetyReasonModal";
 import { HomeHeader } from "@/components/home/HomeHeader";
 import { blurActiveElementBeforeRouteChange } from "@/lib/webFocus";
-import { homeScreenStyles } from "@/screens/Home.styles";
+import { homeDiscoveryStyles, homeScreenStyles } from "@/screens/Home.styles";
 import { useFeed } from "@/features/feed/useFeed";
 import { getBookmark, setBookmark } from "@/features/bookmarks/bookmarkStore";
 import { getLike, setLike } from "@/features/likes/likeStore";
@@ -38,10 +38,27 @@ import {
 
 const CATEGORIES = ["추천", "팔로잉", "인기"] as const;
 type Category = (typeof CATEGORIES)[number];
+const GENRE_FILTERS: readonly {
+  key: string;
+  label: string;
+  category?: "poem" | "essay" | "short";
+  tag?: string;
+}[] = [
+  { key: "all", label: "전체" },
+  { key: "poem", label: "시", category: "poem" },
+  { key: "essay", label: "에세이", category: "essay" },
+  { key: "short", label: "짧은글", category: "short" },
+  { key: "comfort", label: "위로", tag: "위로" },
+  { key: "dawn", label: "새벽", tag: "새벽" },
+  { key: "relay", label: "릴레이", tag: "릴레이" },
+] as const;
+const GENRE_LABELS = GENRE_FILTERS.map((item) => item.label);
+type GenreLabel = (typeof GENRE_LABELS)[number];
 
 export default function Home() {
   const pathname = usePathname();
   const [active, setActive] = useState<Category>("추천");
+  const [activeGenre, setActiveGenre] = useState<GenreLabel>("전체");
   const { showToast } = useToast();
   const { token, signOut } = useAuth();
   const { config: runtimeLegalConfig } = useRuntimeLegalConfig();
@@ -54,11 +71,18 @@ export default function Home() {
   const [blockSubmitting, setBlockSubmitting] = useState(false);
 
   const query = useMemo(() => {
-    if (active === "인기") return { limit: 10, sort: "popular" as const };
-    if (active === "팔로잉") return { limit: 10, sort: "latest" as const, type: "following" as const };
-    if (active === "추천") return { limit: 10, sort: "latest" as const };
-    return { limit: 10, sort: "latest" as const, tag: active };
-  }, [active]);
+    const genre = GENRE_FILTERS.find((item) => item.label === activeGenre);
+    const genreQuery = genre?.category
+      ? { category: genre.category }
+      : genre?.tag
+        ? { tag: genre.tag }
+        : {};
+    if (active === "인기") return { limit: 10, sort: "popular" as const, ...genreQuery };
+    if (active === "팔로잉") {
+      return { limit: 10, sort: "latest" as const, type: "following" as const, ...genreQuery };
+    }
+    return { limit: 10, sort: "latest" as const, ...genreQuery };
+  }, [active, activeGenre]);
 
   const { items, loading, refreshing, error, hasMore, refresh, loadMore, patchItem } =
     useFeed(query);
@@ -81,9 +105,14 @@ export default function Home() {
   const sectionLabel = useMemo(() => {
     if (active === "인기") return "지금 인기";
     if (active === "팔로잉") return "팔로잉 피드";
-    if (active === "추천") return "오늘의 추천";
+    if (active === "추천") return activeGenre === "전체" ? "오늘의 추천" : `${activeGenre} 추천`;
     return `${active} 피드`;
-  }, [active]);
+  }, [active, activeGenre]);
+
+  const immersiveGenre = useMemo(
+    () => GENRE_FILTERS.find((item) => item.label === activeGenre)?.key ?? "all",
+    [activeGenre]
+  );
 
   const setPending = (postId: string, pending: boolean) => {
     setLikePending((prev) => ({ ...prev, [postId]: pending }));
@@ -371,6 +400,32 @@ export default function Home() {
         active={active}
         onChange={setActive}
       />
+      <CategoryChips
+        categories={GENRE_LABELS}
+        active={activeGenre}
+        onChange={setActiveGenre}
+      />
+
+      <View style={homeDiscoveryStyles.wrap}>
+        <Pressable
+          onPress={() => {
+            blurActiveElementBeforeRouteChange();
+            router.push({
+              pathname: "/feed/immersive",
+              params: { genre: immersiveGenre },
+            } as any);
+          }}
+          style={({ pressed }) => [
+            homeDiscoveryStyles.immersiveBtn,
+            pressed && { opacity: 0.82 },
+          ]}
+          accessibilityRole="button"
+          testID="home-immersive-feed-btn"
+        >
+          <Text style={homeDiscoveryStyles.immersiveTitle}>한 글씩 넘겨보기</Text>
+          <Text style={homeDiscoveryStyles.immersiveMeta}>{activeGenre}</Text>
+        </Pressable>
+      </View>
 
       <FeedSection
         items={visibleItems}

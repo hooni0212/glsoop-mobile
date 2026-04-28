@@ -24,6 +24,7 @@ import {
   deleteComment,
   listPostComments,
   PostComment,
+  toggleCommentLike,
 } from "@/services/commentService";
 import { deletePost, getEditablePost } from "@/services/postService";
 import { blockUserById, pickSafetyReasons, reportPost } from "@/services/safetyService";
@@ -54,6 +55,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
 import {
   addPostToBookmarkList,
   BookmarkList,
@@ -169,6 +171,7 @@ export default function PostDetail() {
   const [commentSubmitting, setCommentSubmitting] = useState(false);
   const [replyTarget, setReplyTarget] = useState<PostComment | null>(null);
   const [deletingCommentId, setDeletingCommentId] = useState<number | null>(null);
+  const [commentLikePending, setCommentLikePending] = useState<Record<number, boolean>>({});
 
   const title = post?.title || "";
   const authorName = post?.author?.name || "익명";
@@ -191,6 +194,36 @@ export default function PostDetail() {
   const fallbackLikeCount = post?.stats?.likeCount ?? 0;
   const fallbackIsLiked = Boolean((post as any)?.viewer?.isLiked);
   const postId = post?.id ?? id ?? "";
+  const canCommentOnPost = Boolean((post as any)?.viewer?.canComment);
+  const commentPolicy = (post as any)?.commentPolicy || "logged_in";
+  const visibility = (post as any)?.visibility || "public";
+  const visibilityLabel =
+    visibility === "followers"
+      ? "팔로워 공개"
+      : visibility === "unlisted"
+        ? "링크 공개"
+        : visibility === "private"
+          ? "나만 보기"
+          : "전체 공개";
+  const commentPolicyLabel =
+    commentPolicy === "followers"
+      ? "댓글은 팔로워만"
+      : commentPolicy === "author_only"
+        ? "댓글은 글쓴이만"
+        : commentPolicy === "closed"
+          ? "댓글 닫힘"
+          : "댓글 가능";
+  const commentDisabledReason = !token
+    ? "로그인 후 댓글을 남길 수 있어요."
+    : !canCommentOnPost
+      ? commentPolicy === "closed"
+        ? "댓글이 닫힌 글이에요."
+        : commentPolicy === "followers"
+          ? "팔로워만 댓글을 남길 수 있어요."
+          : commentPolicy === "author_only"
+            ? "글쓴이만 댓글을 남길 수 있어요."
+            : "댓글을 작성할 권한이 없어요."
+      : null;
   const likeSnapshot = useLikeSnapshot(postId, fallbackIsLiked, fallbackLikeCount);
   const likeCount = likeSnapshot.likeCount;
   const isLiked = likeSnapshot.liked;
@@ -310,8 +343,12 @@ export default function PostDetail() {
       promptAuthForAction("댓글은 로그인한 회원만 남길 수 있어요.");
       return;
     }
+    if (!canCommentOnPost) {
+      showToast(commentDisabledReason || "댓글을 작성할 수 없어요.", { tone: "error" });
+      return;
+    }
     setCommentComposerVisible(true);
-  }, [promptAuthForAction, token]);
+  }, [canCommentOnPost, commentDisabledReason, promptAuthForAction, showToast, token]);
 
   const closeCommentComposer = React.useCallback(() => {
     if (commentSubmitting) return;
@@ -323,6 +360,10 @@ export default function PostDetail() {
   const submitComment = async () => {
     if (!token) {
       promptAuthForAction("댓글은 로그인한 회원만 남길 수 있어요.");
+      return;
+    }
+    if (!canCommentOnPost) {
+      showToast(commentDisabledReason || "댓글을 작성할 수 없어요.", { tone: "error" });
       return;
     }
     if (!postId || commentSubmitting) return;
@@ -368,6 +409,10 @@ export default function PostDetail() {
       promptAuthForAction("답글은 로그인한 회원만 남길 수 있어요.");
       return;
     }
+    if (!canCommentOnPost) {
+      showToast(commentDisabledReason || "답글을 작성할 수 없어요.", { tone: "error" });
+      return;
+    }
     haptics.selection();
     setReplyTarget(comment);
     setCommentComposerVisible(true);
@@ -410,6 +455,55 @@ export default function PostDetail() {
       { text: "취소", style: "cancel" },
       { text: "삭제", style: "destructive", onPress: () => void submit() },
     ]);
+  };
+
+  const onPressCommentLike = async (comment: PostComment) => {
+    if (!token) {
+      promptAuthForAction("댓글 공감은 로그인한 회원만 남길 수 있어요.");
+      return;
+    }
+    if (comment.status !== "active" || commentLikePending[comment.id]) return;
+    haptics.selection();
+
+    const prevLiked = comment.likedByMe;
+    const prevCount = comment.likeCount;
+    const nextLiked = !prevLiked;
+    const nextCount = Math.max(0, prevCount + (nextLiked ? 1 : -1));
+
+    setComments((prev) =>
+      prev.map((item) =>
+        item.id === comment.id
+          ? { ...item, likedByMe: nextLiked, likeCount: nextCount }
+          : item
+      )
+    );
+    setCommentLikePending((prev) => ({ ...prev, [comment.id]: true }));
+
+    try {
+      const result = await toggleCommentLike(comment.id);
+      setComments((prev) =>
+        prev.map((item) =>
+          item.id === comment.id
+            ? { ...item, likedByMe: result.liked, likeCount: result.likeCount }
+            : item
+        )
+      );
+    } catch (err) {
+      setComments((prev) =>
+        prev.map((item) =>
+          item.id === comment.id
+            ? { ...item, likedByMe: prevLiked, likeCount: prevCount }
+            : item
+        )
+      );
+      if (err instanceof ApiError && err.status === 401) {
+        await handleAuthError();
+        return;
+      }
+      showToast("댓글 공감 처리에 실패했어요. 잠시 후 다시 시도해주세요.", { tone: "error" });
+    } finally {
+      setCommentLikePending((prev) => ({ ...prev, [comment.id]: false }));
+    }
   };
 
   const onPressLike = async () => {
@@ -900,6 +994,14 @@ export default function PostDetail() {
               </View>
             </View>
             <PostMetaBar type={post.type} tags={post.tags} styles={styles} />
+            <View style={styles.permissionRow}>
+              <View style={styles.permissionChip}>
+                <Text style={styles.permissionChipText}>{visibilityLabel}</Text>
+              </View>
+              <View style={styles.permissionChip}>
+                <Text style={styles.permissionChipText}>{commentPolicyLabel}</Text>
+              </View>
+            </View>
             <PostBody
               postId={postId}
               title={title}
@@ -914,7 +1016,10 @@ export default function PostDetail() {
 
             <View style={styles.commentSection} testID="post-comments-section">
               <View style={styles.commentHeaderRow}>
-                <Text style={styles.commentTitle}>댓글 {commentCount}</Text>
+                <View>
+                  <Text style={styles.commentKicker}>COMMENTS</Text>
+                  <Text style={styles.commentTitle}>댓글 {commentCount}</Text>
+                </View>
                 <View style={styles.commentHeaderActions}>
                   <Pressable
                     onPress={() => void loadComments()}
@@ -929,13 +1034,23 @@ export default function PostDetail() {
                   <Pressable
                     onPress={openCommentComposer}
                     accessibilityRole="button"
-                    style={styles.commentOpenBtn}
+                    disabled={Boolean(commentDisabledReason && token)}
+                    style={[
+                      styles.commentOpenBtn,
+                      commentDisabledReason && token && styles.commentOpenBtnDisabled,
+                    ]}
                     testID="post-comment-open-btn"
                   >
                     <Text style={styles.commentOpenText}>댓글 쓰기</Text>
                   </Pressable>
                 </View>
               </View>
+
+              {commentDisabledReason ? (
+                <View style={styles.commentPolicyNotice}>
+                  <Text style={styles.commentPolicyNoticeText}>{commentDisabledReason}</Text>
+                </View>
+              ) : null}
 
               {commentComposerVisible ? (
                 <View style={styles.commentComposer}>
@@ -971,7 +1086,7 @@ export default function PostDetail() {
                     placeholderTextColor="#8d938f"
                     multiline
                     maxLength={1000}
-                    editable={Boolean(token) && !commentSubmitting}
+                    editable={Boolean(token) && canCommentOnPost && !commentSubmitting}
                     style={styles.commentInput}
                     testID="post-comment-input"
                   />
@@ -979,10 +1094,10 @@ export default function PostDetail() {
                     <Text style={styles.commentInputCount}>{commentInput.length}/1000</Text>
                     <Pressable
                       onPress={() => void submitComment()}
-                      disabled={!token || commentSubmitting || commentInput.trim().length === 0}
+                      disabled={!token || !canCommentOnPost || commentSubmitting || commentInput.trim().length === 0}
                       style={[
                         styles.commentSubmitBtn,
-                        (!token || commentSubmitting || commentInput.trim().length === 0) &&
+                        (!token || !canCommentOnPost || commentSubmitting || commentInput.trim().length === 0) &&
                           styles.commentSubmitBtnDisabled,
                       ]}
                       accessibilityRole="button"
@@ -1014,12 +1129,21 @@ export default function PostDetail() {
                   {topLevelComments.map((comment) => {
                     const replies = repliesByParentId.get(comment.id) ?? [];
                     return (
-                      <View key={comment.id} style={styles.commentThread}>
+                        <View key={comment.id} style={styles.commentThread}>
                         <View style={styles.commentItem}>
                           <View style={styles.commentMetaRow}>
-                            <Text style={styles.commentAuthor}>
-                              {comment.author?.displayName || "삭제된 댓글"}
-                            </Text>
+                            <View style={styles.commentAuthorWrap}>
+                              <View style={styles.commentMarker}>
+                                <Text style={styles.commentMarkerText}>
+                                  {comment.status === "deleted"
+                                    ? ""
+                                    : (comment.author?.displayName || "?").slice(0, 1)}
+                                </Text>
+                              </View>
+                              <Text style={styles.commentAuthor}>
+                                {comment.author?.displayName || "삭제된 댓글"}
+                              </Text>
+                            </View>
                             <Text style={styles.commentDate}>
                               {formatKstDateKorean(comment.createdAt)}
                             </Text>
@@ -1031,6 +1155,29 @@ export default function PostDetail() {
                           </Text>
                           {comment.status === "active" ? (
                             <View style={styles.commentActionRow}>
+                              <Pressable
+                                onPress={() => void onPressCommentLike(comment)}
+                                disabled={commentLikePending[comment.id]}
+                                accessibilityRole="button"
+                                accessibilityLabel={comment.likedByMe ? "댓글 공감 취소" : "댓글 공감"}
+                                accessibilityState={{ selected: comment.likedByMe }}
+                                style={styles.commentIconAction}
+                                testID={`post-comment-like-btn-${comment.id}`}
+                              >
+                                <Ionicons
+                                  name={comment.likedByMe ? "heart" : "heart-outline"}
+                                  size={16}
+                                  color={comment.likedByMe ? "#49805a" : "#6d7771"}
+                                />
+                                <Text
+                                  style={[
+                                    styles.commentActionText,
+                                    comment.likedByMe && styles.commentActionTextActive,
+                                  ]}
+                                >
+                                  {comment.likeCount}
+                                </Text>
+                              </Pressable>
                               <Pressable
                                 onPress={() => onPressReply(comment)}
                                 accessibilityRole="button"
@@ -1059,9 +1206,18 @@ export default function PostDetail() {
                             {replies.map((reply) => (
                               <View key={reply.id} style={styles.replyItem}>
                                 <View style={styles.commentMetaRow}>
-                                  <Text style={styles.commentAuthor}>
-                                    {reply.author?.displayName || "삭제된 댓글"}
-                                  </Text>
+                                  <View style={styles.commentAuthorWrap}>
+                                    <View style={[styles.commentMarker, styles.replyMarker]}>
+                                      <Text style={styles.commentMarkerText}>
+                                        {reply.status === "deleted"
+                                          ? ""
+                                          : (reply.author?.displayName || "?").slice(0, 1)}
+                                      </Text>
+                                    </View>
+                                    <Text style={styles.commentAuthor}>
+                                      {reply.author?.displayName || "삭제된 댓글"}
+                                    </Text>
+                                  </View>
                                   <Text style={styles.commentDate}>
                                     {formatKstDateKorean(reply.createdAt)}
                                   </Text>
@@ -1071,8 +1227,32 @@ export default function PostDetail() {
                                     ? "삭제된 댓글입니다."
                                     : reply.content}
                                 </Text>
-                                {canManagePost && reply.status === "active" ? (
+                                {reply.status === "active" ? (
                                   <View style={styles.commentActionRow}>
+                                    <Pressable
+                                      onPress={() => void onPressCommentLike(reply)}
+                                      disabled={commentLikePending[reply.id]}
+                                      accessibilityRole="button"
+                                      accessibilityLabel={reply.likedByMe ? "댓글 공감 취소" : "댓글 공감"}
+                                      accessibilityState={{ selected: reply.likedByMe }}
+                                      style={styles.commentIconAction}
+                                      testID={`post-comment-like-btn-${reply.id}`}
+                                    >
+                                      <Ionicons
+                                        name={reply.likedByMe ? "heart" : "heart-outline"}
+                                        size={16}
+                                        color={reply.likedByMe ? "#49805a" : "#6d7771"}
+                                      />
+                                      <Text
+                                        style={[
+                                          styles.commentActionText,
+                                          reply.likedByMe && styles.commentActionTextActive,
+                                        ]}
+                                      >
+                                        {reply.likeCount}
+                                      </Text>
+                                    </Pressable>
+                                    {canManagePost ? (
                                     <Pressable
                                       onPress={() => onPressDeleteComment(reply)}
                                       disabled={deletingCommentId === reply.id}
@@ -1083,6 +1263,7 @@ export default function PostDetail() {
                                         {deletingCommentId === reply.id ? "삭제 중" : "삭제"}
                                       </Text>
                                     </Pressable>
+                                    ) : null}
                                   </View>
                                 ) : null}
                               </View>

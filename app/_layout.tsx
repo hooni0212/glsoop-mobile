@@ -103,6 +103,7 @@ function RootLayoutContent() {
                 />
 
                 <Stack.Screen name="search" options={{ headerShown: false }} />
+                <Stack.Screen name="feed/immersive" options={{ headerShown: false }} />
                 <Stack.Screen name="profile-customize" options={{ headerShown: false }} />
                 <Stack.Screen name="ui-kit" options={{ headerShown: false }} />
               </Stack>

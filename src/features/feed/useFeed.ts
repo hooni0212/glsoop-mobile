@@ -66,6 +66,21 @@ function parseTags(row: any) {
     .filter(Boolean);
 }
 
+function parseVisibility(row: any) {
+  const value = pickFirstString(row?.visibility);
+  return value === "followers" || value === "unlisted" || value === "private" ? value : "public";
+}
+
+function parseCommentPolicy(row: any) {
+  const value = pickFirstString(row?.comment_policy, row?.commentPolicy);
+  return value === "everyone" ||
+    value === "followers" ||
+    value === "author_only" ||
+    value === "closed"
+    ? value
+    : "logged_in";
+}
+
 function normalizePost(row: any): Post {
   const id = String(row?.id ?? row?.post_id ?? "");
   const title = pickFirstString(row?.title, row?.post_title);
@@ -111,6 +126,8 @@ function normalizePost(row: any): Post {
       bookmarkCount,
     },
     tags: parseTags(row),
+    visibility: parseVisibility(row),
+    commentPolicy: parseCommentPolicy(row),
     viewer: {
       isLiked: userLiked,
       isBookmarked: userBookmarked,

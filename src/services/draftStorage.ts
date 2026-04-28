@@ -1,13 +1,15 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getAuthToken, COOKIE_SESSION_TOKEN } from "@/lib/authToken";
 import type { PostFontKey } from "@/lib/postContent";
-import type { PostType } from "@/types/post";
+import type { PostCommentPolicy, PostType, PostVisibility } from "@/types/post";
 
 export type WriteDraft = {
   id: string;
   title: string;
   body: string;
   category?: PostType;
+  visibility?: PostVisibility;
+  commentPolicy?: PostCommentPolicy;
   fontKey?: PostFontKey;
   layoutJson?: unknown;
   mode?: "create" | "edit";
@@ -56,6 +58,17 @@ function normalizeDraft(input: any): WriteDraft | null {
       ? input.category
       : undefined;
   const mode = input.mode === "edit" ? "edit" : "create";
+  const visibility =
+    input.visibility === "followers" || input.visibility === "unlisted" || input.visibility === "private"
+      ? input.visibility
+      : "public";
+  const commentPolicy =
+    input.commentPolicy === "everyone" ||
+    input.commentPolicy === "followers" ||
+    input.commentPolicy === "author_only" ||
+    input.commentPolicy === "closed"
+      ? input.commentPolicy
+      : "logged_in";
   const fontKey =
     input.fontKey === "sans" || input.fontKey === "hand" || input.fontKey === "serif"
       ? input.fontKey
@@ -78,6 +91,8 @@ function normalizeDraft(input: any): WriteDraft | null {
     title,
     body,
     category,
+    visibility,
+    commentPolicy,
     fontKey,
     layoutJson,
     mode,
@@ -167,6 +182,8 @@ export async function upsertWriteDraft(input: {
   title: string;
   body: string;
   category?: PostType;
+  visibility?: PostVisibility;
+  commentPolicy?: PostCommentPolicy;
   fontKey?: PostFontKey;
   layoutJson?: unknown;
   mode?: "create" | "edit";
@@ -180,6 +197,8 @@ export async function upsertWriteDraft(input: {
     title: input.title ?? "",
     body: input.body ?? "",
     category: input.category,
+    visibility: input.visibility ?? "public",
+    commentPolicy: input.commentPolicy ?? "logged_in",
     fontKey: input.fontKey ?? "serif",
     layoutJson: input.layoutJson ?? null,
     mode,

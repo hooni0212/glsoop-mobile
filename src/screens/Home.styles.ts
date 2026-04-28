@@ -114,3 +114,36 @@ export const feedSectionStyles = StyleSheet.create({
     height: tokens.space.md,
   },
 });
+
+export const homeDiscoveryStyles = StyleSheet.create({
+  wrap: {
+    width: "100%",
+    maxWidth: 393,
+    alignSelf: "center",
+    paddingHorizontal: 24,
+    paddingBottom: tokens.space.sm,
+    gap: tokens.space.sm,
+  },
+  immersiveBtn: {
+    minHeight: 44,
+    borderRadius: tokens.radius.md,
+    borderWidth: 1,
+    borderColor: tokens.colors.borderStrong,
+    backgroundColor: tokens.colors.surface,
+    paddingHorizontal: tokens.space.md,
+    paddingVertical: tokens.space.sm,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  immersiveTitle: {
+    fontSize: tokens.font.body,
+    fontWeight: "900",
+    color: tokens.colors.text,
+  },
+  immersiveMeta: {
+    fontSize: tokens.font.small,
+    fontWeight: "800",
+    color: tokens.colors.green700,
+  },
+});

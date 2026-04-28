@@ -46,7 +46,7 @@ import {
   clearAllWriteDrafts,
 } from "@/services/draftStorage";
 import { createPost, getEditablePost, updatePost } from "@/services/postService";
-import type { PostType } from "@/types/post";
+import type { PostCommentPolicy, PostType, PostVisibility } from "@/types/post";
 import { ConfirmState, useConfirmBeforeLeave } from "@/hooks/useConfirmBeforeLeave";
 
 import { createWriteStyles } from "./Write.styles";
@@ -73,6 +73,8 @@ export default function Write() {
   const [selectedType, setSelectedType] = useState<PostType | null>(null);
   const [hashtagsInput, setHashtagsInput] = useState("");
   const [fontKey, setFontKey] = useState<PostFontKey>("serif");
+  const [visibility, setVisibility] = useState<PostVisibility>("public");
+  const [commentPolicy, setCommentPolicy] = useState<PostCommentPolicy>("logged_in");
   const [editPostId, setEditPostId] = useState<string | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewPanel, setPreviewPanel] = useState<PreviewPanelKey>("settings");
@@ -107,6 +109,8 @@ export default function Write() {
     body.trim().length > 0 ||
     selectedType !== null ||
     fontKey !== "serif" ||
+    visibility !== "public" ||
+    commentPolicy !== "logged_in" ||
     hasLayoutChanges;
   const canSubmit =
     title.trim().length > 0 && body.trim().length > 0 && selectedType !== null;
@@ -159,6 +163,8 @@ export default function Write() {
         category: selectedType ?? undefined,
         fontKey,
         layoutJson: buildLayoutPayload(layout),
+        visibility,
+        commentPolicy,
         mode: editPostId ? "edit" : "create",
         postId: editPostId,
       });
@@ -170,7 +176,7 @@ export default function Write() {
       showToast("임시저장에 실패했어요. 잠시 후 다시 시도해주세요.", { tone: "error" });
       return false;
     }
-  }, [title, body, draftId, editPostId, selectedType, fontKey, layout, hasLayoutChanges, showToast]);
+  }, [title, body, draftId, editPostId, selectedType, fontKey, layout, visibility, commentPolicy, hasLayoutChanges, showToast]);
 
   const { confirm: leaveConfirm, requestLeave, allowNextLeave } = useConfirmBeforeLeave({
     hasChanges,
@@ -241,6 +247,8 @@ export default function Write() {
     setBody("");
     setSelectedType(null);
     setFontKey("serif");
+    setVisibility("public");
+    setCommentPolicy("logged_in");
     setLayout(DEFAULT_WRITE_LAYOUT);
   }, []);
 
@@ -355,6 +363,8 @@ export default function Write() {
           hashtags: hashtagChips,
           layoutJson: buildLayoutPayload(submissionLayout),
           fontKey,
+          visibility,
+          commentPolicy,
         });
         setCreatedPostId(editPostId);
         logger.debug("[write] update success", { postId: editPostId });
@@ -368,6 +378,8 @@ export default function Write() {
           hashtags: hashtagChips,
           layoutJson: buildLayoutPayload(submissionLayout),
           fontKey,
+          visibility,
+          commentPolicy,
         });
 
         if (draftId) {
@@ -393,6 +405,8 @@ export default function Write() {
     title,
     body,
     fontKey,
+    visibility,
+    commentPolicy,
     previewOpen,
     dismissKeyboard,
   ]);
@@ -446,6 +460,8 @@ export default function Write() {
           setSelectedType(editable.category ?? null);
           setHashtagsInput(editable.hashtags.join(", "));
           setFontKey(editable.fontKey ?? "serif");
+          setVisibility(editable.visibility ?? "public");
+          setCommentPolicy(editable.commentPolicy ?? "logged_in");
           setLayout(parseLayoutJson(editable.layoutJson));
           setActiveBoxId("text_box");
         } catch (err) {
@@ -470,6 +486,8 @@ export default function Write() {
           setSelectedType(d.category ?? null);
           setHashtagsInput("");
           setFontKey(d.fontKey ?? "serif");
+          setVisibility(d.visibility ?? "public");
+          setCommentPolicy(d.commentPolicy ?? "logged_in");
           setLayout(parseLayoutJson(d.layoutJson));
           setActiveBoxId("text_box");
         }
@@ -616,6 +634,10 @@ export default function Write() {
                       onChangeHashtagsInput={setHashtagsInput}
                       fontKey={fontKey}
                       onChangeFontKey={setFontKey}
+                      visibility={visibility}
+                      onChangeVisibility={setVisibility}
+                      commentPolicy={commentPolicy}
+                      onChangeCommentPolicy={setCommentPolicy}
                     />
                   ) : null}
                   {previewPanel === "background" ? (

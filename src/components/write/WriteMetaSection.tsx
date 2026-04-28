@@ -1,7 +1,7 @@
 import React from "react";
 import { Pressable, Text, TextInput, View } from "react-native";
 import type { PostFontKey } from "@/lib/postContent";
-import type { PostType } from "@/types/post";
+import type { PostCommentPolicy, PostType, PostVisibility } from "@/types/post";
 
 type Props = {
   styles: any;
@@ -12,9 +12,14 @@ type Props = {
   onChangeHashtagsInput: (value: string) => void;
   fontKey: PostFontKey;
   onChangeFontKey: (value: PostFontKey) => void;
+  visibility: PostVisibility;
+  onChangeVisibility: (value: PostVisibility) => void;
+  commentPolicy: PostCommentPolicy;
+  onChangeCommentPolicy: (value: PostCommentPolicy) => void;
   showCategory?: boolean;
   showFont?: boolean;
   showHashtags?: boolean;
+  showPermissions?: boolean;
 };
 
 const CATEGORY_ITEMS: { type: PostType; label: string }[] = [
@@ -29,6 +34,20 @@ const FONT_ITEMS: { key: PostFontKey; label: string }[] = [
   { key: "hand", label: "손글씨" },
 ];
 
+const VISIBILITY_ITEMS: { key: PostVisibility; label: string }[] = [
+  { key: "public", label: "전체 공개" },
+  { key: "followers", label: "팔로워" },
+  { key: "unlisted", label: "링크 공개" },
+  { key: "private", label: "나만 보기" },
+];
+
+const COMMENT_POLICY_ITEMS: { key: PostCommentPolicy; label: string }[] = [
+  { key: "logged_in", label: "로그인 사용자" },
+  { key: "followers", label: "팔로워만" },
+  { key: "author_only", label: "나만" },
+  { key: "closed", label: "댓글 닫기" },
+];
+
 export function WriteMetaSection({
   styles,
   selectedType,
@@ -38,12 +57,18 @@ export function WriteMetaSection({
   onChangeHashtagsInput,
   fontKey,
   onChangeFontKey,
+  visibility,
+  onChangeVisibility,
+  commentPolicy,
+  onChangeCommentPolicy,
   showCategory = true,
   showFont = true,
   showHashtags = true,
+  showPermissions = true,
 }: Props) {
-  const showDividerAfterCategory = showCategory && (showFont || showHashtags);
-  const showDividerAfterFont = showFont && showHashtags;
+  const showDividerAfterCategory = showCategory && (showFont || showHashtags || showPermissions);
+  const showDividerAfterFont = showFont && (showHashtags || showPermissions);
+  const showDividerAfterHashtags = showHashtags && showPermissions;
 
   return (
     <View style={styles.metaCard}>
@@ -123,6 +148,58 @@ export function WriteMetaSection({
             </View>
           ) : null}
           <Text style={styles.hint}>쉼표나 공백으로 여러 해시태그를 입력할 수 있어요.</Text>
+        </>
+      ) : null}
+
+      {showDividerAfterHashtags ? <View style={styles.metaDivider} /> : null}
+
+      {showPermissions ? (
+        <>
+          <Text style={styles.label}>공개 범위</Text>
+          <View style={styles.metaChipRow}>
+            {VISIBILITY_ITEMS.map((item) => {
+              const active = visibility === item.key;
+              return (
+                <Pressable
+                  key={item.key}
+                  onPress={() => onChangeVisibility(item.key)}
+                  style={[styles.metaChip, active && styles.metaChipActive]}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${item.label} 공개 범위 선택`}
+                  testID={`write-visibility-${item.key}`}
+                >
+                  <Text style={[styles.metaChipText, active && styles.metaChipTextActive]}>
+                    {item.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+          <Text style={styles.hint}>홈과 검색 노출은 공개 범위에 따라 달라져요.</Text>
+
+          <View style={styles.metaDivider} />
+
+          <Text style={styles.label}>댓글 작성자</Text>
+          <View style={styles.metaChipRow}>
+            {COMMENT_POLICY_ITEMS.map((item) => {
+              const active = commentPolicy === item.key;
+              return (
+                <Pressable
+                  key={item.key}
+                  onPress={() => onChangeCommentPolicy(item.key)}
+                  style={[styles.metaChip, active && styles.metaChipActive]}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${item.label} 댓글 권한 선택`}
+                  testID={`write-comment-policy-${item.key}`}
+                >
+                  <Text style={[styles.metaChipText, active && styles.metaChipTextActive]}>
+                    {item.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+          <Text style={styles.hint}>글 성격에 맞게 댓글을 열거나 제한할 수 있어요.</Text>
         </>
       ) : null}
     </View>
