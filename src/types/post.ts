@@ -1,3 +1,5 @@
+import type { NormalizedProfileCosmeticsExpanded } from "@/types/cosmetics";
+
 export type PostType = 'poem' | 'essay' | 'short';
 export type PostVisibility = 'public' | 'followers' | 'unlisted' | 'private';
 export type PostCommentPolicy = 'everyone' | 'logged_in' | 'followers' | 'author_only' | 'closed';
@@ -27,6 +29,7 @@ export type Post = {
   author: {
     id: string;
     name: string;
+    profileCosmetics?: NormalizedProfileCosmeticsExpanded;
   };
 
   stats?: {

@@ -24,6 +24,8 @@ type Props = {
   // (선택) 액션
   liked?: boolean;
   bookmarked?: boolean;
+  onAuthorPress?: () => void;
+  onCommentPress?: () => void;
   onLikePress?: () => void;
   onBookmarkPress?: () => void;
   onMorePress?: () => void;
@@ -39,6 +41,8 @@ export function FeedCard({
   moreTestID,
   liked = false,
   bookmarked = false,
+  onAuthorPress,
+  onCommentPress,
   onLikePress,
   onBookmarkPress,
   onMorePress,
@@ -52,23 +56,25 @@ export function FeedCard({
   const showRenderedImage = Boolean(primaryImage);
   const showPageBadge = showRenderedImage && pageCount > 1;
   const cardTitle = post.title || "(제목 없음)";
-  const authorInitial = author.slice(0, 1) || "?";
+  const primaryBadge = post.author?.profileCosmetics?.primary_badge;
+  const authorMarker = primaryBadge?.icon_emoji?.trim() || author.slice(0, 1) || "?";
   const canLike = Boolean(onLikePress);
   const canBookmark = Boolean(onBookmarkPress);
+  const showSocialRow = Boolean(canLike || onCommentPress || canBookmark);
 
   return (
     <View style={[styles.card, bookmarked && styles.cardSaved]} testID={testID}>
       <View style={styles.authorRow}>
         <Pressable
-          onPress={onPress}
-          disabled={!onPress}
+          onPress={onAuthorPress}
+          disabled={!onAuthorPress}
           style={({ pressed }) => [styles.authorPressArea, pressed && styles.cardPressed]}
-          accessibilityRole={onPress ? "button" : undefined}
-          accessibilityLabel={onPress ? `게시글 열기: ${cardTitle}` : undefined}
+          accessibilityRole={onAuthorPress ? "button" : undefined}
+          accessibilityLabel={onAuthorPress ? `작가 페이지 열기: ${author}` : undefined}
         >
-          <View style={styles.avatarRing}>
+          <View style={[styles.avatarRing, primaryBadge && styles.avatarRingBadge]}>
             <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{authorInitial}</Text>
+              <Text style={styles.avatarText}>{authorMarker}</Text>
             </View>
           </View>
           <View style={styles.authorTextBlock}>
@@ -138,81 +144,70 @@ export function FeedCard({
         </View>
       )}
 
-      <View style={styles.socialRow}>
-        <View style={styles.leftActions}>
-          <Pressable
-            onPress={onLikePress}
-            hitSlop={10}
-            style={({ pressed }) => [
-              styles.actionBtn,
-              pressed && !likeDisabled && canLike && styles.actionBtnPressed,
-              likeDisabled && styles.actionBtnDisabled,
-            ]}
-            disabled={likeDisabled || !canLike}
-            testID={likeTestID}
-            accessibilityRole="button"
-            accessibilityLabel={liked ? "좋아요 취소" : "좋아요"}
-            accessibilityState={{ disabled: Boolean(likeDisabled || !canLike), selected: liked }}
-          >
-            <Ionicons
-              name={liked ? "heart" : "heart-outline"}
-              size={24}
-              color={liked ? tokens.colors.green700 : tokens.colors.text}
-            />
-          </Pressable>
+      {showSocialRow ? (
+        <View style={styles.socialRow}>
+          <View style={styles.leftActions}>
+            {canLike ? (
+              <Pressable
+                onPress={onLikePress}
+                hitSlop={10}
+                style={({ pressed }) => [
+                  styles.actionBtn,
+                  pressed && !likeDisabled && styles.actionBtnPressed,
+                  likeDisabled && styles.actionBtnDisabled,
+                ]}
+                disabled={likeDisabled}
+                testID={likeTestID}
+                accessibilityRole="button"
+                accessibilityLabel={liked ? "좋아요 취소" : "좋아요"}
+                accessibilityState={{ disabled: Boolean(likeDisabled), selected: liked }}
+              >
+                <Ionicons
+                  name={liked ? "heart" : "heart-outline"}
+                  size={24}
+                  color={liked ? tokens.colors.green700 : tokens.colors.text}
+                />
+              </Pressable>
+            ) : null}
 
-          <Pressable
-            onPress={onPress}
-            disabled={!onPress}
-            hitSlop={10}
-            style={({ pressed }) => [
-              styles.iconOnlyBtn,
-              pressed && onPress && styles.actionBtnPressed,
-              !onPress && styles.actionBtnDisabled,
-            ]}
-            accessibilityRole="button"
-            accessibilityLabel="댓글 보기"
-          >
-            <Ionicons name="chatbubble-outline" size={23} color={tokens.colors.text} />
-          </Pressable>
+            {onCommentPress ? (
+              <Pressable
+                onPress={onCommentPress}
+                hitSlop={10}
+                style={({ pressed }) => [
+                  styles.iconOnlyBtn,
+                  pressed && styles.actionBtnPressed,
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel="댓글 보기"
+              >
+                <Ionicons name="chatbubble-outline" size={23} color={tokens.colors.text} />
+              </Pressable>
+            ) : null}
+          </View>
 
-          <Pressable
-            onPress={onPress}
-            disabled={!onPress}
-            hitSlop={10}
-            style={({ pressed }) => [
-              styles.iconOnlyBtn,
-              pressed && onPress && styles.actionBtnPressed,
-              !onPress && styles.actionBtnDisabled,
-            ]}
-            accessibilityRole="button"
-            accessibilityLabel="공유 화면 열기"
-          >
-            <Ionicons name="paper-plane-outline" size={23} color={tokens.colors.text} />
-          </Pressable>
+          {canBookmark ? (
+            <Pressable
+              onPress={onBookmarkPress}
+              hitSlop={10}
+              style={({ pressed }) => [
+                styles.iconOnlyBtn,
+                pressed && styles.actionBtnPressed,
+              ]}
+              testID={bookmarkTestID}
+              accessibilityRole="button"
+              accessibilityLabel={bookmarked ? "북마크 해제" : "북마크 저장"}
+              accessibilityState={{ selected: bookmarked }}
+            >
+              <Ionicons
+                name={bookmarked ? "bookmark" : "bookmark-outline"}
+                size={24}
+                color={bookmarked ? tokens.colors.green700 : tokens.colors.text}
+              />
+            </Pressable>
+          ) : null}
         </View>
-
-        <Pressable
-          onPress={onBookmarkPress}
-          hitSlop={10}
-          style={({ pressed }) => [
-            styles.iconOnlyBtn,
-            pressed && canBookmark && styles.actionBtnPressed,
-            !canBookmark && styles.actionBtnDisabled,
-          ]}
-          disabled={!canBookmark}
-          testID={bookmarkTestID}
-          accessibilityRole="button"
-          accessibilityLabel={bookmarked ? "북마크 해제" : "북마크 저장"}
-          accessibilityState={{ disabled: !canBookmark, selected: bookmarked }}
-        >
-          <Ionicons
-            name={bookmarked ? "bookmark" : "bookmark-outline"}
-            size={24}
-            color={bookmarked ? tokens.colors.green700 : tokens.colors.text}
-          />
-        </Pressable>
-      </View>
+      ) : null}
 
       <View style={styles.captionBlock}>
         <Text style={styles.likeSummary}>좋아요 {likeCount}</Text>
@@ -300,6 +295,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderWidth: 2,
     borderColor: "#f0a03a",
+  },
+  avatarRingBadge: {
+    borderColor: tokens.colors.green700,
+    backgroundColor: tokens.colors.green050,
   },
   avatar: {
     width: 34,

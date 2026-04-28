@@ -20,13 +20,10 @@ import { ApiError } from "@/lib/errors";
 import { toTimestampMs } from "@/lib/dateTime";
 import { router, usePathname } from "expo-router";
 import { useToast } from "@/feedback/ToastProvider";
-import { getLegalDocumentUrl, getSupportUrl } from "@/config/release";
 import { useRuntimeLegalConfig } from "@/hooks/useRuntimeLegalConfig";
-import { openExternalUrl } from "@/lib/externalLinks";
 import { filterBlockedPosts, useBlockedUserIds } from "@/features/safety/blockedUsersStore";
 import { type Post } from "@/types/post";
 import { blockUserById, pickSafetyReasons, reportPost } from "@/services/safetyService";
-import { resolveRuntimeLegalDocumentUrl } from "@/services/runtimeConfigService";
 import {
   addPostToBookmarkList,
   createBookmarkList,
@@ -73,12 +70,6 @@ export default function Home() {
   const userSafetyReasons = pickSafetyReasons(runtimeLegalConfig?.safety.reportReasons, "user");
   const reportDetailMaxLength = runtimeLegalConfig?.safety.detailMaxLength;
   const reportDetailRequiredReasonCodes = runtimeLegalConfig?.safety.detailRequiredReasonCodes;
-  const legalGuidelinesUrl = resolveRuntimeLegalDocumentUrl(
-    runtimeLegalConfig,
-    "guidelines",
-    getLegalDocumentUrl("guidelines")
-  );
-
   const sectionLabel = useMemo(() => {
     if (active === "인기") return "지금 인기";
     if (active === "팔로잉") return "팔로잉 피드";
@@ -110,22 +101,6 @@ export default function Home() {
     await signOut();
     promptAuthForAction("로그인 상태가 만료되었어요. 다시 로그인하면 이어서 사용할 수 있어요.");
   }, [promptAuthForAction, signOut]);
-
-  const handleOpenGuidelines = React.useCallback(() => {
-    void openExternalUrl(legalGuidelinesUrl).catch(() => {
-      showToast("커뮤니티 가이드라인을 열지 못했어요. 잠시 후 다시 시도해주세요.", {
-        tone: "error",
-      });
-    });
-  }, [legalGuidelinesUrl, showToast]);
-
-  const handleOpenSupport = React.useCallback(() => {
-    void openExternalUrl(getSupportUrl()).catch(() => {
-      showToast("지원 페이지를 열지 못했어요. 잠시 후 다시 시도해주세요.", {
-        tone: "error",
-      });
-    });
-  }, [showToast]);
 
   const closeSafetyOverlays = React.useCallback(() => {
     setSafetyMenuVisible(false);
@@ -385,6 +360,11 @@ export default function Home() {
           if (!loading && hasMore) loadMore();
         }}
         onPressItem={(id) => router.push(`/posts/${String(id)}`)}
+        onPressAuthor={(item) => {
+          const authorId = (item as Post)?.author?.id;
+          if (authorId) router.push(`/users/${authorId}`);
+        }}
+        onCommentPress={(id) => router.push(`/posts/${String(id)}`)}
         onLikePress={(id) => handleLike(String(id))}
         onBookmarkPress={(id) => handleBookmark(String(id))}
         onMorePress={(item) => openSafetyMenu(item as Post)}
@@ -413,22 +393,6 @@ export default function Home() {
               setBlockConfirmVisible(true);
             },
             testID: "home-post-block-btn",
-          },
-          {
-            label: "커뮤니티 가이드라인",
-            variant: "ghost",
-            onPress: () => {
-              setSafetyMenuVisible(false);
-              handleOpenGuidelines();
-            },
-          },
-          {
-            label: "도움말 및 지원",
-            variant: "ghost",
-            onPress: () => {
-              setSafetyMenuVisible(false);
-              handleOpenSupport();
-            },
           },
           {
             label: "닫기",

@@ -2,6 +2,7 @@ import { usePost } from "@/features/posts/usePost";
 import { useRelatedPosts } from "@/features/posts/useRelatedPosts";
 import { useBottomDock } from "@/navigation/bottomDock";
 import { createPostDetailStyles } from "@/screens/PostDetail.styles";
+import { FeedCard } from "@/components/FeedCard";
 import { PostActionBar } from "@/components/post/PostActionBar";
 import { PostBody } from "@/components/post/PostBody";
 import { PostMetaBar } from "@/components/post/PostMetaBar";
@@ -48,6 +49,7 @@ import {
   Modal,
   Platform,
   Pressable,
+  RefreshControl,
   ScrollView,
   Share,
   Text,
@@ -167,6 +169,7 @@ export default function PostDetail() {
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [commentsError, setCommentsError] = useState<string | null>(null);
   const [commentInput, setCommentInput] = useState("");
+  const [commentsExpanded, setCommentsExpanded] = useState(false);
   const [commentComposerVisible, setCommentComposerVisible] = useState(false);
   const [commentSubmitting, setCommentSubmitting] = useState(false);
   const [replyTarget, setReplyTarget] = useState<PostComment | null>(null);
@@ -196,23 +199,6 @@ export default function PostDetail() {
   const postId = post?.id ?? id ?? "";
   const canCommentOnPost = Boolean((post as any)?.viewer?.canComment);
   const commentPolicy = (post as any)?.commentPolicy || "logged_in";
-  const visibility = (post as any)?.visibility || "public";
-  const visibilityLabel =
-    visibility === "followers"
-      ? "팔로워 공개"
-      : visibility === "unlisted"
-        ? "링크 공개"
-        : visibility === "private"
-          ? "나만 보기"
-          : "전체 공개";
-  const commentPolicyLabel =
-    commentPolicy === "followers"
-      ? "댓글은 팔로워만"
-      : commentPolicy === "author_only"
-        ? "댓글은 글쓴이만"
-        : commentPolicy === "closed"
-          ? "댓글 닫힘"
-          : "댓글 가능";
   const commentDisabledReason = !token
     ? "로그인 후 댓글을 남길 수 있어요."
     : !canCommentOnPost
@@ -347,6 +333,7 @@ export default function PostDetail() {
       showToast(commentDisabledReason || "댓글을 작성할 수 없어요.", { tone: "error" });
       return;
     }
+    setCommentsExpanded(true);
     setCommentComposerVisible(true);
   }, [canCommentOnPost, commentDisabledReason, promptAuthForAction, showToast, token]);
 
@@ -930,6 +917,10 @@ export default function PostDetail() {
     setSafetyMenuVisible(true);
   }, []);
 
+  const refreshDetail = React.useCallback(async () => {
+    await refetch();
+  }, [refetch]);
+
   return (
     <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
       {/* ✅ 고정 TopBar (기존 UX 유지) */}
@@ -944,7 +935,7 @@ export default function PostDetail() {
         }}
       />
 
-      {loading ? (
+      {loading && !post ? (
         <View style={styles.center}>
           <AppLoading />
         </View>
@@ -970,9 +961,27 @@ export default function PostDetail() {
         </View>
       ) : (
         <>
-          <ScrollView contentContainerStyle={styles.scrollContent}>
-            <View style={styles.introWrap}>
-              <Text style={styles.introEyebrow}>TODAY&apos;S PAGE</Text>
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            refreshControl={
+              <RefreshControl
+                refreshing={loading && Boolean(post)}
+                onRefresh={() => void refreshDetail()}
+              />
+            }
+          >
+            <PostBody
+              postId={postId}
+              title={title}
+              content={content}
+              paragraphs={paragraphs}
+              footerText={footerText}
+              type={post.type}
+              layout={postLayout}
+              versionSeed={`${title}|${content}|${JSON.stringify((post as any)?.layoutJson ?? null)}`}
+              renderImages={post.renderImages ?? null}
+            />
+            <View style={styles.detailMetaBlock}>
               <View style={styles.metaRow}>
                 {authorId ? (
                   <Pressable
@@ -992,27 +1001,8 @@ export default function PostDetail() {
                   </>
                 ) : null}
               </View>
+              <PostMetaBar type={post.type} tags={post.tags} styles={styles} />
             </View>
-            <PostMetaBar type={post.type} tags={post.tags} styles={styles} />
-            <View style={styles.permissionRow}>
-              <View style={styles.permissionChip}>
-                <Text style={styles.permissionChipText}>{visibilityLabel}</Text>
-              </View>
-              <View style={styles.permissionChip}>
-                <Text style={styles.permissionChipText}>{commentPolicyLabel}</Text>
-              </View>
-            </View>
-            <PostBody
-              postId={postId}
-              title={title}
-              content={content}
-              paragraphs={paragraphs}
-              footerText={footerText}
-              type={post.type}
-              layout={postLayout}
-              versionSeed={`${title}|${content}|${JSON.stringify((post as any)?.layoutJson ?? null)}`}
-              renderImages={post.renderImages ?? null}
-            />
 
             <View style={styles.commentSection} testID="post-comments-section">
               <View style={styles.commentHeaderRow}>
@@ -1022,36 +1012,160 @@ export default function PostDetail() {
                 </View>
                 <View style={styles.commentHeaderActions}>
                   <Pressable
-                    onPress={() => void loadComments()}
-                    disabled={commentsLoading}
+                    onPress={() => setCommentsExpanded(true)}
                     accessibilityRole="button"
-                    testID="post-comments-refresh-btn"
+                    accessibilityLabel="댓글 열기"
+                    style={styles.commentIconBtn}
+                    testID="post-comments-toggle-btn"
                   >
-                    <Text style={styles.commentRefreshText}>
-                      {commentsLoading ? "새로고침 중" : "새로고침"}
-                    </Text>
+                    <Ionicons
+                      name="chatbubble-outline"
+                      size={18}
+                      color="#2d5a3d"
+                    />
                   </Pressable>
                   <Pressable
                     onPress={openCommentComposer}
                     accessibilityRole="button"
-                    disabled={Boolean(commentDisabledReason && token)}
+                    accessibilityLabel="댓글 작성"
+                    disabled={Boolean(commentDisabledReason)}
                     style={[
-                      styles.commentOpenBtn,
-                      commentDisabledReason && token && styles.commentOpenBtnDisabled,
+                      styles.commentIconBtn,
+                      commentDisabledReason && styles.commentOpenBtnDisabled,
                     ]}
                     testID="post-comment-open-btn"
                   >
-                    <Text style={styles.commentOpenText}>댓글 쓰기</Text>
+                    <Ionicons name="create-outline" size={19} color="#2d5a3d" />
                   </Pressable>
                 </View>
               </View>
 
-              {commentDisabledReason ? (
-                <View style={styles.commentPolicyNotice}>
-                  <Text style={styles.commentPolicyNoticeText}>{commentDisabledReason}</Text>
-                </View>
-              ) : null}
+            </View>
 
+            {canManagePost ? (
+              <View style={styles.relatedSection}>
+                <Text style={styles.relatedTitle}>내 글 관리</Text>
+                <View style={styles.manageActionRow}>
+                  <Pressable onPress={onPressEdit} style={styles.manageEditBtn}>
+                    <Text style={styles.manageEditBtnText}>수정하기</Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={onPressDelete}
+                    style={styles.manageDeleteBtn}
+                    disabled={manageBusy}
+                    testID="post-manage-delete-btn"
+                  >
+                    <Text style={styles.manageDeleteBtnText}>
+                      {manageBusy ? "삭제 중..." : "삭제하기"}
+                    </Text>
+                  </Pressable>
+                </View>
+              </View>
+            ) : null}
+
+            <View style={styles.relatedSection}>
+              <Text style={styles.relatedTitle}>관련 글</Text>
+              {relatedLoading ? (
+                <Text style={styles.relatedHint}>불러오는 중...</Text>
+              ) : relatedError ? (
+                <Text style={styles.relatedHint}>
+                  관련 글을 불러오지 못했어요. 잠시 후 다시 시도해주세요.
+                </Text>
+              ) : relatedPosts.length === 0 ? (
+                <Text style={styles.relatedHint}>아직 함께 읽을 관련 글이 없어요.</Text>
+              ) : (
+                <View style={styles.relatedList}>
+                  {relatedPosts.map((item) => (
+                    <FeedCard
+                      key={item.id}
+                      post={item}
+                      onPress={() => router.push(`/posts/${item.id}`)}
+                      onAuthorPress={
+                        item.author?.id ? () => router.push(`/users/${item.author.id}`) : undefined
+                      }
+                      onCommentPress={() => router.push(`/posts/${item.id}`)}
+                    />
+                  ))}
+                </View>
+              )}
+            </View>
+          </ScrollView>
+
+          <PostActionBar
+            likeCount={likeCount}
+            isLiked={isLiked}
+            isBookmarked={isBookmarked}
+            onPressLike={onPressLike}
+            onPressBookmark={() => void openBookmarkModal()}
+            onPressShare={() => void onPressShare()}
+            likeDisabled={likePending}
+            likeTestID="post-like-btn"
+            bookmarkTestID="post-bookmark-btn"
+            shareTestID="post-share-btn"
+            height={dock.action.height}
+            paddingBottom={dock.action.paddingBottom}
+            styles={styles}
+          />
+        </>
+      )}
+
+      <Modal
+        visible={commentsExpanded}
+        transparent
+        animationType="slide"
+        onRequestClose={() => {
+          setCommentsExpanded(false);
+          setCommentComposerVisible(false);
+          setReplyTarget(null);
+        }}
+      >
+        <View style={styles.commentSheetOverlay}>
+          <View style={styles.commentSheet}>
+            <View style={styles.commentSheetHandle} />
+            <View style={styles.commentHeaderRow}>
+              <View>
+                <Text style={styles.commentKicker}>COMMENTS</Text>
+                <Text style={styles.commentTitle}>댓글 {commentCount}</Text>
+              </View>
+              <View style={styles.commentHeaderActions}>
+                <Pressable
+                  onPress={openCommentComposer}
+                  accessibilityRole="button"
+                  accessibilityLabel="댓글 작성"
+                  disabled={Boolean(commentDisabledReason)}
+                  style={[
+                    styles.commentIconBtn,
+                    commentDisabledReason && styles.commentOpenBtnDisabled,
+                  ]}
+                  testID="post-comment-open-btn-sheet"
+                >
+                  <Ionicons name="create-outline" size={19} color="#2d5a3d" />
+                </Pressable>
+                <Pressable
+                  onPress={() => {
+                    setCommentsExpanded(false);
+                    setCommentComposerVisible(false);
+                    setReplyTarget(null);
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel="댓글 닫기"
+                  style={styles.commentIconBtn}
+                  testID="post-comments-close-btn"
+                >
+                  <Ionicons name="close" size={19} color="#2d5a3d" />
+                </Pressable>
+              </View>
+            </View>
+
+            <ScrollView
+              contentContainerStyle={styles.commentSheetContent}
+              refreshControl={
+                <RefreshControl
+                  refreshing={commentsLoading}
+                  onRefresh={() => void loadComments()}
+                />
+              }
+            >
               {commentComposerVisible ? (
                 <View style={styles.commentComposer}>
                   {replyTarget ? (
@@ -1111,25 +1225,25 @@ export default function PostDetail() {
                 </View>
               ) : null}
 
-              {commentsLoading && comments.length === 0 ? (
+              {commentsExpanded && commentsLoading && comments.length === 0 ? (
                 <View style={styles.commentLoadingRow}>
                   <ActivityIndicator color="#2d5a3d" />
                   <Text style={styles.commentHint}>댓글을 불러오는 중...</Text>
                 </View>
-              ) : commentsError ? (
+              ) : commentsExpanded && commentsError ? (
                 <View style={styles.commentEmptyBox}>
                   <Text style={styles.commentHint}>{commentsError}</Text>
                 </View>
-              ) : topLevelComments.length === 0 ? (
+              ) : commentsExpanded && topLevelComments.length === 0 ? (
                 <View style={styles.commentEmptyBox}>
                   <Text style={styles.commentHint}>아직 댓글이 없어요.</Text>
                 </View>
-              ) : (
+              ) : commentsExpanded ? (
                 <View style={styles.commentList}>
                   {topLevelComments.map((comment) => {
                     const replies = repliesByParentId.get(comment.id) ?? [];
                     return (
-                        <View key={comment.id} style={styles.commentThread}>
+                      <View key={comment.id} style={styles.commentThread}>
                         <View style={styles.commentItem}>
                           <View style={styles.commentMetaRow}>
                             <View style={styles.commentAuthorWrap}>
@@ -1253,16 +1367,16 @@ export default function PostDetail() {
                                       </Text>
                                     </Pressable>
                                     {canManagePost ? (
-                                    <Pressable
-                                      onPress={() => onPressDeleteComment(reply)}
-                                      disabled={deletingCommentId === reply.id}
-                                      accessibilityRole="button"
-                                      testID={`post-comment-delete-btn-${reply.id}`}
-                                    >
-                                      <Text style={styles.commentDangerText}>
-                                        {deletingCommentId === reply.id ? "삭제 중" : "삭제"}
-                                      </Text>
-                                    </Pressable>
+                                      <Pressable
+                                        onPress={() => onPressDeleteComment(reply)}
+                                        disabled={deletingCommentId === reply.id}
+                                        accessibilityRole="button"
+                                        testID={`post-comment-delete-btn-${reply.id}`}
+                                      >
+                                        <Text style={styles.commentDangerText}>
+                                          {deletingCommentId === reply.id ? "삭제 중" : "삭제"}
+                                        </Text>
+                                      </Pressable>
                                     ) : null}
                                   </View>
                                 ) : null}
@@ -1274,81 +1388,11 @@ export default function PostDetail() {
                     );
                   })}
                 </View>
-              )}
-            </View>
-
-            {canManagePost ? (
-              <View style={styles.relatedSection}>
-                <Text style={styles.relatedTitle}>내 글 관리</Text>
-                <View style={styles.manageActionRow}>
-                  <Pressable onPress={onPressEdit} style={styles.manageEditBtn}>
-                    <Text style={styles.manageEditBtnText}>수정하기</Text>
-                  </Pressable>
-                  <Pressable
-                    onPress={onPressDelete}
-                    style={styles.manageDeleteBtn}
-                    disabled={manageBusy}
-                    testID="post-manage-delete-btn"
-                  >
-                    <Text style={styles.manageDeleteBtnText}>
-                      {manageBusy ? "삭제 중..." : "삭제하기"}
-                    </Text>
-                  </Pressable>
-                </View>
-              </View>
-            ) : null}
-
-            <View style={styles.relatedSection}>
-              <Text style={styles.relatedTitle}>관련 글</Text>
-              {relatedLoading ? (
-                <Text style={styles.relatedHint}>불러오는 중...</Text>
-              ) : relatedError ? (
-                <Text style={styles.relatedHint}>
-                  관련 글을 불러오지 못했어요. 잠시 후 다시 시도해주세요.
-                </Text>
-              ) : relatedPosts.length === 0 ? (
-                <Text style={styles.relatedHint}>아직 함께 읽을 관련 글이 없어요.</Text>
-              ) : (
-                <View style={styles.relatedList}>
-                  {relatedPosts.map((item) => (
-                    <Pressable
-                      key={item.id}
-                      onPress={() => router.push(`/posts/${item.id}`)}
-                      style={styles.relatedCard}
-                    >
-                      <Text style={styles.relatedCardTitle}>
-                        {item.title || "제목 없는 글"}
-                      </Text>
-                      {item.excerpt ? (
-                        <Text style={styles.relatedCardExcerpt}>{item.excerpt}</Text>
-                      ) : null}
-                      <Text style={styles.relatedCardMeta}>
-                        {item.author?.name || "익명"} · 좋아요 {item.stats?.likeCount ?? 0}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </View>
-              )}
-            </View>
-          </ScrollView>
-
-          <PostActionBar
-            likeCount={likeCount}
-            isLiked={isLiked}
-            isBookmarked={isBookmarked}
-            onPressLike={onPressLike}
-            onPressBookmark={() => void openBookmarkModal()}
-            onPressShare={() => void onPressShare()}
-            likeDisabled={likePending}
-            likeTestID="post-like-btn"
-            bookmarkTestID="post-bookmark-btn"
-            shareTestID="post-share-btn"
-            height={dock.action.height}
-            paddingBottom={dock.action.paddingBottom}
-            styles={styles}
-          />
-        </>
-      )}
+              ) : null}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
 
       <Modal visible={bookmarkModalVisible} transparent animationType="fade">
         <View style={styles.bookmarkModalOverlay}>

@@ -53,11 +53,17 @@ export function createPostDetailStyles(actionBarHeight: number) {
     // --- Scroll ---
     scrollContent: {
       width: "100%",
-      maxWidth: 820,
+      maxWidth: 393,
       alignSelf: "center",
-      paddingHorizontal: tokens.space.xl,
+      paddingHorizontal: 8,
       paddingTop: tokens.space.sm,
       paddingBottom: contentBottomPad,
+    },
+    detailMetaBlock: {
+      marginTop: tokens.space.sm,
+      marginBottom: tokens.space.lg,
+      paddingHorizontal: tokens.space.sm,
+      gap: tokens.space.sm as any,
     },
     introWrap: {
       marginTop: 2,
@@ -175,7 +181,7 @@ export function createPostDetailStyles(actionBarHeight: number) {
       fontWeight: "700",
     },
     relatedList: {
-      gap: tokens.space.sm as any,
+      gap: 18,
     },
     relatedCard: {
       borderWidth: 1,
@@ -232,8 +238,48 @@ export function createPostDetailStyles(actionBarHeight: number) {
     commentHeaderActions: {
       flexDirection: "row",
       alignItems: "center",
-      gap: tokens.space.sm as any,
+      gap: 8,
       flexShrink: 0,
+    },
+    commentIconBtn: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: tokens.colors.green050,
+      borderWidth: 1,
+      borderColor: tokens.colors.border,
+    },
+    commentSheetOverlay: {
+      flex: 1,
+      justifyContent: "flex-end",
+      backgroundColor: tokens.colors.overlay,
+    },
+    commentSheet: {
+      width: "100%",
+      maxHeight: "82%",
+      backgroundColor: tokens.colors.surface,
+      borderTopLeftRadius: tokens.radius.xl,
+      borderTopRightRadius: tokens.radius.xl,
+      borderWidth: 1,
+      borderColor: tokens.colors.border,
+      paddingHorizontal: tokens.space.lg,
+      paddingTop: tokens.space.sm,
+      paddingBottom: tokens.space.lg,
+    },
+    commentSheetHandle: {
+      width: 42,
+      height: 5,
+      borderRadius: tokens.radius.pill,
+      backgroundColor: tokens.colors.borderStrong,
+      alignSelf: "center",
+      marginBottom: tokens.space.md,
+    },
+    commentSheetContent: {
+      paddingTop: tokens.space.md,
+      paddingBottom: tokens.space.xl,
+      gap: tokens.space.md as any,
     },
     commentTitle: {
       fontSize: 16,

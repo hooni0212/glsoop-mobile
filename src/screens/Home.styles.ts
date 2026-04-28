@@ -33,13 +33,14 @@ export const homeHeaderStyles = StyleSheet.create({
     gap: 14,
   },
   brand: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: "900",
     letterSpacing: 0,
     color: tokens.colors.text,
+    flexShrink: 0,
   },
   searchPill: {
-    flex: 1,
+    width: 158,
     minHeight: 42,
     borderRadius: tokens.radius.pill,
     backgroundColor: tokens.colors.bgMuted,

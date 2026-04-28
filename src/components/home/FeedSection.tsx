@@ -26,6 +26,8 @@ type Props<Item extends { id: string | number }> = {
   onRefresh: () => void;
   onEndReached: () => void;
   onPressItem: (id: Item["id"]) => void;
+  onPressAuthor?: (item: Item) => void;
+  onCommentPress?: (id: Item["id"]) => void;
   onLikePress?: (id: Item["id"]) => void;
   onBookmarkPress?: (id: Item["id"]) => void;
   onMorePress?: (item: Item) => void;
@@ -42,6 +44,8 @@ export function FeedSection<Item extends { id: string | number }>({
   onRefresh,
   onEndReached,
   onPressItem,
+  onPressAuthor,
+  onCommentPress,
   onLikePress,
   onBookmarkPress,
   onMorePress,
@@ -91,6 +95,8 @@ export function FeedSection<Item extends { id: string | number }>({
         <FeedSectionItem
           item={item}
           onPressItem={onPressItem}
+          onPressAuthor={onPressAuthor}
+          onCommentPress={onCommentPress}
           onLikePress={onLikePress}
           onBookmarkPress={onBookmarkPress}
           onMorePress={onMorePress}
@@ -104,6 +110,8 @@ export function FeedSection<Item extends { id: string | number }>({
 function FeedSectionItem<Item extends { id: string | number }>({
   item,
   onPressItem,
+  onPressAuthor,
+  onCommentPress,
   onLikePress,
   onBookmarkPress,
   onMorePress,
@@ -111,6 +119,8 @@ function FeedSectionItem<Item extends { id: string | number }>({
 }: {
   item: Item;
   onPressItem: (id: Item["id"]) => void;
+  onPressAuthor?: (item: Item) => void;
+  onCommentPress?: (id: Item["id"]) => void;
   onLikePress?: (id: Item["id"]) => void;
   onBookmarkPress?: (id: Item["id"]) => void;
   onMorePress?: (item: Item) => void;
@@ -132,6 +142,8 @@ function FeedSectionItem<Item extends { id: string | number }>({
       liked={liked}
       bookmarked={bookmarked}
       onPress={() => onPressItem(item.id)}
+      onAuthorPress={onPressAuthor ? () => onPressAuthor(item) : undefined}
+      onCommentPress={onCommentPress ? () => onCommentPress(item.id) : undefined}
       onLikePress={() => onLikePress?.(item.id)}
       onBookmarkPress={() => onBookmarkPress?.(item.id)}
       onMorePress={onMorePress ? () => onMorePress(item) : undefined}
