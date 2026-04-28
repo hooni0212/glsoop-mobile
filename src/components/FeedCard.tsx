@@ -1,5 +1,4 @@
 import { tokens } from "@/theme/tokens";
-import { softCardShadowStyle } from "@/theme/shadows";
 import { resolvePostRenderImages } from "@/lib/postRenderImages";
 import type { Post } from "@/types/post";
 import { formatRelativeKorean } from "@/lib/dateTime";
@@ -53,30 +52,35 @@ export function FeedCard({
   const showRenderedImage = Boolean(primaryImage);
   const showPageBadge = showRenderedImage && pageCount > 1;
   const cardTitle = post.title || "(제목 없음)";
+  const authorInitial = author.slice(0, 1) || "?";
   const canLike = Boolean(onLikePress);
   const canBookmark = Boolean(onBookmarkPress);
 
   return (
     <View style={[styles.card, bookmarked && styles.cardSaved]} testID={testID}>
-      <View style={styles.titleRow}>
-        {onPress ? (
-          <Pressable
-            onPress={onPress}
-            style={({ pressed }) => [styles.openTitleArea, pressed && styles.cardPressed]}
-            accessibilityRole="button"
-            accessibilityLabel={`게시글 열기: ${cardTitle}`}
-          >
-            <Text style={styles.title} numberOfLines={2}>
-              {cardTitle}
+      <View style={styles.authorRow}>
+        <Pressable
+          onPress={onPress}
+          disabled={!onPress}
+          style={({ pressed }) => [styles.authorPressArea, pressed && styles.cardPressed]}
+          accessibilityRole={onPress ? "button" : undefined}
+          accessibilityLabel={onPress ? `게시글 열기: ${cardTitle}` : undefined}
+        >
+          <View style={styles.avatarRing}>
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>{authorInitial}</Text>
+            </View>
+          </View>
+          <View style={styles.authorTextBlock}>
+            <Text style={styles.authorName} numberOfLines={1}>
+              {author}
             </Text>
-          </Pressable>
-        ) : (
-          <View style={styles.openTitleArea}>
-            <Text style={styles.title} numberOfLines={2}>
-              {cardTitle}
+            <Text style={styles.postMeta} numberOfLines={1}>
+              {timeLabel}
             </Text>
           </View>
-        )}
+        </Pressable>
+
         {onMorePress ? (
           <Pressable
             onPress={onMorePress}
@@ -134,19 +138,8 @@ export function FeedCard({
         </View>
       )}
 
-      {/* 하단 메타 + 액션 */}
-      <View style={styles.bottomRow}>
-        <View style={styles.metaRow}>
-          <Text style={styles.metaText} numberOfLines={1}>
-            {author}
-          </Text>
-          <Text style={styles.metaDot}>·</Text>
-          <Text style={styles.metaText} numberOfLines={1}>
-            {timeLabel}
-          </Text>
-        </View>
-
-        <View style={styles.actionsRow}>
+      <View style={styles.socialRow}>
+        <View style={styles.leftActions}>
           <Pressable
             onPress={onLikePress}
             hitSlop={10}
@@ -163,50 +156,82 @@ export function FeedCard({
           >
             <Ionicons
               name={liked ? "heart" : "heart-outline"}
-              size={18}
-              color={liked ? tokens.colors.green700 : tokens.colors.textMuted}
+              size={24}
+              color={liked ? tokens.colors.green700 : tokens.colors.text}
             />
-            <Text
-              style={[
-                styles.actionText,
-                liked && { color: tokens.colors.green700 },
-              ]}
-            >
-              {likeCount}
-            </Text>
           </Pressable>
 
           <Pressable
-            onPress={onBookmarkPress}
+            onPress={onPress}
+            disabled={!onPress}
             hitSlop={10}
             style={({ pressed }) => [
-              styles.actionBtn,
-              styles.bookmarkBtn,
-              pressed && canBookmark && styles.actionBtnPressed,
-              !canBookmark && styles.actionBtnDisabled,
+              styles.iconOnlyBtn,
+              pressed && onPress && styles.actionBtnPressed,
+              !onPress && styles.actionBtnDisabled,
             ]}
-            disabled={!canBookmark}
-            testID={bookmarkTestID}
             accessibilityRole="button"
-            accessibilityLabel={bookmarked ? "북마크 해제" : "북마크 저장"}
-            accessibilityState={{ disabled: !canBookmark, selected: bookmarked }}
+            accessibilityLabel="댓글 보기"
           >
-            <Ionicons
-              name={bookmarked ? "bookmark" : "bookmark-outline"}
-              size={18}
-              color={bookmarked ? tokens.colors.green700 : tokens.colors.textMuted}
-            />
-            <Text
-              style={[
-                styles.actionText,
-                bookmarked && { color: tokens.colors.green700 },
-              ]}
-            >
-              {bookmarked ? "저장됨" : "저장"}
-            </Text>
+            <Ionicons name="chatbubble-outline" size={23} color={tokens.colors.text} />
+          </Pressable>
+
+          <Pressable
+            onPress={onPress}
+            disabled={!onPress}
+            hitSlop={10}
+            style={({ pressed }) => [
+              styles.iconOnlyBtn,
+              pressed && onPress && styles.actionBtnPressed,
+              !onPress && styles.actionBtnDisabled,
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="공유 화면 열기"
+          >
+            <Ionicons name="paper-plane-outline" size={23} color={tokens.colors.text} />
           </Pressable>
         </View>
+
+        <Pressable
+          onPress={onBookmarkPress}
+          hitSlop={10}
+          style={({ pressed }) => [
+            styles.iconOnlyBtn,
+            pressed && canBookmark && styles.actionBtnPressed,
+            !canBookmark && styles.actionBtnDisabled,
+          ]}
+          disabled={!canBookmark}
+          testID={bookmarkTestID}
+          accessibilityRole="button"
+          accessibilityLabel={bookmarked ? "북마크 해제" : "북마크 저장"}
+          accessibilityState={{ disabled: !canBookmark, selected: bookmarked }}
+        >
+          <Ionicons
+            name={bookmarked ? "bookmark" : "bookmark-outline"}
+            size={24}
+            color={bookmarked ? tokens.colors.green700 : tokens.colors.text}
+          />
+        </Pressable>
       </View>
+
+      <View style={styles.captionBlock}>
+        <Text style={styles.likeSummary}>좋아요 {likeCount}</Text>
+        <Pressable
+          onPress={onPress}
+          disabled={!onPress}
+          style={({ pressed }) => [styles.captionPressArea, pressed && styles.cardPressed]}
+          accessibilityRole={onPress ? "button" : undefined}
+          accessibilityLabel={onPress ? `게시글 열기: ${cardTitle}` : undefined}
+        >
+          <Text style={styles.captionText} numberOfLines={2}>
+            <Text style={styles.captionAuthor}>{author}</Text>
+            {" "}
+            {cardTitle}
+            {post.excerpt ? ` ${post.excerpt}` : ""}
+          </Text>
+        </Pressable>
+      </View>
+
     </View>
   );
 }
@@ -230,7 +255,7 @@ function RenderedImage({
       <Image
         source={{ uri: primaryImage }}
         style={styles.renderedImage}
-        contentFit="cover"
+        contentFit="contain"
         transition={120}
       />
     </View>
@@ -240,57 +265,86 @@ function RenderedImage({
 const styles = StyleSheet.create({
   card: {
     width: "100%",
-    maxWidth: 357,
+    maxWidth: 393,
     alignSelf: "center",
     backgroundColor: tokens.colors.surface,
-    borderRadius: tokens.radius.xl,
-    paddingVertical: 22,
-    paddingHorizontal: 20,
-    borderWidth: 1,
-    borderColor: tokens.colors.border,
-
-    ...softCardShadowStyle,
+    borderRadius: 28,
+    paddingBottom: 14,
+    overflow: "hidden",
   },
   cardSaved: {
-    borderColor: tokens.colors.border,
+    backgroundColor: tokens.colors.surface,
   },
   cardPressed: {
-    backgroundColor: tokens.colors.green100,
-    opacity: 0.96,
+    opacity: 0.78,
   },
-  openTitleArea: {
+  authorRow: {
+    minHeight: 62,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 14,
+    gap: 10,
+  },
+  authorPressArea: {
     flex: 1,
+    minWidth: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  avatarRing: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "#f0a03a",
+  },
+  avatar: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: tokens.colors.green100,
+  },
+  avatarText: {
+    fontSize: 13,
+    fontWeight: "900",
+    color: tokens.colors.green900,
+  },
+  authorTextBlock: {
+    flex: 1,
+    minWidth: 0,
+  },
+  authorName: {
+    fontSize: 14,
+    fontWeight: "900",
+    color: tokens.colors.text,
+  },
+  postMeta: {
+    marginTop: 2,
+    fontSize: 12,
+    fontWeight: "700",
+    color: tokens.colors.textMuted,
   },
   openContentArea: {
     width: "100%",
   },
-  titleRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 10,
-  },
-
-  title: {
-    flex: 1,
-    fontSize: 22,
-    fontWeight: "900",
-    letterSpacing: 0,
-    lineHeight: 30,
-    color: tokens.colors.text,
-    marginBottom: 4,
-  },
   renderedImageWrap: {
     position: "relative",
-    marginTop: 4,
-    marginBottom: 14,
-    borderRadius: 20,
+    marginHorizontal: 0,
+    borderRadius: 10,
     overflow: "hidden",
-    backgroundColor: tokens.colors.bgMuted,
+    backgroundColor: "#f7f3ea",
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
   },
   renderedImage: {
     width: "100%",
-    aspectRatio: 317 / 134,
-    backgroundColor: tokens.colors.bgMuted,
+    aspectRatio: 500 / 666,
+    backgroundColor: "#f7f3ea",
   },
   renderedPageBadge: {
     position: "absolute",
@@ -310,14 +364,10 @@ const styles = StyleSheet.create({
   moreBtn: {
     width: 34,
     height: 34,
-    marginTop: -4,
-    marginRight: -4,
     borderRadius: tokens.radius.pill,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: tokens.colors.surfaceStrong,
-    borderWidth: 1,
-    borderColor: tokens.colors.border,
+    backgroundColor: "transparent",
   },
   moreBtnPressed: { opacity: 0.78 },
 
@@ -325,51 +375,37 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 22,
     color: tokens.colors.textMuted,
-    marginTop: 8,
-    marginBottom: 16,
+    paddingHorizontal: 18,
+    paddingVertical: 18,
     fontWeight: "600",
   },
 
-  bottomRow: {
+  socialRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    minHeight: 44,
+    paddingHorizontal: 14,
+    paddingTop: 8,
+  },
+
+  leftActions: {
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
   },
-
-  metaRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    flexShrink: 1,
-    gap: 8,
-  },
-
-  metaText: {
-    fontSize: 12,
-    color: tokens.colors.textMuted,
-    fontWeight: "800",
-  },
-
-  metaDot: {
-    fontSize: 12,
-    color: tokens.colors.textFaint,
-    fontWeight: "900",
-  },
-
-  actionsRow: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  bookmarkBtn: {
-    marginLeft: 6,
-  },
-
   actionBtn: {
-    flexDirection: "row",
+    width: 28,
+    height: 32,
     alignItems: "center",
-    gap: 5,
-    minHeight: 32,
-    paddingHorizontal: 4,
+    justifyContent: "center",
+    borderRadius: tokens.radius.pill,
+  },
+  iconOnlyBtn: {
+    width: 28,
+    height: 32,
+    alignItems: "center",
+    justifyContent: "center",
     borderRadius: tokens.radius.pill,
   },
   actionBtnPressed: {
@@ -379,9 +415,26 @@ const styles = StyleSheet.create({
     opacity: 0.45,
   },
 
-  actionText: {
-    fontSize: 12,
-    color: tokens.colors.textMuted,
+  captionBlock: {
+    paddingHorizontal: 14,
+    gap: 5,
+  },
+  likeSummary: {
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: "900",
+    color: tokens.colors.text,
+  },
+  captionPressArea: {
+    borderRadius: 8,
+  },
+  captionText: {
+    fontSize: 13,
+    lineHeight: 19,
+    fontWeight: "700",
+    color: tokens.colors.text,
+  },
+  captionAuthor: {
     fontWeight: "900",
   },
 });

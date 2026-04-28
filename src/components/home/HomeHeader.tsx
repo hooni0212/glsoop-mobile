@@ -17,15 +17,19 @@ export function HomeHeader({ onPressSearch }: Props) {
       <Pressable
         onPress={onPressSearch}
         hitSlop={12}
-        style={homeHeaderStyles.iconBtn}
+        style={({ pressed }) => [
+          homeHeaderStyles.searchPill,
+          pressed && homeHeaderStyles.searchPillPressed,
+        ]}
         accessibilityRole="button"
         accessibilityLabel="검색"
       >
         <Ionicons
           name="search-outline"
-          size={22}
+          size={18}
           color={tokens.colors.textMuted}
         />
+        <Text style={homeHeaderStyles.searchText}>검색</Text>
       </Pressable>
     </View>
   );

@@ -2,6 +2,7 @@ import { usePost } from "@/features/posts/usePost";
 import { useRelatedPosts } from "@/features/posts/useRelatedPosts";
 import { useBottomDock } from "@/navigation/bottomDock";
 import { createPostDetailStyles } from "@/screens/PostDetail.styles";
+import { PostActionBar } from "@/components/post/PostActionBar";
 import { PostBody } from "@/components/post/PostBody";
 import { PostMetaBar } from "@/components/post/PostMetaBar";
 import { SafetyActionSheet } from "@/components/safety/SafetyActionSheet";
@@ -55,7 +56,6 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { tokens } from "@/theme/tokens";
 import {
   addPostToBookmarkList,
   BookmarkList,
@@ -125,78 +125,9 @@ function buildShareText({
   return `${title}\n${permalink}`;
 }
 
-function formatCompactCount(value: number) {
-  if (!Number.isFinite(value) || value <= 0) return "0";
-  if (value >= 10000) {
-    const next = value / 10000;
-    return `${next >= 10 ? Math.floor(next) : next.toFixed(1).replace(/\.0$/, "")}만`;
-  }
-  if (value >= 1000) {
-    const next = value / 1000;
-    return `${next >= 10 ? Math.floor(next) : next.toFixed(1).replace(/\.0$/, "")}천`;
-  }
-  return String(value);
-}
-
 function createShareFileName(postId: string) {
   const safePostId = postId.replace(/[^a-zA-Z0-9_-]/g, "-") || "card";
   return `glsoop_post_${safePostId}_${Date.now()}.png`;
-}
-
-type IoniconName = React.ComponentProps<typeof Ionicons>["name"];
-
-function ShortsActionButton({
-  iconName,
-  label,
-  active,
-  disabled,
-  onPress,
-  testID,
-  accessibilityLabel,
-  styles,
-}: {
-  iconName: IoniconName;
-  label: string;
-  active?: boolean;
-  disabled?: boolean;
-  onPress: () => void;
-  testID?: string;
-  accessibilityLabel: string;
-  styles: any;
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      disabled={disabled}
-      style={({ pressed }) => [
-        styles.shortsAction,
-        pressed && !disabled && styles.shortsActionPressed,
-        disabled && styles.shortsActionDisabled,
-      ]}
-      hitSlop={8}
-      accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel}
-      accessibilityState={{ disabled: Boolean(disabled), selected: Boolean(active) }}
-      testID={testID}
-    >
-      <View style={[styles.shortsActionIcon, active && styles.shortsActionIconActive]}>
-        <Ionicons
-          name={iconName}
-          size={22}
-          color={active ? tokens.colors.textInverse : tokens.colors.textInverseMuted}
-        />
-      </View>
-      <Text
-        style={[
-          styles.shortsActionLabel,
-          active && styles.shortsActionLabelActive,
-        ]}
-        numberOfLines={1}
-      >
-        {label}
-      </Text>
-    </Pressable>
-  );
 }
 
 export default function PostDetail() {
@@ -208,8 +139,6 @@ export default function PostDetail() {
   const params = useLocalSearchParams<{ id: string }>();
   const pathname = usePathname();
   const id = params?.id ? String(params.id) : undefined;
-  const scrollRef = React.useRef<ScrollView | null>(null);
-  const commentSectionYRef = React.useRef(0);
 
   const { post, loading, error, refetch, mutatePost } = usePost(id);
   const {
@@ -1001,19 +930,18 @@ export default function PostDetail() {
     setSafetyMenuVisible(true);
   }, []);
 
-  const scrollToComments = React.useCallback(() => {
-    scrollRef.current?.scrollTo({
-      y: Math.max(0, commentSectionYRef.current - 14),
-      animated: true,
-    });
-  }, []);
-
   return (
     <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
+      {/* ✅ 고정 TopBar (기존 UX 유지) */}
       <PostTopBar
         onPressBack={onPressBack}
         styles={styles}
-        iconColor={tokens.colors.textInverse}
+        rightAction={{
+          onPress: onPressSafetyMenu,
+          iconName: "ellipsis-vertical",
+          testID: "post-safety-menu-btn",
+          accessibilityLabel: "더보기 메뉴",
+        }}
       />
 
       {loading ? (
@@ -1042,67 +970,51 @@ export default function PostDetail() {
         </View>
       ) : (
         <>
-          <View style={styles.shortsReader}>
-            <ScrollView
-              ref={scrollRef}
-              contentContainerStyle={styles.scrollContent}
-              showsVerticalScrollIndicator={false}
-            >
-              <View style={styles.readerStage}>
-                <PostBody
-                  postId={postId}
-                  title={title}
-                  content={content}
-                  paragraphs={paragraphs}
-                  footerText={footerText}
-                  type={post.type}
-                  layout={postLayout}
-                  versionSeed={`${title}|${content}|${JSON.stringify((post as any)?.layoutJson ?? null)}`}
-                  renderImages={post.renderImages ?? null}
-                />
-
-                <View style={styles.shortsCaption}>
-                  <View style={styles.metaRow}>
-                    {authorId ? (
-                      <Pressable
-                        onPress={() => router.push(`/users/${authorId}`)}
-                        accessibilityRole="button"
-                        testID="post-author-btn"
-                      >
-                        <Text style={styles.metaAuthor}>{authorName}</Text>
-                      </Pressable>
-                    ) : (
-                      <Text style={styles.metaAuthor}>{authorName}</Text>
-                    )}
-                    {dateText ? (
-                      <>
-                        <Text style={styles.metaDot}>·</Text>
-                        <Text style={styles.metaDate}>{dateText}</Text>
-                      </>
-                    ) : null}
-                  </View>
-                  <Text style={styles.shortsCaptionTitle} numberOfLines={2}>
-                    {title || "제목 없는 글"}
-                  </Text>
-                  <PostMetaBar type={post.type} tags={post.tags} styles={styles} />
-                  <View style={styles.permissionRow}>
-                    <View style={styles.permissionChip}>
-                      <Text style={styles.permissionChipText}>{visibilityLabel}</Text>
-                    </View>
-                    <View style={styles.permissionChip}>
-                      <Text style={styles.permissionChipText}>{commentPolicyLabel}</Text>
-                    </View>
-                  </View>
-                </View>
+          <ScrollView contentContainerStyle={styles.scrollContent}>
+            <View style={styles.introWrap}>
+              <Text style={styles.introEyebrow}>TODAY&apos;S PAGE</Text>
+              <View style={styles.metaRow}>
+                {authorId ? (
+                  <Pressable
+                    onPress={() => router.push(`/users/${authorId}`)}
+                    accessibilityRole="button"
+                    testID="post-author-btn"
+                  >
+                    <Text style={styles.metaAuthor}>{authorName}</Text>
+                  </Pressable>
+                ) : (
+                  <Text style={styles.metaAuthor}>{authorName}</Text>
+                )}
+                {dateText ? (
+                  <>
+                    <Text style={styles.metaDot}>·</Text>
+                    <Text style={styles.metaDate}>{dateText}</Text>
+                  </>
+                ) : null}
               </View>
+            </View>
+            <PostMetaBar type={post.type} tags={post.tags} styles={styles} />
+            <View style={styles.permissionRow}>
+              <View style={styles.permissionChip}>
+                <Text style={styles.permissionChipText}>{visibilityLabel}</Text>
+              </View>
+              <View style={styles.permissionChip}>
+                <Text style={styles.permissionChipText}>{commentPolicyLabel}</Text>
+              </View>
+            </View>
+            <PostBody
+              postId={postId}
+              title={title}
+              content={content}
+              paragraphs={paragraphs}
+              footerText={footerText}
+              type={post.type}
+              layout={postLayout}
+              versionSeed={`${title}|${content}|${JSON.stringify((post as any)?.layoutJson ?? null)}`}
+              renderImages={post.renderImages ?? null}
+            />
 
-              <View
-                style={styles.commentSection}
-                testID="post-comments-section"
-                onLayout={(event) => {
-                  commentSectionYRef.current = event.nativeEvent.layout.y;
-                }}
-              >
+            <View style={styles.commentSection} testID="post-comments-section">
               <View style={styles.commentHeaderRow}>
                 <View>
                   <Text style={styles.commentKicker}>COMMENTS</Text>
@@ -1418,54 +1330,23 @@ export default function PostDetail() {
                 </View>
               )}
             </View>
-            </ScrollView>
+          </ScrollView>
 
-            <View style={styles.shortsActionRail} pointerEvents="box-none">
-              <ShortsActionButton
-                iconName={isLiked ? "heart" : "heart-outline"}
-                label={formatCompactCount(likeCount)}
-                active={isLiked}
-                disabled={likePending}
-                onPress={onPressLike}
-                testID="post-like-btn"
-                accessibilityLabel={isLiked ? "좋아요 취소" : "좋아요"}
-                styles={styles}
-              />
-              <ShortsActionButton
-                iconName={isBookmarked ? "bookmark" : "bookmark-outline"}
-                label={isBookmarked ? "저장됨" : "저장"}
-                active={isBookmarked}
-                onPress={() => void openBookmarkModal()}
-                testID="post-bookmark-btn"
-                accessibilityLabel={isBookmarked ? "북마크 저장됨" : "북마크 저장"}
-                styles={styles}
-              />
-              <ShortsActionButton
-                iconName="chatbubble-ellipses-outline"
-                label={commentCount > 0 ? formatCompactCount(commentCount) : "댓글"}
-                onPress={scrollToComments}
-                testID="post-comments-jump-btn"
-                accessibilityLabel="댓글 보기"
-                styles={styles}
-              />
-              <ShortsActionButton
-                iconName="share-social-outline"
-                label="공유"
-                onPress={() => void onPressShare()}
-                testID="post-share-btn"
-                accessibilityLabel="공유하기"
-                styles={styles}
-              />
-              <ShortsActionButton
-                iconName="ellipsis-horizontal"
-                label="더보기"
-                onPress={onPressSafetyMenu}
-                testID="post-safety-menu-btn"
-                accessibilityLabel="더보기 메뉴"
-                styles={styles}
-              />
-            </View>
-          </View>
+          <PostActionBar
+            likeCount={likeCount}
+            isLiked={isLiked}
+            isBookmarked={isBookmarked}
+            onPressLike={onPressLike}
+            onPressBookmark={() => void openBookmarkModal()}
+            onPressShare={() => void onPressShare()}
+            likeDisabled={likePending}
+            likeTestID="post-like-btn"
+            bookmarkTestID="post-bookmark-btn"
+            shareTestID="post-share-btn"
+            height={dock.action.height}
+            paddingBottom={dock.action.paddingBottom}
+            styles={styles}
+          />
         </>
       )}
 

@@ -33,14 +33,12 @@ export function isPublicUgcRoute(pathname: string, segments: string[]) {
   }
 
   if (first === "search") return true;
-  if (first === "feed") return true;
   if (first === "posts") return true;
   if (first === "users") return true;
 
   return (
     pathname === "/" ||
     pathname === "/search" ||
-    pathname.startsWith("/feed/") ||
     pathname.startsWith("/posts/") ||
     pathname.startsWith("/users/")
   );

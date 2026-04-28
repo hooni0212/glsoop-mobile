@@ -25,17 +25,36 @@ export const homeHeaderStyles = StyleSheet.create({
     maxWidth: 393,
     alignSelf: "center",
     paddingTop: 8,
-    paddingHorizontal: 24,
-    paddingBottom: 14,
+    paddingHorizontal: 20,
+    paddingBottom: 10,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    gap: 14,
   },
   brand: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: "900",
     letterSpacing: 0,
     color: tokens.colors.text,
+  },
+  searchPill: {
+    flex: 1,
+    minHeight: 42,
+    borderRadius: tokens.radius.pill,
+    backgroundColor: tokens.colors.bgMuted,
+    paddingHorizontal: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  searchPillPressed: {
+    opacity: 0.76,
+  },
+  searchText: {
+    fontSize: tokens.font.body,
+    fontWeight: "800",
+    color: tokens.colors.textMuted,
   },
   iconBtn: {
     width: 40,
@@ -49,18 +68,79 @@ export const homeHeaderStyles = StyleSheet.create({
   },
 });
 
+export const storyRailStyles = StyleSheet.create({
+  wrap: {
+    paddingTop: 8,
+    paddingBottom: 10,
+  },
+  content: {
+    paddingHorizontal: 18,
+    gap: 14,
+  },
+  item: {
+    width: 72,
+    alignItems: "center",
+    gap: 7,
+  },
+  itemPressed: {
+    opacity: 0.78,
+  },
+  ring: {
+    width: 66,
+    height: 66,
+    borderRadius: 33,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "#f0a03a",
+    backgroundColor: "#fff4e3",
+  },
+  ringActive: {
+    borderColor: tokens.colors.green700,
+    backgroundColor: tokens.colors.green100,
+  },
+  avatar: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: tokens.colors.surface,
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+  },
+  avatarText: {
+    fontSize: 15,
+    fontWeight: "900",
+    color: tokens.colors.green900,
+  },
+  avatarTextActive: {
+    color: tokens.colors.green700,
+  },
+  label: {
+    width: "100%",
+    fontSize: 12,
+    fontWeight: "800",
+    color: tokens.colors.textMuted,
+    textAlign: "center",
+  },
+  labelActive: {
+    color: tokens.colors.text,
+  },
+});
+
 export const categoryChipsStyles = StyleSheet.create({
   wrap: {
     paddingTop: tokens.space.xs,
-    paddingBottom: 12,
+    paddingBottom: 10,
   },
   content: {
-    paddingHorizontal: 24,
-    gap: 10,
+    paddingHorizontal: 18,
+    gap: 8,
   },
   chip: {
-    minHeight: 34,
-    paddingHorizontal: 18,
+    minHeight: 32,
+    paddingHorizontal: 15,
     paddingVertical: 8,
     borderRadius: tokens.radius.pill,
     backgroundColor: tokens.colors.surface,
@@ -90,159 +170,27 @@ export const feedSectionStyles = StyleSheet.create({
     width: "100%",
     maxWidth: 393,
     alignSelf: "center",
-    paddingHorizontal: 18,
+    paddingHorizontal: 0,
     paddingBottom: 18,
   },
   sectionLabel: {
     fontSize: 14,
     fontWeight: "900",
     color: tokens.colors.textMuted,
-    marginBottom: tokens.space.sm,
-    marginLeft: 6,
+    marginBottom: 12,
+    marginLeft: 20,
     letterSpacing: 0,
   },
   footer: {
     paddingVertical: tokens.space.lg,
   },
   headerSpacerTop: {
-    height: tokens.space.sm,
+    height: 4,
   },
   headerSpacerAfterLabel: {
-    height: tokens.space.xs,
+    height: 0,
   },
   itemSeparator: {
-    height: tokens.space.md,
-  },
-});
-
-export const homeDiscoveryStyles = StyleSheet.create({
-  wrap: {
-    width: "100%",
-    maxWidth: 393,
-    alignSelf: "center",
-    paddingHorizontal: 24,
-    paddingBottom: tokens.space.sm,
-    gap: tokens.space.sm,
-  },
-  immersiveBtn: {
-    minHeight: 44,
-    borderRadius: tokens.radius.md,
-    borderWidth: 1,
-    borderColor: tokens.colors.borderStrong,
-    backgroundColor: tokens.colors.surface,
-    paddingHorizontal: tokens.space.md,
-    paddingVertical: tokens.space.sm,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  immersiveTitle: {
-    fontSize: tokens.font.body,
-    fontWeight: "900",
-    color: tokens.colors.text,
-  },
-  immersiveMeta: {
-    fontSize: tokens.font.small,
-    fontWeight: "800",
-    color: tokens.colors.green700,
-  },
-});
-
-export const feedModeStyles = StyleSheet.create({
-  wrap: {
-    width: "100%",
-    maxWidth: 393,
-    alignSelf: "center",
-    paddingHorizontal: 24,
-    paddingBottom: tokens.space.sm,
-    flexDirection: "row",
-    gap: tokens.space.xs,
-  },
-  btn: {
-    flex: 1,
-    minHeight: 36,
-    borderRadius: tokens.radius.pill,
-    borderWidth: 1,
-    borderColor: tokens.colors.border,
-    backgroundColor: tokens.colors.surface,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  btnActive: {
-    borderColor: tokens.colors.green700,
-    backgroundColor: tokens.colors.green100,
-  },
-  btnText: {
-    fontSize: tokens.font.small,
-    fontWeight: "900",
-    color: tokens.colors.textMuted,
-  },
-  btnTextActive: {
-    color: tokens.colors.green700,
-  },
-});
-
-export const immersiveFeedSectionStyles = StyleSheet.create({
-  stateWrap: {
-    flex: 1,
-    width: "100%",
-    maxWidth: 393,
-    alignSelf: "center",
-    paddingHorizontal: 18,
-    paddingTop: tokens.space.md,
-  },
-  page: {
-    width: "100%",
-    maxWidth: 393,
-    alignSelf: "center",
-    paddingHorizontal: 18,
-    paddingTop: tokens.space.md,
-    paddingBottom: tokens.space.xl,
-    justifyContent: "center",
-    gap: tokens.space.md,
-  },
-  contextRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: tokens.space.sm,
-    paddingHorizontal: 6,
-  },
-  contextPill: {
-    borderRadius: tokens.radius.pill,
-    borderWidth: 1,
-    borderColor: tokens.colors.green700,
-    backgroundColor: tokens.colors.green100,
-    paddingHorizontal: tokens.space.sm,
-    paddingVertical: 6,
-  },
-  contextPillText: {
-    fontSize: tokens.font.small,
-    fontWeight: "900",
-    color: tokens.colors.green700,
-  },
-  contextMeta: {
-    fontSize: tokens.font.small,
-    fontWeight: "900",
-    color: tokens.colors.textMuted,
-  },
-  readBtn: {
-    width: "100%",
-    maxWidth: 357,
-    alignSelf: "center",
-    minHeight: 44,
-    borderRadius: tokens.radius.md,
-    backgroundColor: tokens.colors.green900,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  readBtnText: {
-    fontSize: tokens.font.body,
-    fontWeight: "900",
-    color: tokens.colors.textInverse,
-  },
-  footer: {
-    alignItems: "center",
-    justifyContent: "center",
+    height: 22,
   },
 });

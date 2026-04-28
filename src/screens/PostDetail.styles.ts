@@ -8,15 +8,11 @@ import { tokens } from "@/theme/tokens";
 
 export function createPostDetailStyles(actionBarHeight: number) {
   const contentBottomPad = actionBarHeight + tokens.space.xl;
-  const darkBg = "#0b0d0c";
-  const darkSurface = "rgba(255,255,255,0.10)";
-  const darkBorder = "rgba(255,255,255,0.14)";
-  const darkTextMuted = "rgba(255,255,255,0.72)";
 
   return StyleSheet.create({
     safe: {
       flex: 1,
-      backgroundColor: darkBg,
+      backgroundColor: tokens.colors.bg,
       position: "relative",
     },
 
@@ -25,12 +21,11 @@ export function createPostDetailStyles(actionBarHeight: number) {
       position: "relative",
       zIndex: 10,
       paddingTop: tokens.space.xs,
-      paddingHorizontal: tokens.space.lg,
+      paddingHorizontal: tokens.space.md,
       paddingBottom: tokens.space.xs,
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
-      backgroundColor: darkBg,
     },
     backBtn: {
       width: 40,
@@ -38,9 +33,6 @@ export function createPostDetailStyles(actionBarHeight: number) {
       borderRadius: 20,
       alignItems: "center",
       justifyContent: "center",
-      backgroundColor: darkSurface,
-      borderWidth: 1,
-      borderColor: darkBorder,
     },
     rightActionBtn: {
       width: 44,
@@ -48,9 +40,9 @@ export function createPostDetailStyles(actionBarHeight: number) {
       borderRadius: 22,
       alignItems: "center",
       justifyContent: "center",
-      backgroundColor: darkSurface,
+      backgroundColor: tokens.colors.surfaceStrong,
       borderWidth: 1,
-      borderColor: darkBorder,
+      borderColor: tokens.colors.border,
     },
 
     topBarSpacer: {
@@ -59,35 +51,24 @@ export function createPostDetailStyles(actionBarHeight: number) {
     },
 
     // --- Scroll ---
-    shortsReader: {
-      flex: 1,
-      position: "relative",
-    },
     scrollContent: {
       width: "100%",
-      maxWidth: 460,
+      maxWidth: 820,
       alignSelf: "center",
-      paddingLeft: tokens.space.md,
-      paddingRight: 78,
-      paddingTop: tokens.space.xs,
+      paddingHorizontal: tokens.space.xl,
+      paddingTop: tokens.space.sm,
       paddingBottom: contentBottomPad,
     },
-    readerStage: {
-      minHeight: 640,
-      justifyContent: "center",
-      gap: tokens.space.md as any,
-      paddingVertical: tokens.space.md,
+    introWrap: {
+      marginTop: 2,
+      marginBottom: tokens.space.md,
+      gap: 4,
     },
-    shortsCaption: {
-      gap: tokens.space.sm as any,
-      paddingHorizontal: 4,
-      paddingBottom: tokens.space.sm,
-    },
-    shortsCaptionTitle: {
-      fontSize: 18,
-      lineHeight: 24,
+    introEyebrow: {
+      fontSize: 11,
+      letterSpacing: 1.3,
       fontWeight: "900",
-      color: tokens.colors.textInverse,
+      color: tokens.colors.textFaint,
     },
     metaRow: {
       flexDirection: "row",
@@ -97,22 +78,23 @@ export function createPostDetailStyles(actionBarHeight: number) {
     metaAuthor: {
       fontSize: 13,
       fontWeight: "800",
-      color: tokens.colors.textInverse,
+      color: tokens.colors.text,
     },
     metaDot: {
       fontSize: 13,
       fontWeight: "700",
-      color: "rgba(255,255,255,0.44)",
+      color: tokens.colors.textFaint,
     },
     metaDate: {
       fontSize: 13,
       fontWeight: "700",
-      color: darkTextMuted,
+      color: tokens.colors.textMuted,
     },
 
     // --- Meta bar ---
     metaBar: {
       marginTop: 0,
+      marginBottom: tokens.space.md,
       flexDirection: "row",
       alignItems: "center",
       flexWrap: "wrap",
@@ -122,29 +104,29 @@ export function createPostDetailStyles(actionBarHeight: number) {
       paddingHorizontal: tokens.space.sm,
       paddingVertical: 7,
       borderRadius: tokens.radius.pill,
-      backgroundColor: "rgba(73,128,90,0.28)",
+      backgroundColor: tokens.colors.surfaceStrong,
       borderWidth: 1,
-      borderColor: "rgba(228,240,230,0.28)",
+      borderColor: tokens.colors.border,
     },
     typeChipText: {
       fontSize: 12,
       fontWeight: "800",
-      color: tokens.colors.textInverse,
-      letterSpacing: 0,
+      color: tokens.colors.text,
+      letterSpacing: -0.2,
     },
     tagChip: {
       paddingHorizontal: tokens.space.sm,
       paddingVertical: 7,
       borderRadius: tokens.radius.pill,
-      backgroundColor: darkSurface,
+      backgroundColor: tokens.colors.surface,
       borderWidth: 1,
-      borderColor: darkBorder,
+      borderColor: tokens.colors.border,
     },
     tagChipText: {
       fontSize: 12,
       fontWeight: "700",
-      color: darkTextMuted,
-      letterSpacing: 0,
+      color: tokens.colors.textMuted,
+      letterSpacing: -0.2,
     },
     relatedSection: {
       marginTop: tokens.space.xl,
@@ -153,7 +135,7 @@ export function createPostDetailStyles(actionBarHeight: number) {
     relatedTitle: {
       fontSize: 15,
       fontWeight: "900",
-      color: tokens.colors.textInverse,
+      color: tokens.colors.text,
     },
     manageActionRow: {
       flexDirection: "row",
@@ -189,7 +171,7 @@ export function createPostDetailStyles(actionBarHeight: number) {
     },
     relatedHint: {
       fontSize: tokens.font.small,
-      color: darkTextMuted,
+      color: tokens.colors.textMuted,
       fontWeight: "700",
     },
     relatedList: {
@@ -226,19 +208,20 @@ export function createPostDetailStyles(actionBarHeight: number) {
       flexDirection: "row",
       flexWrap: "wrap",
       gap: tokens.space.xs as any,
+      marginTop: tokens.space.sm,
     },
     permissionChip: {
       borderWidth: 1,
-      borderColor: darkBorder,
+      borderColor: tokens.colors.border,
       borderRadius: tokens.radius.pill,
-      backgroundColor: darkSurface,
+      backgroundColor: tokens.colors.surfaceStrong,
       paddingHorizontal: tokens.space.sm,
       paddingVertical: 6,
     },
     permissionChipText: {
       fontSize: 12,
       fontWeight: "800",
-      color: darkTextMuted,
+      color: tokens.colors.textMuted,
     },
     commentHeaderRow: {
       flexDirection: "row",
@@ -255,12 +238,12 @@ export function createPostDetailStyles(actionBarHeight: number) {
     commentTitle: {
       fontSize: 16,
       fontWeight: "900",
-      color: tokens.colors.textInverse,
+      color: tokens.colors.text,
     },
     commentKicker: {
       fontSize: 11,
       fontWeight: "900",
-      color: "rgba(255,255,255,0.48)",
+      color: tokens.colors.textFaint,
       letterSpacing: 0,
       marginBottom: 3,
     },
@@ -484,56 +467,6 @@ export function createPostDetailStyles(actionBarHeight: number) {
       fontSize: tokens.font.small,
       fontWeight: "900",
       color: tokens.colors.danger,
-    },
-
-    // --- Shorts action rail ---
-    shortsActionRail: {
-      position: "absolute",
-      right: tokens.space.sm,
-      top: 62,
-      bottom: tokens.space.lg,
-      zIndex: 25,
-      alignItems: "center",
-      justifyContent: "center",
-      gap: tokens.space.md as any,
-    },
-    shortsAction: {
-      alignItems: "center",
-      justifyContent: "center",
-      gap: 5,
-      width: 58,
-    },
-    shortsActionPressed: {
-      opacity: 0.78,
-      transform: [{ scale: 0.98 }],
-    },
-    shortsActionDisabled: {
-      opacity: 0.5,
-    },
-    shortsActionIcon: {
-      width: 48,
-      height: 48,
-      borderRadius: 24,
-      alignItems: "center",
-      justifyContent: "center",
-      backgroundColor: "rgba(255,255,255,0.13)",
-      borderWidth: 1,
-      borderColor: "rgba(255,255,255,0.12)",
-    },
-    shortsActionIconActive: {
-      backgroundColor: tokens.colors.green700,
-      borderColor: "rgba(255,255,255,0.22)",
-    },
-    shortsActionLabel: {
-      maxWidth: 58,
-      fontSize: 11,
-      lineHeight: 14,
-      fontWeight: "900",
-      color: "rgba(255,255,255,0.86)",
-      textAlign: "center",
-    },
-    shortsActionLabelActive: {
-      color: tokens.colors.textInverse,
     },
 
     // --- Action bar (fixed) ---

@@ -13,7 +13,6 @@ type RightAction = {
 export type PostTopBarProps = {
   onPressBack: () => void;
   backButtonTestID?: string;
-  iconColor?: string;
   rightAction?: RightAction;
   styles: {
     topBar: any;
@@ -26,7 +25,6 @@ export type PostTopBarProps = {
 export function PostTopBar({
   onPressBack,
   backButtonTestID,
-  iconColor = tokens.colors.text,
   rightAction,
   styles,
 }: PostTopBarProps) {
@@ -38,7 +36,7 @@ export function PostTopBar({
         style={styles.backBtn}
         testID={backButtonTestID}
       >
-        <Ionicons name="chevron-back" size={22} color={iconColor} />
+        <Ionicons name="chevron-back" size={22} color={tokens.colors.text} />
       </Pressable>
 
       {rightAction ? (
@@ -53,7 +51,7 @@ export function PostTopBar({
           <Ionicons
             name={rightAction.iconName ?? "ellipsis-horizontal"}
             size={20}
-            color={iconColor}
+            color={tokens.colors.text}
           />
         </Pressable>
       ) : (

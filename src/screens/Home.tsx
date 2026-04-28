@@ -1,15 +1,15 @@
 import React, { useMemo, useState } from "react";
-import { Alert, Pressable, Text, View } from "react-native";
+import { Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { CategoryChips } from "@/components/home/CategoryChips";
 import { FeedSection } from "@/components/home/FeedSection";
-import { ImmersiveFeedSection } from "@/components/home/ImmersiveFeedSection";
+import { StoryRail } from "@/components/home/StoryRail";
 import { SafetyActionSheet } from "@/components/safety/SafetyActionSheet";
 import { SafetyReasonModal } from "@/components/safety/SafetyReasonModal";
 import { HomeHeader } from "@/components/home/HomeHeader";
 import { blurActiveElementBeforeRouteChange } from "@/lib/webFocus";
-import { feedModeStyles, homeScreenStyles } from "@/screens/Home.styles";
+import { homeScreenStyles } from "@/screens/Home.styles";
 import { useFeed } from "@/features/feed/useFeed";
 import { getBookmark, setBookmark } from "@/features/bookmarks/bookmarkStore";
 import { getLike, setLike } from "@/features/likes/likeStore";
@@ -39,7 +39,6 @@ import {
 
 const CATEGORIES = ["추천", "팔로잉", "인기"] as const;
 type Category = (typeof CATEGORIES)[number];
-type FeedMode = "immersive" | "list";
 const GENRE_FILTERS: readonly {
   key: string;
   label: string;
@@ -61,7 +60,6 @@ export default function Home() {
   const pathname = usePathname();
   const [active, setActive] = useState<Category>("추천");
   const [activeGenre, setActiveGenre] = useState<GenreLabel>("전체");
-  const [feedMode, setFeedMode] = useState<FeedMode>("immersive");
   const { showToast } = useToast();
   const { token, signOut } = useAuth();
   const { config: runtimeLegalConfig } = useRuntimeLegalConfig();
@@ -393,87 +391,34 @@ export default function Home() {
         }}
       />
 
+      <StoryRail
+        categories={GENRE_LABELS}
+        active={activeGenre}
+        onChange={setActiveGenre}
+      />
       <CategoryChips
         categories={CATEGORIES}
         active={active}
         onChange={setActive}
       />
-      <CategoryChips
-        categories={GENRE_LABELS}
-        active={activeGenre}
-        onChange={setActiveGenre}
+
+      <FeedSection
+        items={visibleItems}
+        loading={loading}
+        refreshing={refreshing}
+        error={error}
+        hasMore={hasMore}
+        sectionLabel={sectionLabel}
+        onRefresh={refresh}
+        onEndReached={() => {
+          if (!loading && hasMore) loadMore();
+        }}
+        onPressItem={(id) => router.push(`/posts/${String(id)}`)}
+        onLikePress={(id) => handleLike(String(id))}
+        onBookmarkPress={(id) => handleBookmark(String(id))}
+        onMorePress={(item) => openSafetyMenu(item as Post)}
+        getLikeDisabled={(id) => Boolean(likePending[String(id)])}
       />
-
-      <View style={feedModeStyles.wrap}>
-        {(["immersive", "list"] as const).map((mode) => {
-          const activeMode = feedMode === mode;
-          const label = mode === "immersive" ? "넘겨보기" : "목록";
-          return (
-            <Pressable
-              key={mode}
-              onPress={() => setFeedMode(mode)}
-              style={({ pressed }) => [
-                feedModeStyles.btn,
-                activeMode && feedModeStyles.btnActive,
-                pressed && { opacity: 0.82 },
-              ]}
-              accessibilityRole="button"
-              accessibilityState={{ selected: activeMode }}
-              testID={`home-feed-mode-${mode}`}
-            >
-              <Text
-                style={[
-                  feedModeStyles.btnText,
-                  activeMode && feedModeStyles.btnTextActive,
-                ]}
-              >
-                {label}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
-
-      {feedMode === "immersive" ? (
-        <ImmersiveFeedSection
-          key="immersive"
-          items={visibleItems}
-          loading={loading}
-          refreshing={refreshing}
-          error={error}
-          hasMore={hasMore}
-          sectionLabel={sectionLabel}
-          genreLabel={activeGenre}
-          onRefresh={refresh}
-          onEndReached={() => {
-            if (!loading && hasMore) loadMore();
-          }}
-          onPressItem={(id) => router.push(`/posts/${String(id)}`)}
-          onLikePress={(id) => handleLike(String(id))}
-          onBookmarkPress={(id) => handleBookmark(String(id))}
-          onMorePress={(item) => openSafetyMenu(item as Post)}
-          getLikeDisabled={(id) => Boolean(likePending[String(id)])}
-        />
-      ) : (
-        <FeedSection
-          key="list"
-          items={visibleItems}
-          loading={loading}
-          refreshing={refreshing}
-          error={error}
-          hasMore={hasMore}
-          sectionLabel={sectionLabel}
-          onRefresh={refresh}
-          onEndReached={() => {
-            if (!loading && hasMore) loadMore();
-          }}
-          onPressItem={(id) => router.push(`/posts/${String(id)}`)}
-          onLikePress={(id) => handleLike(String(id))}
-          onBookmarkPress={(id) => handleBookmark(String(id))}
-          onMorePress={(item) => openSafetyMenu(item as Post)}
-          getLikeDisabled={(id) => Boolean(likePending[String(id)])}
-        />
-      )}
 
       <SafetyActionSheet
         visible={safetyMenuVisible}
