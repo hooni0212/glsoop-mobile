@@ -1,4 +1,5 @@
 import React from "react";
+import { Image } from "expo-image";
 import {
   KeyboardAvoidingView,
   Modal,
@@ -22,6 +23,8 @@ import { COOKIE_SESSION_TOKEN } from "@/lib/authToken";
 import { formatKstDateTime } from "@/lib/dateTime";
 import { ApiError, normalizeApiError } from "@/lib/errors";
 import { tokens } from "@/theme/tokens";
+
+const glsoopIcon = require("../../assets/images/icon.png");
 
 type LoginResponse = {
   ok: boolean;
@@ -159,11 +162,21 @@ export default function AuthLogin() {
               <Pressable onPress={() => router.back()} style={styles.backBtn}>
                 <Text style={styles.backText}>←</Text>
               </Pressable>
-              <Text style={styles.h1}>로그인</Text>
               <View style={styles.headerSpacer} />
             </View>
 
-            <Text style={styles.sub}>이메일로 로그인해요.</Text>
+            <View style={styles.brandBlock}>
+              <View style={styles.logoFrame}>
+                <Image
+                  source={glsoopIcon}
+                  style={styles.logoImage}
+                  contentFit="cover"
+                  transition={120}
+                />
+              </View>
+              <Text style={styles.h1}>로그인</Text>
+              <Text style={styles.sub}>저장한 글과 팔로잉 피드를 이어서 볼 수 있어요.</Text>
+            </View>
 
             <View style={styles.panel}>
               {error ? (
@@ -177,6 +190,7 @@ export default function AuthLogin() {
                   value={email}
                   onChangeText={setEmail}
                   placeholder="이메일"
+                  placeholderTextColor={tokens.colors.inputPlaceholder}
                   autoCapitalize="none"
                   keyboardType="email-address"
                   autoComplete="email"
@@ -190,6 +204,7 @@ export default function AuthLogin() {
                   value={pw}
                   onChangeText={setPw}
                   placeholder="비밀번호"
+                  placeholderTextColor={tokens.colors.inputPlaceholder}
                   secureTextEntry
                   autoComplete="password"
                   textContentType="password"
@@ -295,7 +310,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: tokens.space.xl,
-    paddingTop: tokens.space.lg,
+    paddingTop: tokens.space.md,
     paddingBottom: tokens.space.xl * 1.5,
   },
   container: {
@@ -321,8 +336,34 @@ const styles = StyleSheet.create({
     borderColor: tokens.colors.border,
   },
   backText: { fontSize: 18, fontWeight: "900", color: tokens.colors.text },
-  h1: { fontSize: tokens.font.h1, fontWeight: "900", color: tokens.colors.text },
-  sub: { fontSize: tokens.font.body, color: tokens.colors.textMuted, lineHeight: 22 },
+  brandBlock: {
+    alignItems: "center",
+    paddingTop: tokens.space.md,
+    paddingBottom: tokens.space.sm,
+    gap: tokens.space.sm as any,
+  },
+  logoFrame: {
+    width: 78,
+    height: 78,
+    borderRadius: 22,
+    overflow: "hidden",
+    backgroundColor: tokens.colors.surface,
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+  },
+  logoImage: {
+    width: "100%",
+    height: "100%",
+  },
+  h1: { fontSize: 28, fontWeight: "900", color: tokens.colors.text, letterSpacing: 0 },
+  sub: {
+    maxWidth: 270,
+    textAlign: "center",
+    fontSize: tokens.font.body,
+    fontWeight: "700",
+    color: tokens.colors.textMuted,
+    lineHeight: 22,
+  },
   panel: {
     borderWidth: 1,
     borderColor: tokens.colors.border,
@@ -339,8 +380,9 @@ const styles = StyleSheet.create({
     backgroundColor: tokens.colors.white,
     borderRadius: tokens.radius.lg,
     paddingHorizontal: tokens.space.lg,
-    paddingVertical: 12,
+    paddingVertical: 14,
     fontSize: tokens.font.body,
+    fontWeight: "700",
     color: tokens.colors.text,
   },
   primaryBtn: {
