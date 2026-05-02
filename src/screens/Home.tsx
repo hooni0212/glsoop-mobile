@@ -1,5 +1,4 @@
 import React, { useMemo, useState } from "react";
-import { Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { CategoryChips } from "@/components/home/CategoryChips";
@@ -12,6 +11,11 @@ import { homeScreenStyles } from "@/screens/Home.styles";
 import { useFeed } from "@/features/feed/useFeed";
 import { getBookmark, setBookmark } from "@/features/bookmarks/bookmarkStore";
 import { getLike, setLike } from "@/features/likes/likeStore";
+import {
+  clearNotificationUnreadCount,
+  refreshNotificationUnreadCount,
+  useNotificationUnreadCount,
+} from "@/features/notifications/notificationStore";
 import { useAuth } from "@/auth/AuthContext";
 import { buildAuthRoute } from "@/lib/authRedirect";
 import * as haptics from "@/lib/haptics";
@@ -33,7 +37,7 @@ import {
   removePostFromBookmarkList,
 } from "@/services/bookmarkService";
 
-const CATEGORIES = ["추천", "팔로잉", "인기"] as const;
+const CATEGORIES = ["추천", "팔로잉", "최신"] as const;
 type Category = (typeof CATEGORIES)[number];
 
 export default function Home() {
@@ -41,6 +45,7 @@ export default function Home() {
   const [active, setActive] = useState<Category>("추천");
   const { showToast } = useToast();
   const { token, signOut } = useAuth();
+  const unreadNotificationCount = useNotificationUnreadCount();
   const { config: runtimeLegalConfig } = useRuntimeLegalConfig();
   const blockedUserIds = useBlockedUserIds();
   const [selectedSafetyPost, setSelectedSafetyPost] = useState<Post | null>(null);
@@ -51,11 +56,11 @@ export default function Home() {
   const [blockSubmitting, setBlockSubmitting] = useState(false);
 
   const query = useMemo(() => {
-    if (active === "인기") return { limit: 10, sort: "popular" as const };
+    if (active === "최신") return { limit: 10, sort: "latest" as const };
     if (active === "팔로잉") {
       return { limit: 10, sort: "latest" as const, type: "following" as const };
     }
-    return { limit: 10, sort: "latest" as const };
+    return { limit: 10, sort: "recommended" as const };
   }, [active]);
 
   const { items, loading, refreshing, error, hasMore, refresh, loadMore, patchItem } =
@@ -71,11 +76,21 @@ export default function Home() {
   const reportDetailMaxLength = runtimeLegalConfig?.safety.detailMaxLength;
   const reportDetailRequiredReasonCodes = runtimeLegalConfig?.safety.detailRequiredReasonCodes;
   const sectionLabel = useMemo(() => {
-    if (active === "인기") return "지금 인기";
+    if (active === "최신") return "새로 올라온 글";
     if (active === "팔로잉") return "팔로잉 피드";
     if (active === "추천") return "오늘의 추천";
     return `${active} 피드`;
   }, [active]);
+  React.useEffect(() => {
+    if (!token) {
+      clearNotificationUnreadCount();
+      return;
+    }
+
+    void refreshNotificationUnreadCount().catch(() => {
+      clearNotificationUnreadCount();
+    });
+  }, [token]);
 
   const setPending = (postId: string, pending: boolean) => {
     setLikePending((prev) => ({ ...prev, [postId]: pending }));
@@ -85,16 +100,24 @@ export default function Home() {
   };
 
   const promptAuthForAction = React.useCallback(
-    (message: string) => {
-      Alert.alert("로그인이 필요해요", message, [
-        { text: "나중에", style: "cancel" },
-        {
-          text: "로그인",
-          onPress: () => router.push(buildAuthRoute("/(auth)", pathname)),
-        },
-      ]);
+    (message: string, redirectPath = pathname) => {
+      showToast(message, { tone: "error" });
+      router.push(buildAuthRoute("/(auth)/login", redirectPath));
     },
-    [pathname]
+    [pathname, showToast]
+  );
+
+  const changeCategory = React.useCallback(
+    (next: Category) => {
+      if (next === active) return;
+      if (next === "팔로잉" && !token) {
+        promptAuthForAction("팔로잉 피드는 로그인 후 볼 수 있어요.");
+        return;
+      }
+      haptics.selection();
+      setActive(next);
+    },
+    [active, promptAuthForAction, token]
   );
 
   const handleAuthError = React.useCallback(async () => {
@@ -107,6 +130,17 @@ export default function Home() {
     setReportReasonVisible(false);
     setBlockConfirmVisible(false);
   }, []);
+
+  const handleNotificationPress = React.useCallback(() => {
+    haptics.selection();
+
+    if (!token) {
+      promptAuthForAction("알림은 로그인 후 확인할 수 있어요.", "/notifications");
+      return;
+    }
+
+    router.push("/notifications");
+  }, [promptAuthForAction, token]);
 
   const handleLike = async (postId: string) => {
     if (!token) {
@@ -152,7 +186,7 @@ export default function Home() {
       if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
         await handleAuthError();
       } else {
-        showToast("좋아요 처리에 실패했어요. 잠시 후 다시 시도해주세요.", { tone: "error" });
+        showToast("공감 처리에 실패했어요. 잠시 후 다시 시도해주세요.", { tone: "error" });
       }
     } finally {
       setPending(postId, false);
@@ -256,6 +290,7 @@ export default function Home() {
   };
 
   const openSafetyMenu = React.useCallback((post: Post) => {
+    haptics.selection();
     setSelectedSafetyPost(post);
     setSafetyMenuVisible(true);
   }, []);
@@ -337,15 +372,19 @@ export default function Home() {
     <SafeAreaView style={homeScreenStyles.safe} edges={["top"]}>
       <HomeHeader
         onPressSearch={() => {
+          haptics.selection();
           blurActiveElementBeforeRouteChange();
           router.push("/search");
         }}
+        onPressNotifications={handleNotificationPress}
+        hasUnreadNotifications={unreadNotificationCount > 0}
+        showNotifications
       />
 
       <CategoryChips
         categories={CATEGORIES}
         active={active}
-        onChange={setActive}
+        onChange={changeCategory}
       />
 
       <FeedSection
@@ -359,12 +398,17 @@ export default function Home() {
         onEndReached={() => {
           if (!loading && hasMore) loadMore();
         }}
-        onPressItem={(id) => router.push(`/posts/${String(id)}`)}
+        onPressItem={(id) => {
+          haptics.selection();
+          router.push(`/posts/${String(id)}`);
+        }}
         onPressAuthor={(item) => {
           const authorId = (item as Post)?.author?.id;
-          if (authorId) router.push(`/users/${authorId}`);
+          if (authorId) {
+            haptics.selection();
+            router.push(`/users/${authorId}`);
+          }
         }}
-        onCommentPress={(id) => router.push(`/posts/${String(id)}`)}
         onLikePress={(id) => handleLike(String(id))}
         onBookmarkPress={(id) => handleBookmark(String(id))}
         onMorePress={(item) => openSafetyMenu(item as Post)}

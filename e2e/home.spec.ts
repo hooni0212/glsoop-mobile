@@ -76,6 +76,13 @@ test.describe("홈 화면", () => {
         body: JSON.stringify({ ok: true, posts: [], hasMore: false }),
       });
     });
+    await page.route("**/api/notifications?**", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ ok: true, notifications: [], unread_count: 0, has_more: false }),
+      });
+    });
 
     await setAuthToken(page, "mock-token-for-home");
   });
@@ -94,6 +101,45 @@ test.describe("홈 화면", () => {
     await page.getByRole("button", { name: "검색" }).click();
     await expect(page.getByTestId("search-screen")).toBeVisible();
     await expect(page.getByTestId("search-input")).toBeVisible();
+  });
+
+  test("알림 버튼은 알림함으로 이동한다", async ({ page }) => {
+    await page.goto("/");
+    await page.getByTestId("home-notifications-btn").click();
+    await expect(page.getByTestId("notifications-screen")).toBeVisible();
+  });
+
+  test("읽지 않은 알림이 있으면 홈 알림 버튼에 점 배지를 표시한다", async ({ page }) => {
+    await page.unroute("**/api/notifications?**");
+    await page.route("**/api/notifications?**", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          notifications: [
+            {
+              id: "n-1",
+              type: "post_comment",
+              title: "새 댓글",
+              body: "루나님이 댓글을 남겼어요.",
+              created_at: "2026-04-23T00:00:00.000Z",
+              read_at: null,
+              target_path: "/posts/201",
+              post_id: 201,
+              comment_id: 1,
+              user_id: 9,
+              actor_count: 1,
+            },
+          ],
+          unread_count: 1,
+          has_more: false,
+        }),
+      });
+    });
+
+    await page.goto("/");
+    await expect(page.getByTestId("home-notifications-unread-dot")).toBeVisible();
   });
 
   test("피드 카드의 공감과 북마크 버튼이 상세 이동 없이 동작한다", async ({ page }) => {
@@ -151,7 +197,9 @@ test.describe("홈 화면", () => {
 
     await page.goto("/");
 
-    await expect(page.getByText("홈 액션 테스트 글")).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "게시글 열기: 홈 액션 테스트 글" })
+    ).toBeVisible();
 
     await page.getByTestId("feed-like-btn-201").click();
     await expect.poll(() => likeToggleCalls).toBe(1);

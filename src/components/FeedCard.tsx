@@ -25,7 +25,6 @@ type Props = {
   liked?: boolean;
   bookmarked?: boolean;
   onAuthorPress?: () => void;
-  onCommentPress?: () => void;
   onLikePress?: () => void;
   onBookmarkPress?: () => void;
   onMorePress?: () => void;
@@ -42,7 +41,6 @@ export function FeedCard({
   liked = false,
   bookmarked = false,
   onAuthorPress,
-  onCommentPress,
   onLikePress,
   onBookmarkPress,
   onMorePress,
@@ -60,7 +58,7 @@ export function FeedCard({
   const authorBadge = primaryBadge?.icon_emoji?.trim();
   const canLike = Boolean(onLikePress);
   const canBookmark = Boolean(onBookmarkPress);
-  const showSocialRow = Boolean(canLike || onCommentPress || canBookmark);
+  const showSocialRow = Boolean(canLike || canBookmark);
 
   return (
     <View style={[styles.card, bookmarked && styles.cardSaved]} testID={testID}>
@@ -155,7 +153,7 @@ export function FeedCard({
                 disabled={likeDisabled}
                 testID={likeTestID}
                 accessibilityRole="button"
-                accessibilityLabel={liked ? "좋아요 취소" : "좋아요"}
+                accessibilityLabel={liked ? "공감 취소" : "공감"}
                 accessibilityState={{ disabled: Boolean(likeDisabled), selected: liked }}
               >
                 <Ionicons
@@ -163,23 +161,12 @@ export function FeedCard({
                   size={24}
                   color={liked ? tokens.colors.green700 : tokens.colors.text}
                 />
+                <Text style={[styles.actionCountText, liked && styles.actionCountTextActive]}>
+                  {likeCount}
+                </Text>
               </Pressable>
             ) : null}
 
-            {onCommentPress ? (
-              <Pressable
-                onPress={onCommentPress}
-                hitSlop={10}
-                style={({ pressed }) => [
-                  styles.iconOnlyBtn,
-                  pressed && styles.actionBtnPressed,
-                ]}
-                accessibilityRole="button"
-                accessibilityLabel="댓글 보기"
-              >
-                <Ionicons name="chatbubble-outline" size={23} color={tokens.colors.text} />
-              </Pressable>
-            ) : null}
           </View>
 
           {canBookmark ? (
@@ -205,9 +192,6 @@ export function FeedCard({
         </View>
       ) : null}
 
-      <View style={styles.captionBlock}>
-        <Text style={styles.likeSummary}>좋아요 {likeCount}</Text>
-      </View>
     </View>
   );
 }
@@ -353,11 +337,14 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   actionBtn: {
-    width: 28,
+    minWidth: 42,
     height: 32,
+    paddingHorizontal: 2,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: tokens.radius.pill,
+    flexDirection: "row",
+    gap: 4,
   },
   iconOnlyBtn: {
     width: 28,
@@ -372,14 +359,13 @@ const styles = StyleSheet.create({
   actionBtnDisabled: {
     opacity: 0.45,
   },
-
-  captionBlock: {
-    paddingHorizontal: 14,
-  },
-  likeSummary: {
+  actionCountText: {
     fontSize: 13,
     lineHeight: 18,
     fontWeight: "900",
     color: tokens.colors.text,
+  },
+  actionCountTextActive: {
+    color: tokens.colors.green700,
   },
 });
