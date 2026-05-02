@@ -8,7 +8,7 @@
 - 적용 범위: `glsoop-mobile`
 - 대상 독자: 모바일 개발자, 릴리스 담당자, 스토어 메타데이터 작성자
 - 상태: `Draft`
-- 최종 업데이트: `2026-03-29`
+- 최종 업데이트: `2026-05-02`
 - Owner: `taehun`
 
 ---
@@ -37,6 +37,7 @@ App Store Connect와 Play Console에 같은 의미의 항목이 있을 때
 - 이용약관 URL: `https://www.glsoop.com/html/terms.html`
 - 개인정보 처리방침 URL: `https://www.glsoop.com/html/privacy.html`
 - 커뮤니티 가이드라인 URL: `https://www.glsoop.com/html/community-guidelines.html`
+- 개인정보 선택/마케팅 수신 철회 경로: 앱 내 `계정센터 > 보안 및 로그인 > 광고성 마케팅 알림`
 - 서비스 한 줄 소개: `일상의 작은 순간들을 기록하고 나누는 공간`
 - 서비스 확장 소개 초안: `매일 조금씩 읽고 쓰는 사람들을 위한 공간, 글숲에서 조용히 오래 남는 글을 만들고 있어요.`
 
@@ -85,6 +86,8 @@ App Store Connect와 Play Console에 같은 의미의 항목이 있을 때
 - bundle identifier: `com.glsoop.app`
 - App Store Connect app id: `6761228925`
 - 현재 심사 후보 build: `1.0.0 (9)`
+- App Privacy 확인: 마케팅 푸시를 위해 수집/사용하는 계정 식별자와 push token 용도를 `Developer's Advertising or Marketing` 목적에 맞게 반영한다.
+- Review Notes 확인: 마케팅 푸시는 명시 동의 사용자에게만 발송하고, 앱 내 철회 경로를 제공한다는 설명을 포함한다.
 
 ### Android 전용 값
 

@@ -3,6 +3,7 @@ import * as SplashScreen from "expo-splash-screen";
 import { AuthGate } from "@/auth/AuthGate";
 import { AuthProvider, useAuth } from "@/auth/AuthContext";
 import { AppBootScreen } from "@/components/state/AppBootScreen";
+import { refreshNotificationUnreadCount } from "@/features/notifications/notificationStore";
 import { ToastProvider, useToast } from "@/feedback/ToastProvider";
 import { usePushNotifications } from "@/lib/pushNotifications";
 import { BottomDockProvider } from "@/navigation/bottomDock";
@@ -103,6 +104,7 @@ function RootLayoutContent() {
                 />
 
                 <Stack.Screen name="search" options={{ headerShown: false }} />
+                <Stack.Screen name="notifications" options={{ headerShown: false }} />
                 <Stack.Screen name="profile-customize" options={{ headerShown: false }} />
                 <Stack.Screen name="ui-kit" options={{ headerShown: false }} />
               </Stack>
@@ -117,7 +119,11 @@ function RootLayoutContent() {
 function NotificationBridge() {
   const { token } = useAuth();
   const { showToast } = useToast();
-  usePushNotifications(token, showToast);
+  usePushNotifications(token, showToast, {
+    onNotificationReceived: () => {
+      void refreshNotificationUnreadCount().catch(() => undefined);
+    },
+  });
   return null;
 }
 

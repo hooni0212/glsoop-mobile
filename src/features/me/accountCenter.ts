@@ -12,6 +12,7 @@ export type MeResponse = {
   is_verified?: boolean;
   remember_login_enabled?: boolean;
   marketing_email_opt_in?: boolean;
+  marketing_push_opt_in?: boolean;
   level: number;
   xp: number;
   streak_days: number;

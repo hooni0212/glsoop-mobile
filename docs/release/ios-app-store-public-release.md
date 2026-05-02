@@ -8,7 +8,7 @@
 - 적용 범위: `glsoop-mobile`
 - 대상 독자: 모바일 개발자, 릴리스 담당자
 - 상태: `Draft`
-- 최종 업데이트: `2026-04-04`
+- 최종 업데이트: `2026-05-02`
 - Owner: `taehun`
 - 공통 기준 문서: `docs/release/store-metadata-canonical.md`
 
@@ -68,6 +68,8 @@ App Store Connect에서 아래를 완료한다.
 
 - Age Rating 설문
 - App Privacy 문항
+  - 마케팅 푸시 동의 상태와 push token이 계정 식별자와 연결되어 광고성 안내에 쓰이는 경우 `Developer's Advertising or Marketing` 목적을 반영한다.
+  - 앱 내 철회 경로는 `계정센터 > 보안 및 로그인 > 광고성 마케팅 알림`으로 입력/설명한다.
 - Pricing and Availability
 - 한국 포함 공개 국가/지역 여부
 
@@ -86,6 +88,7 @@ App Store Connect에서 아래를 완료한다.
   - 로그인 필요 여부
   - 지원/신고는 support fallback 중심이라는 점
   - 비활성화 계정 재활성화 흐름이 있다면 그 테스트 방법
+  - 마케팅 푸시는 거래성 푸시와 분리되어 있고, 명시 동의 사용자에게만 발송되며, 앱 안에서 철회할 수 있다는 점
 
 ### 4. build `1.0.0 (9)`를 버전에 연결한다
 
@@ -162,3 +165,5 @@ App Store Version Release 옵션은 아래 중 하나를 고른다.
 - Apple Release option: https://developer.apple.com/help/app-store-connect/manage-your-apps-availability/select-an-app-store-version-release-option/
 - Apple Manage availability: https://developer.apple.com/help/app-store-connect/manage-your-apps-availability/manage-availability-for-your-app-on-the-app-store
 - Apple Age rating: https://developer.apple.com/help/app-store-connect/manage-app-information/set-an-app-age-rating/
+- Apple App Review Guideline 4.5.4 Push Notifications: https://developer.apple.com/app-store/review/guidelines/#push-notifications
+- Apple App Privacy Details: https://developer.apple.com/app-store/app-privacy-details/

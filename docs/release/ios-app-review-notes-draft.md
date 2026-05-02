@@ -63,6 +63,12 @@ Account management:
 - Account deactivation and deletion can be started inside the app from Account Center.
 - Blocked users can be reviewed and unblocked from Account Center after login.
 
+Notifications:
+- Transactional push notifications are used for comments, replies, and new followers.
+- Promotional or direct marketing push notifications are separated from transactional notifications.
+- Users can explicitly opt in or opt out of marketing push notifications inside the app at Account Center > Security and Login > Advertising/Marketing Notifications.
+- Marketing push notification titles are marked with "(광고)".
+
 Screen recording:
 - A physical-device screen recording is attached in the Review Notes attachment area.
 - The recording shows the public UGC notice, reporting flow, and blocking flow.
