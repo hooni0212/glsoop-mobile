@@ -71,7 +71,7 @@ export default function AccountCenterProfileSettingsScreen() {
     } catch (e) {
       const normalized = normalizeApiError(e);
       if (normalized.kind === "auth") {
-        router.replace(buildAuthRoute("/(auth)", pathname));
+        router.replace(buildAuthRoute("/(auth)/login", pathname));
         return;
       }
       setMessage(normalized.description || normalized.title);
@@ -101,7 +101,7 @@ export default function AccountCenterProfileSettingsScreen() {
             description="계정 센터는 로그인 후 이용할 수 있어요."
             primaryAction={{
               label: "로그인 하러가기",
-              onPress: () => router.replace(buildAuthRoute("/(auth)", pathname)),
+              onPress: () => router.replace(buildAuthRoute("/(auth)/login", pathname)),
             }}
           />
         </View>

@@ -153,7 +153,7 @@ export default function QuestsScreen() {
 
         if (normalized.kind === "auth") {
           Alert.alert(normalized.title, normalized.description);
-          router.push(buildAuthRoute("/(auth)", pathname));
+          router.push(buildAuthRoute("/(auth)/login", pathname));
           return;
         }
 
@@ -182,7 +182,7 @@ export default function QuestsScreen() {
             description="퀘스트 정보를 보려면 로그인해 주세요."
             primaryAction={{
               label: "로그인 하러가기",
-              onPress: () => router.push(buildAuthRoute("/(auth)", pathname)),
+              onPress: () => router.push(buildAuthRoute("/(auth)/login", pathname)),
             }}
           />
         </View>

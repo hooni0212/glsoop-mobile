@@ -316,8 +316,8 @@ test.describe("Growth 플로우", () => {
     await clearAuthToken(page);
     await page.goto("/growth");
 
-    await expect(page.getByText("글숲")).toBeVisible();
-    await expect(page.getByText("로그인", { exact: true })).toBeVisible();
+    await expect(page.getByTestId("auth-login-screen")).toBeVisible();
+    await expect(page.getByTestId("login-submit-btn")).toBeVisible();
     await expect(page.getByText("회원가입", { exact: true })).toBeVisible();
   });
 

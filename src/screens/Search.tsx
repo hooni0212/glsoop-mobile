@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -209,15 +208,10 @@ export default function SearchScreen() {
 
   const promptAuthForAction = useCallback(
     (message: string) => {
-      Alert.alert("로그인이 필요해요", message, [
-        { text: "나중에", style: "cancel" },
-        {
-          text: "로그인",
-          onPress: () => router.push(buildAuthRoute("/(auth)", "/search")),
-        },
-      ]);
+      showToast(message, { tone: "error" });
+      router.push(buildAuthRoute("/(auth)/login", "/search"));
     },
-    []
+    [showToast]
   );
 
   const handleAuthError = useCallback(async () => {

@@ -178,7 +178,7 @@ export default function BookmarksScreen() {
 
   const handleAuthError = useCallback(async () => {
     await signOut();
-    router.replace(buildAuthRoute("/(auth)", pathname));
+    router.replace(buildAuthRoute("/(auth)/login", pathname));
   }, [pathname, signOut]);
 
   const onPressCreateFolder = useCallback(async () => {
@@ -364,7 +364,7 @@ export default function BookmarksScreen() {
         } else {
           const normalized = normalizeApiError(err);
           setFolderItems((prev) => ({ ...prev, error: normalized }));
-          showToast(normalized.description || normalized.title || "좋아요 처리에 실패했어요.", {
+          showToast(normalized.description || normalized.title || "공감 처리에 실패했어요.", {
             tone: "error",
           });
         }

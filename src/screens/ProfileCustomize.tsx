@@ -131,7 +131,7 @@ export default function ProfileCustomizeScreen() {
       const normalized = normalizeApiError(err);
       if (normalized.kind === "auth") {
         showToast("로그인이 필요해요", { tone: "error" });
-        router.replace(buildAuthRoute("/(auth)", pathname));
+        router.replace(buildAuthRoute("/(auth)/login", pathname));
         return;
       }
 
@@ -166,7 +166,7 @@ export default function ProfileCustomizeScreen() {
             description="프로필 꾸미기는 로그인 후 이용할 수 있어요."
             primaryAction={{
               label: "로그인 하러가기",
-              onPress: () => router.replace(buildAuthRoute("/(auth)", pathname)),
+              onPress: () => router.replace(buildAuthRoute("/(auth)/login", pathname)),
             }}
           />
         </View>

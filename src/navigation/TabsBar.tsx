@@ -41,7 +41,7 @@ export function TabsBar(props: any /* BottomTabBarProps */) {
   const go = (name: TabRouteName) => {
     haptics.selection();
     if (!token && name !== "index") {
-      router.push(buildAuthRoute("/(auth)", `/${name}`));
+      router.push(buildAuthRoute("/(auth)/login", `/${name}`));
       return;
     }
     // expo-router Tabs는 내부적으로 React Navigation 기반이라 navigate로 이동 가능
@@ -88,7 +88,7 @@ export function TabsBar(props: any /* BottomTabBarProps */) {
           onPress={() => {
             haptics.medium();
             if (!token) {
-              router.push(buildAuthRoute("/(auth)", "/write"));
+              router.push(buildAuthRoute("/(auth)/login", "/write"));
               return;
             }
             router.push("/write");
