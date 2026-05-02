@@ -87,6 +87,11 @@ export const authorScreenStyles = StyleSheet.create({
     color: tokens.colors.textMuted,
     fontWeight: "900",
   },
+  statMetric: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
   joinedAt: {
     fontSize: tokens.font.small,
     color: tokens.colors.textFaint,
@@ -259,12 +264,15 @@ export const authorScreenStyles = StyleSheet.create({
     gap: tokens.space.xs as any,
   },
   sortChip: {
+    minHeight: 31,
     borderRadius: tokens.radius.pill,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderWidth: 1,
     borderColor: tokens.colors.borderStrong,
     backgroundColor: tokens.colors.surface,
+    alignItems: "center",
+    justifyContent: "center",
   },
   sortChipActive: {
     backgroundColor: tokens.colors.green050,

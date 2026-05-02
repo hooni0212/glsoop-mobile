@@ -2,7 +2,6 @@ import { usePost } from "@/features/posts/usePost";
 import { useRelatedPosts } from "@/features/posts/useRelatedPosts";
 import { useBottomDock } from "@/navigation/bottomDock";
 import { createPostDetailStyles } from "@/screens/PostDetail.styles";
-import { FeedCard } from "@/components/FeedCard";
 import { PostActionBar } from "@/components/post/PostActionBar";
 import { PostBody } from "@/components/post/PostBody";
 import { PostMetaBar } from "@/components/post/PostMetaBar";
@@ -36,7 +35,12 @@ import { buildRenderedPostShareImageUrl } from "@/lib/feedImage";
 import * as haptics from "@/lib/haptics";
 import { logger } from "@/lib/logger";
 import { resolvePostLayout } from "@/lib/postLayout";
+import { resolvePostRenderImages } from "@/lib/postRenderImages";
+import { tokens } from "@/theme/tokens";
+import type { Post } from "@/types/post";
 import * as FileSystem from "expo-file-system/legacy";
+import { Image } from "expo-image";
+import { StatusBar } from "expo-status-bar";
 import { router, useLocalSearchParams, usePathname } from "expo-router";
 import * as Sharing from "expo-sharing";
 import React, { useMemo, useState } from "react";
@@ -54,7 +58,7 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import {
   addPostToBookmarkList,
@@ -131,10 +135,13 @@ function createShareFileName(postId: string) {
 }
 
 export default function PostDetail() {
-  // ✅ safe-area 계산은 navigation layer(BottomDockProvider)에서만 수행
   // 상세 화면은 Tab 도크가 아닌 Action 도크 규격을 사용
   const dock = useBottomDock();
-  const styles = useMemo(() => createPostDetailStyles(dock.action.height), [dock.action.height]);
+  const insets = useSafeAreaInsets();
+  const styles = useMemo(
+    () => createPostDetailStyles(dock.action.height, insets.top),
+    [dock.action.height, insets.top]
+  );
 
   const params = useLocalSearchParams<{ id: string }>();
   const pathname = usePathname();
@@ -240,19 +247,10 @@ export default function PostDetail() {
 
   const promptAuthForAction = React.useCallback(
     (message: string, redirectPath = pathname) => {
-      Alert.alert("로그인이 필요해요", message, [
-        { text: "나중에", style: "cancel" },
-        {
-          text: "로그인",
-          onPress: () => router.push(buildAuthRoute("/(auth)", redirectPath)),
-        },
-        {
-          text: "회원가입",
-          onPress: () => router.push(buildAuthRoute("/(auth)/signup", redirectPath)),
-        },
-      ]);
+      showToast(message, { tone: "error" });
+      router.push(buildAuthRoute("/(auth)/login", redirectPath));
     },
-    [pathname]
+    [pathname, showToast]
   );
 
   React.useEffect(() => {
@@ -515,7 +513,7 @@ export default function PostDetail() {
       if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
         await handleAuthError();
       } else {
-        showToast("좋아요 처리에 실패했어요. 잠시 후 다시 시도해주세요.", { tone: "error" });
+        showToast("공감 처리에 실패했어요. 잠시 후 다시 시도해주세요.", { tone: "error" });
       }
     } finally {
       setLikePending(false);
@@ -888,6 +886,7 @@ export default function PostDetail() {
 
   return (
     <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
+      <StatusBar style="dark" translucent backgroundColor="transparent" />
       {/* ✅ 고정 TopBar (기존 UX 유지) */}
       <PostTopBar
         onPressBack={onPressBack}
@@ -995,7 +994,8 @@ export default function PostDetail() {
             </View>
 
             <View style={styles.relatedSection}>
-              <Text style={styles.relatedTitle}>관련 글</Text>
+              <Text style={styles.relatedEyebrow}>RELATED</Text>
+              <Text style={styles.relatedTitle}>함께 읽기</Text>
               {relatedLoading ? (
                 <Text style={styles.relatedHint}>불러오는 중...</Text>
               ) : relatedError ? (
@@ -1007,14 +1007,11 @@ export default function PostDetail() {
               ) : (
                 <View style={styles.relatedList}>
                   {relatedPosts.map((item) => (
-                    <FeedCard
+                    <RelatedPostCard
                       key={item.id}
                       post={item}
                       onPress={() => router.push(`/posts/${item.id}`)}
-                      onAuthorPress={
-                        item.author?.id ? () => router.push(`/users/${item.author.id}`) : undefined
-                      }
-                      onCommentPress={() => router.push(`/posts/${item.id}`)}
+                      styles={styles}
                     />
                   ))}
                 </View>
@@ -1605,5 +1602,60 @@ export default function PostDetail() {
         onSubmit={({ reasonCode, detail }) => submitPostReport(reasonCode, detail)}
       />
     </SafeAreaView>
+  );
+}
+
+function RelatedPostCard({
+  post,
+  onPress,
+  styles,
+}: {
+  post: Post;
+  onPress: () => void;
+  styles: ReturnType<typeof createPostDetailStyles>;
+}) {
+  const renderImages = resolvePostRenderImages(post);
+  const thumbnail = renderImages?.primaryImage || "";
+  const authorName = post.author?.name || "익명";
+  const likeCount = post.stats?.likeCount ?? 0;
+  const title = post.title || post.excerpt || "제목 없는 글";
+
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [styles.relatedFeedCard, pressed && styles.relatedFeedCardPressed]}
+      accessibilityRole="button"
+      accessibilityLabel={`관련 글 열기: ${title}`}
+    >
+      <View style={styles.relatedThumbWrap}>
+        {thumbnail ? (
+          <Image
+            source={{ uri: thumbnail }}
+            style={styles.relatedThumb}
+            contentFit="cover"
+            transition={120}
+          />
+        ) : (
+          <View style={styles.relatedThumbFallback}>
+            <Ionicons name="document-text-outline" size={22} color={tokens.colors.green700} />
+          </View>
+        )}
+      </View>
+      <View style={styles.relatedFeedCopy}>
+        <Text style={styles.relatedFeedAuthor} numberOfLines={1}>
+          {authorName}
+        </Text>
+        <Text style={styles.relatedFeedTitle} numberOfLines={2}>
+          {title}
+        </Text>
+        <View style={styles.relatedFeedMetaRow} accessibilityLabel={`공감 ${likeCount}개`}>
+          <Ionicons name="heart" size={13} color={tokens.colors.green700} />
+          <Text style={styles.relatedFeedMeta} numberOfLines={1}>
+            {likeCount}
+          </Text>
+        </View>
+      </View>
+      <Ionicons name="chevron-forward" size={18} color={tokens.colors.textFaint} />
+    </Pressable>
   );
 }

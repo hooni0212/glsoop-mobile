@@ -1,4 +1,5 @@
 import React from "react";
+import { Ionicons } from "@expo/vector-icons";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { AppEmpty } from "@/components/state/AppEmpty";
@@ -91,7 +92,10 @@ export function TopPostsList({
                   ) : null}
                   {item.authorName ? <Text style={styles.metaText}>{item.authorName}</Text> : null}
                   {createdAtLabel ? <Text style={styles.metaText}>{createdAtLabel}</Text> : null}
-                  <Text style={styles.metaText}>좋아요 {item.likeCount ?? 0}</Text>
+                  <View style={styles.metaMetric} accessibilityLabel={`공감 ${item.likeCount ?? 0}개`}>
+                    <Ionicons name="heart" size={13} color={tokens.colors.textFaint} />
+                    <Text style={styles.metaText}>{item.likeCount ?? 0}</Text>
+                  </View>
                   <Text style={styles.metaText}>저장 {item.bookmarkCount ?? 0}</Text>
                 </View>
               </View>
@@ -198,6 +202,11 @@ const styles = StyleSheet.create({
     fontSize: tokens.font.small,
     color: tokens.colors.textFaint,
     fontWeight: "700",
+  },
+  metaMetric: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
   },
   metaCategory: {
     color: tokens.colors.green900,

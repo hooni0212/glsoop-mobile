@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { router, useLocalSearchParams, usePathname } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
+import { Ionicons } from "@expo/vector-icons";
 
 import { FeedCard } from "@/components/FeedCard";
 import { SafetyReasonModal } from "@/components/safety/SafetyReasonModal";
@@ -46,6 +47,7 @@ import {
 } from "@/types/cosmetics";
 import type { Post } from "@/types/post";
 import { filterBlockedPosts, useBlockedUserIds } from "@/features/safety/blockedUsersStore";
+import { tokens } from "@/theme/tokens";
 
 function toRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
@@ -169,15 +171,10 @@ export default function Author() {
 
   const promptAuthForAction = useCallback(
     (message: string, redirectPath = pathname) => {
-      Alert.alert("로그인이 필요해요", message, [
-        { text: "나중에", style: "cancel" },
-        {
-          text: "로그인",
-          onPress: () => router.push(buildAuthRoute("/(auth)", redirectPath)),
-        },
-      ]);
+      showToast(message, { tone: "error" });
+      router.push(buildAuthRoute("/(auth)/login", redirectPath));
     },
-    [pathname]
+    [pathname, showToast]
   );
 
   useFocusEffect(
@@ -251,7 +248,7 @@ export default function Author() {
       if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
         await handleAuthError();
       } else {
-        showToast("좋아요 처리에 실패했어요. 잠시 후 다시 시도해주세요.", { tone: "error" });
+        showToast("공감 처리에 실패했어요. 잠시 후 다시 시도해주세요.", { tone: "error" });
       }
     } finally {
       setPending(postId, false);
@@ -494,7 +491,13 @@ export default function Author() {
 
             <View style={authorScreenStyles.statsRow}>
               <Text style={authorScreenStyles.statText}>글 {postCount}</Text>
-              <Text style={authorScreenStyles.statText}>좋아요 {totalLikes}</Text>
+              <View
+                style={authorScreenStyles.statMetric}
+                accessibilityLabel={`공감 ${totalLikes}개`}
+              >
+                <Ionicons name="heart" size={13} color={tokens.colors.textMuted} />
+                <Text style={authorScreenStyles.statText}>{totalLikes}</Text>
+              </View>
               <Text style={authorScreenStyles.statText}>팔로워 {followerCount}</Text>
             </View>
 
@@ -610,29 +613,41 @@ export default function Author() {
             <Text style={authorScreenStyles.sectionLabel}>작성한 글</Text>
             <View style={authorScreenStyles.sortRow}>
               {([
-                ["newest", "최신순"],
-                ["likes", "좋아요순"],
-                ["oldest", "오래된순"],
-              ] as const).map(([value, label]) => {
+                { value: "newest", label: "최신순" },
+                { value: "likes", icon: "heart" },
+                { value: "oldest", label: "오래된순" },
+              ] as const).map((item) => {
+                const value = item.value;
                 const active = sort === value;
                 return (
                   <Pressable
                     key={value}
                     onPress={() => setSort(value)}
                     testID={`author-sort-${value}`}
+                    accessibilityRole="button"
+                    accessibilityLabel={"label" in item ? item.label : "공감 많은 순"}
+                    accessibilityState={{ selected: active }}
                     style={[
                       authorScreenStyles.sortChip,
                       active && authorScreenStyles.sortChipActive,
                     ]}
                   >
-                    <Text
-                      style={[
-                        authorScreenStyles.sortChipText,
-                        active && authorScreenStyles.sortChipTextActive,
-                      ]}
-                    >
-                      {label}
-                    </Text>
+                    {"icon" in item ? (
+                      <Ionicons
+                        name={item.icon}
+                        size={14}
+                        color={active ? tokens.colors.green900 : tokens.colors.textMuted}
+                      />
+                    ) : (
+                      <Text
+                        style={[
+                          authorScreenStyles.sortChipText,
+                          active && authorScreenStyles.sortChipTextActive,
+                        ]}
+                      >
+                        {item.label}
+                      </Text>
+                    )}
                   </Pressable>
                 );
               })}

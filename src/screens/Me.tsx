@@ -418,7 +418,7 @@ export default function MeScreen() {
         return (
           <View style={styles.center}>
             <AppEmpty
-              title={activeTab === "myPosts" ? "작성한 글이 없어요" : "좋아요한 글이 없어요"}
+              title={activeTab === "myPosts" ? "작성한 글이 없어요" : "반응한 글이 없어요"}
             />
           </View>
         );
@@ -563,11 +563,12 @@ export default function MeScreen() {
         <Text style={styles.h1}>내 정보</Text>
         <View style={styles.tabRow}>
           {([
-            ["summary", "요약"],
-            ["myPosts", "내 글"],
-            ["likedPosts", "좋아요"],
-            ["followings", "팔로잉"],
-          ] as const).map(([value, label]) => {
+            { value: "summary", label: "요약" },
+            { value: "myPosts", label: "내 글" },
+            { value: "likedPosts", icon: "heart" },
+            { value: "followings", label: "팔로잉" },
+          ] as const).map((item) => {
+            const value = item.value;
             const active = activeTab === value;
             return (
               <Pressable
@@ -579,9 +580,20 @@ export default function MeScreen() {
                   pressed && styles.controlPressed,
                 ]}
                 accessibilityRole="button"
+                accessibilityLabel={"label" in item ? item.label : "반응한 글"}
                 accessibilityState={{ selected: active }}
               >
-                <Text style={[styles.tabBtnText, active && styles.tabBtnTextActive]}>{label}</Text>
+                {"icon" in item ? (
+                  <Ionicons
+                    name={item.icon}
+                    size={15}
+                    color={active ? tokens.colors.green700 : tokens.colors.textMuted}
+                  />
+                ) : (
+                  <Text style={[styles.tabBtnText, active && styles.tabBtnTextActive]}>
+                    {item.label}
+                  </Text>
+                )}
               </Pressable>
             );
           })}

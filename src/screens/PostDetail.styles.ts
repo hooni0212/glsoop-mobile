@@ -6,8 +6,9 @@ import { tokens } from "@/theme/tokens";
  * - Screen은 조립자 역할만 하도록, 스타일은 여기로 집결
  */
 
-export function createPostDetailStyles(actionBarHeight: number) {
+export function createPostDetailStyles(actionBarHeight: number, topInset = 0) {
   const contentBottomPad = actionBarHeight + tokens.space.xl;
+  const topBarPaddingTop = Math.max(tokens.space.md, topInset + tokens.space.xs);
 
   return StyleSheet.create({
     safe: {
@@ -23,7 +24,7 @@ export function createPostDetailStyles(actionBarHeight: number) {
       left: 0,
       right: 0,
       zIndex: 40,
-      paddingTop: tokens.space.xs,
+      paddingTop: topBarPaddingTop,
       paddingHorizontal: tokens.space.sm,
       paddingBottom: tokens.space.xs,
       flexDirection: "row",
@@ -36,7 +37,7 @@ export function createPostDetailStyles(actionBarHeight: number) {
       borderRadius: 20,
       alignItems: "center",
       justifyContent: "center",
-      backgroundColor: "rgba(255,255,255,0.78)",
+      backgroundColor: "transparent",
     },
     rightActionBtn: {
       width: 44,
@@ -44,9 +45,9 @@ export function createPostDetailStyles(actionBarHeight: number) {
       borderRadius: 22,
       alignItems: "center",
       justifyContent: "center",
-      backgroundColor: "rgba(255,255,255,0.78)",
-      borderWidth: 1,
-      borderColor: "rgba(22,34,28,0.08)",
+      backgroundColor: "transparent",
+      borderWidth: 0,
+      borderColor: "transparent",
     },
 
     topBarSpacer: {
@@ -140,11 +141,23 @@ export function createPostDetailStyles(actionBarHeight: number) {
     },
     relatedSection: {
       marginTop: tokens.space.xl,
-      paddingHorizontal: 8,
+      paddingHorizontal: tokens.space.md,
+      paddingTop: tokens.space.lg,
+      paddingBottom: tokens.space.xl,
       gap: tokens.space.sm as any,
+      backgroundColor: tokens.colors.bgMuted,
+      borderTopWidth: 1,
+      borderTopColor: tokens.colors.border,
+    },
+    relatedEyebrow: {
+      fontSize: 11,
+      fontWeight: "900",
+      color: tokens.colors.textFaint,
+      letterSpacing: 0,
+      marginBottom: -4,
     },
     relatedTitle: {
-      fontSize: 15,
+      fontSize: 16,
       fontWeight: "900",
       color: tokens.colors.text,
     },
@@ -154,7 +167,67 @@ export function createPostDetailStyles(actionBarHeight: number) {
       fontWeight: "700",
     },
     relatedList: {
-      gap: 18,
+      gap: tokens.space.sm as any,
+    },
+    relatedFeedCard: {
+      minHeight: 112,
+      borderRadius: tokens.radius.lg,
+      borderWidth: 1,
+      borderColor: tokens.colors.border,
+      backgroundColor: tokens.colors.surface,
+      padding: tokens.space.sm,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: tokens.space.md as any,
+    },
+    relatedFeedCardPressed: {
+      opacity: 0.78,
+    },
+    relatedThumbWrap: {
+      width: 72,
+      height: 92,
+      borderRadius: tokens.radius.md,
+      overflow: "hidden",
+      backgroundColor: "#f7f3ea",
+      borderWidth: 1,
+      borderColor: tokens.colors.border,
+    },
+    relatedThumb: {
+      width: "100%",
+      height: "100%",
+      backgroundColor: "#f7f3ea",
+    },
+    relatedThumbFallback: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: tokens.colors.green050,
+    },
+    relatedFeedCopy: {
+      flex: 1,
+      minWidth: 0,
+      gap: 5,
+    },
+    relatedFeedAuthor: {
+      fontSize: 12,
+      fontWeight: "900",
+      color: tokens.colors.textMuted,
+    },
+    relatedFeedTitle: {
+      fontSize: 14,
+      lineHeight: 20,
+      fontWeight: "900",
+      color: tokens.colors.text,
+    },
+    relatedFeedMeta: {
+      fontSize: 12,
+      fontWeight: "800",
+      color: tokens.colors.green700,
+    },
+    relatedFeedMetaRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
     },
     relatedCard: {
       borderWidth: 1,

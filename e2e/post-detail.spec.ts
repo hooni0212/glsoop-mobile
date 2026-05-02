@@ -295,9 +295,9 @@ async function openPostDetailFromHome(page: Page) {
     await page.getByTestId("public-ugc-notice-continue").click();
     await expect(publicUgcNoticeGate).toBeHidden();
   }
-  const homeTitle = page.getByText("북마크 모달 테스트 글").first();
-  await expect(homeTitle).toBeVisible();
-  await homeTitle.click();
+  const homePost = page.getByRole("button", { name: "게시글 열기: 북마크 모달 테스트 글" });
+  await expect(homePost).toBeVisible();
+  await homePost.click();
   await expect(page).toHaveURL(/\/posts\/101/);
   await expect(page.getByTestId("post-share-btn")).toBeVisible();
 }
@@ -398,18 +398,17 @@ test.describe("글 상세 화면", () => {
 
     await expect(page.getByTestId("post-comments-section")).toBeVisible();
     await expect(page.getByText("댓글 2")).toBeVisible();
+    await expect(page.getByTestId("post-comment-input")).toBeHidden();
+    await page.getByTestId("post-comments-toggle-btn").click();
     await expect(page.getByText("첫 댓글입니다.")).toBeVisible();
     await expect(page.getByText("답글입니다.")).toBeVisible();
-    await expect(page.getByTestId("post-comment-input")).toBeHidden();
-
-    await page.getByTestId("post-comment-open-btn").click();
-    await expect(page.getByText("새 댓글 작성")).toBeVisible();
+    await expect(page.getByTestId("post-comment-input")).toBeVisible();
     await page.getByTestId("post-comment-input").fill("새 댓글입니다.");
     await page.getByTestId("post-comment-submit-btn").click();
     await expect.poll(() => commentRequests.length).toBe(1);
     await expect(commentRequests[0]).toMatchObject({ content: "새 댓글입니다." });
     await expect(page.getByText("새 댓글입니다.")).toBeVisible();
-    await expect(page.getByTestId("post-comment-input")).toBeHidden();
+    await expect(page.getByTestId("post-comment-input")).toBeVisible();
 
     await page.getByTestId("post-comment-reply-btn-501").click();
     await expect(page.getByText("솔님에게 답글")).toBeVisible();
@@ -526,7 +525,8 @@ test.describe("글 상세 화면", () => {
 
     await openPostDetailFromHome(page);
 
-    await expect(page.getByText("내 글 관리")).toBeVisible();
+    await page.getByTestId("post-safety-menu-btn").click();
+    await expect(page.getByText("글 관리 메뉴를 선택해 주세요.")).toBeVisible();
     await page.getByTestId("post-manage-delete-btn").click();
     await expect(page.getByTestId("post-delete-confirm-btn")).toBeVisible();
     await page.getByTestId("post-delete-confirm-btn").click();
