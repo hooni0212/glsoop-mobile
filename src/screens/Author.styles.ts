@@ -76,6 +76,17 @@ export const authorScreenStyles = StyleSheet.create({
     color: tokens.colors.green700,
     fontWeight: "800",
   },
+  profileBackgroundLabel: {
+    alignSelf: "flex-start",
+    borderRadius: tokens.radius.pill,
+    backgroundColor: "rgba(255,255,255,0.55)",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    fontSize: tokens.font.small,
+    color: tokens.colors.green900,
+    fontWeight: "900",
+    overflow: "hidden",
+  },
   statsRow: {
     flexDirection: "row",
     alignItems: "center",

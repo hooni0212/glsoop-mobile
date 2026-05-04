@@ -25,6 +25,7 @@ export type GrowthAchievementStatus = "locked" | "in_progress" | "completed";
 
 export type GrowthAchievement = {
   id: number;
+  stateId: number;
   code: string;
   name: string;
   description: string;
@@ -33,8 +34,10 @@ export type GrowthAchievement = {
   progress: number;
   target: number;
   unlockedAt: string | null;
+  rewardClaimedAt: string | null;
   positionIndex: number;
   icon: string;
+  uiJson: string;
 };
 
 export type GrowthQuest = {
@@ -74,6 +77,7 @@ export type GrowthPromptQuest = {
 
 export type GrowthCosmeticReward = {
   key: string;
+  type: string | null;
   name: string;
   iconEmoji: string | null;
   rarity: string;
@@ -284,6 +288,7 @@ function normalizeAchievement(input: unknown): GrowthAchievement {
   const row = toRecord(input);
   return {
     id: toNumber(row.id),
+    stateId: toNumber(row.state_id),
     code: toText(row.code),
     name: toText(row.name),
     description: toText(row.description),
@@ -292,8 +297,10 @@ function normalizeAchievement(input: unknown): GrowthAchievement {
     progress: toNumber(row.progress),
     target: toNumber(row.target),
     unlockedAt: toNullableText(row.unlocked_at),
+    rewardClaimedAt: toNullableText(row.reward_claimed_at),
     positionIndex: toNumber(row.position_index),
     icon: toText(row.icon, "🌿"),
+    uiJson: toText(row.ui_json),
   };
 }
 
@@ -388,6 +395,7 @@ function normalizeClaimCosmetic(input: unknown): GrowthCosmeticReward | null {
 
   return {
     key,
+    type: toNullableText(row.type),
     name,
     iconEmoji: toNullableText(row.icon_emoji),
     rarity: toText(row.rarity, "common"),
@@ -427,6 +435,15 @@ function shouldUseCache(force: boolean) {
 function applyQuestClaim(snapshot: GrowthSnapshot, result: ClaimQuestResult, stateId: number) {
   let patched = false;
 
+  const achievements = snapshot.achievements.map((achievement) => {
+    if (achievement.stateId !== stateId) return achievement;
+    patched = true;
+    return {
+      ...achievement,
+      rewardClaimedAt: result.rewardClaimedAt,
+    };
+  });
+
   const campaigns = snapshot.campaigns.map((campaign) => {
     const quests = campaign.quests.map((quest) => {
       if (quest.stateId !== stateId) return quest;
@@ -454,6 +471,7 @@ function applyQuestClaim(snapshot: GrowthSnapshot, result: ClaimQuestResult, sta
   return {
     ...snapshot,
     summary,
+    achievements,
     campaigns,
   };
 }
