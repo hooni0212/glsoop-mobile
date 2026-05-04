@@ -12,11 +12,9 @@ import {
 import { useRouter } from "expo-router";
 
 import { GrowthChart } from "@/components/growth/GrowthChart";
-import { TopPostsList } from "@/components/growth/TopPostsList";
 import { trackGrowthTelemetry, toGrowthTelemetryError } from "@/features/growth/growthTelemetry";
 import { AppEmpty } from "@/components/state/AppEmpty";
 import { useGrowthData } from "@/features/growth/useGrowthData";
-import { blurActiveElementBeforeRouteChange } from "@/lib/webFocus";
 import { tokens } from "@/theme/tokens";
 
 type ProgressItem = {
@@ -26,15 +24,33 @@ type ProgressItem = {
   status: "in_progress" | "completed" | "locked";
 };
 
+type CampaignPreviewItem = {
+  id: number;
+  title: string;
+  typeLabel: string;
+  questCount: number;
+  inProgressCount: number;
+  completedCount: number;
+};
+
 function getStatusMeta(status: ProgressItem["status"]) {
   if (status === "completed") return { label: "완료", color: tokens.colors.green700 };
   if (status === "in_progress") return { label: "진행 중", color: tokens.colors.green900 };
   return { label: "잠금", color: tokens.colors.textMuted };
 }
 
+function formatCampaignType(value: string) {
+  if (value === "daily") return "데일리";
+  if (value === "weekly") return "위클리";
+  if (value === "season") return "시즌";
+  if (value === "event") return "이벤트";
+  if (value === "permanent") return "상시";
+  return "캠페인";
+}
+
 export default function GrowthScreen() {
   const router = useRouter();
-  const { summary, achievements, campaigns, topPosts, topPostsMode, loading, error, source, refetch } = useGrowthData();
+  const { summary, achievements, campaigns, loading, error, source, refetch } = useGrowthData();
   const [refreshing, setRefreshing] = useState(false);
 
   const questSummary = useMemo(() => {
@@ -84,6 +100,25 @@ export default function GrowthScreen() {
       .map(({ id, title, subtitle, status }) => ({ id, title, subtitle, status }));
   }, [campaigns]);
 
+  const campaignPreview = useMemo<CampaignPreviewItem[]>(() => {
+    return campaigns
+      .map((campaign) => {
+        const inProgressCount = campaign.quests.filter((quest) => quest.status === "in_progress").length;
+        const completedCount = campaign.quests.filter((quest) => quest.status === "completed").length;
+        return {
+          id: campaign.id,
+          title: campaign.name,
+          typeLabel: formatCampaignType(campaign.campaignType),
+          questCount: campaign.quests.length,
+          inProgressCount,
+          completedCount,
+        };
+      })
+      .filter((campaign) => campaign.questCount > 0)
+      .sort((a, b) => b.inProgressCount - a.inProgressCount || b.questCount - a.questCount)
+      .slice(0, 3);
+  }, [campaigns]);
+
   const achievementHighlights = useMemo<ProgressItem[]>(() => {
     return achievements
       .map((achievement) => ({
@@ -101,10 +136,6 @@ export default function GrowthScreen() {
       .slice(0, 3)
       .map(({ id, title, subtitle, status }) => ({ id, title, subtitle, status }));
   }, [achievements]);
-
-  const topPostsEmptyTitle = "아직 인기 글이 없어요";
-  const topPostsEmptyDescription = "활동이 더 쌓이면, 여기에서 주목받는 글을 추천해드릴게요.";
-  const topPostsError = topPostsMode === "error" ? error : null;
 
   useEffect(() => {
     trackGrowthTelemetry("growth_screen_viewed", { screen: "home" });
@@ -225,6 +256,11 @@ export default function GrowthScreen() {
           />
         </View>
 
+        <CampaignPreviewSection
+          items={campaignPreview}
+          onPressMore={() => router.push("/growth/quests")}
+        />
+
         <PreviewSection
           title="업적 하이라이트"
           caption={`${achievementSummary.inProgress}개 진행 중`}
@@ -241,21 +277,6 @@ export default function GrowthScreen() {
           emptyText="진행 중인 퀘스트가 없어요."
           onPressMore={() => router.push("/growth/quests")}
           moreButtonTestID="growth-quests-more"
-        />
-
-        <TopPostsList
-          items={topPosts}
-          loading={loading && topPosts.length === 0}
-          error={topPostsError}
-          onPressItem={(id) => {
-            trackGrowthTelemetry("growth_action_clicked", { action: "open_top_post", postId: id });
-            blurActiveElementBeforeRouteChange();
-            router.push(`/posts/${id}`);
-          }}
-          title="인기 글"
-          description="반응이 좋은 글"
-          emptyTitle={topPostsEmptyTitle}
-          emptyDescription={topPostsEmptyDescription}
         />
       </ScrollView>
     </SafeAreaView>
@@ -304,6 +325,68 @@ function ActionCard({
       </View>
       <Ionicons name="chevron-forward" size={16} color={tokens.colors.textMuted} />
     </Pressable>
+  );
+}
+
+function CampaignPreviewSection({
+  items,
+  onPressMore,
+}: {
+  items: CampaignPreviewItem[];
+  onPressMore: () => void;
+}) {
+  return (
+    <View style={styles.sectionCard} testID="growth-campaign-preview">
+      <View style={styles.sectionHeaderRow}>
+        <View style={styles.sectionHeading}>
+          <Text style={styles.sectionTitle}>진행 캠페인</Text>
+          <Text style={styles.sectionCaption}>
+            {items.length > 0 ? `${items.length}개 캠페인 표시 중` : "열린 캠페인을 확인해요"}
+          </Text>
+        </View>
+        <Pressable
+          onPress={onPressMore}
+          style={styles.moreBtn}
+          testID="growth-campaigns-more"
+          accessibilityRole="button"
+          accessibilityLabel="진행 캠페인 전체보기"
+          accessibilityHint="퀘스트 상세 화면으로 이동"
+        >
+          <Text style={styles.moreBtnText}>전체보기</Text>
+        </Pressable>
+      </View>
+
+      {items.length === 0 ? (
+        <Text style={styles.emptyText}>진행 중인 캠페인이 없어요.</Text>
+      ) : (
+        <View style={styles.campaignPreviewList}>
+          {items.map((item) => (
+            <Pressable
+              key={item.id}
+              onPress={onPressMore}
+              style={({ pressed }) => [styles.campaignPreviewItem, pressed && styles.pressed]}
+              testID={`growth-campaign-preview-item-${item.id}`}
+              accessibilityRole="button"
+              accessibilityLabel={`${item.title} 캠페인 보기`}
+              accessibilityHint="퀘스트 상세 화면으로 이동"
+            >
+              <View style={styles.campaignPreviewBody}>
+                <View style={styles.campaignPreviewTitleRow}>
+                  <Text numberOfLines={1} style={styles.campaignPreviewTitle}>
+                    {item.title}
+                  </Text>
+                  <Text style={styles.campaignPreviewBadge}>{item.typeLabel}</Text>
+                </View>
+                <Text style={styles.campaignPreviewMeta}>
+                  퀘스트 {item.questCount}개 · 진행 {item.inProgressCount}개 · 완료 {item.completedCount}개
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={tokens.colors.textMuted} />
+            </Pressable>
+          ))}
+        </View>
+      )}
+    </View>
   );
 }
 
@@ -577,5 +660,51 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     paddingHorizontal: 8,
     paddingVertical: 4,
+  },
+  campaignPreviewList: {
+    gap: tokens.space.sm as any,
+  },
+  campaignPreviewItem: {
+    borderRadius: tokens.radius.lg,
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+    backgroundColor: tokens.colors.surface,
+    paddingHorizontal: tokens.space.sm,
+    paddingVertical: tokens.space.sm,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: tokens.space.sm as any,
+    minHeight: 64,
+  },
+  campaignPreviewBody: {
+    flex: 1,
+    gap: 5,
+  },
+  campaignPreviewTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: tokens.space.xs as any,
+  },
+  campaignPreviewTitle: {
+    flex: 1,
+    fontSize: tokens.font.body,
+    fontWeight: "900",
+    color: tokens.colors.text,
+  },
+  campaignPreviewBadge: {
+    flexShrink: 0,
+    borderRadius: tokens.radius.pill,
+    backgroundColor: tokens.colors.green100,
+    color: tokens.colors.green900,
+    fontSize: tokens.font.small,
+    fontWeight: "900",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    overflow: "hidden",
+  },
+  campaignPreviewMeta: {
+    fontSize: tokens.font.small,
+    color: tokens.colors.textMuted,
+    fontWeight: "700",
   },
 });

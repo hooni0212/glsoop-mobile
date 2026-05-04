@@ -14,7 +14,6 @@ export type TopPostItem = {
   title: string;
   excerpt?: string;
   authorName?: string;
-  category?: string;
   createdAt?: string | null;
   likeCount?: number;
   bookmarkCount?: number;
@@ -87,9 +86,6 @@ export function TopPostsList({
                 ) : null}
 
                 <View style={styles.metaRow}>
-                  {item.category ? (
-                    <Text style={[styles.metaText, styles.metaCategory]}>{item.category}</Text>
-                  ) : null}
                   {item.authorName ? <Text style={styles.metaText}>{item.authorName}</Text> : null}
                   {createdAtLabel ? <Text style={styles.metaText}>{createdAtLabel}</Text> : null}
                   <View style={styles.metaMetric} accessibilityLabel={`공감 ${item.likeCount ?? 0}개`}>
@@ -207,9 +203,5 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 3,
-  },
-  metaCategory: {
-    color: tokens.colors.green900,
-    fontWeight: "800",
   },
 });
