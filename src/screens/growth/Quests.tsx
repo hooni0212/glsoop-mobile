@@ -12,7 +12,7 @@ import { useToast } from "@/feedback/ToastProvider";
 import { refreshMyCosmetics } from "@/features/cosmetics/useMyCosmetics";
 import { trackGrowthTelemetry, toGrowthTelemetryError } from "@/features/growth/growthTelemetry";
 import type { GrowthQuest } from "@/features/growth/useGrowthData";
-import { useGrowthData } from "@/features/growth/useGrowthData";
+import { parseGrowthPromptQuest, useGrowthData } from "@/features/growth/useGrowthData";
 import { toTimestampMs } from "@/lib/dateTime";
 import { ApiError, normalizeApiError } from "@/lib/errors";
 import { tokens } from "@/theme/tokens";
@@ -21,6 +21,22 @@ const STATUS_ORDER: Record<GrowthQuest["status"], number> = {
   in_progress: 0,
   completed: 1,
   locked: 2,
+};
+
+type QuestCosmeticRewardPreview = {
+  key: string;
+  icon: string;
+  label: string;
+};
+
+const COSMETIC_REWARD_PRESETS: Record<string, QuestCosmeticRewardPreview> = {
+  badge_spring_2026: { key: "badge_spring_2026", icon: "🌸", label: "봄 시즌 배지" },
+  badge_summer_2026: { key: "badge_summer_2026", icon: "☀️", label: "여름 시즌 배지" },
+  badge_autumn_2026: { key: "badge_autumn_2026", icon: "🍂", label: "가을 시즌 배지" },
+  badge_winter_2026: { key: "badge_winter_2026", icon: "❄️", label: "겨울 시즌 배지" },
+  sticker_leaf: { key: "sticker_leaf", icon: "🍃", label: "리프 스티커" },
+  sticker_star: { key: "sticker_star", icon: "✨", label: "스타 스티커" },
+  sticker_moon: { key: "sticker_moon", icon: "🌙", label: "문 스티커" },
 };
 
 function clampPercent(value: number) {
@@ -49,6 +65,29 @@ function formatCampaignType(value: string) {
   if (value === "event") return "이벤트";
   if (value === "permanent") return "상시";
   return "캠페인";
+}
+
+function parseQuestRewardCosmetics(quest: GrowthQuest): QuestCosmeticRewardPreview[] {
+  if (!quest.uiJson) return [];
+  try {
+    const parsed = JSON.parse(quest.uiJson) as { rewards?: { cosmetics?: unknown } };
+    if (!Array.isArray(parsed?.rewards?.cosmetics)) return [];
+    const uniqueKeys = Array.from(
+      new Set(
+        parsed.rewards.cosmetics
+          .map((value) => (typeof value === "string" ? value.trim() : ""))
+          .filter(Boolean)
+      )
+    ).slice(0, 4);
+
+    return uniqueKeys.map((key) => {
+      if (COSMETIC_REWARD_PRESETS[key]) return COSMETIC_REWARD_PRESETS[key];
+      if (key.startsWith("badge_")) return { key, icon: "🏅", label: "시즌 배지" };
+      return { key, icon: "✨", label: "스티커" };
+    });
+  } catch {
+    return [];
+  }
 }
 
 export default function QuestsScreen() {
@@ -167,6 +206,27 @@ export default function QuestsScreen() {
     [claimPendingByStateId, claimQuestReward, pathname, refetch, router, showToast]
   );
 
+  const handleStartPromptQuest = useCallback(
+    (quest: GrowthQuest) => {
+      const prompt = parseGrowthPromptQuest(quest);
+      if (!prompt || quest.isLocked) return;
+      const params = new URLSearchParams({
+        questStateId: String(quest.stateId),
+        promptKey: prompt.key,
+        promptTitle: prompt.title,
+        promptBody: prompt.body,
+        promptCategory: prompt.defaultCategory,
+        promptTags: prompt.suggestedHashtags.join(","),
+      });
+      trackGrowthTelemetry("growth_quest_prompt_write_started", {
+        stateId: quest.stateId,
+        templateId: quest.id,
+      });
+      router.push(`/write?${params.toString()}`);
+    },
+    [router]
+  );
+
   if (error?.kind === "auth") {
     return (
       <SafeAreaView style={styles.safe} testID="growth-quests-screen">
@@ -269,6 +329,7 @@ export default function QuestsScreen() {
                       quest={quest}
                       claimPending={Boolean(claimPendingByStateId[quest.stateId])}
                       onClaim={handleClaimReward}
+                      onStartPromptQuest={handleStartPromptQuest}
                     />
                   ))}
                 </View>
@@ -285,16 +346,21 @@ function QuestItem({
   quest,
   claimPending,
   onClaim,
+  onStartPromptQuest,
 }: {
   quest: GrowthQuest;
   claimPending: boolean;
   onClaim: (stateId: number) => void;
+  onStartPromptQuest: (quest: GrowthQuest) => void;
 }) {
   const statusMeta = getQuestStatusMeta(quest);
   const lockHint = getQuestLockHint(quest);
+  const prompt = parseGrowthPromptQuest(quest);
+  const cosmeticRewards = parseQuestRewardCosmetics(quest);
   const percent = quest.target > 0 ? clampPercent((quest.progress / quest.target) * 100) : 0;
   const progressCurrent = Math.min(quest.progress, quest.target);
   const canClaim = quest.status === "completed" && !quest.rewardClaimedAt && !quest.isLocked;
+  const canStartPrompt = Boolean(prompt && !quest.isLocked && quest.status !== "completed");
 
   return (
     <View style={styles.questItem}>
@@ -319,9 +385,43 @@ function QuestItem({
           진행 {progressCurrent}/{quest.target}
         </Text>
       </View>
+      {cosmeticRewards.length > 0 ? (
+        <View style={styles.rewardPreviewRow} testID={`quest-reward-cosmetics-${quest.stateId}`}>
+          {cosmeticRewards.map((reward) => (
+            <View
+              key={reward.key}
+              style={styles.rewardPreviewChip}
+              testID={`quest-reward-cosmetic-${quest.stateId}-${reward.key}`}
+            >
+              <Text style={styles.rewardPreviewText}>
+                {reward.icon} {reward.label}
+              </Text>
+            </View>
+          ))}
+        </View>
+      ) : null}
       <View style={styles.progressTrack}>
         <View style={[styles.progressBar, quest.isLocked && styles.progressBarLocked, { width: `${percent}%` }]} />
       </View>
+
+      {prompt ? (
+        <View style={styles.promptBox}>
+          <Text style={styles.promptLabel}>글감</Text>
+          <Text style={styles.promptTitle}>{prompt.title}</Text>
+          {prompt.body ? <Text style={styles.promptBody}>{prompt.body}</Text> : null}
+          {canStartPrompt ? (
+            <Pressable
+              onPress={() => onStartPromptQuest(quest)}
+              style={({ pressed }) => [styles.promptBtn, pressed && styles.promptBtnPressed]}
+              testID={`quest-prompt-write-btn-${quest.stateId}`}
+              accessibilityRole="button"
+              accessibilityLabel={prompt.ctaLabel}
+            >
+              <Text style={styles.promptBtnText}>{prompt.ctaLabel}</Text>
+            </Pressable>
+          ) : null}
+        </View>
+      ) : null}
 
       {canClaim ? (
         <Pressable
@@ -494,6 +594,24 @@ const styles = StyleSheet.create({
     color: tokens.colors.textMuted,
     fontWeight: "700",
   },
+  rewardPreviewRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+  },
+  rewardPreviewChip: {
+    borderRadius: tokens.radius.pill,
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+    backgroundColor: tokens.colors.green050,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  rewardPreviewText: {
+    fontSize: tokens.font.small,
+    fontWeight: "800",
+    color: tokens.colors.green900,
+  },
   progressTrack: {
     height: 8,
     borderRadius: tokens.radius.pill,
@@ -507,6 +625,48 @@ const styles = StyleSheet.create({
   },
   progressBarLocked: {
     backgroundColor: tokens.colors.textFaint,
+  },
+  promptBox: {
+    borderRadius: tokens.radius.lg,
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+    backgroundColor: tokens.colors.green050,
+    padding: tokens.space.md,
+    gap: 6,
+  },
+  promptLabel: {
+    fontSize: 11,
+    fontWeight: "900",
+    color: tokens.colors.green700,
+  },
+  promptTitle: {
+    fontSize: tokens.font.body,
+    fontWeight: "900",
+    color: tokens.colors.text,
+    lineHeight: 20,
+  },
+  promptBody: {
+    fontSize: tokens.font.small,
+    fontWeight: "700",
+    color: tokens.colors.textMuted,
+    lineHeight: 18,
+  },
+  promptBtn: {
+    marginTop: 4,
+    minHeight: 42,
+    borderRadius: tokens.radius.pill,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: tokens.colors.green700,
+    paddingHorizontal: tokens.space.lg,
+  },
+  promptBtnPressed: {
+    opacity: 0.86,
+  },
+  promptBtnText: {
+    fontSize: tokens.font.small,
+    fontWeight: "900",
+    color: tokens.colors.textInverse,
   },
   claimBtn: {
     alignSelf: "flex-start",

@@ -45,6 +45,7 @@ import {
   upsertWriteDraft,
   clearAllWriteDrafts,
 } from "@/services/draftStorage";
+import type { WriteDraftQuestContext } from "@/services/draftStorage";
 import { createPost, getEditablePost, updatePost } from "@/services/postService";
 import type { PostCommentPolicy, PostType, PostVisibility } from "@/types/post";
 import { ConfirmState, useConfirmBeforeLeave } from "@/hooks/useConfirmBeforeLeave";
@@ -58,6 +59,36 @@ const PREVIEW_PANEL_ITEMS: { key: PreviewPanelKey; label: string }[] = [
   { key: "background", label: "배경" },
   { key: "layout", label: "배치" },
 ];
+
+function getParamString(value: unknown): string | null {
+  const raw = Array.isArray(value) ? value[0] : value;
+  if (typeof raw !== "string") return null;
+  const trimmed = raw.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function getParamNumber(value: unknown): number | null {
+  const raw = getParamString(value);
+  if (!raw) return null;
+  const parsed = Number(raw);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+}
+
+function normalizePromptCategory(value: unknown): PostType | undefined {
+  const raw = getParamString(value);
+  return raw === "poem" || raw === "essay" || raw === "short" ? raw : undefined;
+}
+
+function parsePromptTags(value: unknown): string[] {
+  const raw = getParamString(value);
+  if (!raw) return [];
+  return raw
+    .split(/[\s,]+/)
+    .map((item) => item.trim().replace(/^#+/, ""))
+    .filter(Boolean)
+    .filter((item, index, arr) => arr.indexOf(item) === index)
+    .slice(0, 12);
+}
 
 export default function Write() {
   const styles = useMemo(() => createWriteStyles(), []);
@@ -76,6 +107,7 @@ export default function Write() {
   const [visibility, setVisibility] = useState<PostVisibility>("public");
   const [commentPolicy, setCommentPolicy] = useState<PostCommentPolicy>("logged_in");
   const [editPostId, setEditPostId] = useState<string | null>(null);
+  const [questContext, setQuestContext] = useState<WriteDraftQuestContext | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewPanel, setPreviewPanel] = useState<PreviewPanelKey>("settings");
   const [layout, setLayout] = useState<WriteLayoutModel>(DEFAULT_WRITE_LAYOUT);
@@ -89,6 +121,11 @@ export default function Write() {
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [createdPostId, setCreatedPostId] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<AppErrorModel | null>(null);
+  const [lastQuestCompletion, setLastQuestCompletion] = useState<{
+    status?: string;
+    progress?: number;
+    target?: number;
+  } | null>(null);
 
   const hasShownRestorePromptRef = useRef(false);
   const isEditMode = Boolean(editPostId);
@@ -103,11 +140,27 @@ export default function Write() {
   }, [hashtagsInput]);
   const layoutSignature = useMemo(() => JSON.stringify(buildLayoutPayload(layout)), [layout]);
   const hasLayoutChanges = layoutSignature !== DEFAULT_WRITE_LAYOUT_SIGNATURE;
+  const promptQuestFromParams = useMemo<WriteDraftQuestContext | null>(() => {
+    const rawParams = (params ?? {}) as Record<string, unknown>;
+    const stateId = getParamNumber(rawParams.questStateId);
+    const promptKey = getParamString(rawParams.promptKey);
+    if (!stateId || !promptKey) return null;
+
+    return {
+      stateId,
+      promptKey,
+      promptTitle: getParamString(rawParams.promptTitle) ?? undefined,
+      promptBody: getParamString(rawParams.promptBody) ?? undefined,
+      defaultCategory: normalizePromptCategory(rawParams.promptCategory),
+      suggestedHashtags: parsePromptTags(rawParams.promptTags),
+    };
+  }, [params]);
 
   const hasChanges =
     title.trim().length > 0 ||
     body.trim().length > 0 ||
     selectedType !== null ||
+    questContext !== null ||
     fontKey !== "serif" ||
     visibility !== "public" ||
     commentPolicy !== "logged_in" ||
@@ -141,6 +194,7 @@ export default function Write() {
     const trimmedBody = body.trim();
     const hasDraftableChanges =
       Boolean(trimmedTitle || trimmedBody || selectedType) ||
+      Boolean(questContext) ||
       fontKey !== "serif" ||
       hasLayoutChanges;
     if (!hasDraftableChanges) {
@@ -165,6 +219,7 @@ export default function Write() {
         layoutJson: buildLayoutPayload(layout),
         visibility,
         commentPolicy,
+        questContext,
         mode: editPostId ? "edit" : "create",
         postId: editPostId,
       });
@@ -176,7 +231,7 @@ export default function Write() {
       showToast("임시저장에 실패했어요. 잠시 후 다시 시도해주세요.", { tone: "error" });
       return false;
     }
-  }, [title, body, draftId, editPostId, selectedType, fontKey, layout, visibility, commentPolicy, hasLayoutChanges, showToast]);
+  }, [title, body, draftId, editPostId, selectedType, fontKey, layout, visibility, commentPolicy, questContext, hasLayoutChanges, showToast]);
 
   const { confirm: leaveConfirm, requestLeave, allowNextLeave } = useConfirmBeforeLeave({
     hasChanges,
@@ -249,6 +304,7 @@ export default function Write() {
     setFontKey("serif");
     setVisibility("public");
     setCommentPolicy("logged_in");
+    setQuestContext(null);
     setLayout(DEFAULT_WRITE_LAYOUT);
   }, []);
 
@@ -352,6 +408,7 @@ export default function Write() {
 
     setSubmitError(null);
     setCreatedPostId(null);
+    setLastQuestCompletion(null);
     setIsSubmitting(true);
     try {
       if (editPostId) {
@@ -380,6 +437,9 @@ export default function Write() {
           fontKey,
           visibility,
           commentPolicy,
+          questContext: questContext
+            ? { stateId: questContext.stateId, promptKey: questContext.promptKey }
+            : undefined,
         });
 
         if (draftId) {
@@ -387,6 +447,7 @@ export default function Write() {
           setDraftId(null);
         }
         setCreatedPostId(created.postId);
+        setLastQuestCompletion(created.questCompletion ?? null);
         logger.debug("[write] submit success", { postId: created.postId });
       }
       setSubmitSuccess(true);
@@ -407,6 +468,7 @@ export default function Write() {
     fontKey,
     visibility,
     commentPolicy,
+    questContext,
     previewOpen,
     dismissKeyboard,
   ]);
@@ -462,6 +524,7 @@ export default function Write() {
           setFontKey(editable.fontKey ?? "serif");
           setVisibility(editable.visibility ?? "public");
           setCommentPolicy(editable.commentPolicy ?? "logged_in");
+          setQuestContext(null);
           setLayout(parseLayoutJson(editable.layoutJson));
           setActiveBoxId("text_box");
         } catch (err) {
@@ -488,8 +551,25 @@ export default function Write() {
           setFontKey(d.fontKey ?? "serif");
           setVisibility(d.visibility ?? "public");
           setCommentPolicy(d.commentPolicy ?? "logged_in");
+          setQuestContext(d.questContext ?? null);
+          if (d.questContext?.suggestedHashtags?.length) {
+            setHashtagsInput(d.questContext.suggestedHashtags.join(", "));
+          }
           setLayout(parseLayoutJson(d.layoutJson));
           setActiveBoxId("text_box");
+        }
+        return;
+      }
+
+      if (promptQuestFromParams) {
+        logger.debug("[write] prompt quest restored", {
+          stateId: promptQuestFromParams.stateId,
+          promptKey: promptQuestFromParams.promptKey,
+        });
+        setQuestContext(promptQuestFromParams);
+        setSelectedType(promptQuestFromParams.defaultCategory ?? "essay");
+        if (promptQuestFromParams.suggestedHashtags?.length) {
+          setHashtagsInput(promptQuestFromParams.suggestedHashtags.join(", "));
         }
         return;
       }
@@ -582,6 +662,17 @@ export default function Write() {
                   error={submitError}
                   onRetry={submitError.canRetry ? onPressSubmit : undefined}
                 />
+              </View>
+            ) : null}
+            {questContext ? (
+              <View style={styles.questPromptCard} testID="write-quest-prompt-card">
+                <Text style={styles.questPromptEyebrow}>퀘스트 주제</Text>
+                <Text style={styles.questPromptTitle}>
+                  {questContext.promptTitle ?? "주제 글쓰기"}
+                </Text>
+                {questContext.promptBody ? (
+                  <Text style={styles.questPromptBody}>{questContext.promptBody}</Text>
+                ) : null}
               </View>
             ) : null}
             {previewOpen ? (
@@ -706,7 +797,11 @@ export default function Write() {
             <View style={styles.successCard}>
               <Text style={styles.successTitle}>완료되었어요</Text>
               <Text style={styles.successMessage}>
-                {isEditMode ? "수정한 글을 확인할까요?" : "어디로 이동할까요?"}
+                {lastQuestCompletion
+                  ? "퀘스트 진행도도 반영됐어요."
+                  : isEditMode
+                    ? "수정한 글을 확인할까요?"
+                    : "어디로 이동할까요?"}
               </Text>
               <View style={styles.successActions}>
                 <Pressable

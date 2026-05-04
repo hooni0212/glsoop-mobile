@@ -18,12 +18,23 @@ export type CreatePostInput = {
   fontKey?: PostFontKey;
   visibility?: PostVisibility;
   commentPolicy?: PostCommentPolicy;
+  questContext?: {
+    stateId: number;
+    promptKey: string;
+  };
 };
 
 type CreatePostResponse = {
   ok: boolean;
   message?: string;
   post_id?: string;
+  quest_completion?: {
+    state_id?: number;
+    status?: string;
+    progress?: number;
+    target?: number;
+    completed_at?: string | null;
+  };
 };
 
 type DeletePostResponse = {
@@ -51,7 +62,10 @@ type UpdatePostResponse = {
   message?: string;
 };
 
-export async function createPost(input: CreatePostInput): Promise<{ postId: string }> {
+export async function createPost(input: CreatePostInput): Promise<{
+  postId: string;
+  questCompletion?: NonNullable<CreatePostResponse["quest_completion"]>;
+}> {
   const payload: Record<string, unknown> = {
     type: input.type,
     category: input.category ?? input.type,
@@ -64,6 +78,12 @@ export async function createPost(input: CreatePostInput): Promise<{ postId: stri
   if (input.layoutJson) payload.layout_json = input.layoutJson;
   if (input.visibility) payload.visibility = input.visibility;
   if (input.commentPolicy) payload.comment_policy = input.commentPolicy;
+  if (input.questContext) {
+    payload.quest_context = {
+      state_id: input.questContext.stateId,
+      prompt_key: input.questContext.promptKey,
+    };
+  }
 
   const res = await apiPost<CreatePostResponse>("/api/posts", payload);
 
@@ -75,7 +95,7 @@ export async function createPost(input: CreatePostInput): Promise<{ postId: stri
     throw new Error("서버가 post_id를 응답하지 않았어요.");
   }
 
-  return { postId: res.post_id };
+  return { postId: res.post_id, questCompletion: res.quest_completion };
 }
 
 export async function deletePost(postId: string): Promise<void> {

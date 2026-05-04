@@ -110,6 +110,36 @@ export function createWriteStyles() {
       justifyContent: "center",
       paddingVertical: 12,
     },
+    questPromptCard: {
+      marginBottom: 14,
+      padding: 16,
+      borderRadius: tokens.radius.lg,
+      backgroundColor: tokens.colors.green050,
+      borderWidth: 1,
+      borderColor: tokens.colors.green100,
+    },
+    questPromptEyebrow: {
+      fontSize: 12,
+      fontWeight: "900",
+      color: tokens.colors.green700,
+      letterSpacing: 0,
+    },
+    questPromptTitle: {
+      marginTop: 6,
+      fontSize: 17,
+      lineHeight: 23,
+      fontWeight: "900",
+      color: tokens.colors.text,
+      letterSpacing: 0,
+    },
+    questPromptBody: {
+      marginTop: 8,
+      fontSize: 13,
+      lineHeight: 19,
+      fontWeight: "700",
+      color: tokens.colors.textMuted,
+      letterSpacing: 0,
+    },
 
     card: {
       borderRadius: 28,

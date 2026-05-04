@@ -61,6 +61,17 @@ export type GrowthQuest = {
   lockReason: string | null;
 };
 
+export type GrowthPromptQuest = {
+  key: string;
+  title: string;
+  body: string;
+  ctaLabel: string;
+  defaultCategory: "poem" | "essay" | "short";
+  suggestedHashtags: string[];
+  source: string | null;
+  sourceUrl: string | null;
+};
+
 export type GrowthCosmeticReward = {
   key: string;
   name: string;
@@ -212,6 +223,41 @@ function toIdText(value: unknown) {
 
 function toRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+}
+
+function toStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.map((item) => String(item || "").trim()).filter(Boolean).slice(0, 12);
+}
+
+function normalizePromptCategory(value: unknown): "poem" | "essay" | "short" {
+  if (value === "poem" || value === "short") return value;
+  return "essay";
+}
+
+export function parseGrowthPromptQuest(quest: GrowthQuest): GrowthPromptQuest | null {
+  if (quest.conditionType !== "PROMPT_POST_CREATED" || !quest.uiJson) return null;
+  try {
+    const parsed = JSON.parse(quest.uiJson);
+    const root = toRecord(parsed);
+    if (root.quest_kind !== "writing_prompt") return null;
+    const prompt = toRecord(root.prompt);
+    const key = toText(prompt.key).trim();
+    const title = toText(prompt.title).trim();
+    if (!key || !title) return null;
+    return {
+      key,
+      title,
+      body: toText(prompt.body),
+      ctaLabel: toText(prompt.cta_label, "이 주제로 글쓰기"),
+      defaultCategory: normalizePromptCategory(prompt.default_category),
+      suggestedHashtags: toStringArray(prompt.suggested_hashtags),
+      source: toNullableText(root.source),
+      sourceUrl: toNullableText(root.source_url),
+    };
+  } catch {
+    return null;
+  }
 }
 
 function normalizeStatus(value: unknown): GrowthAchievementStatus {
