@@ -64,7 +64,7 @@ function formatCampaignType(value: string) {
   if (value === "season") return "시즌";
   if (value === "event") return "이벤트";
   if (value === "permanent") return "상시";
-  return "캠페인";
+  return "이벤트";
 }
 
 function parseQuestRewardCosmetics(quest: GrowthQuest): QuestCosmeticRewardPreview[] {
@@ -258,7 +258,7 @@ export default function QuestsScreen() {
     <SafeAreaView style={styles.safe} testID="growth-quests-screen">
       <GrowthDetailTopBar
         title="퀘스트 상세"
-        subtitle={`캠페인 ${campaigns.length}개 · 퀘스트 ${questCount}개`}
+        subtitle={`이벤트 ${campaigns.length}개 · 퀘스트 ${questCount}개`}
         onPressBack={() => router.back()}
         backButtonTestID="growth-quests-back-btn"
       />
@@ -295,7 +295,7 @@ export default function QuestsScreen() {
         {showEmpty ? (
           <AppEmpty
             title="진행 가능한 퀘스트가 없어요"
-            description="지금은 표시할 퀘스트가 없어요. 새 캠페인이 열리면 자동으로 표시돼요."
+            description="지금은 표시할 퀘스트가 없어요. 새 이벤트가 열리면 자동으로 표시돼요."
           />
         ) : null}
 
