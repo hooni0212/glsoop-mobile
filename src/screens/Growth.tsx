@@ -45,7 +45,7 @@ function formatCampaignType(value: string) {
   if (value === "season") return "시즌";
   if (value === "event") return "이벤트";
   if (value === "permanent") return "상시";
-  return "캠페인";
+  return "이벤트";
 }
 
 export default function GrowthScreen() {
@@ -218,7 +218,7 @@ export default function GrowthScreen() {
           </View>
 
           <View style={styles.heroStatsRow}>
-            <HeroStat label="활성 캠페인" value={`${campaigns.length}`} />
+            <HeroStat label="활성 이벤트" value={`${campaigns.length}`} />
             <HeroStat label="진행 업적" value={`${achievementSummary.inProgress}`} />
             <HeroStat label="진행 퀘스트" value={`${questSummary.inProgress}`} />
           </View>
@@ -339,9 +339,9 @@ function CampaignPreviewSection({
     <View style={styles.sectionCard} testID="growth-campaign-preview">
       <View style={styles.sectionHeaderRow}>
         <View style={styles.sectionHeading}>
-          <Text style={styles.sectionTitle}>진행 캠페인</Text>
+          <Text style={styles.sectionTitle}>진행 이벤트</Text>
           <Text style={styles.sectionCaption}>
-            {items.length > 0 ? `${items.length}개 캠페인 표시 중` : "열린 캠페인을 확인해요"}
+            {items.length > 0 ? `${items.length}개 이벤트 표시 중` : "열린 이벤트를 확인해요"}
           </Text>
         </View>
         <Pressable
@@ -349,7 +349,7 @@ function CampaignPreviewSection({
           style={styles.moreBtn}
           testID="growth-campaigns-more"
           accessibilityRole="button"
-          accessibilityLabel="진행 캠페인 전체보기"
+          accessibilityLabel="진행 이벤트 전체보기"
           accessibilityHint="퀘스트 상세 화면으로 이동"
         >
           <Text style={styles.moreBtnText}>전체보기</Text>
@@ -357,7 +357,7 @@ function CampaignPreviewSection({
       </View>
 
       {items.length === 0 ? (
-        <Text style={styles.emptyText}>진행 중인 캠페인이 없어요.</Text>
+        <Text style={styles.emptyText}>진행 중인 이벤트가 없어요.</Text>
       ) : (
         <View style={styles.campaignPreviewList}>
           {items.map((item) => (
@@ -367,7 +367,7 @@ function CampaignPreviewSection({
               style={({ pressed }) => [styles.campaignPreviewItem, pressed && styles.pressed]}
               testID={`growth-campaign-preview-item-${item.id}`}
               accessibilityRole="button"
-              accessibilityLabel={`${item.title} 캠페인 보기`}
+              accessibilityLabel={`${item.title} 이벤트 보기`}
               accessibilityHint="퀘스트 상세 화면으로 이동"
             >
               <View style={styles.campaignPreviewBody}>

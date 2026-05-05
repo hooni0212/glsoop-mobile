@@ -34,6 +34,7 @@ import { ApiError } from "@/lib/errors";
 import { buildRenderedPostShareImageUrl } from "@/lib/feedImage";
 import * as haptics from "@/lib/haptics";
 import { logger } from "@/lib/logger";
+import { normalizePostBackgroundTemplateId } from "@/lib/postBackgroundTemplates";
 import { resolvePostLayout } from "@/lib/postLayout";
 import { resolvePostRenderImages } from "@/lib/postRenderImages";
 import { tokens } from "@/theme/tokens";
@@ -702,7 +703,13 @@ export default function PostDetail() {
           throw new Error("Native file sharing is unavailable.");
         }
 
-        const imageUrl = buildRenderedPostShareImageUrl(post.id, { format: "png" });
+        const shareTemplate = normalizePostBackgroundTemplateId(
+          post.renderImages?.template ?? postLayout.presetId
+        );
+        const imageUrl = buildRenderedPostShareImageUrl(post.id, {
+          format: "png",
+          template: shareTemplate,
+        });
         const downloaded = await FileSystem.downloadAsync(
           imageUrl,
           `${cacheDirectory}${createShareFileName(post.id)}`
@@ -720,6 +727,7 @@ export default function PostDetail() {
         logShareEventSafely("shared", {
           ...baseMeta,
           image_format: "png",
+          image_template: shareTemplate,
           image_url: imageUrl,
         });
         showToast("이미지 공유가 완료되었어요.", { tone: "success" });
