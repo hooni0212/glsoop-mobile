@@ -6,26 +6,31 @@ export const MAX_HEADER_STICKERS = 3;
 
 export type CosmeticItem = {
   key: string;
+  type: "badge" | "sticker" | "background" | string | null;
   name: string;
   icon_emoji: string | null;
   rarity: string | null;
   season: string | null;
+  meta: Record<string, unknown> | null;
 };
 
 export type ProfileCosmeticsState = {
   primary_badge_key: string | null;
+  profile_background_key: string | null;
   showcase_badge_keys: string[];
   header_stickers: { slot: CosmeticStickerSlot; key: string }[];
 };
 
 export type ProfileCosmeticsExpanded = {
   primary_badge?: CosmeticItem | null;
+  profile_background?: CosmeticItem | null;
   showcase_badges?: CosmeticItem[];
   header_stickers?: { slot: CosmeticStickerSlot; sticker: CosmeticItem }[];
 };
 
 export type NormalizedProfileCosmeticsExpanded = {
   primary_badge: CosmeticItem | null;
+  profile_background: CosmeticItem | null;
   showcase_badges: CosmeticItem[];
   header_stickers: { slot: CosmeticStickerSlot; sticker: CosmeticItem }[];
 };
@@ -80,16 +85,22 @@ export function normalizeCosmeticItem(value: unknown): CosmeticItem | null {
 
   return {
     key,
+    type: toNullableText(row.type),
     name,
     icon_emoji: toNullableText(row.icon_emoji ?? row.iconEmoji),
     rarity: toNullableText(row.rarity) || "common",
     season: toNullableText(row.season),
+    meta:
+      row.meta && typeof row.meta === "object" && !Array.isArray(row.meta)
+        ? (row.meta as Record<string, unknown>)
+        : null,
   };
 }
 
 export function createEmptyProfileCosmeticsState(): ProfileCosmeticsState {
   return {
     primary_badge_key: null,
+    profile_background_key: null,
     showcase_badge_keys: [],
     header_stickers: [],
   };
@@ -100,6 +111,9 @@ export function normalizeProfileCosmeticsState(value: unknown): ProfileCosmetics
 
   const primary_badge_key = normalizeCosmeticKey(
     row.primary_badge_key ?? row.primaryBadgeKey
+  );
+  const profile_background_key = normalizeCosmeticKey(
+    row.profile_background_key ?? row.profileBackgroundKey
   );
 
   const rawShowcase = toArray(row.showcase_badge_keys ?? row.showcaseBadgeKeys);
@@ -131,6 +145,7 @@ export function normalizeProfileCosmeticsState(value: unknown): ProfileCosmetics
 
   return {
     primary_badge_key,
+    profile_background_key,
     showcase_badge_keys,
     header_stickers,
   };
@@ -142,6 +157,9 @@ export function normalizeProfileCosmeticsExpanded(
   const row = toRecord(value);
 
   const primary_badge = normalizeCosmeticItem(row.primary_badge ?? row.primaryBadge);
+  const profile_background = normalizeCosmeticItem(
+    row.profile_background ?? row.profileBackground
+  );
 
   const rawShowcase = toArray(row.showcase_badges ?? row.showcaseBadges);
   const showcaseSeen = new Set<string>();
@@ -174,6 +192,7 @@ export function normalizeProfileCosmeticsExpanded(
 
   return {
     primary_badge,
+    profile_background,
     showcase_badges,
     header_stickers,
   };

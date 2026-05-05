@@ -91,6 +91,19 @@ function emojiOrFallback(value: unknown, fallback: string): string {
   return trimmed.length > 0 ? trimmed : fallback;
 }
 
+function getProfileBackgroundTone(key: string | null | undefined) {
+  if (key === "background_writer_grove") {
+    return { backgroundColor: "#EAF5EE", borderColor: "#9EC9AD" };
+  }
+  if (key === "background_deep_forest") {
+    return { backgroundColor: "#DCEFE5", borderColor: "#7DAE91" };
+  }
+  if (key === "background_prompt_letters") {
+    return { backgroundColor: "#FFF1E8", borderColor: "#E6BDA6" };
+  }
+  return { backgroundColor: tokens.colors.surface, borderColor: tokens.colors.border };
+}
+
 function getStickerAnchorStyle(slot: CosmeticStickerSlot) {
   if (slot === "tl") return authorScreenStyles.stickerTL;
   if (slot === "tr") return authorScreenStyles.stickerTR;
@@ -422,13 +435,23 @@ export default function Author() {
 
   const listHeader = useMemo(
     () => {
-      const primaryBadge = profileCosmetics.primary_badge;
-      const showcaseBadges = profileCosmetics.showcase_badges.slice(0, 6);
+	      const primaryBadge = profileCosmetics.primary_badge;
+	      const profileBackground = profileCosmetics.profile_background;
+	      const backgroundTone = getProfileBackgroundTone(profileBackground?.key);
+	      const showcaseBadges = profileCosmetics.showcase_badges.slice(0, 6);
       const headerStickers = profileCosmetics.header_stickers;
 
       return (
         <View>
-          <View style={authorScreenStyles.profileCard}>
+	          <View
+	            style={[
+	              authorScreenStyles.profileCard,
+	              {
+	                backgroundColor: backgroundTone.backgroundColor,
+	                borderColor: backgroundTone.borderColor,
+	              },
+	            ]}
+	          >
             {headerStickers.map(({ slot, sticker }) => (
               <View
                 key={`${slot}-${sticker.key}`}
@@ -456,7 +479,12 @@ export default function Author() {
               ) : null}
             </View>
 
-            <Text style={authorScreenStyles.bio}>{collapsedAbout || bio}</Text>
+	            <Text style={authorScreenStyles.bio}>{collapsedAbout || bio}</Text>
+	            {profileBackground ? (
+	              <Text style={authorScreenStyles.profileBackgroundLabel}>
+	                {emojiOrFallback(profileBackground.icon_emoji, "🎨")} {profileBackground.name}
+	              </Text>
+	            ) : null}
             {about.length > 96 ? (
               <Pressable
                 onPress={() => setBioExpanded((current) => !current)}
