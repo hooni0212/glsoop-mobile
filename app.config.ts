@@ -16,6 +16,15 @@ export default (): ExpoConfig => ({
         defaultChannel: "default",
       },
     ],
+    [
+      "expo-media-library",
+      {
+        photosPermission: "글숲에서 만든 공유 이미지를 확인하기 위해 사진 접근 권한이 필요합니다.",
+        savePhotosPermission: "글숲에서 만든 공유 이미지를 사진 앱에 저장하기 위해 권한이 필요합니다.",
+        isAccessMediaLocationEnabled: false,
+        granularPermissions: [],
+      },
+    ],
   ],
   ios: {
     ...baseConfig.ios,

@@ -41,6 +41,7 @@ import { tokens } from "@/theme/tokens";
 import type { Post } from "@/types/post";
 import * as FileSystem from "expo-file-system/legacy";
 import { Image } from "expo-image";
+import * as MediaLibrary from "expo-media-library";
 import { StatusBar } from "expo-status-bar";
 import { router, useLocalSearchParams, usePathname } from "expo-router";
 import * as Sharing from "expo-sharing";
@@ -135,6 +136,51 @@ function createShareFileName(postId: string) {
   return `glsoop_post_${safePostId}_${Date.now()}.png`;
 }
 
+async function downloadPostShareImage(postId: string, imageUrl: string) {
+  const cacheDirectory = FileSystem.cacheDirectory;
+  if (!cacheDirectory) {
+    throw new Error("공유 이미지를 임시 저장할 공간을 찾지 못했어요.");
+  }
+
+  const downloaded = await FileSystem.downloadAsync(
+    imageUrl,
+    `${cacheDirectory}${createShareFileName(postId)}`
+  );
+
+  if (downloaded.status < 200 || downloaded.status >= 300) {
+    throw new Error("공유 이미지를 내려받지 못했어요.");
+  }
+
+  return downloaded.uri;
+}
+
+async function ensureMediaLibrarySavePermission() {
+  const isAvailable = await MediaLibrary.isAvailableAsync();
+  if (!isAvailable) {
+    throw new Error("이 기기에서는 사진 앱 저장을 지원하지 않아요.");
+  }
+
+  const currentPermission = await MediaLibrary.getPermissionsAsync(true);
+  if (currentPermission.granted) return;
+
+  if (!currentPermission.canAskAgain) {
+    throw new Error("사진 앱 저장 권한이 꺼져 있어요. 기기 설정에서 글숲의 사진 권한을 허용해주세요.");
+  }
+
+  const nextPermission = await MediaLibrary.requestPermissionsAsync(true);
+  if (!nextPermission.granted) {
+    throw new Error("사진 앱에 저장하려면 사진 추가 권한이 필요해요.");
+  }
+}
+
+function getShareFailureMessage(mode: ShareMode, error: unknown) {
+  if (error instanceof Error && error.message) return error.message;
+  if (mode === "imageSave") return "이미지 저장에 실패했어요. 잠시 후 다시 시도해주세요.";
+  return "공유에 실패했어요. 잠시 후 다시 시도해주세요.";
+}
+
+type ShareMode = "imageShare" | "imageSave" | "link" | "title" | "full";
+
 export default function PostDetail() {
   // 상세 화면은 Tab 도크가 아닌 Action 도크 규격을 사용
   const dock = useBottomDock();
@@ -167,7 +213,7 @@ export default function PostDetail() {
   const [bookmarkLoading, setBookmarkLoading] = useState(false);
   const [bookmarkLists, setBookmarkLists] = useState<BookmarkList[]>([]);
   const [bookmarkPending, setBookmarkPending] = useState<Record<string, boolean>>({});
-  const [shareSubmitting, setShareSubmitting] = useState<"image" | "link" | "full" | "title" | null>(null);
+  const [shareSubmitting, setShareSubmitting] = useState<ShareMode | null>(null);
   const [canManagePost, setCanManagePost] = useState(false);
   const [manageBusy, setManageBusy] = useState(false);
   const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
@@ -638,14 +684,15 @@ export default function PostDetail() {
     }
   };
 
-  const sharePost = async (mode: "image" | "link" | "title" | "full") => {
+  const sharePost = async (mode: ShareMode) => {
     if (!post) return;
     if (shareSubmitting) return;
 
     const shareTitle = title || "글숲";
     const shareContent = content.trim();
     const permalink = buildPostPermalink(post.id);
-    const textMode = mode === "image" ? "link" : mode;
+    const isImageMode = mode === "imageShare" || mode === "imageSave";
+    const textMode = isImageMode ? "link" : mode;
     const shareMessage = buildShareText({
       mode: textMode,
       title: shareTitle,
@@ -657,8 +704,10 @@ export default function PostDetail() {
     const dismissedAction =
       (Share as { dismissedAction?: string }).dismissedAction ?? "dismissedAction";
     const channel =
-      mode === "image"
+      mode === "imageShare"
         ? "share_modal_image_png"
+        : mode === "imageSave"
+          ? "share_modal_image_save"
         : mode === "link"
           ? "share_modal_link"
           : mode === "full"
@@ -692,17 +741,7 @@ export default function PostDetail() {
       setShareSubmitting(mode);
       setShareModalVisible(false);
 
-      if (mode === "image" && Platform.OS !== "web") {
-        const cacheDirectory = FileSystem.cacheDirectory;
-        if (!cacheDirectory) {
-          throw new Error("File cache directory is unavailable.");
-        }
-
-        const canShareFile = await Sharing.isAvailableAsync();
-        if (!canShareFile) {
-          throw new Error("Native file sharing is unavailable.");
-        }
-
+      if (isImageMode && Platform.OS !== "web") {
         const shareTemplate = normalizePostBackgroundTemplateId(
           post.renderImages?.template ?? postLayout.presetId
         );
@@ -710,16 +749,28 @@ export default function PostDetail() {
           format: "png",
           template: shareTemplate,
         });
-        const downloaded = await FileSystem.downloadAsync(
-          imageUrl,
-          `${cacheDirectory}${createShareFileName(post.id)}`
-        );
+        const imageUri = await downloadPostShareImage(post.id, imageUrl);
 
-        if (downloaded.status < 200 || downloaded.status >= 300) {
-          throw new Error(`Image download failed: ${downloaded.status}`);
+        if (mode === "imageSave") {
+          await ensureMediaLibrarySavePermission();
+          await MediaLibrary.saveToLibraryAsync(imageUri);
+          logShareEventSafely("shared", {
+            ...baseMeta,
+            image_format: "png",
+            image_template: shareTemplate,
+            image_url: imageUrl,
+            action: "saved_to_library",
+          });
+          showToast("이미지를 사진 앱에 저장했어요.", { tone: "success" });
+          return;
         }
 
-        await Sharing.shareAsync(downloaded.uri, {
+        const canShareFile = await Sharing.isAvailableAsync();
+        if (!canShareFile) {
+          throw new Error("이 기기에서는 이미지 공유를 지원하지 않아요.");
+        }
+
+        await Sharing.shareAsync(imageUri, {
           dialogTitle: shareTitle,
           mimeType: "image/png",
           UTI: "public.png",
@@ -772,7 +823,7 @@ export default function PostDetail() {
       if (__DEV__) {
         logger.warn("[share] post share failed", shareError);
       }
-      showToast("공유에 실패했어요. 잠시 후 다시 시도해주세요.", { tone: "error" });
+      showToast(getShareFailureMessage(mode, shareError), { tone: "error" });
     } finally {
       setShareSubmitting(null);
     }
@@ -1374,16 +1425,29 @@ export default function PostDetail() {
               {Platform.OS !== "web" ? (
                 <>
                   <Pressable
-                    onPress={() => void sharePost("image")}
+                    onPress={() => void sharePost("imageSave")}
                     disabled={Boolean(shareSubmitting)}
                     style={[
                       styles.bookmarkModalListItem,
                       shareSubmitting && styles.bookmarkModalListItemDisabled,
                     ]}
                   >
-                    <Text style={styles.bookmarkModalListItemName}>이미지 저장/공유</Text>
+                    <Text style={styles.bookmarkModalListItemName}>이미지 저장</Text>
                     <Text style={styles.bookmarkModalListItemStatus}>
-                      {shareSubmitting === "image" ? "준비 중" : "PNG"}
+                      {shareSubmitting === "imageSave" ? "저장 중" : "사진 앱"}
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => void sharePost("imageShare")}
+                    disabled={Boolean(shareSubmitting)}
+                    style={[
+                      styles.bookmarkModalListItem,
+                      shareSubmitting && styles.bookmarkModalListItemDisabled,
+                    ]}
+                  >
+                    <Text style={styles.bookmarkModalListItemName}>이미지 공유</Text>
+                    <Text style={styles.bookmarkModalListItemStatus}>
+                      {shareSubmitting === "imageShare" ? "준비 중" : "PNG"}
                     </Text>
                   </Pressable>
                   <Pressable
