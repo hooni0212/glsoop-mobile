@@ -5,6 +5,7 @@ import { normalizeApiError, type AppErrorModel } from "@/lib/errors";
 import { buildPostExcerpt } from "@/lib/postContent";
 import { normalizePostRenderImageFields } from "@/lib/postRenderImages";
 import { normalizePublicDisplayName } from "@/lib/publicDisplayName";
+import { normalizeProfileCosmeticsExpanded } from "@/types/cosmetics";
 import type { Post } from "@/types/post";
 
 type RelatedPostsResponse = {
@@ -53,6 +54,23 @@ function parseTags(row: any) {
     .filter(Boolean);
 }
 
+function parseAuthorProfileCosmetics(row: any) {
+  return normalizeProfileCosmeticsExpanded(
+    row?.author_profile_cosmetics ??
+      row?.authorProfileCosmetics ?? {
+        primary_badge: row?.author_primary_badge_key
+          ? {
+              key: row.author_primary_badge_key,
+              name: row.author_primary_badge_name,
+              icon_emoji: row.author_primary_badge_icon_emoji,
+              rarity: row.author_primary_badge_rarity,
+              season: row.author_primary_badge_season,
+            }
+          : null,
+      }
+  );
+}
+
 function normalizeRelatedPost(row: any): Post {
   const id = String(row?.id ?? row?.post_id ?? "");
   const title = pickFirstString(row?.title, row?.post_title);
@@ -83,6 +101,7 @@ function normalizeRelatedPost(row: any): Post {
     author: {
       id: authorId,
       name: authorName,
+      profileCosmetics: parseAuthorProfileCosmetics(row),
     },
     stats: {
       likeCount,

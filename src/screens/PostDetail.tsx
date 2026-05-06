@@ -5,42 +5,63 @@ import { createPostDetailStyles } from "@/screens/PostDetail.styles";
 import { PostActionBar } from "@/components/post/PostActionBar";
 import { PostBody } from "@/components/post/PostBody";
 import { PostMetaBar } from "@/components/post/PostMetaBar";
+import { SafetyActionSheet } from "@/components/safety/SafetyActionSheet";
 import { SafetyReasonModal } from "@/components/safety/SafetyReasonModal";
 import { AppEmpty } from "@/components/state/AppEmpty";
 import { AppError } from "@/components/state/AppError";
 import { AppLoading } from "@/components/state/AppLoading";
 import { PostTopBar } from "@/components/post/PostTopBar";
-import { getLegalDocumentUrl, getSupportUrl } from "@/config/release";
+import { releaseConfig } from "@/config/release";
 import { useAuth } from "@/auth/AuthContext";
 import { setBookmark, useBookmarkSnapshot } from "@/features/bookmarks/bookmarkStore";
 import { useRuntimeLegalConfig } from "@/hooks/useRuntimeLegalConfig";
 import { getLike, setLike, useLikeSnapshot } from "@/features/likes/likeStore";
 import { useToast } from "@/feedback/ToastProvider";
-import { openExternalUrl } from "@/lib/externalLinks";
 import { togglePostLike } from "@/services/likeService";
+import {
+  createPostComment,
+  deleteComment,
+  listPostComments,
+  PostComment,
+  toggleCommentLike,
+} from "@/services/commentService";
 import { deletePost, getEditablePost } from "@/services/postService";
 import { blockUserById, pickSafetyReasons, reportPost } from "@/services/safetyService";
 import { logShareEvent } from "@/services/shareService";
-import { resolveRuntimeLegalDocumentUrl } from "@/services/runtimeConfigService";
 import { buildAuthRoute } from "@/lib/authRedirect";
 import { formatKstDateKorean } from "@/lib/dateTime";
 import { ApiError } from "@/lib/errors";
+import { buildRenderedPostShareImageUrl } from "@/lib/feedImage";
+import * as haptics from "@/lib/haptics";
 import { logger } from "@/lib/logger";
+import { normalizePostBackgroundTemplateId } from "@/lib/postBackgroundTemplates";
 import { resolvePostLayout } from "@/lib/postLayout";
+import { resolvePostRenderImages } from "@/lib/postRenderImages";
+import { tokens } from "@/theme/tokens";
+import type { Post } from "@/types/post";
+import * as FileSystem from "expo-file-system/legacy";
+import { Image } from "expo-image";
+import * as MediaLibrary from "expo-media-library";
+import { StatusBar } from "expo-status-bar";
 import { router, useLocalSearchParams, usePathname } from "expo-router";
+import * as Sharing from "expo-sharing";
 import React, { useMemo, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   InteractionManager,
   Modal,
   Platform,
   Pressable,
+  RefreshControl,
   ScrollView,
   Share,
   Text,
+  TextInput,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
 import {
   addPostToBookmarkList,
   BookmarkList,
@@ -80,11 +101,94 @@ function createShareRequestId(postId: string) {
   return `share_${postId}_${Date.now()}_${randomPart}`.slice(0, 120);
 }
 
+function buildPostPermalink(postId: string) {
+  const encodedPostId = encodeURIComponent(postId);
+  if (Platform.OS === "web" && typeof window !== "undefined" && window.location?.origin) {
+    return `${window.location.origin}/html/post.html?postId=${encodedPostId}`;
+  }
+  return `${releaseConfig.siteUrl}/html/post.html?postId=${encodedPostId}`;
+}
+
+function buildShareText({
+  mode,
+  title,
+  content,
+  permalink,
+}: {
+  mode: "title" | "full" | "link";
+  title: string;
+  content: string;
+  permalink: string;
+}) {
+  if (mode === "link") {
+    return `${title}\n${permalink}`;
+  }
+
+  if (mode === "full" && content) {
+    return `${title}\n\n${content}\n\n${permalink}`;
+  }
+
+  return `${title}\n${permalink}`;
+}
+
+function createShareFileName(postId: string) {
+  const safePostId = postId.replace(/[^a-zA-Z0-9_-]/g, "-") || "card";
+  return `glsoop_post_${safePostId}_${Date.now()}.png`;
+}
+
+async function downloadPostShareImage(postId: string, imageUrl: string) {
+  const cacheDirectory = FileSystem.cacheDirectory;
+  if (!cacheDirectory) {
+    throw new Error("공유 이미지를 임시 저장할 공간을 찾지 못했어요.");
+  }
+
+  const downloaded = await FileSystem.downloadAsync(
+    imageUrl,
+    `${cacheDirectory}${createShareFileName(postId)}`
+  );
+
+  if (downloaded.status < 200 || downloaded.status >= 300) {
+    throw new Error("공유 이미지를 내려받지 못했어요.");
+  }
+
+  return downloaded.uri;
+}
+
+async function ensureMediaLibrarySavePermission() {
+  const isAvailable = await MediaLibrary.isAvailableAsync();
+  if (!isAvailable) {
+    throw new Error("이 기기에서는 사진 앱 저장을 지원하지 않아요.");
+  }
+
+  const currentPermission = await MediaLibrary.getPermissionsAsync(true);
+  if (currentPermission.granted) return;
+
+  if (!currentPermission.canAskAgain) {
+    throw new Error("사진 앱 저장 권한이 꺼져 있어요. 기기 설정에서 글숲의 사진 권한을 허용해주세요.");
+  }
+
+  const nextPermission = await MediaLibrary.requestPermissionsAsync(true);
+  if (!nextPermission.granted) {
+    throw new Error("사진 앱에 저장하려면 사진 추가 권한이 필요해요.");
+  }
+}
+
+function getShareFailureMessage(mode: ShareMode, error: unknown) {
+  if (error instanceof Error && error.message) return error.message;
+  if (mode === "imageSave") return "이미지 저장에 실패했어요. 잠시 후 다시 시도해주세요.";
+  return "공유에 실패했어요. 잠시 후 다시 시도해주세요.";
+}
+
+type ShareMode = "imageShare" | "imageSave" | "link" | "title" | "full";
+
 export default function PostDetail() {
-  // ✅ safe-area 계산은 navigation layer(BottomDockProvider)에서만 수행
   // 상세 화면은 Tab 도크가 아닌 Action 도크 규격을 사용
   const dock = useBottomDock();
-  const styles = useMemo(() => createPostDetailStyles(dock.action.height), [dock.action.height]);
+  const insets = useSafeAreaInsets();
+  const styles = useMemo(
+    () => createPostDetailStyles(dock.action.height, insets.top),
+    [dock.action.height, insets.top]
+  );
 
   const params = useLocalSearchParams<{ id: string }>();
   const pathname = usePathname();
@@ -109,8 +213,19 @@ export default function PostDetail() {
   const [bookmarkLoading, setBookmarkLoading] = useState(false);
   const [bookmarkLists, setBookmarkLists] = useState<BookmarkList[]>([]);
   const [bookmarkPending, setBookmarkPending] = useState<Record<string, boolean>>({});
+  const [shareSubmitting, setShareSubmitting] = useState<ShareMode | null>(null);
   const [canManagePost, setCanManagePost] = useState(false);
   const [manageBusy, setManageBusy] = useState(false);
+  const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
+  const [comments, setComments] = useState<PostComment[]>([]);
+  const [commentsLoading, setCommentsLoading] = useState(false);
+  const [commentsError, setCommentsError] = useState<string | null>(null);
+  const [commentInput, setCommentInput] = useState("");
+  const [commentsExpanded, setCommentsExpanded] = useState(false);
+  const [commentSubmitting, setCommentSubmitting] = useState(false);
+  const [replyTarget, setReplyTarget] = useState<PostComment | null>(null);
+  const [deletingCommentId, setDeletingCommentId] = useState<number | null>(null);
+  const [commentLikePending, setCommentLikePending] = useState<Record<number, boolean>>({});
 
   const title = post?.title || "";
   const authorName = post?.author?.name || "익명";
@@ -133,36 +248,56 @@ export default function PostDetail() {
   const fallbackLikeCount = post?.stats?.likeCount ?? 0;
   const fallbackIsLiked = Boolean((post as any)?.viewer?.isLiked);
   const postId = post?.id ?? id ?? "";
+  const canCommentOnPost = Boolean((post as any)?.viewer?.canComment);
+  const commentPolicy = (post as any)?.commentPolicy || "logged_in";
+  const commentDisabledReason = !token
+    ? "로그인 후 댓글을 남길 수 있어요."
+    : !canCommentOnPost
+      ? commentPolicy === "closed"
+        ? "댓글이 닫힌 글이에요."
+        : commentPolicy === "followers"
+          ? "팔로워만 댓글을 남길 수 있어요."
+          : commentPolicy === "author_only"
+            ? "글쓴이만 댓글을 남길 수 있어요."
+            : "댓글을 작성할 권한이 없어요."
+      : null;
+  const canWriteComment = Boolean(token) && canCommentOnPost;
   const likeSnapshot = useLikeSnapshot(postId, fallbackIsLiked, fallbackLikeCount);
   const likeCount = likeSnapshot.likeCount;
   const isLiked = likeSnapshot.liked;
   const fallbackBookmarked = Boolean((post as any)?.viewer?.isBookmarked);
   const bookmarkSnapshot = useBookmarkSnapshot(postId, fallbackBookmarked);
   const isBookmarked = bookmarkSnapshot.bookmarked;
-  const legalGuidelinesUrl = resolveRuntimeLegalDocumentUrl(
-    runtimeLegalConfig,
-    "guidelines",
-    getLegalDocumentUrl("guidelines")
-  );
+  const loadedPostId = post?.id ?? null;
   const postSafetyReasons = pickSafetyReasons(runtimeLegalConfig?.safety.reportReasons, "post");
   const userSafetyReasons = pickSafetyReasons(runtimeLegalConfig?.safety.reportReasons, "user");
   const reportDetailMaxLength = runtimeLegalConfig?.safety.detailMaxLength;
   const reportDetailRequiredReasonCodes = runtimeLegalConfig?.safety.detailRequiredReasonCodes;
+  const topLevelComments = useMemo(
+    () => comments.filter((comment) => !comment.parentCommentId),
+    [comments]
+  );
+  const repliesByParentId = useMemo(() => {
+    const map = new Map<number, PostComment[]>();
+    for (const comment of comments) {
+      if (!comment.parentCommentId) continue;
+      const current = map.get(comment.parentCommentId) ?? [];
+      current.push(comment);
+      map.set(comment.parentCommentId, current);
+    }
+    return map;
+  }, [comments]);
+  const commentCount = comments.filter((comment) => comment.status === "active").length;
 
   const onPressBack = () => router.back();
   const showNotFound = error?.kind === "not_found";
 
   const promptAuthForAction = React.useCallback(
     (message: string, redirectPath = pathname) => {
-      Alert.alert("로그인이 필요해요", message, [
-        { text: "나중에", style: "cancel" },
-        {
-          text: "로그인",
-          onPress: () => router.push(buildAuthRoute("/(auth)", redirectPath)),
-        },
-      ]);
+      showToast(message, { tone: "error" });
+      router.push(buildAuthRoute("/(auth)/login", redirectPath));
     },
-    [pathname]
+    [pathname, showToast]
   );
 
   React.useEffect(() => {
@@ -197,12 +332,200 @@ export default function PostDetail() {
     );
   }, [promptAuthForAction, signOut]);
 
+  const loadComments = React.useCallback(async () => {
+    if (!postId) return;
+    setCommentsLoading(true);
+    setCommentsError(null);
+    try {
+      const result = await listPostComments({ postId, limit: 50, offset: 0 });
+      setComments(result.comments);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        setComments([]);
+        return;
+      }
+      setCommentsError(
+        err instanceof Error ? err.message : "댓글을 불러오지 못했어요."
+      );
+    } finally {
+      setCommentsLoading(false);
+    }
+  }, [postId]);
+
+  React.useEffect(() => {
+    setComments([]);
+    setCommentInput("");
+    setReplyTarget(null);
+    setCommentsError(null);
+    if (!postId || loading || error || !loadedPostId) return;
+    void loadComments();
+  }, [error, loadComments, loadedPostId, loading, postId]);
+
+  const openCommentsSheet = React.useCallback(() => {
+    setCommentsExpanded(true);
+  }, []);
+
+  const clearCommentDraft = React.useCallback(() => {
+    if (commentSubmitting) return;
+    setCommentInput("");
+    setReplyTarget(null);
+  }, [commentSubmitting]);
+
+  const submitComment = async () => {
+    if (!token) {
+      promptAuthForAction("댓글은 로그인한 회원만 남길 수 있어요.");
+      return;
+    }
+    if (!canCommentOnPost) {
+      showToast(commentDisabledReason || "댓글을 작성할 수 없어요.", { tone: "error" });
+      return;
+    }
+    if (!postId || commentSubmitting) return;
+
+    const contentToSend = commentInput.trim();
+    if (!contentToSend) {
+      showToast("댓글 내용을 입력해주세요.", { tone: "error" });
+      return;
+    }
+    if (contentToSend.length > 1000) {
+      showToast("댓글은 1000자 이하로 입력해주세요.", { tone: "error" });
+      return;
+    }
+
+    setCommentSubmitting(true);
+    try {
+      const created = await createPostComment({
+        postId,
+        content: contentToSend,
+        parentCommentId: replyTarget?.id ?? null,
+      });
+      setComments((prev) => [...prev, created]);
+      setCommentInput("");
+      setReplyTarget(null);
+      showToast(replyTarget ? "답글을 남겼어요." : "댓글을 남겼어요.", { tone: "success" });
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        await handleAuthError();
+        return;
+      }
+      showToast(
+        err instanceof Error ? err.message : "댓글 작성에 실패했어요. 잠시 후 다시 시도해주세요.",
+        { tone: "error" }
+      );
+    } finally {
+      setCommentSubmitting(false);
+    }
+  };
+
+  const onPressReply = (comment: PostComment) => {
+    if (!token) {
+      promptAuthForAction("답글은 로그인한 회원만 남길 수 있어요.");
+      return;
+    }
+    if (!canCommentOnPost) {
+      showToast(commentDisabledReason || "답글을 작성할 수 없어요.", { tone: "error" });
+      return;
+    }
+    haptics.selection();
+    setCommentsExpanded(true);
+    setReplyTarget(comment);
+  };
+
+  const onPressDeleteComment = (comment: PostComment) => {
+    if (!token || deletingCommentId) return;
+    haptics.warning();
+
+    const submit = async () => {
+      setDeletingCommentId(comment.id);
+      try {
+        await deleteComment(comment.id);
+        setComments((prev) =>
+          prev.map((item) =>
+            item.id === comment.id
+              ? {
+                  ...item,
+                  status: "deleted",
+                  content: null,
+                  author: null,
+                  deletedAt: new Date().toISOString(),
+                }
+              : item
+          )
+        );
+        showToast("댓글을 삭제했어요.", { tone: "success" });
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 401) {
+          await handleAuthError();
+          return;
+        }
+        showToast("댓글 삭제에 실패했어요. 잠시 후 다시 시도해주세요.", { tone: "error" });
+      } finally {
+        setDeletingCommentId(null);
+      }
+    };
+
+    Alert.alert("댓글 삭제", "이 댓글을 삭제할까요?", [
+      { text: "취소", style: "cancel" },
+      { text: "삭제", style: "destructive", onPress: () => void submit() },
+    ]);
+  };
+
+  const onPressCommentLike = async (comment: PostComment) => {
+    if (!token) {
+      promptAuthForAction("댓글 공감은 로그인한 회원만 남길 수 있어요.");
+      return;
+    }
+    if (comment.status !== "active" || commentLikePending[comment.id]) return;
+    haptics.selection();
+
+    const prevLiked = comment.likedByMe;
+    const prevCount = comment.likeCount;
+    const nextLiked = !prevLiked;
+    const nextCount = Math.max(0, prevCount + (nextLiked ? 1 : -1));
+
+    setComments((prev) =>
+      prev.map((item) =>
+        item.id === comment.id
+          ? { ...item, likedByMe: nextLiked, likeCount: nextCount }
+          : item
+      )
+    );
+    setCommentLikePending((prev) => ({ ...prev, [comment.id]: true }));
+
+    try {
+      const result = await toggleCommentLike(comment.id);
+      setComments((prev) =>
+        prev.map((item) =>
+          item.id === comment.id
+            ? { ...item, likedByMe: result.liked, likeCount: result.likeCount }
+            : item
+        )
+      );
+    } catch (err) {
+      setComments((prev) =>
+        prev.map((item) =>
+          item.id === comment.id
+            ? { ...item, likedByMe: prevLiked, likeCount: prevCount }
+            : item
+        )
+      );
+      if (err instanceof ApiError && err.status === 401) {
+        await handleAuthError();
+        return;
+      }
+      showToast("댓글 공감 처리에 실패했어요. 잠시 후 다시 시도해주세요.", { tone: "error" });
+    } finally {
+      setCommentLikePending((prev) => ({ ...prev, [comment.id]: false }));
+    }
+  };
+
   const onPressLike = async () => {
     if (!token) {
       promptAuthForAction("공감은 로그인한 회원만 남길 수 있어요.");
       return;
     }
     if (!post || likePending) return;
+    haptics.selection();
 
     const stored = getLike(post.id);
     const prevLiked = stored?.liked ?? Boolean(post.viewer?.isLiked);
@@ -237,7 +560,7 @@ export default function PostDetail() {
       if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
         await handleAuthError();
       } else {
-        showToast("좋아요 처리에 실패했어요. 잠시 후 다시 시도해주세요.", { tone: "error" });
+        showToast("공감 처리에 실패했어요. 잠시 후 다시 시도해주세요.", { tone: "error" });
       }
     } finally {
       setLikePending(false);
@@ -259,6 +582,7 @@ export default function PostDetail() {
       return;
     }
     if (!post) return;
+    haptics.selection();
     setBookmarkModalVisible(true);
     setBookmarkLoading(true);
 
@@ -319,6 +643,7 @@ export default function PostDetail() {
       );
       setBookmarkLists(nextLists);
       syncBookmarkSnapshot(nextLists);
+      haptics.success();
     } catch (err) {
       if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
         setBookmarkModalVisible(false);
@@ -343,6 +668,7 @@ export default function PostDetail() {
       const next = [{ ...created, contains: true }, ...bookmarkLists];
       setBookmarkLists(next);
       syncBookmarkSnapshot(next);
+      haptics.success();
     } catch (err) {
       if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
         setBookmarkModalVisible(false);
@@ -358,18 +684,35 @@ export default function PostDetail() {
     }
   };
 
-  const sharePost = async (mode: "title" | "full") => {
+  const sharePost = async (mode: ShareMode) => {
     if (!post) return;
+    if (shareSubmitting) return;
 
     const shareTitle = title || "글숲";
     const shareContent = content.trim();
-    const shareMessage =
-      mode === "full" && shareContent ? `${shareTitle}\n\n${shareContent}` : shareTitle;
+    const permalink = buildPostPermalink(post.id);
+    const isImageMode = mode === "imageShare" || mode === "imageSave";
+    const textMode = isImageMode ? "link" : mode;
+    const shareMessage = buildShareText({
+      mode: textMode,
+      title: shareTitle,
+      content: shareContent,
+      permalink,
+    });
     const requestId = createShareRequestId(post.id);
     const platform = Platform.OS === "web" ? "web" : "mobile";
     const dismissedAction =
       (Share as { dismissedAction?: string }).dismissedAction ?? "dismissedAction";
-    const channel = mode === "full" ? "share_modal_full" : "share_modal_title_only";
+    const channel =
+      mode === "imageShare"
+        ? "share_modal_image_png"
+        : mode === "imageSave"
+          ? "share_modal_image_save"
+        : mode === "link"
+          ? "share_modal_link"
+          : mode === "full"
+            ? "share_modal_full"
+            : "share_modal_title_only";
 
     const logShareEventSafely = (result: "shared" | "dismissed" | "failed", meta?: Record<string, unknown>) => {
       void logShareEvent({
@@ -387,20 +730,72 @@ export default function PostDetail() {
       });
     };
 
+    const baseMeta = {
+      title_length: shareTitle.length,
+      content_length: shareContent.length,
+      share_mode: mode,
+      permalink,
+    };
+
     try {
+      setShareSubmitting(mode);
       setShareModalVisible(false);
+
+      if (isImageMode && Platform.OS !== "web") {
+        const shareTemplate = normalizePostBackgroundTemplateId(
+          post.renderImages?.template ?? postLayout.presetId
+        );
+        const imageUrl = buildRenderedPostShareImageUrl(post.id, {
+          format: "png",
+          template: shareTemplate,
+        });
+        const imageUri = await downloadPostShareImage(post.id, imageUrl);
+
+        if (mode === "imageSave") {
+          await ensureMediaLibrarySavePermission();
+          await MediaLibrary.saveToLibraryAsync(imageUri);
+          logShareEventSafely("shared", {
+            ...baseMeta,
+            image_format: "png",
+            image_template: shareTemplate,
+            image_url: imageUrl,
+            action: "saved_to_library",
+          });
+          showToast("이미지를 사진 앱에 저장했어요.", { tone: "success" });
+          return;
+        }
+
+        const canShareFile = await Sharing.isAvailableAsync();
+        if (!canShareFile) {
+          throw new Error("이 기기에서는 이미지 공유를 지원하지 않아요.");
+        }
+
+        await Sharing.shareAsync(imageUri, {
+          dialogTitle: shareTitle,
+          mimeType: "image/png",
+          UTI: "public.png",
+        });
+        logShareEventSafely("shared", {
+          ...baseMeta,
+          image_format: "png",
+          image_template: shareTemplate,
+          image_url: imageUrl,
+        });
+        showToast("이미지 공유가 완료되었어요.", { tone: "success" });
+        return;
+      }
+
       const result = await Share.share({
         title: shareTitle,
         message: shareMessage,
+        url: permalink,
       });
 
       if (result.action === Share.sharedAction) {
         logShareEventSafely("shared", {
+          ...baseMeta,
           action: result.action,
           activity_type: result.activityType || null,
-          title_length: shareTitle.length,
-          content_length: shareContent.length,
-          share_mode: mode,
         });
         showToast("공유가 완료되었어요.", { tone: "success" });
         return;
@@ -408,29 +803,29 @@ export default function PostDetail() {
 
       if (result.action === dismissedAction) {
         logShareEventSafely("dismissed", {
+          ...baseMeta,
           action: result.action,
           activity_type: result.activityType || null,
-          title_length: shareTitle.length,
-          content_length: shareContent.length,
-          share_mode: mode,
         });
         return;
       }
 
       logShareEventSafely("dismissed", {
+        ...baseMeta,
         action: result.action || "unknown",
         activity_type: result.activityType || null,
-        title_length: shareTitle.length,
-        content_length: shareContent.length,
-        share_mode: mode,
       });
-    } catch {
+    } catch (shareError) {
       logShareEventSafely("failed", {
-        title_length: shareTitle.length,
-        content_length: shareContent.length,
-        share_mode: mode,
+        ...baseMeta,
+        error: shareError instanceof Error ? shareError.message : "unknown",
       });
-      showToast("공유에 실패했어요. 잠시 후 다시 시도해주세요.", { tone: "error" });
+      if (__DEV__) {
+        logger.warn("[share] post share failed", shareError);
+      }
+      showToast(getShareFailureMessage(mode, shareError), { tone: "error" });
+    } finally {
+      setShareSubmitting(null);
     }
   };
 
@@ -446,51 +841,33 @@ export default function PostDetail() {
 
   const onPressDelete = () => {
     if (!post?.id || manageBusy) return;
-
-    Alert.alert("글 삭제", "정말 이 글을 삭제할까요?", [
-      { text: "취소", style: "cancel" },
-      {
-        text: "삭제",
-        style: "destructive",
-        onPress: () => {
-          void (async () => {
-            setManageBusy(true);
-            try {
-              await deletePost(post.id);
-              showToast("글을 삭제했어요.", { tone: "success" });
-              router.replace("/(tabs)");
-            } catch (err) {
-              if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
-                await handleAuthError();
-              } else {
-                showToast("글 삭제에 실패했어요. 잠시 후 다시 시도해주세요.", {
-                  tone: "error",
-                });
-              }
-            } finally {
-              setManageBusy(false);
-            }
-          })();
-        },
-      },
-    ]);
+    setDeleteConfirmVisible(true);
   };
 
-  const openGuidelines = React.useCallback(() => {
-    void openExternalUrl(legalGuidelinesUrl).catch(() => {
-      showToast("가이드라인을 열지 못했어요. 잠시 후 다시 시도해주세요.", {
-        tone: "error",
-      });
-    });
-  }, [legalGuidelinesUrl, showToast]);
+  const submitDelete = () => {
+    if (!post?.id || manageBusy) return;
 
-  const openSupport = React.useCallback(() => {
-    void openExternalUrl(getSupportUrl()).catch(() => {
-      showToast("지원 페이지를 열지 못했어요. 잠시 후 다시 시도해주세요.", {
-        tone: "error",
-      });
-    });
-  }, [showToast]);
+    void (async () => {
+      setManageBusy(true);
+      try {
+        await deletePost(post.id);
+        setDeleteConfirmVisible(false);
+        showToast("글을 삭제했어요.", { tone: "success" });
+        router.replace("/(tabs)");
+      } catch (err) {
+        if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
+          setDeleteConfirmVisible(false);
+          await handleAuthError();
+        } else {
+          showToast("글 삭제에 실패했어요. 잠시 후 다시 시도해주세요.", {
+            tone: "error",
+          });
+        }
+      } finally {
+        setManageBusy(false);
+      }
+    })();
+  };
 
   const submitPostReport = React.useCallback(
     async (reasonCode: string, detail?: string) => {
@@ -562,8 +939,13 @@ export default function PostDetail() {
     setSafetyMenuVisible(true);
   }, []);
 
+  const refreshDetail = React.useCallback(async () => {
+    await refetch();
+  }, [refetch]);
+
   return (
     <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
+      <StatusBar style="dark" translucent backgroundColor="transparent" />
       {/* ✅ 고정 TopBar (기존 UX 유지) */}
       <PostTopBar
         onPressBack={onPressBack}
@@ -576,7 +958,7 @@ export default function PostDetail() {
         }}
       />
 
-      {loading ? (
+      {loading && !post ? (
         <View style={styles.center}>
           <AppLoading />
         </View>
@@ -602,9 +984,27 @@ export default function PostDetail() {
         </View>
       ) : (
         <>
-          <ScrollView contentContainerStyle={styles.scrollContent}>
-            <View style={styles.introWrap}>
-              <Text style={styles.introEyebrow}>TODAY&apos;S PAGE</Text>
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            refreshControl={
+              <RefreshControl
+                refreshing={loading && Boolean(post)}
+                onRefresh={() => void refreshDetail()}
+              />
+            }
+          >
+            <PostBody
+              postId={postId}
+              title={title}
+              content={content}
+              paragraphs={paragraphs}
+              footerText={footerText}
+              type={post.type}
+              layout={postLayout}
+              versionSeed={`${title}|${content}|${JSON.stringify((post as any)?.layoutJson ?? null)}`}
+              renderImages={post.renderImages ?? null}
+            />
+            <View style={styles.detailMetaBlock}>
               <View style={styles.metaRow}>
                 {authorId ? (
                   <Pressable
@@ -624,42 +1024,37 @@ export default function PostDetail() {
                   </>
                 ) : null}
               </View>
+              <PostMetaBar type={post.type} tags={post.tags} styles={styles} />
             </View>
-            <PostMetaBar type={post.type} tags={post.tags} styles={styles} />
-            <PostBody
-              postId={postId}
-              title={title}
-              content={content}
-              paragraphs={paragraphs}
-              footerText={footerText}
-              type={post.type}
-              layout={postLayout}
-              versionSeed={`${title}|${content}|${JSON.stringify((post as any)?.layoutJson ?? null)}`}
-              renderImages={post.renderImages ?? null}
-            />
 
-            {canManagePost ? (
-              <View style={styles.relatedSection}>
-                <Text style={styles.relatedTitle}>내 글 관리</Text>
-                <View style={styles.manageActionRow}>
-                  <Pressable onPress={onPressEdit} style={styles.manageEditBtn}>
-                    <Text style={styles.manageEditBtnText}>수정하기</Text>
-                  </Pressable>
+            <View style={styles.commentSection} testID="post-comments-section">
+              <View style={styles.commentHeaderRow}>
+                <View>
+                  <Text style={styles.commentKicker}>COMMENTS</Text>
+                  <Text style={styles.commentTitle}>댓글 {commentCount}</Text>
+                </View>
+                <View style={styles.commentHeaderActions}>
                   <Pressable
-                    onPress={onPressDelete}
-                    style={styles.manageDeleteBtn}
-                    disabled={manageBusy}
+                    onPress={openCommentsSheet}
+                    accessibilityRole="button"
+                    accessibilityLabel="댓글 열기"
+                    style={styles.commentIconBtn}
+                    testID="post-comments-toggle-btn"
                   >
-                    <Text style={styles.manageDeleteBtnText}>
-                      {manageBusy ? "삭제 중..." : "삭제하기"}
-                    </Text>
+                    <Ionicons
+                      name="chatbubble-outline"
+                      size={18}
+                      color="#2d5a3d"
+                    />
                   </Pressable>
                 </View>
               </View>
-            ) : null}
+
+            </View>
 
             <View style={styles.relatedSection}>
-              <Text style={styles.relatedTitle}>관련 글</Text>
+              <Text style={styles.relatedEyebrow}>RELATED</Text>
+              <Text style={styles.relatedTitle}>함께 읽기</Text>
               {relatedLoading ? (
                 <Text style={styles.relatedHint}>불러오는 중...</Text>
               ) : relatedError ? (
@@ -671,21 +1066,12 @@ export default function PostDetail() {
               ) : (
                 <View style={styles.relatedList}>
                   {relatedPosts.map((item) => (
-                    <Pressable
+                    <RelatedPostCard
                       key={item.id}
+                      post={item}
                       onPress={() => router.push(`/posts/${item.id}`)}
-                      style={styles.relatedCard}
-                    >
-                      <Text style={styles.relatedCardTitle}>
-                        {item.title || "제목 없는 글"}
-                      </Text>
-                      {item.excerpt ? (
-                        <Text style={styles.relatedCardExcerpt}>{item.excerpt}</Text>
-                      ) : null}
-                      <Text style={styles.relatedCardMeta}>
-                        {item.author?.name || "익명"} · 좋아요 {item.stats?.likeCount ?? 0}
-                      </Text>
-                    </Pressable>
+                      styles={styles}
+                    />
                   ))}
                 </View>
               )}
@@ -709,6 +1095,267 @@ export default function PostDetail() {
           />
         </>
       )}
+
+      <Modal
+        visible={commentsExpanded}
+        transparent
+        animationType="slide"
+        onRequestClose={() => {
+          setCommentsExpanded(false);
+          setReplyTarget(null);
+        }}
+      >
+        <View style={styles.commentSheetOverlay}>
+          <View style={styles.commentSheet}>
+            <View style={styles.commentSheetHandle} />
+            <View style={styles.commentHeaderRow}>
+              <View>
+                <Text style={styles.commentKicker}>COMMENTS</Text>
+                <Text style={styles.commentTitle}>댓글 {commentCount}</Text>
+              </View>
+              <View style={styles.commentHeaderActions}>
+                <Pressable
+                  onPress={() => {
+                    setCommentsExpanded(false);
+                    setReplyTarget(null);
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel="댓글 닫기"
+                  style={styles.commentIconBtn}
+                  testID="post-comments-close-btn"
+                >
+                  <Ionicons name="close" size={19} color="#2d5a3d" />
+                </Pressable>
+              </View>
+            </View>
+
+            <ScrollView
+              contentContainerStyle={styles.commentSheetContent}
+              refreshControl={
+                <RefreshControl
+                  refreshing={commentsLoading}
+                  onRefresh={() => void loadComments()}
+                />
+              }
+            >
+              {canWriteComment ? (
+                <View style={styles.commentComposer}>
+                  {replyTarget ? (
+                    <View style={styles.replyTargetRow}>
+                      <Text style={styles.replyTargetText} numberOfLines={1}>
+                        {replyTarget.author?.displayName || "댓글"}님에게 답글
+                      </Text>
+                      <Pressable
+                        onPress={clearCommentDraft}
+                        accessibilityRole="button"
+                        testID="post-comment-reply-cancel-btn"
+                      >
+                        <Text style={styles.replyCancelText}>취소</Text>
+                      </Pressable>
+                    </View>
+                  ) : (
+                    null
+                  )}
+                  <TextInput
+                    value={commentInput}
+                    onChangeText={setCommentInput}
+                    placeholder={replyTarget ? "답글을 남겨보세요" : "댓글을 남겨보세요"}
+                    placeholderTextColor="#8d938f"
+                    multiline
+                    maxLength={1000}
+                    editable={!commentSubmitting}
+                    style={styles.commentInput}
+                    testID="post-comment-input"
+                  />
+                  <View style={styles.commentComposerFooter}>
+                    <Text style={styles.commentInputCount}>{commentInput.length}/1000</Text>
+                    <Pressable
+                      onPress={() => void submitComment()}
+                      disabled={commentSubmitting || commentInput.trim().length === 0}
+                      style={[
+                        styles.commentSubmitBtn,
+                        (commentSubmitting || commentInput.trim().length === 0) &&
+                          styles.commentSubmitBtnDisabled,
+                      ]}
+                      accessibilityRole="button"
+                      testID="post-comment-submit-btn"
+                    >
+                      <Text style={styles.commentSubmitText}>
+                        {commentSubmitting ? "등록 중" : replyTarget ? "답글 등록" : "등록"}
+                      </Text>
+                    </Pressable>
+                  </View>
+                </View>
+              ) : null}
+
+              {commentsExpanded && commentsLoading && comments.length === 0 ? (
+                <View style={styles.commentLoadingRow}>
+                  <ActivityIndicator color="#2d5a3d" />
+                  <Text style={styles.commentHint}>댓글을 불러오는 중...</Text>
+                </View>
+              ) : commentsExpanded && commentsError ? (
+                <View style={styles.commentEmptyBox}>
+                  <Text style={styles.commentHint}>{commentsError}</Text>
+                </View>
+              ) : commentsExpanded && topLevelComments.length === 0 ? (
+                <View style={styles.commentEmptyBox}>
+                  <Text style={styles.commentHint}>아직 댓글이 없어요.</Text>
+                </View>
+              ) : commentsExpanded ? (
+                <View style={styles.commentList}>
+                  {topLevelComments.map((comment) => {
+                    const replies = repliesByParentId.get(comment.id) ?? [];
+                    return (
+                      <View key={comment.id} style={styles.commentThread}>
+                        <View style={styles.commentItem}>
+                          <View style={styles.commentMetaRow}>
+                            <View style={styles.commentAuthorWrap}>
+                              <View style={styles.commentMarker}>
+                                <Text style={styles.commentMarkerText}>
+                                  {comment.status === "deleted"
+                                    ? ""
+                                    : (comment.author?.displayName || "?").slice(0, 1)}
+                                </Text>
+                              </View>
+                              <Text style={styles.commentAuthor}>
+                                {comment.author?.displayName || "삭제된 댓글"}
+                              </Text>
+                            </View>
+                            <Text style={styles.commentDate}>
+                              {formatKstDateKorean(comment.createdAt)}
+                            </Text>
+                          </View>
+                          <Text style={styles.commentBody}>
+                            {comment.status === "deleted"
+                              ? "삭제된 댓글입니다."
+                              : comment.content}
+                          </Text>
+                          {comment.status === "active" ? (
+                            <View style={styles.commentActionRow}>
+                              <Pressable
+                                onPress={() => void onPressCommentLike(comment)}
+                                disabled={commentLikePending[comment.id]}
+                                accessibilityRole="button"
+                                accessibilityLabel={comment.likedByMe ? "댓글 공감 취소" : "댓글 공감"}
+                                accessibilityState={{ selected: comment.likedByMe }}
+                                style={styles.commentIconAction}
+                                testID={`post-comment-like-btn-${comment.id}`}
+                              >
+                                <Ionicons
+                                  name={comment.likedByMe ? "heart" : "heart-outline"}
+                                  size={16}
+                                  color={comment.likedByMe ? "#49805a" : "#6d7771"}
+                                />
+                                <Text
+                                  style={[
+                                    styles.commentActionText,
+                                    comment.likedByMe && styles.commentActionTextActive,
+                                  ]}
+                                >
+                                  {comment.likeCount}
+                                </Text>
+                              </Pressable>
+                              <Pressable
+                                onPress={() => onPressReply(comment)}
+                                accessibilityRole="button"
+                                testID={`post-comment-reply-btn-${comment.id}`}
+                              >
+                                <Text style={styles.commentActionText}>답글</Text>
+                              </Pressable>
+                              {canManagePost ? (
+                                <Pressable
+                                  onPress={() => onPressDeleteComment(comment)}
+                                  disabled={deletingCommentId === comment.id}
+                                  accessibilityRole="button"
+                                  testID={`post-comment-delete-btn-${comment.id}`}
+                                >
+                                  <Text style={styles.commentDangerText}>
+                                    {deletingCommentId === comment.id ? "삭제 중" : "삭제"}
+                                  </Text>
+                                </Pressable>
+                              ) : null}
+                            </View>
+                          ) : null}
+                        </View>
+
+                        {replies.length > 0 ? (
+                          <View style={styles.replyList}>
+                            {replies.map((reply) => (
+                              <View key={reply.id} style={styles.replyItem}>
+                                <View style={styles.commentMetaRow}>
+                                  <View style={styles.commentAuthorWrap}>
+                                    <View style={[styles.commentMarker, styles.replyMarker]}>
+                                      <Text style={styles.commentMarkerText}>
+                                        {reply.status === "deleted"
+                                          ? ""
+                                          : (reply.author?.displayName || "?").slice(0, 1)}
+                                      </Text>
+                                    </View>
+                                    <Text style={styles.commentAuthor}>
+                                      {reply.author?.displayName || "삭제된 댓글"}
+                                    </Text>
+                                  </View>
+                                  <Text style={styles.commentDate}>
+                                    {formatKstDateKorean(reply.createdAt)}
+                                  </Text>
+                                </View>
+                                <Text style={styles.commentBody}>
+                                  {reply.status === "deleted"
+                                    ? "삭제된 댓글입니다."
+                                    : reply.content}
+                                </Text>
+                                {reply.status === "active" ? (
+                                  <View style={styles.commentActionRow}>
+                                    <Pressable
+                                      onPress={() => void onPressCommentLike(reply)}
+                                      disabled={commentLikePending[reply.id]}
+                                      accessibilityRole="button"
+                                      accessibilityLabel={reply.likedByMe ? "댓글 공감 취소" : "댓글 공감"}
+                                      accessibilityState={{ selected: reply.likedByMe }}
+                                      style={styles.commentIconAction}
+                                      testID={`post-comment-like-btn-${reply.id}`}
+                                    >
+                                      <Ionicons
+                                        name={reply.likedByMe ? "heart" : "heart-outline"}
+                                        size={16}
+                                        color={reply.likedByMe ? "#49805a" : "#6d7771"}
+                                      />
+                                      <Text
+                                        style={[
+                                          styles.commentActionText,
+                                          reply.likedByMe && styles.commentActionTextActive,
+                                        ]}
+                                      >
+                                        {reply.likeCount}
+                                      </Text>
+                                    </Pressable>
+                                    {canManagePost ? (
+                                      <Pressable
+                                        onPress={() => onPressDeleteComment(reply)}
+                                        disabled={deletingCommentId === reply.id}
+                                        accessibilityRole="button"
+                                        testID={`post-comment-delete-btn-${reply.id}`}
+                                      >
+                                        <Text style={styles.commentDangerText}>
+                                          {deletingCommentId === reply.id ? "삭제 중" : "삭제"}
+                                        </Text>
+                                      </Pressable>
+                                    ) : null}
+                                  </View>
+                                ) : null}
+                              </View>
+                            ))}
+                          </View>
+                        ) : null}
+                      </View>
+                    );
+                  })}
+                </View>
+              ) : null}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
 
       <Modal visible={bookmarkModalVisible} transparent animationType="fade">
         <View style={styles.bookmarkModalOverlay}>
@@ -771,28 +1418,87 @@ export default function PostDetail() {
           <View style={styles.bookmarkModalCard}>
             <Text style={styles.bookmarkModalTitle}>공유 방식 선택</Text>
             <Text style={styles.bookmarkModalDescription}>
-              제목만 보낼지, 본문까지 함께 보낼지 선택할 수 있어요.
+              이미지, 링크, 본문 중 원하는 방식으로 보낼 수 있어요.
             </Text>
 
             <View style={styles.bookmarkModalList}>
+              {Platform.OS !== "web" ? (
+                <>
+                  <Pressable
+                    onPress={() => void sharePost("imageSave")}
+                    disabled={Boolean(shareSubmitting)}
+                    style={[
+                      styles.bookmarkModalListItem,
+                      shareSubmitting && styles.bookmarkModalListItemDisabled,
+                    ]}
+                  >
+                    <Text style={styles.bookmarkModalListItemName}>이미지 저장</Text>
+                    <Text style={styles.bookmarkModalListItemStatus}>
+                      {shareSubmitting === "imageSave" ? "저장 중" : "사진 앱"}
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => void sharePost("imageShare")}
+                    disabled={Boolean(shareSubmitting)}
+                    style={[
+                      styles.bookmarkModalListItem,
+                      shareSubmitting && styles.bookmarkModalListItemDisabled,
+                    ]}
+                  >
+                    <Text style={styles.bookmarkModalListItemName}>이미지 공유</Text>
+                    <Text style={styles.bookmarkModalListItemStatus}>
+                      {shareSubmitting === "imageShare" ? "준비 중" : "PNG"}
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => void sharePost("link")}
+                    disabled={Boolean(shareSubmitting)}
+                    style={[
+                      styles.bookmarkModalListItem,
+                      shareSubmitting && styles.bookmarkModalListItemDisabled,
+                    ]}
+                  >
+                    <Text style={styles.bookmarkModalListItemName}>링크 공유</Text>
+                    <Text style={styles.bookmarkModalListItemStatus}>
+                      {shareSubmitting === "link" ? "공유 중" : "추천"}
+                    </Text>
+                  </Pressable>
+                </>
+              ) : null}
               <Pressable
                 onPress={() => void sharePost("full")}
-                style={styles.bookmarkModalListItem}
+                disabled={Boolean(shareSubmitting)}
+                style={[
+                  styles.bookmarkModalListItem,
+                  shareSubmitting && styles.bookmarkModalListItemDisabled,
+                ]}
               >
                 <Text style={styles.bookmarkModalListItemName}>본문까지 공유</Text>
-                <Text style={styles.bookmarkModalListItemStatus}>추천</Text>
+                <Text style={styles.bookmarkModalListItemStatus}>
+                  {shareSubmitting === "full" ? "공유 중" : Platform.OS === "web" ? "추천" : "텍스트"}
+                </Text>
               </Pressable>
               <Pressable
                 onPress={() => void sharePost("title")}
-                style={styles.bookmarkModalListItem}
+                disabled={Boolean(shareSubmitting)}
+                style={[
+                  styles.bookmarkModalListItem,
+                  shareSubmitting && styles.bookmarkModalListItemDisabled,
+                ]}
               >
                 <Text style={styles.bookmarkModalListItemName}>제목만 공유</Text>
-                <Text style={styles.bookmarkModalListItemStatus}>간단히</Text>
+                <Text style={styles.bookmarkModalListItemStatus}>
+                  {shareSubmitting === "title" ? "공유 중" : "간단히"}
+                </Text>
               </Pressable>
             </View>
 
             <Pressable
-              onPress={() => setShareModalVisible(false)}
+              onPress={() => {
+                if (shareSubmitting) return;
+                setShareModalVisible(false);
+              }}
+              disabled={Boolean(shareSubmitting)}
               style={styles.bookmarkModalCloseBtn}
             >
               <Text style={styles.bookmarkModalCloseBtnText}>닫기</Text>
@@ -811,12 +1517,38 @@ export default function PostDetail() {
           <View style={styles.bookmarkModalCard}>
             <Text style={styles.bookmarkModalTitle}>더보기</Text>
             <Text style={styles.bookmarkModalDescription}>
-              {canManagePost
-                ? "이 글에서 필요한 메뉴를 선택해 주세요."
-                : "공유, 신고, 차단, 가이드라인, 지원 경로를 확인할 수 있어요."}
+              {canManagePost ? "글 관리 메뉴를 선택해 주세요." : "게시글 메뉴를 선택해 주세요."}
             </Text>
 
             <View style={styles.modalActionList}>
+              {canManagePost ? (
+                <>
+                  <Pressable
+                    onPress={() => {
+                      setSafetyMenuVisible(false);
+                      onPressEdit();
+                    }}
+                    style={styles.modalActionBtn}
+                  >
+                    <Text style={styles.modalActionText}>수정하기</Text>
+                  </Pressable>
+
+                  <Pressable
+                    onPress={() => {
+                      setSafetyMenuVisible(false);
+                      onPressDelete();
+                    }}
+                    disabled={manageBusy}
+                    style={[styles.modalActionBtn, styles.modalActionBtnDanger]}
+                    testID="post-manage-delete-btn"
+                  >
+                    <Text style={[styles.modalActionText, styles.modalActionTextDanger]}>
+                      {manageBusy ? "삭제 중..." : "삭제하기"}
+                    </Text>
+                  </Pressable>
+                </>
+              ) : null}
+
               <Pressable
                 onPress={() => {
                   setSafetyMenuVisible(false);
@@ -854,26 +1586,6 @@ export default function PostDetail() {
               ) : null}
 
               <Pressable
-                onPress={() => {
-                  setSafetyMenuVisible(false);
-                  openGuidelines();
-                }}
-                style={[styles.modalActionBtn, styles.modalActionBtnGhost]}
-              >
-                <Text style={styles.modalActionText}>커뮤니티 가이드라인</Text>
-              </Pressable>
-
-              <Pressable
-                onPress={() => {
-                  setSafetyMenuVisible(false);
-                  openSupport();
-                }}
-                style={[styles.modalActionBtn, styles.modalActionBtnGhost]}
-              >
-                <Text style={styles.modalActionText}>도움말 및 지원</Text>
-              </Pressable>
-
-              <Pressable
                 onPress={() => setSafetyMenuVisible(false)}
                 style={[styles.modalActionBtn, styles.modalActionBtnGhost]}
               >
@@ -883,6 +1595,31 @@ export default function PostDetail() {
           </View>
         </View>
       </Modal>
+
+      <SafetyActionSheet
+        visible={deleteConfirmVisible}
+        title="글 삭제"
+        description="정말 이 글을 삭제할까요? 삭제한 글은 되돌릴 수 없어요."
+        onRequestClose={() => {
+          if (!manageBusy) setDeleteConfirmVisible(false);
+        }}
+        actions={[
+          {
+            label: manageBusy ? "삭제 중..." : "삭제하기",
+            variant: "danger",
+            disabled: manageBusy,
+            onPress: submitDelete,
+            testID: "post-delete-confirm-btn",
+          },
+          {
+            label: "취소",
+            variant: "ghost",
+            disabled: manageBusy,
+            onPress: () => setDeleteConfirmVisible(false),
+            testID: "post-delete-cancel-btn",
+          },
+        ]}
+      />
 
       <Modal
         visible={blockConfirmVisible}
@@ -894,7 +1631,7 @@ export default function PostDetail() {
           <View style={styles.bookmarkModalCard}>
             <Text style={styles.bookmarkModalTitle}>작성자 차단</Text>
             <Text style={styles.bookmarkModalDescription}>
-              {`${authorName}님의 글과 프로필을 내 화면에서 즉시 숨기고, 운영팀이 검토 후 필요한 경우 콘텐츠 삭제 또는 계정 제재를 진행할 수 있어요. 나중에 계정 센터에서 차단을 해제할 수 있어요.`}
+              {`${authorName}님의 글과 프로필을 숨길까요? 계정 센터에서 다시 해제할 수 있어요.`}
             </Text>
 
             <View style={styles.modalActionList}>
@@ -924,11 +1661,11 @@ export default function PostDetail() {
       <SafetyReasonModal
         visible={reportReasonVisible}
         title="게시글 신고"
-        description="신고가 접수되면 운영팀이 24시간 내 검토하고, 위반 시 콘텐츠 삭제 및 계정 제재가 이루어질 수 있어요."
+        description="접수된 신고는 운영 기준에 따라 검토돼요."
         reasons={postSafetyReasons}
         detailMaxLength={reportDetailMaxLength}
         detailRequiredReasonCodes={reportDetailRequiredReasonCodes}
-        submitLabel="신고 접수"
+        submitLabel="신고하기"
         submitting={reportSubmitting}
         onClose={() => {
           if (reportSubmitting) return;
@@ -937,5 +1674,60 @@ export default function PostDetail() {
         onSubmit={({ reasonCode, detail }) => submitPostReport(reasonCode, detail)}
       />
     </SafeAreaView>
+  );
+}
+
+function RelatedPostCard({
+  post,
+  onPress,
+  styles,
+}: {
+  post: Post;
+  onPress: () => void;
+  styles: ReturnType<typeof createPostDetailStyles>;
+}) {
+  const renderImages = resolvePostRenderImages(post);
+  const thumbnail = renderImages?.primaryImage || "";
+  const authorName = post.author?.name || "익명";
+  const likeCount = post.stats?.likeCount ?? 0;
+  const title = post.title || post.excerpt || "제목 없는 글";
+
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [styles.relatedFeedCard, pressed && styles.relatedFeedCardPressed]}
+      accessibilityRole="button"
+      accessibilityLabel={`관련 글 열기: ${title}`}
+    >
+      <View style={styles.relatedThumbWrap}>
+        {thumbnail ? (
+          <Image
+            source={{ uri: thumbnail }}
+            style={styles.relatedThumb}
+            contentFit="cover"
+            transition={120}
+          />
+        ) : (
+          <View style={styles.relatedThumbFallback}>
+            <Ionicons name="document-text-outline" size={22} color={tokens.colors.green700} />
+          </View>
+        )}
+      </View>
+      <View style={styles.relatedFeedCopy}>
+        <Text style={styles.relatedFeedAuthor} numberOfLines={1}>
+          {authorName}
+        </Text>
+        <Text style={styles.relatedFeedTitle} numberOfLines={2}>
+          {title}
+        </Text>
+        <View style={styles.relatedFeedMetaRow} accessibilityLabel={`공감 ${likeCount}개`}>
+          <Ionicons name="heart" size={13} color={tokens.colors.green700} />
+          <Text style={styles.relatedFeedMeta} numberOfLines={1}>
+            {likeCount}
+          </Text>
+        </View>
+      </View>
+      <Ionicons name="chevron-forward" size={18} color={tokens.colors.textFaint} />
+    </Pressable>
   );
 }

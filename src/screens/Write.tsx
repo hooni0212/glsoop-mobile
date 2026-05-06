@@ -15,6 +15,7 @@ import {
 } from "react-native";
 
 import { WriteActionBar } from "@/components/write/WriteActionBar";
+import { WriteBackgroundSection } from "@/components/write/WriteBackgroundSection";
 import { WriteEditor } from "@/components/write/WriteEditor";
 import { WriteLayoutSection } from "@/components/write/WriteLayoutSection";
 import { WriteMetaSection } from "@/components/write/WriteMetaSection";
@@ -23,8 +24,10 @@ import { WriteStates } from "@/components/write/WriteStates";
 import { WriteTopBar } from "@/components/write/WriteTopBar";
 import { AppError } from "@/components/state/AppError";
 import { AppLoading } from "@/components/state/AppLoading";
+import { useToast } from "@/feedback/ToastProvider";
 import { normalizeApiError, type AppErrorModel } from "@/lib/errors";
 import { logger } from "@/lib/logger";
+import type { PostBackgroundTemplateId } from "@/lib/postBackgroundTemplates";
 import type { PostFontKey } from "@/lib/postContent";
 import {
   DEFAULT_WRITE_LAYOUT,
@@ -42,16 +45,56 @@ import {
   upsertWriteDraft,
   clearAllWriteDrafts,
 } from "@/services/draftStorage";
+import type { WriteDraftQuestContext } from "@/services/draftStorage";
 import { createPost, getEditablePost, updatePost } from "@/services/postService";
-import type { PostType } from "@/types/post";
+import type { PostCommentPolicy, PostType, PostVisibility } from "@/types/post";
 import { ConfirmState, useConfirmBeforeLeave } from "@/hooks/useConfirmBeforeLeave";
 
 import { createWriteStyles } from "./Write.styles";
+
+const DEFAULT_WRITE_LAYOUT_SIGNATURE = JSON.stringify(buildLayoutPayload(DEFAULT_WRITE_LAYOUT));
+type PreviewPanelKey = "settings" | "background" | "layout";
+const PREVIEW_PANEL_ITEMS: { key: PreviewPanelKey; label: string }[] = [
+  { key: "settings", label: "메타" },
+  { key: "background", label: "배경" },
+  { key: "layout", label: "배치" },
+];
+
+function getParamString(value: unknown): string | null {
+  const raw = Array.isArray(value) ? value[0] : value;
+  if (typeof raw !== "string") return null;
+  const trimmed = raw.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function getParamNumber(value: unknown): number | null {
+  const raw = getParamString(value);
+  if (!raw) return null;
+  const parsed = Number(raw);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+}
+
+function normalizePromptCategory(value: unknown): PostType | undefined {
+  const raw = getParamString(value);
+  return raw === "poem" || raw === "essay" || raw === "short" ? raw : undefined;
+}
+
+function parsePromptTags(value: unknown): string[] {
+  const raw = getParamString(value);
+  if (!raw) return [];
+  return raw
+    .split(/[\s,]+/)
+    .map((item) => item.trim().replace(/^#+/, ""))
+    .filter(Boolean)
+    .filter((item, index, arr) => arr.indexOf(item) === index)
+    .slice(0, 12);
+}
 
 export default function Write() {
   const styles = useMemo(() => createWriteStyles(), []);
   const params = useLocalSearchParams();
   const navigation = useNavigation();
+  const { showToast } = useToast();
   const { width } = useWindowDimensions();
   const isLargeScreen = width >= 768;
 
@@ -61,8 +104,12 @@ export default function Write() {
   const [selectedType, setSelectedType] = useState<PostType | null>(null);
   const [hashtagsInput, setHashtagsInput] = useState("");
   const [fontKey, setFontKey] = useState<PostFontKey>("serif");
+  const [visibility, setVisibility] = useState<PostVisibility>("public");
+  const [commentPolicy, setCommentPolicy] = useState<PostCommentPolicy>("logged_in");
   const [editPostId, setEditPostId] = useState<string | null>(null);
+  const [questContext, setQuestContext] = useState<WriteDraftQuestContext | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewPanel, setPreviewPanel] = useState<PreviewPanelKey>("settings");
   const [layout, setLayout] = useState<WriteLayoutModel>(DEFAULT_WRITE_LAYOUT);
   const [activeBoxId, setActiveBoxId] = useState<LayoutBoxId>("text_box");
   const [editLoading, setEditLoading] = useState(false);
@@ -74,6 +121,11 @@ export default function Write() {
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [createdPostId, setCreatedPostId] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<AppErrorModel | null>(null);
+  const [lastQuestCompletion, setLastQuestCompletion] = useState<{
+    status?: string;
+    progress?: number;
+    target?: number;
+  } | null>(null);
 
   const hasShownRestorePromptRef = useRef(false);
   const isEditMode = Boolean(editPostId);
@@ -86,8 +138,33 @@ export default function Write() {
       .filter((item, index, arr) => arr.indexOf(item) === index)
       .slice(0, 12);
   }, [hashtagsInput]);
+  const layoutSignature = useMemo(() => JSON.stringify(buildLayoutPayload(layout)), [layout]);
+  const hasLayoutChanges = layoutSignature !== DEFAULT_WRITE_LAYOUT_SIGNATURE;
+  const promptQuestFromParams = useMemo<WriteDraftQuestContext | null>(() => {
+    const rawParams = (params ?? {}) as Record<string, unknown>;
+    const stateId = getParamNumber(rawParams.questStateId);
+    const promptKey = getParamString(rawParams.promptKey);
+    if (!stateId || !promptKey) return null;
 
-  const hasChanges = title.trim().length > 0 || body.trim().length > 0 || selectedType !== null;
+    return {
+      stateId,
+      promptKey,
+      promptTitle: getParamString(rawParams.promptTitle) ?? undefined,
+      promptBody: getParamString(rawParams.promptBody) ?? undefined,
+      defaultCategory: normalizePromptCategory(rawParams.promptCategory),
+      suggestedHashtags: parsePromptTags(rawParams.promptTags),
+    };
+  }, [params]);
+
+  const hasChanges =
+    title.trim().length > 0 ||
+    body.trim().length > 0 ||
+    selectedType !== null ||
+    questContext !== null ||
+    fontKey !== "serif" ||
+    visibility !== "public" ||
+    commentPolicy !== "logged_in" ||
+    hasLayoutChanges;
   const canSubmit =
     title.trim().length > 0 && body.trim().length > 0 && selectedType !== null;
   const submissionLayout = useMemo(
@@ -115,7 +192,15 @@ export default function Write() {
   const saveDraftExplicit = useCallback(async () => {
     const trimmedTitle = title.trim();
     const trimmedBody = body.trim();
-    if (!trimmedTitle && !trimmedBody) return;
+    const hasDraftableChanges =
+      Boolean(trimmedTitle || trimmedBody || selectedType) ||
+      Boolean(questContext) ||
+      fontKey !== "serif" ||
+      hasLayoutChanges;
+    if (!hasDraftableChanges) {
+      showToast("임시저장할 내용이 없어요.");
+      return false;
+    }
 
     logger.debug("[write] draft explicit save", {
       draftId,
@@ -124,18 +209,29 @@ export default function Write() {
       category: selectedType,
     });
 
-    const id = await upsertWriteDraft({
-      id: draftId,
-      title: trimmedTitle,
-      body: trimmedBody,
-      category: selectedType ?? undefined,
-      fontKey,
-      layoutJson: buildLayoutPayload(layout),
-      mode: editPostId ? "edit" : "create",
-      postId: editPostId,
-    });
-    if (!draftId) setDraftId(id);
-  }, [title, body, draftId, editPostId, selectedType, fontKey, layout]);
+    try {
+      const id = await upsertWriteDraft({
+        id: draftId,
+        title: trimmedTitle,
+        body: trimmedBody,
+        category: selectedType ?? undefined,
+        fontKey,
+        layoutJson: buildLayoutPayload(layout),
+        visibility,
+        commentPolicy,
+        questContext,
+        mode: editPostId ? "edit" : "create",
+        postId: editPostId,
+      });
+      if (!draftId) setDraftId(id);
+      showToast("임시저장했어요.", { tone: "success" });
+      return true;
+    } catch (error) {
+      logger.warn("[write] draft explicit save failed", error);
+      showToast("임시저장에 실패했어요. 잠시 후 다시 시도해주세요.", { tone: "error" });
+      return false;
+    }
+  }, [title, body, draftId, editPostId, selectedType, fontKey, layout, visibility, commentPolicy, questContext, hasLayoutChanges, showToast]);
 
   const { confirm: leaveConfirm, requestLeave, allowNextLeave } = useConfirmBeforeLeave({
     hasChanges,
@@ -173,8 +269,8 @@ export default function Write() {
           onPress: () => {
             dismiss();
             void (async () => {
-              await saveDraftExplicit();
-              proceed(action);
+              const saved = await saveDraftExplicit();
+              if (saved) proceed(action);
             })();
           },
           testID: "confirm-close-save",
@@ -206,6 +302,9 @@ export default function Write() {
     setBody("");
     setSelectedType(null);
     setFontKey("serif");
+    setVisibility("public");
+    setCommentPolicy("logged_in");
+    setQuestContext(null);
     setLayout(DEFAULT_WRITE_LAYOUT);
   }, []);
 
@@ -265,6 +364,13 @@ export default function Write() {
     }));
   }, []);
 
+  const updateBackgroundTemplate = useCallback((presetId: PostBackgroundTemplateId) => {
+    setLayout((current) => ({
+      ...current,
+      presetId,
+    }));
+  }, []);
+
   const nudgeBox = useCallback((boxId: LayoutBoxId, axis: "x" | "y", delta: number) => {
     setLayout((current) => {
       const box = boxId === "title_box" ? current.titleBox : boxId === "text_box" ? current.bodyBox : current.footerBox;
@@ -279,19 +385,10 @@ export default function Write() {
     });
   }, []);
 
-  const dragBox = useCallback((boxId: LayoutBoxId, deltaX: number, deltaY: number) => {
-    setLayout((current) => {
-      const box = boxId === "title_box" ? current.titleBox : boxId === "text_box" ? current.bodyBox : current.footerBox;
-      return updateLayoutBox(current, boxId, {
-        x: box.x + deltaX,
-        y: box.y + deltaY,
-      });
-    });
-  }, []);
-
   const onPressSubmit = useCallback(async () => {
     if (!previewOpen) {
       dismissKeyboard();
+      setPreviewPanel("settings");
       setPreviewOpen(true);
       return;
     }
@@ -311,6 +408,7 @@ export default function Write() {
 
     setSubmitError(null);
     setCreatedPostId(null);
+    setLastQuestCompletion(null);
     setIsSubmitting(true);
     try {
       if (editPostId) {
@@ -322,6 +420,8 @@ export default function Write() {
           hashtags: hashtagChips,
           layoutJson: buildLayoutPayload(submissionLayout),
           fontKey,
+          visibility,
+          commentPolicy,
         });
         setCreatedPostId(editPostId);
         logger.debug("[write] update success", { postId: editPostId });
@@ -335,6 +435,11 @@ export default function Write() {
           hashtags: hashtagChips,
           layoutJson: buildLayoutPayload(submissionLayout),
           fontKey,
+          visibility,
+          commentPolicy,
+          questContext: questContext
+            ? { stateId: questContext.stateId, promptKey: questContext.promptKey }
+            : undefined,
         });
 
         if (draftId) {
@@ -342,6 +447,7 @@ export default function Write() {
           setDraftId(null);
         }
         setCreatedPostId(created.postId);
+        setLastQuestCompletion(created.questCompletion ?? null);
         logger.debug("[write] submit success", { postId: created.postId });
       }
       setSubmitSuccess(true);
@@ -360,6 +466,9 @@ export default function Write() {
     title,
     body,
     fontKey,
+    visibility,
+    commentPolicy,
+    questContext,
     previewOpen,
     dismissKeyboard,
   ]);
@@ -413,6 +522,9 @@ export default function Write() {
           setSelectedType(editable.category ?? null);
           setHashtagsInput(editable.hashtags.join(", "));
           setFontKey(editable.fontKey ?? "serif");
+          setVisibility(editable.visibility ?? "public");
+          setCommentPolicy(editable.commentPolicy ?? "logged_in");
+          setQuestContext(null);
           setLayout(parseLayoutJson(editable.layoutJson));
           setActiveBoxId("text_box");
         } catch (err) {
@@ -437,8 +549,27 @@ export default function Write() {
           setSelectedType(d.category ?? null);
           setHashtagsInput("");
           setFontKey(d.fontKey ?? "serif");
+          setVisibility(d.visibility ?? "public");
+          setCommentPolicy(d.commentPolicy ?? "logged_in");
+          setQuestContext(d.questContext ?? null);
+          if (d.questContext?.suggestedHashtags?.length) {
+            setHashtagsInput(d.questContext.suggestedHashtags.join(", "));
+          }
           setLayout(parseLayoutJson(d.layoutJson));
           setActiveBoxId("text_box");
+        }
+        return;
+      }
+
+      if (promptQuestFromParams) {
+        logger.debug("[write] prompt quest restored", {
+          stateId: promptQuestFromParams.stateId,
+          promptKey: promptQuestFromParams.promptKey,
+        });
+        setQuestContext(promptQuestFromParams);
+        setSelectedType(promptQuestFromParams.defaultCategory ?? "essay");
+        if (promptQuestFromParams.suggestedHashtags?.length) {
+          setHashtagsInput(promptQuestFromParams.suggestedHashtags.join(", "));
         }
         return;
       }
@@ -503,6 +634,7 @@ export default function Write() {
           canSubmit={canPrimaryAction}
           onPressClose={previewOpen ? onPressBackFromPreview : onPressClose}
           onPressSubmit={onPressSubmit}
+          onPressSaveDraft={saveDraftExplicit}
           submitLabel={primaryActionLabel}
           submitAccessibilityLabel={primaryActionAccessibilityLabel}
           onPressDrafts={onPressDrafts}
@@ -532,71 +664,116 @@ export default function Write() {
                 />
               </View>
             ) : null}
+            {questContext ? (
+              <View style={styles.questPromptCard} testID="write-quest-prompt-card">
+                <Text style={styles.questPromptEyebrow}>퀘스트 주제</Text>
+                <Text style={styles.questPromptTitle}>
+                  {questContext.promptTitle ?? "주제 글쓰기"}
+                </Text>
+                {questContext.promptBody ? (
+                  <Text style={styles.questPromptBody}>{questContext.promptBody}</Text>
+                ) : null}
+              </View>
+            ) : null}
             {previewOpen ? (
-              <WritePreviewCard
-                title={title}
-                body={body}
-                selectedType={selectedType}
-                layout={submissionLayout}
-                fontKey={fontKey}
-              />
+              <>
+                <WritePreviewCard
+                  title={title}
+                  body={body}
+                  selectedType={selectedType}
+                  layout={submissionLayout}
+                  fontKey={fontKey}
+                  compact={previewPanel === "layout"}
+                />
+                <View style={styles.previewControlStack}>
+                  <View style={styles.previewSheetHandle} />
+                  <View style={styles.previewPanelTabs}>
+                    {PREVIEW_PANEL_ITEMS.map((item) => {
+                      const active = previewPanel === item.key;
+                      return (
+                        <Pressable
+                          key={item.key}
+                          onPress={() => setPreviewPanel(item.key)}
+                          style={[
+                            styles.previewPanelTab,
+                            active && styles.previewPanelTabActive,
+                          ]}
+                          accessibilityRole="button"
+                          accessibilityLabel={`${item.label} 조정`}
+                          accessibilityState={{ selected: active }}
+                          testID={`write-preview-panel-${item.key}`}
+                        >
+                          <Text
+                            style={[
+                              styles.previewPanelTabText,
+                              active && styles.previewPanelTabTextActive,
+                            ]}
+                          >
+                            {item.label}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                  {previewPanel === "settings" ? (
+                    <WriteMetaSection
+                      styles={styles}
+                      selectedType={selectedType}
+                      onSelectType={setSelectedType}
+                      hashtagsInput={hashtagsInput}
+                      hashtagChips={hashtagChips}
+                      onChangeHashtagsInput={setHashtagsInput}
+                      fontKey={fontKey}
+                      onChangeFontKey={setFontKey}
+                      visibility={visibility}
+                      onChangeVisibility={setVisibility}
+                      commentPolicy={commentPolicy}
+                      onChangeCommentPolicy={setCommentPolicy}
+                    />
+                  ) : null}
+                  {previewPanel === "background" ? (
+                    <WriteBackgroundSection
+                      styles={styles}
+                      selectedId={layout.presetId}
+                      onSelect={updateBackgroundTemplate}
+                    />
+                  ) : null}
+                  {previewPanel === "layout" ? (
+                    <ScrollView
+                      style={styles.previewPanelInnerScroll}
+                      contentContainerStyle={styles.previewPanelInnerContent}
+                      nestedScrollEnabled
+                      showsVerticalScrollIndicator={false}
+                    >
+                      <WriteLayoutSection
+                        styles={styles}
+                        layout={layout}
+                        activeBoxId={activeBoxId}
+                        onSelectBox={setActiveBoxId}
+                        onChangeTitleAlign={updateTitleAlign}
+                        onChangeBodyAlign={updateBodyAlign}
+                        onChangeTitleScale={updateTitleScale}
+                        onChangeBodyScale={updateBodyScale}
+                        onChangeTitleLineHeight={updateTitleLineHeight}
+                        onChangeBodyLineHeight={updateBodyLineHeight}
+                        onChangeTitleLetterSpacing={updateTitleLetterSpacing}
+                        onChangeBodyLetterSpacing={updateBodyLetterSpacing}
+                        onNudgeBox={nudgeBox}
+                        onResizeBox={resizeBox}
+                      />
+                    </ScrollView>
+                  ) : null}
+                </View>
+              </>
             ) : (
               <WriteEditor
                 title={title}
                 body={body}
-                fontKey={fontKey}
-                layout={layout}
-                activeBoxId={activeBoxId}
-                onSelectBox={setActiveBoxId}
-                onDragBox={dragBox}
+                selectedType={selectedType}
                 onChangeTitle={setTitle}
                 onChangeBody={setBody}
-                onPressBackground={dismissKeyboard}
-                styles={styles}
-              >
-                <WriteLayoutSection
-                  styles={styles}
-                  layout={layout}
-                  activeBoxId={activeBoxId}
-                  onSelectBox={setActiveBoxId}
-                  onChangeTitleAlign={updateTitleAlign}
-                  onChangeBodyAlign={updateBodyAlign}
-                  onChangeTitleScale={updateTitleScale}
-                  onChangeBodyScale={updateBodyScale}
-                  onChangeTitleLineHeight={updateTitleLineHeight}
-                  onChangeBodyLineHeight={updateBodyLineHeight}
-                  onChangeTitleLetterSpacing={updateTitleLetterSpacing}
-                  onChangeBodyLetterSpacing={updateBodyLetterSpacing}
-                  onNudgeBox={nudgeBox}
-                  onResizeBox={resizeBox}
-                />
-              </WriteEditor>
-            )}
-
-            {!previewOpen ? (
-              <WriteMetaSection
-                styles={styles}
-                selectedType={selectedType}
                 onSelectType={setSelectedType}
-                hashtagsInput={hashtagsInput}
-                hashtagChips={hashtagChips}
-                onChangeHashtagsInput={setHashtagsInput}
-                fontKey={fontKey}
-                onChangeFontKey={setFontKey}
-                showCategory={false}
-              />
-            ) : (
-              <WriteMetaSection
                 styles={styles}
-                selectedType={selectedType}
-                onSelectType={setSelectedType}
-                hashtagsInput={hashtagsInput}
-                hashtagChips={hashtagChips}
-                onChangeHashtagsInput={setHashtagsInput}
-                fontKey={fontKey}
-                onChangeFontKey={setFontKey}
-                showFont={false}
-                showHashtags={false}
               />
             )}
 
@@ -620,7 +797,11 @@ export default function Write() {
             <View style={styles.successCard}>
               <Text style={styles.successTitle}>완료되었어요</Text>
               <Text style={styles.successMessage}>
-                {isEditMode ? "수정한 글을 확인할까요?" : "어디로 이동할까요?"}
+                {lastQuestCompletion
+                  ? "퀘스트 진행도도 반영됐어요."
+                  : isEditMode
+                    ? "수정한 글을 확인할까요?"
+                    : "어디로 이동할까요?"}
               </Text>
               <View style={styles.successActions}>
                 <Pressable
@@ -646,7 +827,7 @@ export default function Write() {
           </View>
         </Modal>
 
-        {__DEV__ && (
+        {__DEV__ && !previewOpen && (
           <View style={styles.devWrap}>
             <View style={styles.devCard}>
               <View style={styles.devRow}>

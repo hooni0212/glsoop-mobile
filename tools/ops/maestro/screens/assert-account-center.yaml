@@ -1,0 +1,6 @@
+appId: com.glsoop.app
+---
+- extendedWaitUntil:
+    visible: "ACCOUNT CENTER"
+    timeout: 60000
+- assertVisible: "ACCOUNT CENTER"

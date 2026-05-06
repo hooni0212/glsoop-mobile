@@ -136,8 +136,9 @@ test.describe("웹 인증 세션 유지", () => {
     await setAuthToken(page, COOKIE_SESSION_TOKEN);
     await page.goto("/profile-customize");
 
-    await expect(page.getByText("일상의 작은 순간들을 기록하고")).toBeVisible();
-    await expect(page).toHaveURL(/\/\?redirect=%2Fprofile-customize$/);
+    await expect(page.getByTestId("auth-login-screen")).toBeVisible();
+    await expect(page.getByText("저장한 글과 팔로잉 피드를 이어서 볼 수 있어요.")).toBeVisible();
+    await expect(page).toHaveURL(/\/login\?redirect=%2Fprofile-customize$/);
     await expect.poll(() => getAuthToken(page)).toBeNull();
   });
 

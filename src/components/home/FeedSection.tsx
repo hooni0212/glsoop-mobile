@@ -26,6 +26,7 @@ type Props<Item extends { id: string | number }> = {
   onRefresh: () => void;
   onEndReached: () => void;
   onPressItem: (id: Item["id"]) => void;
+  onPressAuthor?: (item: Item) => void;
   onLikePress?: (id: Item["id"]) => void;
   onBookmarkPress?: (id: Item["id"]) => void;
   onMorePress?: (item: Item) => void;
@@ -42,6 +43,7 @@ export function FeedSection<Item extends { id: string | number }>({
   onRefresh,
   onEndReached,
   onPressItem,
+  onPressAuthor,
   onLikePress,
   onBookmarkPress,
   onMorePress,
@@ -71,7 +73,7 @@ export function FeedSection<Item extends { id: string | number }>({
           {!loading && items.length === 0 && !error ? (
             <AppEmpty
               title="아직 글이 없어요"
-              description="다른 카테고리를 눌러보거나 새로고침 해보세요."
+              description="다른 카테고리를 보거나 새로고침해 보세요."
               primaryAction={{ label: "새로고침", onPress: onRefresh }}
             />
           ) : null}
@@ -91,6 +93,7 @@ export function FeedSection<Item extends { id: string | number }>({
         <FeedSectionItem
           item={item}
           onPressItem={onPressItem}
+          onPressAuthor={onPressAuthor}
           onLikePress={onLikePress}
           onBookmarkPress={onBookmarkPress}
           onMorePress={onMorePress}
@@ -104,6 +107,7 @@ export function FeedSection<Item extends { id: string | number }>({
 function FeedSectionItem<Item extends { id: string | number }>({
   item,
   onPressItem,
+  onPressAuthor,
   onLikePress,
   onBookmarkPress,
   onMorePress,
@@ -111,6 +115,7 @@ function FeedSectionItem<Item extends { id: string | number }>({
 }: {
   item: Item;
   onPressItem: (id: Item["id"]) => void;
+  onPressAuthor?: (item: Item) => void;
   onLikePress?: (id: Item["id"]) => void;
   onBookmarkPress?: (id: Item["id"]) => void;
   onMorePress?: (item: Item) => void;
@@ -132,6 +137,7 @@ function FeedSectionItem<Item extends { id: string | number }>({
       liked={liked}
       bookmarked={bookmarked}
       onPress={() => onPressItem(item.id)}
+      onAuthorPress={onPressAuthor ? () => onPressAuthor(item) : undefined}
       onLikePress={() => onLikePress?.(item.id)}
       onBookmarkPress={() => onBookmarkPress?.(item.id)}
       onMorePress={onMorePress ? () => onMorePress(item) : undefined}

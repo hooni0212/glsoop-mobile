@@ -1,0 +1,8 @@
+appId: com.glsoop.app
+---
+- extendedWaitUntil:
+    visible:
+      id: "search-screen"
+    timeout: 60000
+- assertVisible:
+    id: "search-screen"

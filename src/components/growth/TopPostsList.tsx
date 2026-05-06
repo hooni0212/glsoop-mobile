@@ -1,4 +1,5 @@
 import React from "react";
+import { Ionicons } from "@expo/vector-icons";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { AppEmpty } from "@/components/state/AppEmpty";
@@ -13,7 +14,6 @@ export type TopPostItem = {
   title: string;
   excerpt?: string;
   authorName?: string;
-  category?: string;
   createdAt?: string | null;
   likeCount?: number;
   bookmarkCount?: number;
@@ -36,9 +36,9 @@ export function TopPostsList({
   error = null,
   onPressItem,
   title = "인기 글",
-  description = "반응이 좋은 글을 모아 보여주는 영역이에요.",
+  description = "반응이 좋은 글",
   emptyTitle = "아직 인기 글이 없어요",
-  emptyDescription = "활동이 더 쌓이면, 여기에서 주목받는 글을 추천해드릴게요.",
+  emptyDescription = "활동이 쌓이면 여기에 표시돼요.",
 }: Props) {
   if (loading && items.length === 0) {
     return <AppLoading message="인기 글을 불러오는 중..." />;
@@ -86,12 +86,12 @@ export function TopPostsList({
                 ) : null}
 
                 <View style={styles.metaRow}>
-                  {item.category ? (
-                    <Text style={[styles.metaText, styles.metaCategory]}>{item.category}</Text>
-                  ) : null}
                   {item.authorName ? <Text style={styles.metaText}>{item.authorName}</Text> : null}
                   {createdAtLabel ? <Text style={styles.metaText}>{createdAtLabel}</Text> : null}
-                  <Text style={styles.metaText}>좋아요 {item.likeCount ?? 0}</Text>
+                  <View style={styles.metaMetric} accessibilityLabel={`공감 ${item.likeCount ?? 0}개`}>
+                    <Ionicons name="heart" size={13} color={tokens.colors.textFaint} />
+                    <Text style={styles.metaText}>{item.likeCount ?? 0}</Text>
+                  </View>
                   <Text style={styles.metaText}>저장 {item.bookmarkCount ?? 0}</Text>
                 </View>
               </View>
@@ -199,8 +199,9 @@ const styles = StyleSheet.create({
     color: tokens.colors.textFaint,
     fontWeight: "700",
   },
-  metaCategory: {
-    color: tokens.colors.green900,
-    fontWeight: "800",
+  metaMetric: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
   },
 });

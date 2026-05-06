@@ -21,6 +21,11 @@ import {
   normalizeSession,
   parseFlag,
 } from "@/features/me/accountCenter";
+import {
+  getMarketingPushConsent,
+  updateMarketingPushConsent,
+  type MarketingPushConsent,
+} from "@/services/marketingPushService";
 import { tokens } from "@/theme/tokens";
 
 export default function AccountCenterSecuritySettingsScreen() {
@@ -33,18 +38,23 @@ export default function AccountCenterSecuritySettingsScreen() {
   const [error, setError] = React.useState<ReturnType<typeof normalizeApiError> | null>(null);
   const [rememberLoginEnabled, setRememberLoginEnabled] = React.useState(false);
   const [savingRemember, setSavingRemember] = React.useState(false);
+  const [marketingPushConsent, setMarketingPushConsent] =
+    React.useState<MarketingPushConsent | null>(null);
+  const [savingMarketingPush, setSavingMarketingPush] = React.useState(false);
   const [logoutAllBusy, setLogoutAllBusy] = React.useState(false);
 
   const loadSecurity = React.useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const [meResponse, sessionsResponse] = await Promise.all([
+      const [meResponse, sessionsResponse, marketingConsentResponse] = await Promise.all([
         apiGet<MeResponse>("/api/me"),
         apiGet<SessionsResponse>("/api/me/sessions"),
+        getMarketingPushConsent(),
       ]);
       setMe(meResponse);
       setRememberLoginEnabled(parseFlag(meResponse.remember_login_enabled));
+      setMarketingPushConsent(marketingConsentResponse);
       setSessions(
         Array.isArray(sessionsResponse?.sessions)
           ? sessionsResponse.sessions.map(normalizeSession)
@@ -53,6 +63,7 @@ export default function AccountCenterSecuritySettingsScreen() {
     } catch (e) {
       setError(normalizeApiError(e));
       setMe(null);
+      setMarketingPushConsent(null);
       setSessions([]);
     } finally {
       setLoading(false);
@@ -78,12 +89,45 @@ export default function AccountCenterSecuritySettingsScreen() {
       setRememberLoginEnabled((current) => !current);
       const normalized = normalizeApiError(e);
       if (normalized.kind === "auth") {
-        router.replace(buildAuthRoute("/(auth)", pathname));
+        router.replace(buildAuthRoute("/(auth)/login", pathname));
         return;
       }
       showToast(normalized.description || normalized.title, { tone: "error" });
     } finally {
       setSavingRemember(false);
+    }
+  }
+
+  async function onSaveMarketingPushConsent(nextValue: boolean) {
+    if (!marketingPushConsent || savingMarketingPush) return;
+
+    const previous = marketingPushConsent;
+    setMarketingPushConsent((current) =>
+      current ? { ...current, marketingPushOptIn: nextValue } : current
+    );
+    setSavingMarketingPush(true);
+    try {
+      const nextConsent = await updateMarketingPushConsent({
+        marketingPushOptIn: nextValue,
+        marketingVersion: previous.marketingVersion,
+      });
+      setMarketingPushConsent(nextConsent);
+      showToast(
+        nextValue
+          ? "마케팅 알림 수신에 동의했어요."
+          : "마케팅 알림 수신 동의를 철회했어요.",
+        { tone: "success" }
+      );
+    } catch (e) {
+      setMarketingPushConsent(previous);
+      const normalized = normalizeApiError(e);
+      if (normalized.kind === "auth") {
+        router.replace(buildAuthRoute("/(auth)/login", pathname));
+        return;
+      }
+      showToast(normalized.description || normalized.title, { tone: "error" });
+    } finally {
+      setSavingMarketingPush(false);
     }
   }
 
@@ -96,7 +140,7 @@ export default function AccountCenterSecuritySettingsScreen() {
     } catch (e) {
       const normalized = normalizeApiError(e);
       if (normalized.kind === "auth") {
-        router.replace(buildAuthRoute("/(auth)", pathname));
+        router.replace(buildAuthRoute("/(auth)/login", pathname));
         return;
       }
       showToast(normalized.description || normalized.title, { tone: "error" });
@@ -126,7 +170,7 @@ export default function AccountCenterSecuritySettingsScreen() {
             description="보안 설정은 로그인 후 이용할 수 있어요."
             primaryAction={{
               label: "로그인 하러가기",
-              onPress: () => router.replace(buildAuthRoute("/(auth)", pathname)),
+              onPress: () => router.replace(buildAuthRoute("/(auth)/login", pathname)),
             }}
           />
         </View>
@@ -184,6 +228,62 @@ export default function AccountCenterSecuritySettingsScreen() {
               </Text>
             </Pressable>
           </View>
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>광고성 마케팅 알림</Text>
+          <Text style={styles.cardDescription}>
+            이벤트, 새 기능, 글쓰기 리마인드처럼 앱 이용을 권유하는 광고성 정보를 푸시로 받을지 선택해요. 댓글, 답글, 팔로워 같은 거래성 알림과는 별도로 관리됩니다.
+          </Text>
+          <View style={styles.toggleRow}>
+            <Pressable
+              onPress={() => void onSaveMarketingPushConsent(true)}
+              style={[
+                styles.toggleChip,
+                marketingPushConsent?.marketingPushOptIn && styles.toggleChipActive,
+              ]}
+              disabled={savingMarketingPush || !marketingPushConsent}
+              testID="marketing-push-opt-in-btn"
+              accessibilityRole="button"
+              accessibilityLabel="광고성 마케팅 알림 수신 동의"
+            >
+              <Text
+                style={[
+                  styles.toggleChipText,
+                  marketingPushConsent?.marketingPushOptIn && styles.toggleChipTextActive,
+                ]}
+              >
+                동의
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => void onSaveMarketingPushConsent(false)}
+              style={[
+                styles.toggleChip,
+                marketingPushConsent &&
+                  !marketingPushConsent.marketingPushOptIn &&
+                  styles.toggleChipActive,
+              ]}
+              disabled={savingMarketingPush || !marketingPushConsent}
+              testID="marketing-push-opt-out-btn"
+              accessibilityRole="button"
+              accessibilityLabel="광고성 마케팅 알림 수신 철회"
+            >
+              <Text
+                style={[
+                  styles.toggleChipText,
+                  marketingPushConsent &&
+                    !marketingPushConsent.marketingPushOptIn &&
+                    styles.toggleChipTextActive,
+                ]}
+              >
+                철회
+              </Text>
+            </Pressable>
+          </View>
+          <Text style={styles.consentNote}>
+            동의 여부는 언제든 여기에서 바꿀 수 있어요.
+          </Text>
         </View>
 
         <View style={styles.card}>
@@ -278,6 +378,9 @@ const styles = StyleSheet.create({
     height: 40,
   },
   content: {
+    width: "100%",
+    maxWidth: 760,
+    alignSelf: "center",
     paddingHorizontal: tokens.space.xl,
     paddingTop: tokens.space.md,
     paddingBottom: tokens.space.xl,
@@ -329,6 +432,12 @@ const styles = StyleSheet.create({
     fontSize: tokens.font.small,
     color: tokens.colors.textMuted,
     lineHeight: 20,
+  },
+  consentNote: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: tokens.colors.textFaint,
+    lineHeight: 18,
   },
   sessionList: {
     gap: tokens.space.sm as any,

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { router } from "expo-router";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, ScrollView, Text, View, useWindowDimensions } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { AppEmpty } from "@/components/state/AppEmpty";
@@ -29,6 +29,8 @@ function formatDate(ts: number) {
 
 export default function WriteDrafts() {
   const styles = useMemo(() => createWriteStyles(), []);
+  const { width } = useWindowDimensions();
+  const isLargeScreen = width >= 768;
   const [drafts, setDrafts] = useState<WriteDraft[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<AppErrorModel | null>(null);
@@ -97,70 +99,78 @@ export default function WriteDrafts() {
         </Pressable>
       </View>
 
-      <ScrollView contentContainerStyle={{ padding: 14, paddingBottom: 40 }}>
-        {loading ? (
-          <View style={styles.center}>
-            <AppLoading message="임시저장함을 불러오는 중…" />
-          </View>
-        ) : error ? (
-          <View style={styles.center}>
-            <AppError error={error} onRetry={error.canRetry ? refresh : undefined} />
-          </View>
-        ) : drafts.length === 0 ? (
-          <View style={styles.center}>
-            <AppEmpty
-              title="임시저장한 글이 없어요"
-              description="새 글을 작성하거나 자유롭게 기록해보세요."
-              primaryAction={{ label: "글 작성하기", onPress: () => router.push("/write") }}
-            />
-          </View>
-        ) : (
-          drafts.map((d) => {
-            const preview = (d.body || "").replace(/\s+/g, " ").slice(0, 90);
-            const title = d.title?.trim() ? d.title.trim() : "(제목 없음)";
-            return (
-              <View key={d.id} style={styles.metaCard} testID={`draft-item-${d.id}`}>
-                <Text style={{ fontSize: 14, fontWeight: "900", color: "#2B2B2B" }}>{title}</Text>
-                {!!d.category && (
-                  <Text style={{ marginTop: 6, fontSize: 12, color: "#2E5A3D", fontWeight: "800" }}>
-                    {CATEGORY_LABEL[d.category] ?? d.category}
+      <ScrollView
+        contentContainerStyle={[
+          styles.scrollContent,
+          isLargeScreen && styles.scrollContentWide,
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={[styles.contentStack, isLargeScreen && styles.contentStackWide]}>
+          {loading ? (
+            <View style={styles.center}>
+              <AppLoading message="임시저장함을 불러오는 중…" />
+            </View>
+          ) : error ? (
+            <View style={styles.center}>
+              <AppError error={error} onRetry={error.canRetry ? refresh : undefined} />
+            </View>
+          ) : drafts.length === 0 ? (
+            <View style={styles.center}>
+              <AppEmpty
+                title="임시저장한 글이 없어요"
+                description="새 글을 작성하거나 자유롭게 기록해보세요."
+                primaryAction={{ label: "글 작성하기", onPress: () => router.push("/write") }}
+              />
+            </View>
+          ) : (
+            drafts.map((d) => {
+              const preview = (d.body || "").replace(/\s+/g, " ").slice(0, 90);
+              const title = d.title?.trim() ? d.title.trim() : "(제목 없음)";
+              return (
+                <View key={d.id} style={styles.metaCard} testID={`draft-item-${d.id}`}>
+                  <Text style={{ fontSize: 14, fontWeight: "900", color: "#2B2B2B" }}>{title}</Text>
+                  {!!d.category && (
+                    <Text style={{ marginTop: 6, fontSize: 12, color: "#2E5A3D", fontWeight: "800" }}>
+                      {CATEGORY_LABEL[d.category] ?? d.category}
+                    </Text>
+                  )}
+                  <Text style={{ marginTop: 6, fontSize: 12, color: "#6C6C6C", fontWeight: "700" }}>
+                    {formatDate(d.updatedAt)}
                   </Text>
-                )}
-                <Text style={{ marginTop: 6, fontSize: 12, color: "#6C6C6C", fontWeight: "700" }}>
-                  {formatDate(d.updatedAt)}
-                </Text>
-                {!!preview && (
-                  <Text style={{ marginTop: 10, fontSize: 13, color: "#2B2B2B", lineHeight: 18 }}>
-                    {preview}
-                  </Text>
-                )}
+                  {!!preview && (
+                    <Text style={{ marginTop: 10, fontSize: 13, color: "#2B2B2B", lineHeight: 18 }}>
+                      {preview}
+                    </Text>
+                  )}
 
-                <View style={{ flexDirection: "row", gap: 10, marginTop: 12 }}>
-                  <Pressable
-                    onPress={() => onPressOpen(d.id)}
-                    style={[styles.chip, { flex: 1 }]}
-                    hitSlop={6}
-                    accessibilityRole="button"
-                    accessibilityLabel="임시저장 열기"
-                    testID={`draft-open-${d.id}`}
-                  >
-                    <Text style={styles.chipText}>열기</Text>
-                  </Pressable>
-                  <Pressable
-                    onPress={() => onPressDelete(d.id)}
-                    style={[styles.chip, { flex: 1, borderColor: "rgba(180,50,50,0.35)" }]}
-                    hitSlop={6}
-                    accessibilityRole="button"
-                    accessibilityLabel="임시저장 삭제"
-                    testID={`draft-delete-${d.id}`}
-                  >
-                    <Text style={[styles.chipText, { color: "rgba(180,50,50,0.95)" }]}>삭제</Text>
-                  </Pressable>
+                  <View style={{ flexDirection: "row", gap: 10, marginTop: 12 }}>
+                    <Pressable
+                      onPress={() => onPressOpen(d.id)}
+                      style={[styles.chip, { flex: 1 }]}
+                      hitSlop={6}
+                      accessibilityRole="button"
+                      accessibilityLabel="임시저장 열기"
+                      testID={`draft-open-${d.id}`}
+                    >
+                      <Text style={styles.chipText}>열기</Text>
+                    </Pressable>
+                    <Pressable
+                      onPress={() => onPressDelete(d.id)}
+                      style={[styles.chip, { flex: 1, borderColor: "rgba(180,50,50,0.35)" }]}
+                      hitSlop={6}
+                      accessibilityRole="button"
+                      accessibilityLabel="임시저장 삭제"
+                      testID={`draft-delete-${d.id}`}
+                    >
+                      <Text style={[styles.chipText, { color: "rgba(180,50,50,0.95)" }]}>삭제</Text>
+                    </Pressable>
+                  </View>
                 </View>
-              </View>
-            );
-          })
-        )}
+              );
+            })
+          )}
+        </View>
       </ScrollView>
     </SafeAreaView>
   );

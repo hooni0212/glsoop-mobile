@@ -2,7 +2,6 @@ import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import type { AppErrorModel } from "@/lib/errors";
-import { softPanelShadowStyle } from "@/theme/shadows";
 import { tokens } from "@/theme/tokens";
 
 type AppErrorDisplay = Pick<AppErrorModel, "title" | "description">;
@@ -36,40 +35,46 @@ export function AppError({ error, onRetry, retryLabel = "다시 시도" }: Props
 
 const styles = StyleSheet.create({
   container: {
-    paddingVertical: tokens.space.lg,
-    paddingHorizontal: tokens.space.xl,
-    borderRadius: tokens.radius.xl,
-    backgroundColor: tokens.colors.surfaceStrong,
+    width: "100%",
+    maxWidth: 357,
+    alignSelf: "center",
+    paddingVertical: 18,
+    paddingHorizontal: 20,
+    borderRadius: tokens.radius.lg,
+    backgroundColor: tokens.colors.dangerSoft,
     borderWidth: 1,
-    borderColor: tokens.colors.border,
+    borderColor: tokens.colors.dangerBorder,
     alignItems: "center",
     justifyContent: "center",
-    gap: tokens.space.sm as any,
-    ...softPanelShadowStyle,
+    gap: 8,
   },
   title: {
-    fontSize: tokens.font.body,
-    fontWeight: "800",
-    color: tokens.colors.text,
+    fontSize: 14,
+    fontWeight: "900",
+    color: tokens.colors.danger,
     textAlign: "center",
+    lineHeight: 20,
   },
   description: {
-    fontSize: tokens.font.small,
-    color: tokens.colors.textMuted,
+    fontSize: 13,
+    color: tokens.colors.danger,
     textAlign: "center",
+    lineHeight: 18,
+    fontWeight: "700",
   },
   retryButton: {
-    marginTop: tokens.space.sm,
-    paddingHorizontal: tokens.space.md,
-    paddingVertical: tokens.space.sm,
+    marginTop: 6,
+    minHeight: 40,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
     borderRadius: tokens.radius.pill,
-    backgroundColor: tokens.colors.green100,
+    backgroundColor: tokens.colors.white,
     borderWidth: 1,
-    borderColor: tokens.colors.borderStrong,
+    borderColor: tokens.colors.dangerBorder,
   },
   retryText: {
-    fontSize: tokens.font.small,
-    fontWeight: "800",
-    color: tokens.colors.green900,
+    fontSize: 13,
+    fontWeight: "900",
+    color: tokens.colors.danger,
   },
 });

@@ -1,4 +1,4 @@
-import type { PostType } from "@/types/post";
+import type { PostCommentPolicy, PostType, PostVisibility } from "@/types/post";
 import { apiDelete, apiGet, apiPost, apiPut } from "@/lib/api";
 import {
   extractPostFontKey,
@@ -16,12 +16,25 @@ export type CreatePostInput = {
   hashtags?: string[];
   layoutJson?: unknown;
   fontKey?: PostFontKey;
+  visibility?: PostVisibility;
+  commentPolicy?: PostCommentPolicy;
+  questContext?: {
+    stateId: number;
+    promptKey: string;
+  };
 };
 
 type CreatePostResponse = {
   ok: boolean;
   message?: string;
   post_id?: string;
+  quest_completion?: {
+    state_id?: number;
+    status?: string;
+    progress?: number;
+    target?: number;
+    completed_at?: string | null;
+  };
 };
 
 type DeletePostResponse = {
@@ -39,6 +52,8 @@ type EditablePostResponse = {
     category?: PostType;
     hashtags?: string[];
     layout_json?: unknown;
+    visibility?: PostVisibility;
+    comment_policy?: PostCommentPolicy;
   };
 };
 
@@ -47,7 +62,10 @@ type UpdatePostResponse = {
   message?: string;
 };
 
-export async function createPost(input: CreatePostInput): Promise<{ postId: string }> {
+export async function createPost(input: CreatePostInput): Promise<{
+  postId: string;
+  questCompletion?: NonNullable<CreatePostResponse["quest_completion"]>;
+}> {
   const payload: Record<string, unknown> = {
     type: input.type,
     category: input.category ?? input.type,
@@ -58,6 +76,14 @@ export async function createPost(input: CreatePostInput): Promise<{ postId: stri
   if (input.title) payload.title = input.title;
   if (input.hashtags && input.hashtags.length > 0) payload.hashtags = input.hashtags;
   if (input.layoutJson) payload.layout_json = input.layoutJson;
+  if (input.visibility) payload.visibility = input.visibility;
+  if (input.commentPolicy) payload.comment_policy = input.commentPolicy;
+  if (input.questContext) {
+    payload.quest_context = {
+      state_id: input.questContext.stateId,
+      prompt_key: input.questContext.promptKey,
+    };
+  }
 
   const res = await apiPost<CreatePostResponse>("/api/posts", payload);
 
@@ -69,7 +95,7 @@ export async function createPost(input: CreatePostInput): Promise<{ postId: stri
     throw new Error("서버가 post_id를 응답하지 않았어요.");
   }
 
-  return { postId: res.post_id };
+  return { postId: res.post_id, questCompletion: res.quest_completion };
 }
 
 export async function deletePost(postId: string): Promise<void> {
@@ -88,6 +114,8 @@ export async function getEditablePost(postId: string): Promise<{
   hashtags: string[];
   layoutJson: unknown;
   fontKey: PostFontKey;
+  visibility: PostVisibility;
+  commentPolicy: PostCommentPolicy;
 }> {
   const res = await apiGet<EditablePostResponse>(`/api/posts/${encodeURIComponent(postId)}/edit`);
 
@@ -105,6 +133,8 @@ export async function getEditablePost(postId: string): Promise<{
       : [],
     layoutJson: res.post.layout_json ?? null,
     fontKey: extractPostFontKey(res.post.content),
+    visibility: res.post.visibility ?? "public",
+    commentPolicy: res.post.comment_policy ?? "logged_in",
   };
 }
 
@@ -116,6 +146,8 @@ export async function updatePost(input: {
   hashtags?: string[];
   layoutJson?: unknown;
   fontKey?: PostFontKey;
+  visibility?: PostVisibility;
+  commentPolicy?: PostCommentPolicy;
 }): Promise<void> {
   const res = await apiPut<UpdatePostResponse>(`/api/posts/${encodeURIComponent(input.postId)}`, {
     title: input.title,
@@ -123,6 +155,8 @@ export async function updatePost(input: {
     category: input.type,
     hashtags: input.hashtags ?? [],
     layout_json: input.layoutJson,
+    visibility: input.visibility ?? "public",
+    comment_policy: input.commentPolicy ?? "logged_in",
   });
 
   if (res?.ok === false) {

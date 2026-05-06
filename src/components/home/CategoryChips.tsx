@@ -1,5 +1,5 @@
 import React from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 
 import { categoryChipsStyles as styles } from "@/screens/Home.styles";
 
@@ -16,21 +16,22 @@ export function CategoryChips<T extends string>({
 }: Props<T>) {
   return (
     <View style={styles.wrap}>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.content}
-      >
+      <View style={styles.content}>
         {categories.map((c) => {
           const isActive = c === active;
           return (
             <Pressable
               key={c}
               onPress={() => onChange(c)}
-              style={[styles.chip, isActive && styles.chipActive]}
+              style={({ pressed }) => [
+                styles.chip,
+                isActive && styles.chipActive,
+                pressed && styles.chipPressed,
+              ]}
               accessibilityRole="button"
               accessibilityState={{ selected: isActive }}
             >
+              <View style={[styles.activeLine, isActive && styles.activeLineOn]} />
               <Text
                 style={[styles.chipText, isActive && styles.chipTextActive]}
               >
@@ -39,8 +40,7 @@ export function CategoryChips<T extends string>({
             </Pressable>
           );
         })}
-        <View style={{ width: 6 }} />
-      </ScrollView>
+      </View>
     </View>
   );
 }

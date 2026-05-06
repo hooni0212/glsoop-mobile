@@ -3,7 +3,9 @@ import * as SplashScreen from "expo-splash-screen";
 import { AuthGate } from "@/auth/AuthGate";
 import { AuthProvider, useAuth } from "@/auth/AuthContext";
 import { AppBootScreen } from "@/components/state/AppBootScreen";
-import { ToastProvider } from "@/feedback/ToastProvider";
+import { refreshNotificationUnreadCount } from "@/features/notifications/notificationStore";
+import { ToastProvider, useToast } from "@/feedback/ToastProvider";
+import { usePushNotifications } from "@/lib/pushNotifications";
 import { BottomDockProvider } from "@/navigation/bottomDock";
 import { Stack } from "expo-router";
 import { StyleSheet, View } from "react-native";
@@ -44,6 +46,7 @@ function RootLayoutContent() {
     <View style={styles.root} onLayout={() => setLayoutReady(true)}>
       <BottomDockProvider>
         <ToastProvider>
+          <NotificationBridge />
           {!ready ? (
             <AppBootScreen message="로그인 상태를 준비하고 있어요..." />
           ) : (
@@ -101,6 +104,7 @@ function RootLayoutContent() {
                 />
 
                 <Stack.Screen name="search" options={{ headerShown: false }} />
+                <Stack.Screen name="notifications" options={{ headerShown: false }} />
                 <Stack.Screen name="profile-customize" options={{ headerShown: false }} />
                 <Stack.Screen name="ui-kit" options={{ headerShown: false }} />
               </Stack>
@@ -110,6 +114,17 @@ function RootLayoutContent() {
       </BottomDockProvider>
     </View>
   );
+}
+
+function NotificationBridge() {
+  const { token } = useAuth();
+  const { showToast } = useToast();
+  usePushNotifications(token, showToast, {
+    onNotificationReceived: () => {
+      void refreshNotificationUnreadCount().catch(() => undefined);
+    },
+  });
+  return null;
 }
 
 const styles = StyleSheet.create({

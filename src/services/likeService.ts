@@ -15,7 +15,7 @@ export async function togglePostLike(
   );
 
   if (!res?.ok) {
-    throw new Error(res?.message || "좋아요 요청에 실패했어요.");
+    throw new Error(res?.message || "공감 요청에 실패했어요.");
   }
 
   return { liked: res.liked, likeCount: res.like_count };

@@ -35,6 +35,35 @@ function slotLabel(slot: CosmeticStickerSlot) {
   return "우하단";
 }
 
+function backgroundTone(key: string | null | undefined) {
+  if (key === "background_writer_grove") {
+    return {
+      backgroundColor: "#EAF5EE",
+      borderColor: "#9EC9AD",
+      accentColor: tokens.colors.green700,
+    };
+  }
+  if (key === "background_deep_forest") {
+    return {
+      backgroundColor: "#DCEFE5",
+      borderColor: "#7DAE91",
+      accentColor: tokens.colors.green900,
+    };
+  }
+  if (key === "background_prompt_letters") {
+    return {
+      backgroundColor: "#FFF1E8",
+      borderColor: "#E6BDA6",
+      accentColor: "#8A4B2A",
+    };
+  }
+  return {
+    backgroundColor: tokens.colors.surfaceStrong,
+    borderColor: tokens.colors.border,
+    accentColor: tokens.colors.green700,
+  };
+}
+
 function buildSlotSelection(state: ProfileCosmeticsState) {
   const map = new Map<CosmeticStickerSlot, string>();
   for (const entry of state.header_stickers) {
@@ -62,7 +91,28 @@ export default function ProfileCustomizeScreen() {
   }, [loading, profile]);
 
   const slotSelection = React.useMemo(() => buildSlotSelection(selection), [selection]);
-  const hasInventory = inventory.badges.length > 0 || inventory.stickers.length > 0;
+  const hasInventory =
+    inventory.badges.length > 0 ||
+    inventory.stickers.length > 0 ||
+    inventory.backgrounds.length > 0;
+
+  const selectedBackground = React.useMemo(
+    () =>
+      inventory.backgrounds.find((item) => item.key === selection.profile_background_key) ??
+      null,
+    [inventory.backgrounds, selection.profile_background_key]
+  );
+  const selectedPrimaryBadge = React.useMemo(
+    () => inventory.badges.find((item) => item.key === selection.primary_badge_key) ?? null,
+    [inventory.badges, selection.primary_badge_key]
+  );
+  const selectedShowcaseBadges = React.useMemo(
+    () =>
+      selection.showcase_badge_keys
+        .map((key) => inventory.badges.find((item) => item.key === key))
+        .filter(Boolean) as CosmeticItem[],
+    [inventory.badges, selection.showcase_badge_keys]
+  );
 
   const pickPrimaryBadge = React.useCallback((key: string | null) => {
     setDirty(true);
@@ -70,6 +120,16 @@ export default function ProfileCustomizeScreen() {
       normalizeProfileCosmeticsState({
         ...prev,
         primary_badge_key: key,
+      })
+    );
+  }, []);
+
+  const pickBackground = React.useCallback((key: string | null) => {
+    setDirty(true);
+    setSelection((prev) =>
+      normalizeProfileCosmeticsState({
+        ...prev,
+        profile_background_key: key,
       })
     );
   }, []);
@@ -131,7 +191,7 @@ export default function ProfileCustomizeScreen() {
       const normalized = normalizeApiError(err);
       if (normalized.kind === "auth") {
         showToast("로그인이 필요해요", { tone: "error" });
-        router.replace(buildAuthRoute("/(auth)", pathname));
+        router.replace(buildAuthRoute("/(auth)/login", pathname));
         return;
       }
 
@@ -166,7 +226,7 @@ export default function ProfileCustomizeScreen() {
             description="프로필 꾸미기는 로그인 후 이용할 수 있어요."
             primaryAction={{
               label: "로그인 하러가기",
-              onPress: () => router.replace(buildAuthRoute("/(auth)", pathname)),
+              onPress: () => router.replace(buildAuthRoute("/(auth)/login", pathname)),
             }}
           />
         </View>
@@ -196,10 +256,39 @@ export default function ProfileCustomizeScreen() {
         {error ? (
           <View style={styles.notice}>
             <Text style={styles.noticeText}>
-              일부 데이터를 새로고침하지 못했어요. 선택 후 저장은 계속할 수 있어요.
+              일부 데이터를 새로고침하지 못했어요. 저장은 계속할 수 있어요.
             </Text>
           </View>
         ) : null}
+
+        <ProfilePreview
+          background={selectedBackground}
+          primaryBadge={selectedPrimaryBadge}
+          showcaseBadges={selectedShowcaseBadges}
+          stickers={selection.header_stickers}
+          stickerInventory={inventory.stickers}
+        />
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>프로필 배경</Text>
+          <Text style={styles.sectionHint}>작가 프로필 카드에 적용돼요.</Text>
+
+          {inventory.backgrounds.length === 0 ? (
+            <Text style={styles.emptyText}>사용할 수 있는 배경이 아직 없어요.</Text>
+          ) : (
+            <View style={styles.optionWrap}>
+              {inventory.backgrounds.map((item) => (
+                <CosmeticChip
+                  key={item.key}
+                  item={item}
+                  selected={selection.profile_background_key === item.key}
+                  onPress={() => pickBackground(item.key)}
+                  testID={`profile-background-${item.key}`}
+                />
+              ))}
+            </View>
+          )}
+        </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>대표 뱃지</Text>
@@ -233,7 +322,7 @@ export default function ProfileCustomizeScreen() {
           <Text style={styles.sectionTitle}>
             쇼케이스 뱃지 {selection.showcase_badge_keys.length}/{MAX_SHOWCASE_BADGES}
           </Text>
-          <Text style={styles.sectionHint}>작가 카드에 최대 6개까지 노출돼요.</Text>
+          <Text style={styles.sectionHint}>작가 카드에 최대 6개까지 보여요.</Text>
 
           {inventory.badges.length === 0 ? (
             <Text style={styles.emptyText}>쇼케이스에 올릴 뱃지가 없어요.</Text>
@@ -254,7 +343,7 @@ export default function ProfileCustomizeScreen() {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>헤더 스티커</Text>
-          <Text style={styles.sectionHint}>좌상단/우상단/우하단 슬롯을 각각 고를 수 있어요.</Text>
+          <Text style={styles.sectionHint}>세 슬롯을 각각 고를 수 있어요.</Text>
 
           {inventory.stickers.length === 0 ? (
             <Text style={styles.emptyText}>보유한 스티커가 아직 없어요.</Text>
@@ -289,16 +378,16 @@ export default function ProfileCustomizeScreen() {
 
         <Pressable
           onPress={saveProfileCosmetics}
-          disabled={saving || loading}
+          disabled={saving || loading || !dirty}
           style={({ pressed }) => [
             styles.saveButton,
-            (saving || loading) && styles.saveButtonDisabled,
-            pressed && !(saving || loading) && styles.saveButtonPressed,
+            (saving || loading || !dirty) && styles.saveButtonDisabled,
+            pressed && !(saving || loading || !dirty) && styles.saveButtonPressed,
           ]}
           testID="profile-cosmetics-save-btn"
         >
           <Text style={styles.saveButtonText}>
-            {saving ? "저장 중..." : dirty ? "저장하기" : "변경사항 저장"}
+            {saving ? "저장 중..." : "저장"}
           </Text>
         </Pressable>
       </ScrollView>
@@ -321,6 +410,80 @@ function ProfileCustomizeTopBar() {
       <View style={styles.topBarSpacer} />
     </View>
   );
+}
+
+function ProfilePreview({
+  background,
+  primaryBadge,
+  showcaseBadges,
+  stickers,
+  stickerInventory,
+}: {
+  background: CosmeticItem | null;
+  primaryBadge: CosmeticItem | null;
+  showcaseBadges: CosmeticItem[];
+  stickers: ProfileCosmeticsState["header_stickers"];
+  stickerInventory: CosmeticItem[];
+}) {
+  const tone = backgroundTone(background?.key);
+  const stickerByKey = React.useMemo(
+    () => new Map(stickerInventory.map((item) => [item.key, item])),
+    [stickerInventory]
+  );
+
+  return (
+    <View
+      style={[
+        styles.previewCard,
+        { backgroundColor: tone.backgroundColor, borderColor: tone.borderColor },
+      ]}
+      testID="profile-cosmetics-preview"
+    >
+      {stickers.map((entry) => {
+        const sticker = stickerByKey.get(entry.key);
+        if (!sticker) return null;
+        return (
+          <View
+            key={`${entry.slot}-${entry.key}`}
+            pointerEvents="none"
+            style={[styles.previewSticker, getPreviewStickerAnchor(entry.slot)]}
+          >
+            <Text style={styles.previewStickerText}>{toEmoji(sticker.icon_emoji, "✨")}</Text>
+          </View>
+        );
+      })}
+
+      <View style={styles.previewNameRow}>
+        <Text style={styles.previewName}>내 프로필</Text>
+        {primaryBadge ? (
+          <Text accessibilityLabel={`대표 뱃지 ${primaryBadge.name}`} style={styles.previewBadge}>
+            {toEmoji(primaryBadge.icon_emoji, "🏅")}
+          </Text>
+        ) : null}
+      </View>
+      <Text style={styles.previewBio}>업적과 캠페인 보상으로 꾸민 모습입니다.</Text>
+      {showcaseBadges.length > 0 ? (
+        <View style={styles.previewShowcase}>
+          {showcaseBadges.slice(0, MAX_SHOWCASE_BADGES).map((badge) => (
+            <View key={badge.key} style={styles.previewShowcaseChip}>
+              <Text style={styles.previewShowcaseText}>
+                {toEmoji(badge.icon_emoji, "🏅")} {badge.name}
+              </Text>
+            </View>
+          ))}
+        </View>
+      ) : null}
+      <Text style={[styles.previewBackgroundLabel, { color: tone.accentColor }]}>
+        {background?.name ?? "기본 배경"}
+      </Text>
+    </View>
+  );
+}
+
+function getPreviewStickerAnchor(slot: CosmeticStickerSlot) {
+  if (slot === "tl") return styles.previewStickerTL;
+  if (slot === "tr") return styles.previewStickerTR;
+  return styles.previewStickerBR;
 }
 
 function CosmeticChip({
@@ -416,6 +579,9 @@ const styles = StyleSheet.create({
     height: 40,
   },
   content: {
+    width: "100%",
+    maxWidth: 760,
+    alignSelf: "center",
     paddingHorizontal: tokens.space.xl,
     paddingTop: tokens.space.sm,
     paddingBottom: tokens.space.xl,
@@ -432,6 +598,85 @@ const styles = StyleSheet.create({
     fontSize: tokens.font.small,
     color: tokens.colors.textMuted,
     lineHeight: 18,
+  },
+  previewCard: {
+    minHeight: 150,
+    borderRadius: tokens.radius.xl,
+    borderWidth: 1,
+    padding: tokens.space.lg,
+    gap: tokens.space.sm as any,
+    position: "relative",
+    overflow: "hidden",
+  },
+  previewNameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: tokens.space.xs as any,
+    paddingRight: 72,
+  },
+  previewName: {
+    fontSize: 21,
+    fontWeight: "900",
+    color: tokens.colors.text,
+  },
+  previewBadge: {
+    fontSize: 18,
+    lineHeight: 22,
+  },
+  previewBio: {
+    fontSize: tokens.font.body,
+    color: tokens.colors.textMuted,
+    lineHeight: 21,
+  },
+  previewShowcase: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+  },
+  previewShowcaseChip: {
+    borderRadius: tokens.radius.pill,
+    borderWidth: 1,
+    borderColor: tokens.colors.borderStrong,
+    backgroundColor: "rgba(255,255,255,0.58)",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  previewShowcaseText: {
+    fontSize: tokens.font.small,
+    fontWeight: "800",
+    color: tokens.colors.green900,
+  },
+  previewBackgroundLabel: {
+    marginTop: 2,
+    fontSize: tokens.font.small,
+    fontWeight: "900",
+  },
+  previewSticker: {
+    position: "absolute",
+    width: 28,
+    height: 28,
+    borderRadius: tokens.radius.pill,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: tokens.colors.borderStrong,
+    backgroundColor: "rgba(255,255,255,0.78)",
+  },
+  previewStickerTL: {
+    top: 12,
+    left: 12,
+  },
+  previewStickerTR: {
+    top: 12,
+    right: 12,
+  },
+  previewStickerBR: {
+    right: 12,
+    bottom: 12,
+  },
+  previewStickerText: {
+    fontSize: 14,
+    lineHeight: 16,
   },
   section: {
     borderRadius: tokens.radius.xl,
@@ -467,7 +712,7 @@ const styles = StyleSheet.create({
     borderRadius: tokens.radius.lg,
     borderWidth: 1,
     borderColor: tokens.colors.border,
-    backgroundColor: tokens.colors.bgMuted,
+    backgroundColor: tokens.colors.bg,
     padding: tokens.space.sm,
     gap: tokens.space.xs as any,
   },

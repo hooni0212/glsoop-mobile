@@ -12,6 +12,7 @@ import {
 type CosmeticsInventory = {
   badges: CosmeticItem[];
   stickers: CosmeticItem[];
+  backgrounds: CosmeticItem[];
 };
 
 export type MyCosmeticsResult = {
@@ -79,8 +80,9 @@ function normalizeInventory(value: unknown): CosmeticsInventory {
 
   const badges = normalizeItemList(row.badges ?? row.badge_items);
   const stickers = normalizeItemList(row.stickers ?? row.sticker_items);
+  const backgrounds = normalizeItemList(row.backgrounds ?? row.background_items);
 
-  return { badges, stickers };
+  return { badges, stickers, backgrounds };
 }
 
 export async function getMyCosmetics(): Promise<MyCosmeticsResult> {

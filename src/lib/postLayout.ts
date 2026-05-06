@@ -1,3 +1,9 @@
+import {
+  DEFAULT_POST_BACKGROUND_TEMPLATE_ID,
+  normalizePostBackgroundTemplateId,
+  type PostBackgroundTemplateId,
+} from "@/lib/postBackgroundTemplates";
+
 export type LayoutAlign = "left" | "center" | "right";
 export type LayoutBoxId = "title_box" | "text_box" | "footer_box";
 
@@ -20,7 +26,7 @@ export type LayoutBox = {
 export type WriteLayoutModel = {
   layoutVersion: number;
   unit: "normalized";
-  presetId: "paper01";
+  presetId: PostBackgroundTemplateId;
   titleBox: LayoutBox;
   bodyBox: LayoutBox;
   footerBox: LayoutBox;
@@ -60,7 +66,7 @@ const DEFAULT_FOOTER_BOX: LayoutBox = {
 export const DEFAULT_WRITE_LAYOUT: WriteLayoutModel = {
   layoutVersion: 1,
   unit: "normalized",
-  presetId: "paper01",
+  presetId: DEFAULT_POST_BACKGROUND_TEMPLATE_ID,
   titleBox: DEFAULT_TITLE_BOX,
   bodyBox: DEFAULT_BODY_BOX,
   footerBox: DEFAULT_FOOTER_BOX,
@@ -220,10 +226,7 @@ export function parseLayoutJson(raw: unknown): WriteLayoutModel {
 
   layout.layoutVersion = Number(record.layout_version) || 1;
   layout.unit = "normalized";
-  layout.presetId =
-    typeof record.canvas?.presetId === "string" && record.canvas.presetId.trim()
-      ? "paper01"
-      : DEFAULT_WRITE_LAYOUT.presetId;
+  layout.presetId = normalizePostBackgroundTemplateId(record.canvas?.presetId);
   layout.titleBox = normalizeBox(titleSource, DEFAULT_TITLE_BOX);
   layout.bodyBox = normalizeBox(bodySource, DEFAULT_BODY_BOX);
   layout.footerBox = normalizeBox(footerSource, DEFAULT_FOOTER_BOX);
@@ -261,6 +264,9 @@ export function buildLayoutPayload(layout: WriteLayoutModel) {
   return {
     layout_version: layout.layoutVersion,
     unit: layout.unit,
+    canvas: {
+      presetId: normalizePostBackgroundTemplateId(layout.presetId),
+    },
     title_box: {
       x: layout.titleBox.x,
       y: layout.titleBox.y,

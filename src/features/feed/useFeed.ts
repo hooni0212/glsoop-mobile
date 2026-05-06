@@ -3,10 +3,11 @@ import { normalizeApiError, type AppErrorModel } from "@/lib/errors";
 import { buildPostExcerpt } from "@/lib/postContent";
 import { normalizePostRenderImageFields } from "@/lib/postRenderImages";
 import { normalizePublicDisplayName } from "@/lib/publicDisplayName";
+import { normalizeProfileCosmeticsExpanded } from "@/types/cosmetics";
 import type { Post } from "@/types/post";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-type Sort = "latest" | "popular";
+type Sort = "latest" | "popular" | "recommended";
 type FeedType = "all" | "following";
 
 export type FeedQuery = {
@@ -23,6 +24,11 @@ type FeedResponse = {
   has_more?: boolean;
   hasMore?: boolean;
   message?: string;
+};
+
+type FeedBatch = {
+  posts: Post[];
+  hasMore: boolean;
 };
 
 function pickFirstString(...vals: any[]) {
@@ -66,6 +72,38 @@ function parseTags(row: any) {
     .filter(Boolean);
 }
 
+function parseVisibility(row: any) {
+  const value = pickFirstString(row?.visibility);
+  return value === "followers" || value === "unlisted" || value === "private" ? value : "public";
+}
+
+function parseCommentPolicy(row: any) {
+  const value = pickFirstString(row?.comment_policy, row?.commentPolicy);
+  return value === "everyone" ||
+    value === "followers" ||
+    value === "author_only" ||
+    value === "closed"
+    ? value
+    : "logged_in";
+}
+
+function parseAuthorProfileCosmetics(row: any) {
+  return normalizeProfileCosmeticsExpanded(
+    row?.author_profile_cosmetics ??
+      row?.authorProfileCosmetics ?? {
+        primary_badge: row?.author_primary_badge_key
+          ? {
+              key: row.author_primary_badge_key,
+              name: row.author_primary_badge_name,
+              icon_emoji: row.author_primary_badge_icon_emoji,
+              rarity: row.author_primary_badge_rarity,
+              season: row.author_primary_badge_season,
+            }
+          : null,
+      }
+  );
+}
+
 function normalizePost(row: any): Post {
   const id = String(row?.id ?? row?.post_id ?? "");
   const title = pickFirstString(row?.title, row?.post_title);
@@ -105,12 +143,15 @@ function normalizePost(row: any): Post {
     author: {
       id: authorId || undefined,
       name: authorName,
+      profileCosmetics: parseAuthorProfileCosmetics(row),
     },
     stats: {
       likeCount,
       bookmarkCount,
     },
     tags: parseTags(row),
+    visibility: parseVisibility(row),
+    commentPolicy: parseCommentPolicy(row),
     viewer: {
       isLiked: userLiked,
       isBookmarked: userBookmarked,
@@ -119,6 +160,154 @@ function normalizePost(row: any): Post {
   };
 
   return post as Post;
+}
+
+function inferHasMore(res: FeedResponse, nextLength: number, limit: number) {
+  if (typeof res.has_more === "boolean") return res.has_more;
+  if (typeof res.hasMore === "boolean") return res.hasMore;
+  return nextLength >= limit;
+}
+
+async function fetchFeedBatch(params: URLSearchParams, limit: number): Promise<FeedBatch> {
+  const res = await apiGet<FeedResponse>(`/api/posts?${params.toString()}`);
+
+  if (!res?.ok) throw new Error(res?.message || "피드를 불러오지 못했어요.");
+
+  const posts = (res.posts ?? []).map(normalizePost);
+  return {
+    posts,
+    hasMore: inferHasMore(res, posts.length, limit),
+  };
+}
+
+function appendUniquePosts(prev: Post[], next: Post[]) {
+  if (prev.length === 0) return next;
+  const seen = new Set(prev.map((item) => item.id));
+  const uniqueNext = next.filter((item) => {
+    if (seen.has(item.id)) return false;
+    seen.add(item.id);
+    return true;
+  });
+  return [...prev, ...uniqueNext];
+}
+
+function getPreferenceSignals(posts: Post[]) {
+  const categories = new Set<string>();
+  const tags = new Set<string>();
+
+  for (const post of posts) {
+    if (!post.viewer?.isLiked && !post.viewer?.isBookmarked) continue;
+    categories.add(post.type);
+    for (const tag of post.tags ?? []) {
+      if (tag) tags.add(tag);
+    }
+  }
+
+  return { categories, tags };
+}
+
+function buildRecommendedPosts(latest: Post[], popular: Post[]) {
+  const byId = new Map<
+    string,
+    {
+      post: Post;
+      score: number;
+    }
+  >();
+  const source = [...popular, ...latest];
+  const preferences = getPreferenceSignals(source);
+
+  popular.forEach((post, index) => {
+    const current = byId.get(post.id) ?? { post, score: 0 };
+    current.score += (popular.length - index) * 3;
+    byId.set(post.id, current);
+  });
+
+  latest.forEach((post, index) => {
+    const current = byId.get(post.id) ?? { post, score: 0 };
+    current.score += (latest.length - index) * 2;
+    if (index < 6) current.score += 6 - index;
+    byId.set(post.id, current);
+  });
+
+  for (const item of byId.values()) {
+    if (preferences.categories.has(item.post.type)) item.score += 8;
+    for (const tag of item.post.tags ?? []) {
+      if (preferences.tags.has(tag)) item.score += 4;
+    }
+  }
+
+  const candidates = Array.from(byId.values());
+  const picked: Post[] = [];
+  const authorUse = new Map<string, number>();
+  const categoryUse = new Map<string, number>();
+
+  while (candidates.length > 0) {
+    let bestIndex = 0;
+    let bestScore = Number.NEGATIVE_INFINITY;
+
+    for (let index = 0; index < candidates.length; index += 1) {
+      const candidate = candidates[index];
+      const authorId = candidate.post.author?.id || "";
+      const authorPenalty = authorId ? (authorUse.get(authorId) ?? 0) * 14 : 0;
+      const categoryPenalty = (categoryUse.get(candidate.post.type) ?? 0) * 6;
+      const adjustedScore = candidate.score - authorPenalty - categoryPenalty;
+
+      if (adjustedScore > bestScore) {
+        bestIndex = index;
+        bestScore = adjustedScore;
+      }
+    }
+
+    const [next] = candidates.splice(bestIndex, 1);
+    picked.push(next.post);
+
+    const authorId = next.post.author?.id || "";
+    if (authorId) authorUse.set(authorId, (authorUse.get(authorId) ?? 0) + 1);
+    categoryUse.set(next.post.type, (categoryUse.get(next.post.type) ?? 0) + 1);
+  }
+
+  return picked;
+}
+
+async function fetchRecommendedBatch(
+  baseParams: URLSearchParams,
+  offset: number,
+  limit: number
+): Promise<FeedBatch> {
+  const poolLimit = Math.min(50, Math.max(limit * 3, 18));
+
+  const fetchWithSort = (sort: "latest" | "popular") => {
+    const params = new URLSearchParams(baseParams);
+    params.set("sort", sort);
+    params.set("limit", String(poolLimit));
+    params.set("offset", String(offset));
+    return fetchFeedBatch(params, poolLimit);
+  };
+
+  const [popularResult, latestResult] = await Promise.allSettled([
+    fetchWithSort("popular"),
+    fetchWithSort("latest"),
+  ]);
+
+  const fulfilled = [popularResult, latestResult].filter(
+    (result): result is PromiseFulfilledResult<FeedBatch> => result.status === "fulfilled"
+  );
+
+  if (fulfilled.length === 0) {
+    if (popularResult.status === "rejected") throw popularResult.reason;
+    if (latestResult.status === "rejected") throw latestResult.reason;
+    throw new Error("피드를 불러오지 못했어요.");
+  }
+
+  const popular = popularResult.status === "fulfilled" ? popularResult.value : { posts: [], hasMore: false };
+  const latest = latestResult.status === "fulfilled" ? latestResult.value : { posts: [], hasMore: false };
+  const posts = buildRecommendedPosts(latest.posts, popular.posts).slice(0, limit);
+
+  return {
+    posts,
+    hasMore: popular.hasMore || latest.hasMore || posts.length >= limit,
+  };
 }
 
 export function useFeed(query: FeedQuery = {}) {
@@ -161,27 +350,19 @@ export function useFeed(query: FeedQuery = {}) {
           setLoading(true);
         }
 
-        const params = new URLSearchParams(baseParams);
-        params.set("offset", String(offsetRef.current));
+        let batch: FeedBatch;
 
-        const res = await apiGet<FeedResponse>(`/api/posts?${params.toString()}`);
+        if (sort === "recommended" && type !== "following") {
+          batch = await fetchRecommendedBatch(baseParams, offsetRef.current, limit);
+        } else {
+          const params = new URLSearchParams(baseParams);
+          params.set("offset", String(offsetRef.current));
+          batch = await fetchFeedBatch(params, limit);
+        }
 
-        if (!res?.ok) throw new Error(res?.message || "피드를 불러오지 못했어요.");
-
-        const nextRaw = res.posts ?? [];
-        const next = nextRaw.map(normalizePost);
-
-        setItems((prev) => (reset ? next : [...prev, ...next]));
-
-        const inferredHasMore =
-          typeof res.has_more === "boolean"
-            ? res.has_more
-            : typeof res.hasMore === "boolean"
-              ? res.hasMore
-              : next.length >= limit;
-
-        setHasMore(inferredHasMore);
-        offsetRef.current += next.length;
+        setItems((prev) => (reset ? batch.posts : appendUniquePosts(prev, batch.posts)));
+        setHasMore(batch.hasMore);
+        offsetRef.current += batch.posts.length;
       } catch (e: any) {
         setError(normalizeApiError(e));
       } finally {
@@ -190,7 +371,7 @@ export function useFeed(query: FeedQuery = {}) {
         inflightRef.current = false;
       }
     },
-    [baseParams, limit]
+    [baseParams, limit, sort, type]
   );
 
   const refresh = useCallback(async () => {

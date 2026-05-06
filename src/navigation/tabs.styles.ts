@@ -101,8 +101,8 @@ export function createTabsStyles(insetBottom?: number) {
 
     label: {
       fontSize: 12,
-      fontWeight: "700",
-      letterSpacing: -0.2,
+      fontWeight: "900",
+      letterSpacing: 0,
       marginTop: 4,
     },
 
@@ -111,12 +111,14 @@ export function createTabsStyles(insetBottom?: number) {
       top: 0,
       left: 18,
       right: 18,
-      height: 2,
+      height: 3,
       borderRadius: 2,
       backgroundColor: "transparent",
     },
     activeLineOn: {
       backgroundColor: COLORS.active,
+      borderWidth: 3,
+      borderColor: "#fffefa",
     },
 
     // ✅ 가운데 FAB 자리 확보(탭 간격)

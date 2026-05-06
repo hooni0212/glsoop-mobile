@@ -3,6 +3,7 @@ import { normalizeApiError, type AppErrorModel } from "@/lib/errors";
 import { normalizePostReadText, splitPostParagraphs } from "@/lib/postContent";
 import { normalizePostRenderImageFields } from "@/lib/postRenderImages";
 import { normalizePublicDisplayName } from "@/lib/publicDisplayName";
+import { normalizeProfileCosmeticsExpanded } from "@/types/cosmetics";
 import type { Post } from "@/types/post";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -53,6 +54,38 @@ function parseTags(row: any) {
     .filter(Boolean);
 }
 
+function parseVisibility(row: any) {
+  const value = pickFirstString(row?.visibility);
+  return value === "followers" || value === "unlisted" || value === "private" ? value : "public";
+}
+
+function parseCommentPolicy(row: any) {
+  const value = pickFirstString(row?.comment_policy, row?.commentPolicy);
+  return value === "everyone" ||
+    value === "followers" ||
+    value === "author_only" ||
+    value === "closed"
+    ? value
+    : "logged_in";
+}
+
+function parseAuthorProfileCosmetics(row: any) {
+  return normalizeProfileCosmeticsExpanded(
+    row?.author_profile_cosmetics ??
+      row?.authorProfileCosmetics ?? {
+        primary_badge: row?.author_primary_badge_key
+          ? {
+              key: row.author_primary_badge_key,
+              name: row.author_primary_badge_name,
+              icon_emoji: row.author_primary_badge_icon_emoji,
+              rarity: row.author_primary_badge_rarity,
+              season: row.author_primary_badge_season,
+            }
+          : null,
+      }
+  );
+}
+
 function normalizePostDetail(row: any): any {
   const id = String(row?.id ?? row?.post_id ?? "");
   const title = pickFirstString(row?.title, row?.post_title);
@@ -83,16 +116,37 @@ function normalizePostDetail(row: any): any {
   );
 
   const category = pickFirstString(row?.category, row?.type) || "short";
+  const viewer = row?.viewer && typeof row.viewer === "object" ? row.viewer : {};
+  const hasCanRead =
+    Object.prototype.hasOwnProperty.call(viewer, "can_read") ||
+    Object.prototype.hasOwnProperty.call(viewer, "canRead");
+  const hasCanComment =
+    Object.prototype.hasOwnProperty.call(viewer, "can_comment") ||
+    Object.prototype.hasOwnProperty.call(viewer, "canComment");
 
   const post: any = {
     id,
     type: category,
     title: title || undefined,
     createdAt,
-    author: { id: authorId || undefined, name: authorName },
+    author: {
+      id: authorId || undefined,
+      name: authorName,
+      profileCosmetics: parseAuthorProfileCosmetics(row),
+    },
     stats: { likeCount, bookmarkCount },
     tags: parseTags(row),
-    viewer: { isLiked: userLiked, isBookmarked: userBookmarked },
+    visibility: parseVisibility(row),
+    commentPolicy: parseCommentPolicy(row),
+    viewer: {
+      isLiked: userLiked,
+      isBookmarked: userBookmarked,
+      canRead: hasCanRead ? parseFlag(viewer?.can_read, viewer?.canRead) : true,
+      canComment: hasCanComment ? parseFlag(viewer?.can_comment, viewer?.canComment) : true,
+      isAuthor: parseFlag(viewer?.is_author, viewer?.isAuthor),
+      visibilityReason:
+        typeof viewer?.visibility_reason === "string" ? viewer.visibility_reason : null,
+    },
     content: normalizePostReadText(contentRaw),
     paragraphs: splitPostParagraphs(contentRaw),
     contentRaw,

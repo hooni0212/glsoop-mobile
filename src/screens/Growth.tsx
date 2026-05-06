@@ -12,11 +12,9 @@ import {
 import { useRouter } from "expo-router";
 
 import { GrowthChart } from "@/components/growth/GrowthChart";
-import { TopPostsList } from "@/components/growth/TopPostsList";
 import { trackGrowthTelemetry, toGrowthTelemetryError } from "@/features/growth/growthTelemetry";
 import { AppEmpty } from "@/components/state/AppEmpty";
 import { useGrowthData } from "@/features/growth/useGrowthData";
-import { blurActiveElementBeforeRouteChange } from "@/lib/webFocus";
 import { tokens } from "@/theme/tokens";
 
 type ProgressItem = {
@@ -26,15 +24,33 @@ type ProgressItem = {
   status: "in_progress" | "completed" | "locked";
 };
 
+type CampaignPreviewItem = {
+  id: number;
+  title: string;
+  typeLabel: string;
+  questCount: number;
+  inProgressCount: number;
+  completedCount: number;
+};
+
 function getStatusMeta(status: ProgressItem["status"]) {
   if (status === "completed") return { label: "완료", color: tokens.colors.green700 };
   if (status === "in_progress") return { label: "진행 중", color: tokens.colors.green900 };
   return { label: "잠금", color: tokens.colors.textMuted };
 }
 
+function formatCampaignType(value: string) {
+  if (value === "daily") return "데일리";
+  if (value === "weekly") return "위클리";
+  if (value === "season") return "시즌";
+  if (value === "event") return "이벤트";
+  if (value === "permanent") return "상시";
+  return "이벤트";
+}
+
 export default function GrowthScreen() {
   const router = useRouter();
-  const { summary, achievements, campaigns, topPosts, topPostsMode, loading, error, source, refetch } = useGrowthData();
+  const { summary, achievements, campaigns, loading, error, source, refetch } = useGrowthData();
   const [refreshing, setRefreshing] = useState(false);
 
   const questSummary = useMemo(() => {
@@ -84,6 +100,25 @@ export default function GrowthScreen() {
       .map(({ id, title, subtitle, status }) => ({ id, title, subtitle, status }));
   }, [campaigns]);
 
+  const campaignPreview = useMemo<CampaignPreviewItem[]>(() => {
+    return campaigns
+      .map((campaign) => {
+        const inProgressCount = campaign.quests.filter((quest) => quest.status === "in_progress").length;
+        const completedCount = campaign.quests.filter((quest) => quest.status === "completed").length;
+        return {
+          id: campaign.id,
+          title: campaign.name,
+          typeLabel: formatCampaignType(campaign.campaignType),
+          questCount: campaign.quests.length,
+          inProgressCount,
+          completedCount,
+        };
+      })
+      .filter((campaign) => campaign.questCount > 0)
+      .sort((a, b) => b.inProgressCount - a.inProgressCount || b.questCount - a.questCount)
+      .slice(0, 3);
+  }, [campaigns]);
+
   const achievementHighlights = useMemo<ProgressItem[]>(() => {
     return achievements
       .map((achievement) => ({
@@ -101,11 +136,6 @@ export default function GrowthScreen() {
       .slice(0, 3)
       .map(({ id, title, subtitle, status }) => ({ id, title, subtitle, status }));
   }, [achievements]);
-
-  const topPostsEmptyTitle = "아직 인기 글이 없어요";
-  const topPostsEmptyDescription =
-    "활동이 더 쌓이면, 여기에서 주목받는 글을 추천해드릴게요.";
-  const topPostsError = topPostsMode === "error" ? error : null;
 
   useEffect(() => {
     trackGrowthTelemetry("growth_screen_viewed", { screen: "home" });
@@ -178,17 +208,17 @@ export default function GrowthScreen() {
             <View style={styles.heroTitleBlock}>
               <Text style={styles.heroEyebrow}>오늘의 리포트</Text>
               <Text style={styles.h1}>성장</Text>
-              <Text style={styles.subtitle}>오늘의 성장 신호를 한눈에 확인해요.</Text>
+              <Text style={styles.subtitle}>지금 진행 중인 흐름을 확인해요.</Text>
               <Text style={styles.heroQuickStatus}>
                 {summary
                   ? `Lv.${summary.level} · 오늘 +${summary.todayXp} XP`
-                  : "성장 데이터를 준비하고 있어요."}
+                  : "데이터를 불러오는 중이에요."}
               </Text>
             </View>
           </View>
 
           <View style={styles.heroStatsRow}>
-            <HeroStat label="활성 캠페인" value={`${campaigns.length}`} />
+            <HeroStat label="활성 이벤트" value={`${campaigns.length}`} />
             <HeroStat label="진행 업적" value={`${achievementSummary.inProgress}`} />
             <HeroStat label="진행 퀘스트" value={`${questSummary.inProgress}`} />
           </View>
@@ -204,7 +234,7 @@ export default function GrowthScreen() {
         <View style={styles.actionRow}>
           <ActionCard
             title="업적 보기"
-            description={`전체 ${achievementSummary.total}개`}
+            description={`${achievementSummary.total}개`}
             icon="trophy-outline"
             onPress={() => {
               trackGrowthTelemetry("growth_action_clicked", { action: "open_achievements" });
@@ -215,7 +245,7 @@ export default function GrowthScreen() {
           />
           <ActionCard
             title="퀘스트 보기"
-            description={`전체 ${questSummary.total}개`}
+            description={`${questSummary.total}개`}
             icon="trail-sign-outline"
             onPress={() => {
               trackGrowthTelemetry("growth_action_clicked", { action: "open_quests" });
@@ -226,11 +256,16 @@ export default function GrowthScreen() {
           />
         </View>
 
+        <CampaignPreviewSection
+          items={campaignPreview}
+          onPressMore={() => router.push("/growth/quests")}
+        />
+
         <PreviewSection
           title="업적 하이라이트"
           caption={`${achievementSummary.inProgress}개 진행 중`}
           items={achievementHighlights}
-          emptyText="진행 중인 업적이 없어요. 활동을 시작하면 자동으로 채워져요."
+          emptyText="진행 중인 업적이 없어요."
           onPressMore={() => router.push("/growth/achievements")}
           moreButtonTestID="growth-achievements-more"
         />
@@ -239,24 +274,9 @@ export default function GrowthScreen() {
           title="퀘스트 진행 하이라이트"
           caption={`${questSummary.inProgress}개 진행 중`}
           items={questHighlights}
-          emptyText="진행 중인 퀘스트가 없어요. 새 캠페인이 열리면 표시돼요."
+          emptyText="진행 중인 퀘스트가 없어요."
           onPressMore={() => router.push("/growth/quests")}
           moreButtonTestID="growth-quests-more"
-        />
-
-        <TopPostsList
-          items={topPosts}
-          loading={loading && topPosts.length === 0}
-          error={topPostsError}
-          onPressItem={(id) => {
-            trackGrowthTelemetry("growth_action_clicked", { action: "open_top_post", postId: id });
-            blurActiveElementBeforeRouteChange();
-            router.push(`/posts/${id}`);
-          }}
-          title="인기 글"
-          description="반응이 좋은 글을 모아 보여주는 영역이에요."
-          emptyTitle={topPostsEmptyTitle}
-          emptyDescription={topPostsEmptyDescription}
         />
       </ScrollView>
     </SafeAreaView>
@@ -305,6 +325,68 @@ function ActionCard({
       </View>
       <Ionicons name="chevron-forward" size={16} color={tokens.colors.textMuted} />
     </Pressable>
+  );
+}
+
+function CampaignPreviewSection({
+  items,
+  onPressMore,
+}: {
+  items: CampaignPreviewItem[];
+  onPressMore: () => void;
+}) {
+  return (
+    <View style={styles.sectionCard} testID="growth-campaign-preview">
+      <View style={styles.sectionHeaderRow}>
+        <View style={styles.sectionHeading}>
+          <Text style={styles.sectionTitle}>진행 이벤트</Text>
+          <Text style={styles.sectionCaption}>
+            {items.length > 0 ? `${items.length}개 이벤트 표시 중` : "열린 이벤트를 확인해요"}
+          </Text>
+        </View>
+        <Pressable
+          onPress={onPressMore}
+          style={styles.moreBtn}
+          testID="growth-campaigns-more"
+          accessibilityRole="button"
+          accessibilityLabel="진행 이벤트 전체보기"
+          accessibilityHint="퀘스트 상세 화면으로 이동"
+        >
+          <Text style={styles.moreBtnText}>전체보기</Text>
+        </Pressable>
+      </View>
+
+      {items.length === 0 ? (
+        <Text style={styles.emptyText}>진행 중인 이벤트가 없어요.</Text>
+      ) : (
+        <View style={styles.campaignPreviewList}>
+          {items.map((item) => (
+            <Pressable
+              key={item.id}
+              onPress={onPressMore}
+              style={({ pressed }) => [styles.campaignPreviewItem, pressed && styles.pressed]}
+              testID={`growth-campaign-preview-item-${item.id}`}
+              accessibilityRole="button"
+              accessibilityLabel={`${item.title} 이벤트 보기`}
+              accessibilityHint="퀘스트 상세 화면으로 이동"
+            >
+              <View style={styles.campaignPreviewBody}>
+                <View style={styles.campaignPreviewTitleRow}>
+                  <Text numberOfLines={1} style={styles.campaignPreviewTitle}>
+                    {item.title}
+                  </Text>
+                  <Text style={styles.campaignPreviewBadge}>{item.typeLabel}</Text>
+                </View>
+                <Text style={styles.campaignPreviewMeta}>
+                  퀘스트 {item.questCount}개 · 진행 {item.inProgressCount}개 · 완료 {item.completedCount}개
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={tokens.colors.textMuted} />
+            </Pressable>
+          ))}
+        </View>
+      )}
+    </View>
   );
 }
 
@@ -374,6 +456,9 @@ const styles = StyleSheet.create({
     backgroundColor: tokens.colors.bg,
   },
   content: {
+    width: "100%",
+    maxWidth: 820,
+    alignSelf: "center",
     paddingHorizontal: tokens.space.xl,
     paddingTop: tokens.space.lg,
     paddingBottom: 120,
@@ -575,5 +660,51 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     paddingHorizontal: 8,
     paddingVertical: 4,
+  },
+  campaignPreviewList: {
+    gap: tokens.space.sm as any,
+  },
+  campaignPreviewItem: {
+    borderRadius: tokens.radius.lg,
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+    backgroundColor: tokens.colors.surface,
+    paddingHorizontal: tokens.space.sm,
+    paddingVertical: tokens.space.sm,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: tokens.space.sm as any,
+    minHeight: 64,
+  },
+  campaignPreviewBody: {
+    flex: 1,
+    gap: 5,
+  },
+  campaignPreviewTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: tokens.space.xs as any,
+  },
+  campaignPreviewTitle: {
+    flex: 1,
+    fontSize: tokens.font.body,
+    fontWeight: "900",
+    color: tokens.colors.text,
+  },
+  campaignPreviewBadge: {
+    flexShrink: 0,
+    borderRadius: tokens.radius.pill,
+    backgroundColor: tokens.colors.green100,
+    color: tokens.colors.green900,
+    fontSize: tokens.font.small,
+    fontWeight: "900",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    overflow: "hidden",
+  },
+  campaignPreviewMeta: {
+    fontSize: tokens.font.small,
+    color: tokens.colors.textMuted,
+    fontWeight: "700",
   },
 });

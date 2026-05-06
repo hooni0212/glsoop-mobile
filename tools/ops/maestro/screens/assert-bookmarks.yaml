@@ -1,0 +1,6 @@
+appId: com.glsoop.app
+---
+- extendedWaitUntil:
+    visible: "북마크 폴더"
+    timeout: 60000
+- assertVisible: "북마크 폴더"

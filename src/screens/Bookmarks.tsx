@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { router, usePathname } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
+import { Ionicons } from "@expo/vector-icons";
 
 import { useAuth } from "@/auth/AuthContext";
 import { FeedCard } from "@/components/FeedCard";
@@ -31,6 +32,7 @@ import {
   removePostFromBookmarkList,
 } from "@/services/bookmarkService";
 import { togglePostLike } from "@/services/likeService";
+import { softPanelShadowStyle } from "@/theme/shadows";
 import { tokens } from "@/theme/tokens";
 import type { Post } from "@/types/post";
 
@@ -176,7 +178,7 @@ export default function BookmarksScreen() {
 
   const handleAuthError = useCallback(async () => {
     await signOut();
-    router.replace(buildAuthRoute("/(auth)", pathname));
+    router.replace(buildAuthRoute("/(auth)/login", pathname));
   }, [pathname, signOut]);
 
   const onPressCreateFolder = useCallback(async () => {
@@ -362,7 +364,7 @@ export default function BookmarksScreen() {
         } else {
           const normalized = normalizeApiError(err);
           setFolderItems((prev) => ({ ...prev, error: normalized }));
-          showToast(normalized.description || normalized.title || "좋아요 처리에 실패했어요.", {
+          showToast(normalized.description || normalized.title || "공감 처리에 실패했어요.", {
             tone: "error",
           });
         }
@@ -400,7 +402,7 @@ export default function BookmarksScreen() {
       );
     }
     return (
-      <ScrollView contentContainerStyle={styles.listScroll}>
+      <ScrollView contentContainerStyle={styles.listScroll} keyboardShouldPersistTaps="handled">
         {lists.map((list) => (
           <View key={list.id} style={styles.folderCard}>
             {editingListId === list.id ? (
@@ -409,27 +411,38 @@ export default function BookmarksScreen() {
                   value={editFolderName}
                   onChangeText={setEditFolderName}
                   placeholder="폴더 이름"
+                  placeholderTextColor={tokens.colors.inputPlaceholder}
                   style={styles.input}
+                  accessibilityLabel="수정할 폴더 이름"
                   maxLength={80}
                 />
                 <TextInput
                   value={editFolderDesc}
                   onChangeText={setEditFolderDesc}
                   placeholder="설명 (선택)"
+                  placeholderTextColor={tokens.colors.inputPlaceholder}
                   style={styles.input}
+                  accessibilityLabel="수정할 폴더 설명"
                   maxLength={120}
                 />
                 <View style={styles.editActions}>
-                  <Pressable onPress={onCancelEditFolder} style={styles.editSecondaryBtn}>
+                  <Pressable
+                    onPress={onCancelEditFolder}
+                    style={({ pressed }) => [styles.editSecondaryBtn, pressed && styles.controlPressed]}
+                  >
                     <Text style={styles.editSecondaryBtnText}>취소</Text>
                   </Pressable>
                   <Pressable
                     onPress={() => void onPressRenameFolder()}
                     disabled={renamingListId === list.id || !editFolderName.trim()}
-                    style={[
+                    style={({ pressed }) => [
                       styles.editPrimaryBtn,
                       (renamingListId === list.id || !editFolderName.trim()) &&
                         styles.createBtnDisabled,
+                      pressed &&
+                        renamingListId !== list.id &&
+                        Boolean(editFolderName.trim()) &&
+                        styles.controlPressed,
                     ]}
                   >
                     <Text style={styles.editPrimaryBtnText}>
@@ -445,39 +458,61 @@ export default function BookmarksScreen() {
                     setSelectedListId(list.id);
                     setMode("items");
                   }}
-                  style={styles.folderMainBtn}
+                  style={({ pressed }) => [styles.folderMainBtn, pressed && styles.folderMainBtnPressed]}
                   testID={`bookmark-folder-${list.id}`}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${list.name} 북마크 폴더 열기`}
                 >
-                  <View style={styles.folderHeaderRow}>
-                    <Text style={styles.folderTitle} numberOfLines={1}>
-                      {list.name}
-                    </Text>
-                    <Text style={styles.folderCount}>{list.itemCount ?? 0}개</Text>
+                  <View style={styles.folderCardTop}>
+                    <View style={styles.folderIcon}>
+                      <Ionicons name="folder-open-outline" size={20} color={tokens.colors.green700} />
+                    </View>
+                    <View style={styles.folderTextBlock}>
+                      <Text style={styles.folderTitle} numberOfLines={1}>
+                        {list.name}
+                      </Text>
+                      {!!list.description && (
+                        <Text style={styles.folderDescription} numberOfLines={2}>
+                          {list.description}
+                        </Text>
+                      )}
+                    </View>
+                    <View style={styles.folderCountPill}>
+                      <Text style={styles.folderCount}>{list.itemCount ?? 0}개</Text>
+                    </View>
                   </View>
-                  {!!list.description && (
-                    <Text style={styles.folderDescription} numberOfLines={2}>
-                      {list.description}
-                    </Text>
-                  )}
-                  <Text style={styles.folderOpenHint}>열어서 글 보기</Text>
+                  <View style={styles.folderOpenRow}>
+                    <Text style={styles.folderOpenHint}>글 보기</Text>
+                    <Ionicons name="chevron-forward" size={16} color={tokens.colors.green700} />
+                  </View>
                 </Pressable>
 
                 <View style={styles.folderActions}>
                   <Pressable
                     onPress={() => onStartEditFolder(list)}
                     hitSlop={10}
-                    style={styles.folderEditBtn}
+                    style={({ pressed }) => [styles.folderEditBtn, pressed && styles.controlPressed]}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${list.name} 폴더 수정`}
                   >
-                    <Text style={styles.folderEditText}>폴더 수정</Text>
+                    <Ionicons name="create-outline" size={15} color={tokens.colors.text} />
+                    <Text style={styles.folderEditText}>수정</Text>
                   </Pressable>
                   <Pressable
                     onPress={() => void onPressDeleteFolder(list.id)}
                     hitSlop={10}
                     disabled={deletingListId === list.id}
-                    style={styles.folderDeleteBtn}
+                    style={({ pressed }) => [
+                      styles.folderDeleteBtn,
+                      deletingListId === list.id && styles.createBtnDisabled,
+                      pressed && deletingListId !== list.id && styles.controlPressed,
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${list.name} 폴더 삭제`}
                   >
+                    <Ionicons name="trash-outline" size={15} color={tokens.colors.danger} />
                     <Text style={styles.folderDeleteText}>
-                      {deletingListId === list.id ? "삭제중..." : "폴더 삭제"}
+                      {deletingListId === list.id ? "삭제 중..." : "삭제"}
                     </Text>
                   </Pressable>
                 </View>
@@ -522,7 +557,7 @@ export default function BookmarksScreen() {
       );
     }
     return (
-      <ScrollView contentContainerStyle={styles.itemsScroll}>
+      <ScrollView contentContainerStyle={styles.itemsScroll} keyboardShouldPersistTaps="handled">
         {folderItems.items.map((item) => (
           <View key={item.id} style={styles.itemWrap}>
             <BookmarkFeedItem
@@ -536,7 +571,7 @@ export default function BookmarksScreen() {
         {folderItems.hasMore ? (
           <Pressable
             onPress={() => void loadItems({ reset: false })}
-            style={styles.moreBtn}
+            style={({ pressed }) => [styles.moreBtn, pressed && !folderItems.loading && styles.controlPressed]}
             disabled={folderItems.loading}
           >
             <Text style={styles.moreBtnText}>
@@ -553,8 +588,23 @@ export default function BookmarksScreen() {
       {mode === "lists" ? (
         <>
           <View style={styles.header}>
-            <Text style={styles.title}>북마크 폴더</Text>
-            <Pressable onPress={() => setShowCreate((prev) => !prev)} style={styles.headerBtn}>
+            <View style={styles.headerCopy}>
+              <Text style={styles.title}>북마크 폴더</Text>
+              <Text style={styles.headerMeta}>
+                {loadingLists ? "불러오는 중" : `${lists.length}개 폴더`}
+              </Text>
+            </View>
+            <Pressable
+              onPress={() => setShowCreate((prev) => !prev)}
+              style={({ pressed }) => [styles.headerBtn, pressed && styles.controlPressed]}
+              accessibilityRole="button"
+              accessibilityLabel={showCreate ? "새 폴더 입력 닫기" : "새 폴더 만들기"}
+            >
+              <Ionicons
+                name={showCreate ? "close" : "add"}
+                size={17}
+                color={tokens.colors.green700}
+              />
               <Text style={styles.headerBtnText}>{showCreate ? "닫기" : "새 폴더"}</Text>
             </Pressable>
           </View>
@@ -565,21 +615,32 @@ export default function BookmarksScreen() {
                 value={newFolderName}
                 onChangeText={setNewFolderName}
                 placeholder="폴더 이름"
+                placeholderTextColor={tokens.colors.inputPlaceholder}
                 style={styles.input}
+                accessibilityLabel="새 폴더 이름"
                 maxLength={80}
               />
               <TextInput
                 value={newFolderDesc}
                 onChangeText={setNewFolderDesc}
                 placeholder="설명 (선택)"
+                placeholderTextColor={tokens.colors.inputPlaceholder}
                 style={styles.input}
+                accessibilityLabel="새 폴더 설명"
                 maxLength={120}
               />
               <Pressable
                 onPress={() => void onPressCreateFolder()}
                 disabled={creatingFolder || !newFolderName.trim()}
-                style={[styles.createBtn, (creatingFolder || !newFolderName.trim()) && styles.createBtnDisabled]}
+                style={({ pressed }) => [
+                  styles.createBtn,
+                  (creatingFolder || !newFolderName.trim()) && styles.createBtnDisabled,
+                  pressed && !creatingFolder && Boolean(newFolderName.trim()) && styles.controlPressed,
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel="폴더 생성"
               >
+                <Ionicons name="checkmark" size={17} color={tokens.colors.textInverse} />
                 <Text style={styles.createBtnText}>{creatingFolder ? "생성 중..." : "폴더 생성"}</Text>
               </Pressable>
             </View>
@@ -590,13 +651,19 @@ export default function BookmarksScreen() {
       ) : (
         <>
           <View style={styles.detailHeader}>
-            <Pressable onPress={() => setMode("lists")} style={styles.backBtn}>
-              <Text style={styles.backBtnText}>← 목록</Text>
+            <Pressable
+              onPress={() => setMode("lists")}
+              style={({ pressed }) => [styles.backBtn, pressed && styles.controlPressed]}
+              accessibilityRole="button"
+              accessibilityLabel="북마크 폴더 목록으로 돌아가기"
+            >
+              <Ionicons name="arrow-back" size={16} color={tokens.colors.text} />
+              <Text style={styles.backBtnText}>목록</Text>
             </Pressable>
             <Text style={styles.detailTitle} numberOfLines={1}>
               {selectedList?.name || "북마크"}
             </Text>
-            <View style={{ width: 66 }} />
+            <View style={styles.detailHeaderSpacer} />
           </View>
 
           {renderItemsScreen()}
@@ -641,119 +708,200 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 16 },
 
   header: {
+    width: "100%",
+    maxWidth: 393,
+    alignSelf: "center",
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: tokens.space.lg,
+    paddingHorizontal: 24,
     paddingTop: tokens.space.lg,
     paddingBottom: tokens.space.md,
   },
+  headerCopy: {
+    gap: 3,
+  },
   title: { fontSize: 22, fontWeight: "900", color: tokens.colors.text },
+  headerMeta: {
+    fontSize: tokens.font.small,
+    fontWeight: "700",
+    color: tokens.colors.textMuted,
+  },
   headerBtn: {
+    minHeight: 44,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
     borderWidth: 1,
-    borderColor: tokens.colors.borderStrong,
+    borderColor: tokens.colors.border,
     borderRadius: tokens.radius.pill,
     paddingHorizontal: 12,
     paddingVertical: 8,
     backgroundColor: tokens.colors.surfaceStrong,
   },
-  headerBtnText: { fontSize: 12, fontWeight: "800", color: tokens.colors.text },
+  headerBtnText: { fontSize: 12, fontWeight: "800", color: tokens.colors.green700 },
+  controlPressed: { opacity: 0.82 },
 
   createBox: {
+    width: "100%",
+    maxWidth: 393,
+    alignSelf: "center",
     marginHorizontal: tokens.space.lg,
     marginBottom: tokens.space.md,
     borderWidth: 1,
     borderColor: tokens.colors.border,
-    borderRadius: tokens.radius.lg,
-    padding: tokens.space.md,
+    borderRadius: tokens.radius.xl,
+    padding: tokens.space.lg,
     backgroundColor: tokens.colors.surfaceStrong,
-    gap: 8,
+    gap: tokens.space.sm,
+    ...softPanelShadowStyle,
   },
   input: {
+    minHeight: 44,
     borderWidth: 1,
-    borderColor: tokens.colors.borderStrong,
+    borderColor: tokens.colors.border,
     borderRadius: tokens.radius.md,
-    paddingHorizontal: 12,
+    paddingHorizontal: tokens.space.md,
     paddingVertical: 10,
-    backgroundColor: "#fff",
+    backgroundColor: tokens.colors.white,
     color: tokens.colors.text,
+    fontSize: 14,
   },
   createBtn: {
+    minHeight: 44,
     marginTop: 2,
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    gap: 6,
     borderRadius: tokens.radius.md,
     backgroundColor: tokens.colors.green700,
     paddingVertical: 11,
   },
   createBtnDisabled: { opacity: 0.5 },
-  createBtnText: { fontSize: 13, fontWeight: "800", color: "#fff" },
+  createBtnText: { fontSize: 13, fontWeight: "800", color: tokens.colors.textInverse },
 
   listScroll: {
-    paddingHorizontal: tokens.space.lg,
+    width: "100%",
+    maxWidth: 393,
+    alignSelf: "center",
+    paddingHorizontal: 18,
     paddingBottom: 32,
-    gap: 10,
+    gap: tokens.space.md,
   },
   folderCard: {
     borderWidth: 1,
     borderColor: tokens.colors.border,
-    borderRadius: tokens.radius.lg,
+    borderRadius: tokens.radius.xl,
     backgroundColor: tokens.colors.surfaceStrong,
-    padding: 12,
-    gap: 10,
+    padding: tokens.space.sm,
+    gap: tokens.space.sm,
+    ...softPanelShadowStyle,
   },
-  editBox: { gap: 8 },
-  folderMainBtn: { gap: 8 },
-  folderHeaderRow: {
+  editBox: { gap: tokens.space.sm },
+  folderMainBtn: {
+    minHeight: 80,
+    borderRadius: tokens.radius.lg,
+    padding: tokens.space.sm,
+    gap: tokens.space.sm,
+  },
+  folderMainBtnPressed: {
+    backgroundColor: tokens.colors.green100,
+  },
+  folderCardTop: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    gap: 8,
+    gap: tokens.space.md,
+  },
+  folderIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: tokens.radius.lg,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: tokens.colors.green050,
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+  },
+  folderTextBlock: {
+    flex: 1,
+    gap: 4,
   },
   folderTitle: { flex: 1, fontSize: 15, fontWeight: "900", color: tokens.colors.text },
-  folderCount: { fontSize: 12, color: tokens.colors.textMuted, fontWeight: "800" },
-  folderDescription: { fontSize: 12, color: tokens.colors.textMuted, fontWeight: "700" },
-  folderOpenHint: { fontSize: 12, color: tokens.colors.green900, fontWeight: "800" },
+  folderCountPill: {
+    minWidth: 44,
+    minHeight: 30,
+    borderRadius: tokens.radius.pill,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 10,
+    backgroundColor: tokens.colors.green050,
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+  },
+  folderCount: { fontSize: 12, color: tokens.colors.green700, fontWeight: "800" },
+  folderDescription: { fontSize: 12, color: tokens.colors.textMuted, fontWeight: "700", lineHeight: 18 },
+  folderOpenRow: {
+    minHeight: 28,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    gap: 2,
+  },
+  folderOpenHint: { fontSize: 12, color: tokens.colors.green700, fontWeight: "800" },
   folderActions: {
     flexDirection: "row",
     justifyContent: "flex-end",
-    gap: 8,
+    gap: tokens.space.xs,
   },
   folderEditBtn: {
+    minHeight: 36,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
     alignSelf: "flex-end",
-    borderRadius: tokens.radius.sm,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    borderRadius: tokens.radius.pill,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
     backgroundColor: tokens.colors.surface,
     borderWidth: 1,
     borderColor: tokens.colors.border,
   },
-  folderEditText: { fontSize: 11, fontWeight: "800", color: tokens.colors.text },
+  folderEditText: { fontSize: 12, fontWeight: "800", color: tokens.colors.text },
   folderDeleteBtn: {
+    minHeight: 36,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
     alignSelf: "flex-end",
-    borderRadius: tokens.radius.sm,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    backgroundColor: "rgba(180,50,50,0.08)",
+    borderRadius: tokens.radius.pill,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    backgroundColor: tokens.colors.dangerSoft,
+    borderWidth: 1,
+    borderColor: tokens.colors.dangerBorder,
   },
-  folderDeleteText: { fontSize: 11, fontWeight: "800", color: "rgba(180,50,50,0.95)" },
+  folderDeleteText: { fontSize: 12, fontWeight: "800", color: tokens.colors.danger },
   editActions: {
     flexDirection: "row",
     justifyContent: "flex-end",
     gap: 8,
   },
   editSecondaryBtn: {
+    minHeight: 44,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: tokens.radius.md,
     borderWidth: 1,
-    borderColor: tokens.colors.borderStrong,
+    borderColor: tokens.colors.border,
     paddingHorizontal: 12,
     paddingVertical: 11,
     backgroundColor: tokens.colors.surface,
   },
   editSecondaryBtnText: { fontSize: 13, fontWeight: "800", color: tokens.colors.text },
   editPrimaryBtn: {
+    minHeight: 44,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: tokens.radius.md,
@@ -764,38 +912,50 @@ const styles = StyleSheet.create({
   editPrimaryBtnText: { fontSize: 13, fontWeight: "800", color: "#fff" },
 
   detailHeader: {
+    width: "100%",
+    maxWidth: 393,
+    alignSelf: "center",
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     gap: 8,
-    paddingHorizontal: tokens.space.lg,
+    paddingHorizontal: 24,
     paddingTop: tokens.space.lg,
     paddingBottom: tokens.space.md,
   },
   backBtn: {
+    minHeight: 44,
+    flexDirection: "row",
+    gap: 5,
     borderWidth: 1,
-    borderColor: tokens.colors.borderStrong,
+    borderColor: tokens.colors.border,
     borderRadius: tokens.radius.pill,
     paddingHorizontal: 10,
     paddingVertical: 8,
     backgroundColor: tokens.colors.surfaceStrong,
     minWidth: 66,
     alignItems: "center",
+    justifyContent: "center",
   },
   backBtnText: { fontSize: 12, color: tokens.colors.text, fontWeight: "800" },
   detailTitle: { flex: 1, textAlign: "center", fontSize: 17, fontWeight: "900", color: tokens.colors.text },
+  detailHeaderSpacer: { width: 66 },
 
   itemsScroll: {
-    paddingHorizontal: tokens.space.lg,
+    width: "100%",
+    maxWidth: 393,
+    alignSelf: "center",
+    paddingHorizontal: 18,
     paddingBottom: 32,
-    gap: 10,
+    gap: tokens.space.md,
   },
   itemWrap: { width: "100%" },
   moreBtn: {
+    minHeight: 44,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: tokens.colors.borderStrong,
+    borderColor: tokens.colors.border,
     borderRadius: tokens.radius.md,
     paddingVertical: 10,
     backgroundColor: tokens.colors.surfaceStrong,

@@ -13,12 +13,14 @@ export function isProtectedRoute(pathname: string, segments: string[]) {
   if (first === "write-drafts") return true;
   if (first === "account-center") return true;
   if (first === "profile-customize") return true;
+  if (first === "notifications") return true;
 
   return (
     pathname.startsWith("/growth") ||
     pathname.startsWith("/write") ||
     pathname.startsWith("/account-center") ||
-    pathname.startsWith("/profile-customize")
+    pathname.startsWith("/profile-customize") ||
+    pathname.startsWith("/notifications")
   );
 }
 

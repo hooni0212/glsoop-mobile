@@ -3,9 +3,11 @@ import React from "react";
 import { clearBookmarks } from "@/features/bookmarks/bookmarkStore";
 import { resetMyCosmeticsSnapshot } from "@/features/cosmetics/useMyCosmetics";
 import { clearLikes } from "@/features/likes/likeStore";
+import { clearNotificationUnreadCount } from "@/features/notifications/notificationStore";
 import { clearBlockedUserIds } from "@/features/safety/blockedUsersStore";
 import { apiPost } from "@/lib/api";
 import { clearAuthToken, getAuthToken, setAuthToken } from "@/lib/authToken";
+import { unregisterStoredPushTokenAsync } from "@/lib/pushNotifications";
 
 type AuthState = {
   /** persisted auth storage 로드 완료 여부 */
@@ -41,12 +43,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     clearLikes();
     clearBookmarks();
     clearBlockedUserIds();
+    clearNotificationUnreadCount();
     resetMyCosmeticsSnapshot();
     await setAuthToken(nextToken);
     setToken(nextToken);
   }, []);
 
   const signOut = React.useCallback(async () => {
+    try {
+      await unregisterStoredPushTokenAsync();
+    } catch {
+      // push token cleanup is best-effort during logout
+    }
     try {
       await apiPost("/api/logout", {});
     } catch {
@@ -57,6 +65,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     clearLikes();
     clearBookmarks();
     clearBlockedUserIds();
+    clearNotificationUnreadCount();
     resetMyCosmeticsSnapshot();
   }, []);
 

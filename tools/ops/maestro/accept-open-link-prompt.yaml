@@ -1,0 +1,5 @@
+appId: com.glsoop.app
+---
+- tapOn:
+    text: "열기"
+    optional: true

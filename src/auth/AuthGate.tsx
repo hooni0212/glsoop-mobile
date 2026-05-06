@@ -78,7 +78,7 @@ export function AuthGate() {
 
     if (!token) {
       if (needsAuth && !inAuthGroup) {
-        router.replace(buildAuthRoute("/(auth)", pathname));
+        router.replace(buildAuthRoute("/(auth)/login", pathname));
       }
       return;
     }
@@ -103,7 +103,7 @@ export function AuthGate() {
           await signOut();
           setValidatedKey(null);
           if (latestRoute.needsAuth || latestRoute.inAuthGroup) {
-            router.replace(buildAuthRoute("/(auth)", latestRoute.pathname));
+            router.replace(buildAuthRoute("/(auth)/login", latestRoute.pathname));
           }
           return;
         }
@@ -144,7 +144,7 @@ export function AuthGate() {
 
   // 토큰이 없고 auth 그룹 밖이면 즉시 리다이렉트(깜빡임 최소화)
   if (!token && needsAuth && !inAuthGroup) {
-    return <Redirect href={buildAuthRoute("/(auth)", pathname)} />;
+    return <Redirect href={buildAuthRoute("/(auth)/login", pathname)} />;
   }
 
   return <PublicUgcNoticeGate active={!inAuthGroup && isPublicUgc} />;

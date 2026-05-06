@@ -1,5 +1,4 @@
 import React, { useMemo, useState } from "react";
-import { Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { CategoryChips } from "@/components/home/CategoryChips";
@@ -12,20 +11,23 @@ import { homeScreenStyles } from "@/screens/Home.styles";
 import { useFeed } from "@/features/feed/useFeed";
 import { getBookmark, setBookmark } from "@/features/bookmarks/bookmarkStore";
 import { getLike, setLike } from "@/features/likes/likeStore";
+import {
+  clearNotificationUnreadCount,
+  refreshNotificationUnreadCount,
+  useNotificationUnreadCount,
+} from "@/features/notifications/notificationStore";
 import { useAuth } from "@/auth/AuthContext";
 import { buildAuthRoute } from "@/lib/authRedirect";
+import * as haptics from "@/lib/haptics";
 import { togglePostLike } from "@/services/likeService";
 import { ApiError } from "@/lib/errors";
 import { toTimestampMs } from "@/lib/dateTime";
 import { router, usePathname } from "expo-router";
 import { useToast } from "@/feedback/ToastProvider";
-import { getLegalDocumentUrl, getSupportUrl } from "@/config/release";
 import { useRuntimeLegalConfig } from "@/hooks/useRuntimeLegalConfig";
-import { openExternalUrl } from "@/lib/externalLinks";
 import { filterBlockedPosts, useBlockedUserIds } from "@/features/safety/blockedUsersStore";
 import { type Post } from "@/types/post";
 import { blockUserById, pickSafetyReasons, reportPost } from "@/services/safetyService";
-import { resolveRuntimeLegalDocumentUrl } from "@/services/runtimeConfigService";
 import {
   addPostToBookmarkList,
   createBookmarkList,
@@ -35,7 +37,7 @@ import {
   removePostFromBookmarkList,
 } from "@/services/bookmarkService";
 
-const CATEGORIES = ["추천", "팔로잉", "인기", "여행"] as const;
+const CATEGORIES = ["추천", "팔로잉", "최신"] as const;
 type Category = (typeof CATEGORIES)[number];
 
 export default function Home() {
@@ -43,6 +45,7 @@ export default function Home() {
   const [active, setActive] = useState<Category>("추천");
   const { showToast } = useToast();
   const { token, signOut } = useAuth();
+  const unreadNotificationCount = useNotificationUnreadCount();
   const { config: runtimeLegalConfig } = useRuntimeLegalConfig();
   const blockedUserIds = useBlockedUserIds();
   const [selectedSafetyPost, setSelectedSafetyPost] = useState<Post | null>(null);
@@ -53,10 +56,11 @@ export default function Home() {
   const [blockSubmitting, setBlockSubmitting] = useState(false);
 
   const query = useMemo(() => {
-    if (active === "인기") return { limit: 10, sort: "popular" as const };
-    if (active === "팔로잉") return { limit: 10, sort: "latest" as const, type: "following" as const };
-    if (active === "추천") return { limit: 10, sort: "latest" as const };
-    return { limit: 10, sort: "latest" as const, tag: active };
+    if (active === "최신") return { limit: 10, sort: "latest" as const };
+    if (active === "팔로잉") {
+      return { limit: 10, sort: "latest" as const, type: "following" as const };
+    }
+    return { limit: 10, sort: "recommended" as const };
   }, [active]);
 
   const { items, loading, refreshing, error, hasMore, refresh, loadMore, patchItem } =
@@ -71,18 +75,22 @@ export default function Home() {
   const userSafetyReasons = pickSafetyReasons(runtimeLegalConfig?.safety.reportReasons, "user");
   const reportDetailMaxLength = runtimeLegalConfig?.safety.detailMaxLength;
   const reportDetailRequiredReasonCodes = runtimeLegalConfig?.safety.detailRequiredReasonCodes;
-  const legalGuidelinesUrl = resolveRuntimeLegalDocumentUrl(
-    runtimeLegalConfig,
-    "guidelines",
-    getLegalDocumentUrl("guidelines")
-  );
-
   const sectionLabel = useMemo(() => {
-    if (active === "인기") return "지금 인기";
+    if (active === "최신") return "새로 올라온 글";
     if (active === "팔로잉") return "팔로잉 피드";
     if (active === "추천") return "오늘의 추천";
     return `${active} 피드`;
   }, [active]);
+  React.useEffect(() => {
+    if (!token) {
+      clearNotificationUnreadCount();
+      return;
+    }
+
+    void refreshNotificationUnreadCount().catch(() => {
+      clearNotificationUnreadCount();
+    });
+  }, [token]);
 
   const setPending = (postId: string, pending: boolean) => {
     setLikePending((prev) => ({ ...prev, [postId]: pending }));
@@ -92,16 +100,24 @@ export default function Home() {
   };
 
   const promptAuthForAction = React.useCallback(
-    (message: string) => {
-      Alert.alert("로그인이 필요해요", message, [
-        { text: "나중에", style: "cancel" },
-        {
-          text: "로그인",
-          onPress: () => router.push(buildAuthRoute("/(auth)", pathname)),
-        },
-      ]);
+    (message: string, redirectPath = pathname) => {
+      showToast(message, { tone: "error" });
+      router.push(buildAuthRoute("/(auth)/login", redirectPath));
     },
-    [pathname]
+    [pathname, showToast]
+  );
+
+  const changeCategory = React.useCallback(
+    (next: Category) => {
+      if (next === active) return;
+      if (next === "팔로잉" && !token) {
+        promptAuthForAction("팔로잉 피드는 로그인 후 볼 수 있어요.");
+        return;
+      }
+      haptics.selection();
+      setActive(next);
+    },
+    [active, promptAuthForAction, token]
   );
 
   const handleAuthError = React.useCallback(async () => {
@@ -109,27 +125,22 @@ export default function Home() {
     promptAuthForAction("로그인 상태가 만료되었어요. 다시 로그인하면 이어서 사용할 수 있어요.");
   }, [promptAuthForAction, signOut]);
 
-  const handleOpenGuidelines = React.useCallback(() => {
-    void openExternalUrl(legalGuidelinesUrl).catch(() => {
-      showToast("커뮤니티 가이드라인을 열지 못했어요. 잠시 후 다시 시도해주세요.", {
-        tone: "error",
-      });
-    });
-  }, [legalGuidelinesUrl, showToast]);
-
-  const handleOpenSupport = React.useCallback(() => {
-    void openExternalUrl(getSupportUrl()).catch(() => {
-      showToast("지원 페이지를 열지 못했어요. 잠시 후 다시 시도해주세요.", {
-        tone: "error",
-      });
-    });
-  }, [showToast]);
-
   const closeSafetyOverlays = React.useCallback(() => {
     setSafetyMenuVisible(false);
     setReportReasonVisible(false);
     setBlockConfirmVisible(false);
   }, []);
+
+  const handleNotificationPress = React.useCallback(() => {
+    haptics.selection();
+
+    if (!token) {
+      promptAuthForAction("알림은 로그인 후 확인할 수 있어요.", "/notifications");
+      return;
+    }
+
+    router.push("/notifications");
+  }, [promptAuthForAction, token]);
 
   const handleLike = async (postId: string) => {
     if (!token) {
@@ -137,6 +148,7 @@ export default function Home() {
       return;
     }
     if (likePending[postId]) return;
+    haptics.selection();
 
     const target = items.find((item) => item.id === postId);
     if (!target) return;
@@ -174,7 +186,7 @@ export default function Home() {
       if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
         await handleAuthError();
       } else {
-        showToast("좋아요 처리에 실패했어요. 잠시 후 다시 시도해주세요.", { tone: "error" });
+        showToast("공감 처리에 실패했어요. 잠시 후 다시 시도해주세요.", { tone: "error" });
       }
     } finally {
       setPending(postId, false);
@@ -187,6 +199,7 @@ export default function Home() {
       return;
     }
     if (bookmarkPending[postId]) return;
+    haptics.selection();
     const target = items.find((item) => item.id === postId);
     if (!target) return;
 
@@ -277,6 +290,7 @@ export default function Home() {
   };
 
   const openSafetyMenu = React.useCallback((post: Post) => {
+    haptics.selection();
     setSelectedSafetyPost(post);
     setSafetyMenuVisible(true);
   }, []);
@@ -358,15 +372,19 @@ export default function Home() {
     <SafeAreaView style={homeScreenStyles.safe} edges={["top"]}>
       <HomeHeader
         onPressSearch={() => {
+          haptics.selection();
           blurActiveElementBeforeRouteChange();
           router.push("/search");
         }}
+        onPressNotifications={handleNotificationPress}
+        hasUnreadNotifications={unreadNotificationCount > 0}
+        showNotifications
       />
 
       <CategoryChips
         categories={CATEGORIES}
         active={active}
-        onChange={setActive}
+        onChange={changeCategory}
       />
 
       <FeedSection
@@ -380,7 +398,17 @@ export default function Home() {
         onEndReached={() => {
           if (!loading && hasMore) loadMore();
         }}
-        onPressItem={(id) => router.push(`/posts/${String(id)}`)}
+        onPressItem={(id) => {
+          haptics.selection();
+          router.push(`/posts/${String(id)}`);
+        }}
+        onPressAuthor={(item) => {
+          const authorId = (item as Post)?.author?.id;
+          if (authorId) {
+            haptics.selection();
+            router.push(`/users/${authorId}`);
+          }
+        }}
         onLikePress={(id) => handleLike(String(id))}
         onBookmarkPress={(id) => handleBookmark(String(id))}
         onMorePress={(item) => openSafetyMenu(item as Post)}
@@ -390,7 +418,7 @@ export default function Home() {
       <SafetyActionSheet
         visible={safetyMenuVisible}
         title="게시글 안전 메뉴"
-        description="이 글에서 신고, 작성자 차단, 가이드라인, 지원 경로를 바로 확인할 수 있어요."
+        description="신고, 차단, 가이드라인을 확인할 수 있어요."
         onRequestClose={() => setSafetyMenuVisible(false)}
         actions={[
           {
@@ -411,22 +439,6 @@ export default function Home() {
             testID: "home-post-block-btn",
           },
           {
-            label: "커뮤니티 가이드라인",
-            variant: "ghost",
-            onPress: () => {
-              setSafetyMenuVisible(false);
-              handleOpenGuidelines();
-            },
-          },
-          {
-            label: "도움말 및 지원",
-            variant: "ghost",
-            onPress: () => {
-              setSafetyMenuVisible(false);
-              handleOpenSupport();
-            },
-          },
-          {
             label: "닫기",
             variant: "ghost",
             onPress: () => setSafetyMenuVisible(false),
@@ -437,7 +449,7 @@ export default function Home() {
       <SafetyActionSheet
         visible={blockConfirmVisible}
         title="작성자 차단"
-        description={`${selectedSafetyPost?.author?.name || "이 사용자"}의 글과 프로필이 내 화면에서 즉시 숨겨집니다. 운영 기준 위반 여부는 검토 후 조치될 수 있어요. 계속할까요?`}
+        description={`${selectedSafetyPost?.author?.name || "이 사용자"}님의 글과 프로필을 숨길까요?`}
         onRequestClose={() => {
           if (blockSubmitting) return;
           setBlockConfirmVisible(false);
@@ -465,11 +477,11 @@ export default function Home() {
       <SafetyReasonModal
         visible={reportReasonVisible}
         title="게시글 신고"
-        description="신고가 접수되면 운영팀이 24시간 내 검토하고, 위반 시 콘텐츠 삭제 및 계정 제재가 이루어질 수 있어요."
+        description="접수된 신고는 운영 기준에 따라 검토돼요."
         reasons={postSafetyReasons}
         detailMaxLength={reportDetailMaxLength}
         detailRequiredReasonCodes={reportDetailRequiredReasonCodes}
-        submitLabel="신고 접수"
+        submitLabel="신고하기"
         submitting={reportSubmitting}
         onClose={() => {
           if (reportSubmitting) return;

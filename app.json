@@ -1,15 +1,16 @@
 {
   "expo": {
-    "name": "glsoop-mobile",
+    "name": "글숲",
     "slug": "glsoop-mobile",
-    "version": "1.0.0",
+    "version": "1.0.3",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "glsoopmobile",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": false,
+      "supportsTablet": true,
+      "requireFullScreen": true,
       "bundleIdentifier": "com.glsoop.app",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false

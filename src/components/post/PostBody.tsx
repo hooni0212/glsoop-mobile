@@ -4,8 +4,8 @@ import { Image } from "expo-image";
 
 import { PaperReadingCard } from "@/components/paper/PaperReadingCard";
 import { buildRenderedPostImageUrl } from "@/lib/feedImage";
+import { normalizePostBackgroundTemplateId } from "@/lib/postBackgroundTemplates";
 import type { WriteLayoutModel } from "@/lib/postLayout";
-import { paperFrameShadowStyle, softCardShadowStyle } from "@/theme/shadows";
 import type { PostRenderImages, PostType } from "@/types/post";
 import { tokens } from "@/theme/tokens";
 
@@ -38,8 +38,11 @@ export function PostBody({
   const scrollRef = useRef<ScrollView | null>(null);
   const fallbackImageUrl = useMemo(() => {
     if (!postId) return null;
-    return buildRenderedPostImageUrl(postId, versionSeed);
-  }, [postId, versionSeed]);
+    return buildRenderedPostImageUrl(postId, {
+      versionSeed,
+      template: normalizePostBackgroundTemplateId(renderImages?.template ?? layout.presetId),
+    });
+  }, [layout.presetId, postId, renderImages?.template, versionSeed]);
   const imageUrls = useMemo(() => {
     const explicit = Array.isArray(renderImages?.images)
       ? renderImages.images.map((item) => String(item || "").trim()).filter(Boolean)
@@ -66,10 +69,6 @@ export function PostBody({
   if (imageUrls.length > 0 && !renderFailed) {
     return (
       <View style={styles.wrap}>
-        <View style={styles.header}>
-          <Text style={styles.eyebrow}>SERVER RENDER</Text>
-          <Text style={styles.hint}>서버가 생성한 책 페이지 이미지를 그대로 보여줘요.</Text>
-        </View>
         <View style={styles.frame}>
           <View
             style={styles.carouselViewport}
@@ -133,13 +132,6 @@ export function PostBody({
             </View>
           ) : null}
         </View>
-        {renderImages?.isTruncated ? (
-          <View style={styles.truncatedNotice}>
-            <Text style={styles.truncatedNoticeText}>
-              이미지에는 일부만 표시됩니다.
-            </Text>
-          </View>
-        ) : null}
       </View>
     );
   }
@@ -153,43 +145,20 @@ export function PostBody({
       footerText={footerText}
       type={type}
       layout={layout}
-      eyebrow="READING CARD"
-      hint="이미지 렌더를 불러오지 못해 텍스트 카드로 보여줘요."
     />
   );
 }
 
 const styles = {
   wrap: {
-    marginBottom: 6,
-    gap: 14,
-  },
-  header: {
-    gap: 4,
-    paddingHorizontal: 4,
-  },
-  eyebrow: {
-    fontSize: 11,
-    letterSpacing: 1.3,
-    fontWeight: "900" as const,
-    color: "rgba(80,58,32,0.55)",
-  },
-  hint: {
-    fontSize: 12,
-    fontWeight: "700" as const,
-    color: "rgba(80,58,32,0.64)",
+    marginBottom: 0,
   },
   frame: {
-    borderRadius: 24,
-    padding: 14,
-    backgroundColor: "rgba(92,69,42,0.10)",
-    borderWidth: 1,
-    borderColor: "rgba(86,62,32,0.08)",
-    ...paperFrameShadowStyle,
+    position: "relative" as const,
+    backgroundColor: "#f4ead8",
   },
   carouselViewport: {
     overflow: "hidden" as const,
-    borderRadius: 20,
   },
   carouselSlide: {
     alignItems: "center" as const,
@@ -198,16 +167,18 @@ const styles = {
   image: {
     width: "100%" as const,
     aspectRatio: 500 / 666,
-    borderRadius: 20,
     overflow: "hidden" as const,
     backgroundColor: "#f4ead8",
   },
   carouselFooter: {
-    marginTop: 12,
+    position: "absolute" as const,
+    left: 0,
+    right: 0,
+    bottom: 14,
     alignItems: "center" as const,
-    gap: 10,
   },
   carouselStatus: {
+    marginBottom: 8,
     borderRadius: tokens.radius.pill,
     backgroundColor: "rgba(255,250,244,0.88)",
     borderWidth: 1,
@@ -235,20 +206,5 @@ const styles = {
   carouselDotActive: {
     width: 20,
     backgroundColor: "rgba(80,58,32,0.68)",
-  },
-  truncatedNotice: {
-    borderRadius: tokens.radius.lg,
-    borderWidth: 1,
-    borderColor: "rgba(160,103,24,0.16)",
-    backgroundColor: "rgba(255,246,225,0.92)",
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    ...softCardShadowStyle,
-  },
-  truncatedNoticeText: {
-    fontSize: 13,
-    lineHeight: 20,
-    fontWeight: "700" as const,
-    color: "rgba(95,67,20,0.82)",
   },
 };

@@ -1,20 +1,32 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getAuthToken, COOKIE_SESSION_TOKEN } from "@/lib/authToken";
 import type { PostFontKey } from "@/lib/postContent";
-import type { PostType } from "@/types/post";
+import type { PostCommentPolicy, PostType, PostVisibility } from "@/types/post";
 
 export type WriteDraft = {
   id: string;
   title: string;
   body: string;
   category?: PostType;
+  visibility?: PostVisibility;
+  commentPolicy?: PostCommentPolicy;
   fontKey?: PostFontKey;
   layoutJson?: unknown;
   mode?: "create" | "edit";
   postId?: string;
+  questContext?: WriteDraftQuestContext;
   authNamespace?: string;
   updatedAt: number; // epoch ms
   expiresAt: number;
+};
+
+export type WriteDraftQuestContext = {
+  stateId: number;
+  promptKey: string;
+  promptTitle?: string;
+  promptBody?: string;
+  defaultCategory?: PostType;
+  suggestedHashtags?: string[];
 };
 
 const DRAFTS_KEY = "glsoop:write:drafts:v1";
@@ -56,12 +68,24 @@ function normalizeDraft(input: any): WriteDraft | null {
       ? input.category
       : undefined;
   const mode = input.mode === "edit" ? "edit" : "create";
+  const visibility =
+    input.visibility === "followers" || input.visibility === "unlisted" || input.visibility === "private"
+      ? input.visibility
+      : "public";
+  const commentPolicy =
+    input.commentPolicy === "everyone" ||
+    input.commentPolicy === "followers" ||
+    input.commentPolicy === "author_only" ||
+    input.commentPolicy === "closed"
+      ? input.commentPolicy
+      : "logged_in";
   const fontKey =
     input.fontKey === "sans" || input.fontKey === "hand" || input.fontKey === "serif"
       ? input.fontKey
       : "serif";
   const layoutJson = input.layoutJson ?? null;
   const postId = typeof input.postId === "string" && input.postId.trim() ? input.postId.trim() : undefined;
+  const questContext = normalizeDraftQuestContext(input.questContext);
   const authNamespace =
     typeof input.authNamespace === "string" && input.authNamespace.trim()
       ? input.authNamespace.trim()
@@ -78,13 +102,38 @@ function normalizeDraft(input: any): WriteDraft | null {
     title,
     body,
     category,
+    visibility,
+    commentPolicy,
     fontKey,
     layoutJson,
     mode,
     postId,
+    questContext,
     authNamespace,
     updatedAt,
     expiresAt,
+  };
+}
+
+function normalizeDraftQuestContext(input: any): WriteDraftQuestContext | undefined {
+  if (!input || typeof input !== "object") return undefined;
+  const stateId = Number(input.stateId);
+  const promptKey = typeof input.promptKey === "string" ? input.promptKey.trim() : "";
+  if (!Number.isInteger(stateId) || stateId <= 0 || !promptKey) return undefined;
+  const defaultCategory =
+    input.defaultCategory === "poem" || input.defaultCategory === "essay" || input.defaultCategory === "short"
+      ? input.defaultCategory
+      : undefined;
+  const suggestedHashtags = Array.isArray(input.suggestedHashtags)
+    ? input.suggestedHashtags.map(String).map((tag: string) => tag.trim()).filter(Boolean).slice(0, 12)
+    : undefined;
+  return {
+    stateId,
+    promptKey,
+    promptTitle: typeof input.promptTitle === "string" ? input.promptTitle : undefined,
+    promptBody: typeof input.promptBody === "string" ? input.promptBody : undefined,
+    defaultCategory,
+    suggestedHashtags,
   };
 }
 
@@ -167,10 +216,13 @@ export async function upsertWriteDraft(input: {
   title: string;
   body: string;
   category?: PostType;
+  visibility?: PostVisibility;
+  commentPolicy?: PostCommentPolicy;
   fontKey?: PostFontKey;
   layoutJson?: unknown;
   mode?: "create" | "edit";
   postId?: string | null;
+  questContext?: WriteDraftQuestContext | null;
 }): Promise<string> {
   const id = buildDraftId(input);
   const mode = input.mode === "edit" ? "edit" : "create";
@@ -180,10 +232,13 @@ export async function upsertWriteDraft(input: {
     title: input.title ?? "",
     body: input.body ?? "",
     category: input.category,
+    visibility: input.visibility ?? "public",
+    commentPolicy: input.commentPolicy ?? "logged_in",
     fontKey: input.fontKey ?? "serif",
     layoutJson: input.layoutJson ?? null,
     mode,
     postId: typeof input.postId === "string" ? input.postId : undefined,
+    questContext: input.questContext ?? undefined,
     authNamespace,
     updatedAt: Date.now(),
     expiresAt: Date.now() + DRAFT_TTL_MS,

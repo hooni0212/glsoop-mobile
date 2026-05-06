@@ -11,6 +11,7 @@ import {
 type CosmeticsInventory = {
   badges: CosmeticItem[];
   stickers: CosmeticItem[];
+  backgrounds: CosmeticItem[];
 };
 
 type UseMyCosmeticsResult = {
@@ -24,6 +25,7 @@ type UseMyCosmeticsResult = {
 const EMPTY_INVENTORY: CosmeticsInventory = {
   badges: [],
   stickers: [],
+  backgrounds: [],
 };
 
 type CosmeticsSnapshot = {

@@ -35,6 +35,7 @@ type GrowthMockOptions = {
   fallbackShouldFail?: boolean;
   topPostsEmpty?: boolean;
   claimEntitlementRequired?: boolean;
+  postCreateCapture?: { payload?: Record<string, unknown> };
 };
 
 function growthDashboardFixture(options: GrowthMockOptions = {}) {
@@ -113,6 +114,41 @@ function growthDashboardFixture(options: GrowthMockOptions = {}) {
             lock_reason: null,
           },
           {
+            id: 504,
+            state_id: 9004,
+            name: "지나간 연인에게 편지를 써봐요",
+            description: "인스타그램 주제로 한 편을 완성해보세요",
+            condition_type: "PROMPT_POST_CREATED",
+            category: "essay",
+            target: 1,
+            reward_xp: 25,
+            status: "in_progress",
+            progress: 0,
+            position_index: 3,
+            campaign_id: 201,
+            campaign_type: "daily",
+            template_kind: "quest",
+            code: "prompt_past_lover_letter",
+            ui_json: JSON.stringify({
+              quest_kind: "writing_prompt",
+              prompt: {
+                key: "past-lover-letter",
+                title: "지나간 연인에게 편지를 써봐요",
+                body: "보내지 못한 말, 지금이라면 다르게 쓰고 싶은 문장을 글로 남겨보세요.",
+                cta_label: "이 주제로 쓰기",
+                default_category: "essay",
+                suggested_hashtags: ["편지", "이별", "글숲"],
+              },
+              source: "instagram",
+              source_url: "https://www.instagram.com/glsoop",
+            }),
+            completed_at: null,
+            reward_claimed_at: null,
+            is_locked: false,
+            required_entitlement: null,
+            lock_reason: null,
+          },
+          {
             id: 503,
             state_id: 9003,
             name: "봄 시즌 패스 퀘스트",
@@ -128,7 +164,10 @@ function growthDashboardFixture(options: GrowthMockOptions = {}) {
             campaign_type: "daily",
             template_kind: "normal",
             code: "premium_pass_quest",
-            ui_json: "{\"required_entitlement\":\"pass:2026_spring\"}",
+            ui_json: JSON.stringify({
+              required_entitlement: "pass:2026_spring",
+              rewards: { cosmetics: ["badge_spring_2026"] },
+            }),
             completed_at: "2026-02-10T08:35:00.000Z",
             reward_claimed_at: null,
             is_locked: true,
@@ -183,6 +222,28 @@ async function mockGrowthApis(page: Page, options: GrowthMockOptions = {}) {
       return;
     }
 
+    if (isApiRequest(route, "/api/posts") && route.request().method() === "POST") {
+      if (options.postCreateCapture) {
+        options.postCreateCapture.payload = route.request().postDataJSON() as Record<string, unknown>;
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          post_id: "post-e2e-prompt-quest",
+          quest_completion: {
+            state_id: 9004,
+            prompt_key: "past-lover-letter",
+            progress: 1,
+            target: 1,
+            status: "completed",
+          },
+        }),
+      });
+      return;
+    }
+
     if (isApiRequest(route, "/api/growth/summary")) {
       await route.fulfill({
         status: 200,
@@ -222,6 +283,15 @@ async function mockGrowthApis(page: Page, options: GrowthMockOptions = {}) {
             ? { ok: false, message: "퀘스트 정보를 불러오지 못했어요." }
             : { ok: true, message: "fallback quests", campaigns: dashboardFixture.campaigns }
         ),
+      });
+      return;
+    }
+
+    if (isApiRequest(route, "/api/growth/top-posts")) {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ ok: true, message: "fallback top posts", top_posts: [] }),
       });
       return;
     }
@@ -307,8 +377,8 @@ test.describe("Growth 플로우", () => {
     await clearAuthToken(page);
     await page.goto("/growth");
 
-    await expect(page.getByText("글숲")).toBeVisible();
-    await expect(page.getByText("로그인", { exact: true })).toBeVisible();
+    await expect(page.getByTestId("auth-login-screen")).toBeVisible();
+    await expect(page.getByTestId("login-submit-btn")).toBeVisible();
     await expect(page.getByText("회원가입", { exact: true })).toBeVisible();
   });
 
@@ -320,7 +390,9 @@ test.describe("Growth 플로우", () => {
 
     await expect(page.getByTestId("growth-screen")).toBeVisible();
     await expect(page.getByText("오늘의 리포트")).toBeVisible();
-    await expect(page.getByText("테스트 인기 글")).toBeVisible();
+    await expect(page.getByTestId("growth-campaign-preview")).toBeVisible();
+    await expect(page.getByTestId("growth-campaign-preview-item-201")).toContainText("데일리 캠페인");
+    await expect(page.getByTestId("top-posts-list")).toHaveCount(0);
 
     await activateByTestId(page, "growth-action-achievements");
     await expect(page.getByTestId("growth-achievements-screen")).toBeVisible();
@@ -331,6 +403,9 @@ test.describe("Growth 플로우", () => {
     await expect(page.getByTestId("growth-quests-screen")).toBeVisible();
     await expect(page.getByText("프리미엄 잠금")).toBeVisible();
     await expect(page.getByTestId("quest-lock-hint-9003")).toBeVisible();
+    await expect(page.getByTestId("quest-reward-cosmetic-9003-badge_spring_2026")).toContainText(
+      "봄 시즌 배지"
+    );
     await expect(page.getByTestId("quest-claim-btn-9003")).toHaveCount(0);
 
     const claimButton = page.getByTestId("quest-claim-btn-9001");
@@ -343,17 +418,7 @@ test.describe("Growth 플로우", () => {
     await expect(page.getByTestId("growth-screen")).toBeVisible();
   });
 
-  test("인기 글 항목을 누르면 게시글 상세로 이동한다", async ({ page }) => {
-    await mockGrowthApis(page);
-    await setAuthToken(page, "mock-token-for-growth");
-
-    await page.goto("/growth");
-
-    await activateByTestId(page, "top-post-item-701");
-    await expect(page).toHaveURL(/\/posts\/701$/);
-  });
-
-  test("dashboard 요청이 실패하면 fallback 데이터와 인기 글 empty UI를 유지한다", async ({ page }) => {
+  test("dashboard 요청이 실패하면 fallback 데이터로 성장 홈을 유지한다", async ({ page }) => {
     await mockGrowthApis(page, { dashboardShouldFail: true });
     await setAuthToken(page, "mock-token-for-growth");
 
@@ -361,9 +426,7 @@ test.describe("Growth 플로우", () => {
 
     await expect(page.getByTestId("growth-screen")).toBeVisible();
     await expect(page.getByLabel("데이터 소스: 대체 데이터")).toBeVisible();
-    await expect(page.getByTestId("top-posts-empty")).toBeVisible();
-    await expect(page.getByText("아직 인기 글이 없어요")).toBeVisible();
-    await expect(page.getByText("활동이 더 쌓이면, 여기에서 주목받는 글을 추천해드릴게요.")).toBeVisible();
+    await expect(page.getByTestId("top-posts-empty")).toHaveCount(0);
   });
 
   test("dashboard와 fallback이 모두 실패하면 오류 UI를 노출한다", async ({ page }) => {
@@ -377,15 +440,44 @@ test.describe("Growth 플로우", () => {
     await expect(page.getByText("성장 요약을 불러오지 못했어요.").first()).toBeVisible();
   });
 
-  test("dashboard top_posts가 빈 배열이면 준비중이 아닌 empty UI를 보여준다", async ({ page }) => {
+  test("dashboard top_posts가 빈 배열이어도 성장 홈에는 인기 글 영역을 렌더하지 않는다", async ({ page }) => {
     await mockGrowthApis(page, { topPostsEmpty: true });
     await setAuthToken(page, "mock-token-for-growth");
 
     await page.goto("/growth");
 
     await expect(page.getByTestId("growth-screen")).toBeVisible();
-    await expect(page.getByTestId("top-posts-empty")).toBeVisible();
-    await expect(page.getByText("아직 인기 글이 없어요")).toBeVisible();
-    await expect(page.getByText("활동이 더 쌓이면, 여기에서 주목받는 글을 추천해드릴게요.")).toBeVisible();
+    await expect(page.getByTestId("top-posts-list")).toHaveCount(0);
+    await expect(page.getByTestId("top-posts-empty")).toHaveCount(0);
+  });
+
+  test("프롬프트 퀘스트에서 글쓰기 화면으로 이동하고 quest_context를 전송한다", async ({ page }) => {
+    const capture: { payload?: Record<string, unknown> } = {};
+    await mockGrowthApis(page, { postCreateCapture: capture });
+    await setAuthToken(page, "mock-token-for-growth");
+
+    await page.goto("/growth");
+    await activateByTestId(page, "growth-action-quests");
+    await activateByTestId(page, "quest-prompt-write-btn-9004");
+
+    await expect(page).toHaveURL(/\/write\?/);
+    const promptCard = page.getByTestId("write-quest-prompt-card");
+    await expect(promptCard).toBeVisible();
+    await expect(promptCard.getByText("지나간 연인에게 편지를 써봐요")).toBeVisible();
+
+    await page.getByTestId("write-title-input").fill("보내지 못한 편지");
+    await page.getByTestId("write-body-input").fill("이제야 조용히 적어보는 문장들입니다.");
+
+    const submitBtn = page.getByTestId("write-submit-btn");
+    await submitBtn.click();
+    await submitBtn.click();
+
+    await expect(page.getByText("퀘스트 진행도도 반영됐어요.")).toBeVisible();
+    expect(capture.payload?.category).toBe("essay");
+    expect(capture.payload?.hashtags).toEqual(["편지", "이별", "글숲"]);
+    expect(capture.payload?.quest_context).toEqual({
+      state_id: 9004,
+      prompt_key: "past-lover-letter",
+    });
   });
 });

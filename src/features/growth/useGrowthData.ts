@@ -25,6 +25,7 @@ export type GrowthAchievementStatus = "locked" | "in_progress" | "completed";
 
 export type GrowthAchievement = {
   id: number;
+  stateId: number;
   code: string;
   name: string;
   description: string;
@@ -33,8 +34,10 @@ export type GrowthAchievement = {
   progress: number;
   target: number;
   unlockedAt: string | null;
+  rewardClaimedAt: string | null;
   positionIndex: number;
   icon: string;
+  uiJson: string;
 };
 
 export type GrowthQuest = {
@@ -61,8 +64,20 @@ export type GrowthQuest = {
   lockReason: string | null;
 };
 
+export type GrowthPromptQuest = {
+  key: string;
+  title: string;
+  body: string;
+  ctaLabel: string;
+  defaultCategory: "poem" | "essay" | "short";
+  suggestedHashtags: string[];
+  source: string | null;
+  sourceUrl: string | null;
+};
+
 export type GrowthCosmeticReward = {
   key: string;
+  type: string | null;
   name: string;
   iconEmoji: string | null;
   rarity: string;
@@ -214,6 +229,41 @@ function toRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
 }
 
+function toStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.map((item) => String(item || "").trim()).filter(Boolean).slice(0, 12);
+}
+
+function normalizePromptCategory(value: unknown): "poem" | "essay" | "short" {
+  if (value === "poem" || value === "short") return value;
+  return "essay";
+}
+
+export function parseGrowthPromptQuest(quest: GrowthQuest): GrowthPromptQuest | null {
+  if (quest.conditionType !== "PROMPT_POST_CREATED" || !quest.uiJson) return null;
+  try {
+    const parsed = JSON.parse(quest.uiJson);
+    const root = toRecord(parsed);
+    if (root.quest_kind !== "writing_prompt") return null;
+    const prompt = toRecord(root.prompt);
+    const key = toText(prompt.key).trim();
+    const title = toText(prompt.title).trim();
+    if (!key || !title) return null;
+    return {
+      key,
+      title,
+      body: toText(prompt.body),
+      ctaLabel: toText(prompt.cta_label, "이 주제로 글쓰기"),
+      defaultCategory: normalizePromptCategory(prompt.default_category),
+      suggestedHashtags: toStringArray(prompt.suggested_hashtags),
+      source: toNullableText(root.source),
+      sourceUrl: toNullableText(root.source_url),
+    };
+  } catch {
+    return null;
+  }
+}
+
 function normalizeStatus(value: unknown): GrowthAchievementStatus {
   const s = toText(value, "");
   if (s === "completed" || s === "in_progress") return s;
@@ -238,6 +288,7 @@ function normalizeAchievement(input: unknown): GrowthAchievement {
   const row = toRecord(input);
   return {
     id: toNumber(row.id),
+    stateId: toNumber(row.state_id),
     code: toText(row.code),
     name: toText(row.name),
     description: toText(row.description),
@@ -246,8 +297,10 @@ function normalizeAchievement(input: unknown): GrowthAchievement {
     progress: toNumber(row.progress),
     target: toNumber(row.target),
     unlockedAt: toNullableText(row.unlocked_at),
+    rewardClaimedAt: toNullableText(row.reward_claimed_at),
     positionIndex: toNumber(row.position_index),
     icon: toText(row.icon, "🌿"),
+    uiJson: toText(row.ui_json),
   };
 }
 
@@ -342,6 +395,7 @@ function normalizeClaimCosmetic(input: unknown): GrowthCosmeticReward | null {
 
   return {
     key,
+    type: toNullableText(row.type),
     name,
     iconEmoji: toNullableText(row.icon_emoji),
     rarity: toText(row.rarity, "common"),
@@ -381,6 +435,15 @@ function shouldUseCache(force: boolean) {
 function applyQuestClaim(snapshot: GrowthSnapshot, result: ClaimQuestResult, stateId: number) {
   let patched = false;
 
+  const achievements = snapshot.achievements.map((achievement) => {
+    if (achievement.stateId !== stateId) return achievement;
+    patched = true;
+    return {
+      ...achievement,
+      rewardClaimedAt: result.rewardClaimedAt,
+    };
+  });
+
   const campaigns = snapshot.campaigns.map((campaign) => {
     const quests = campaign.quests.map((quest) => {
       if (quest.stateId !== stateId) return quest;
@@ -408,6 +471,7 @@ function applyQuestClaim(snapshot: GrowthSnapshot, result: ClaimQuestResult, sta
   return {
     ...snapshot,
     summary,
+    achievements,
     campaigns,
   };
 }
