@@ -369,6 +369,35 @@ test.describe("Write 임시저장 UX", () => {
     await expect(page).toHaveURL(/\/write-drafts$/);
   });
 
+  test("S4-1: 저장된 초안이 있어도 새로 쓰기는 별도 초안을 추가한다", async ({ page }) => {
+    await clearDrafts(page);
+
+    await page.goto("/write");
+    await page.getByTestId("write-title-input").fill("첫 초안");
+    await page.getByTestId("write-body-input").fill("첫 본문");
+    await page.getByTestId("write-save-draft-btn").click();
+    await expect.poll(async () => (await getDrafts(page)).length).toBe(1);
+
+    await page.getByTestId("write-close-btn").click();
+    await page.getByTestId("confirm-close-save").click();
+    await expect(page).toHaveURL(/\/(\(tabs\))?\/?$/);
+
+    await page.getByTestId("fab-write").click();
+    await expect(page.getByTestId("write-confirm-modal")).toBeVisible();
+    await page.getByTestId("confirm-draft-new").click();
+    await expect(page.getByTestId("write-title-input")).toHaveValue("");
+    await expect(page.getByTestId("write-body-input")).toHaveValue("");
+
+    await page.getByTestId("write-title-input").fill("둘째 초안");
+    await page.getByTestId("write-body-input").fill("둘째 본문");
+    await page.getByTestId("write-save-draft-btn").click();
+
+    await expect.poll(async () => (await getDrafts(page)).length).toBe(2);
+    const drafts = await getDrafts(page);
+    expect(new Set(drafts.map((draft: any) => draft.id)).size).toBe(2);
+    expect(drafts.map((draft: any) => draft.title).sort()).toEqual(["둘째 초안", "첫 초안"]);
+  });
+
   test("S5: 임시저장함 → 열기/삭제", async ({ page }) => {
     await seedDraft(page, { id: "draft-a", title: "A title", body: "A body" });
     await page.goto("/write-drafts");

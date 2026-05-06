@@ -66,6 +66,10 @@ export default function WriteDrafts() {
     router.push({ pathname: "/write", params: { draftId: id } });
   }, []);
 
+  const onPressNew = useCallback(() => {
+    router.push({ pathname: "/write", params: { newDraft: String(Date.now()) } });
+  }, []);
+
   const onPressDelete = useCallback(async (id: string) => {
     await deleteWriteDraft(id);
     await refresh();
@@ -88,7 +92,7 @@ export default function WriteDrafts() {
         <Text style={styles.screenTitle}>임시저장</Text>
 
         <Pressable
-          onPress={() => router.push("/write")}
+          onPress={onPressNew}
           hitSlop={12}
           style={styles.doneBtn}
           accessibilityRole="button"
@@ -120,7 +124,7 @@ export default function WriteDrafts() {
               <AppEmpty
                 title="임시저장한 글이 없어요"
                 description="새 글을 작성하거나 자유롭게 기록해보세요."
-                primaryAction={{ label: "글 작성하기", onPress: () => router.push("/write") }}
+                primaryAction={{ label: "글 작성하기", onPress: onPressNew }}
               />
             </View>
           ) : (

@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigation } from "@react-navigation/native";
+import { useIsFocused, useNavigation } from "@react-navigation/native";
 import {
   Keyboard,
   KeyboardAvoidingView,
@@ -94,6 +94,7 @@ export default function Write() {
   const styles = useMemo(() => createWriteStyles(), []);
   const params = useLocalSearchParams();
   const navigation = useNavigation();
+  const isFocused = useIsFocused();
   const { showToast } = useToast();
   const { width } = useWindowDimensions();
   const isLargeScreen = width >= 768;
@@ -127,7 +128,7 @@ export default function Write() {
     target?: number;
   } | null>(null);
 
-  const hasShownRestorePromptRef = useRef(false);
+  const lastInitializedEntryKeyRef = useRef<string | null>(null);
   const isEditMode = Boolean(editPostId);
 
   const hashtagChips = useMemo(() => {
@@ -155,6 +156,27 @@ export default function Write() {
       suggestedHashtags: parsePromptTags(rawParams.promptTags),
     };
   }, [params]);
+  const routePostId = useMemo(
+    () => getParamString(((params ?? {}) as Record<string, unknown>).postId),
+    [params]
+  );
+  const routeDraftId = useMemo(
+    () => getParamString(((params ?? {}) as Record<string, unknown>).draftId),
+    [params]
+  );
+  const routeNewDraft = useMemo(
+    () => getParamString(((params ?? {}) as Record<string, unknown>).newDraft),
+    [params]
+  );
+  const writeEntryKey = useMemo(() => {
+    if (routePostId) return `post:${routePostId}`;
+    if (routeDraftId) return `draft:${routeDraftId}`;
+    if (routeNewDraft) return `new:${routeNewDraft}`;
+    if (promptQuestFromParams) {
+      return `quest:${promptQuestFromParams.stateId}:${promptQuestFromParams.promptKey}`;
+    }
+    return "create";
+  }, [promptQuestFromParams, routeDraftId, routeNewDraft, routePostId]);
 
   const hasChanges =
     title.trim().length > 0 ||
@@ -188,6 +210,31 @@ export default function Write() {
   const openDraftPrompt = useCallback((next: Omit<NonNullable<ConfirmState>, "visible">) => {
     logger.debug("[write] confirm open", { title: next.title });
     setDraftPrompt({ visible: true, ...next });
+  }, []);
+
+  const resetWriteState = useCallback(() => {
+    setDraftId(null);
+    setTitle("");
+    setBody("");
+    setSelectedType(null);
+    setHashtagsInput("");
+    setFontKey("serif");
+    setVisibility("public");
+    setCommentPolicy("logged_in");
+    setEditPostId(null);
+    setQuestContext(null);
+    setPreviewOpen(false);
+    setPreviewPanel("settings");
+    setLayout(DEFAULT_WRITE_LAYOUT);
+    setActiveBoxId("text_box");
+    setEditLoading(false);
+    setEditError(null);
+    setDraftPrompt(null);
+    setIsSubmitting(false);
+    setSubmitSuccess(false);
+    setCreatedPostId(null);
+    setSubmitError(null);
+    setLastQuestCompletion(null);
   }, []);
 
   const saveDraftExplicit = useCallback(async () => {
@@ -264,6 +311,7 @@ export default function Write() {
             dismiss();
             void (async () => {
               if (draftId) await deleteWriteDraft(draftId);
+              resetWriteState();
               proceed(action);
             })();
           },
@@ -275,7 +323,10 @@ export default function Write() {
             dismiss();
             void (async () => {
               const saved = await saveDraftExplicit();
-              if (saved) proceed(action);
+              if (saved) {
+                resetWriteState();
+                proceed(action);
+              }
             })();
           },
           testID: "confirm-close-save",
@@ -302,16 +353,9 @@ export default function Write() {
   const clearDraftsForDev = useCallback(async () => {
     if (!__DEV__) return;
     await clearAllWriteDrafts();
-    setDraftId(null);
-    setTitle("");
-    setBody("");
-    setSelectedType(null);
-    setFontKey("serif");
-    setVisibility("public");
-    setCommentPolicy("logged_in");
-    setQuestContext(null);
-    setLayout(DEFAULT_WRITE_LAYOUT);
-  }, []);
+    lastInitializedEntryKeyRef.current = null;
+    resetWriteState();
+  }, [resetWriteState]);
 
   const updateTitleAlign = useCallback((value: LayoutAlign) => {
     setLayout((current) => ({
@@ -481,15 +525,18 @@ export default function Write() {
   const onSuccessGoHome = useCallback(() => {
     setSubmitSuccess(false);
     allowNextLeave();
+    resetWriteState();
     router.replace("/(tabs)");
-  }, [allowNextLeave]);
+  }, [allowNextLeave, resetWriteState]);
 
   const onSuccessViewPost = useCallback(() => {
-    if (!createdPostId) return;
+    const postId = createdPostId;
+    if (!postId) return;
     setSubmitSuccess(false);
     allowNextLeave();
-    router.replace(`/posts/${createdPostId}`);
-  }, [createdPostId, allowNextLeave]);
+    resetWriteState();
+    router.replace(`/posts/${postId}`);
+  }, [createdPostId, allowNextLeave, resetWriteState]);
 
   // 1) 키보드 상태 감지
   useEffect(() => {
@@ -508,18 +555,23 @@ export default function Write() {
 
   // 2) Write 진입 시: (a) 파라미터로 draftId가 오면 해당 draft 복구, (b) 아니면 draft 존재 여부에 따라 UX 제공
   useEffect(() => {
-    if (hasShownRestorePromptRef.current) return;
-    hasShownRestorePromptRef.current = true;
+    if (!isFocused) {
+      lastInitializedEntryKeyRef.current = null;
+      return;
+    }
+    if (lastInitializedEntryKeyRef.current === writeEntryKey) return;
+    lastInitializedEntryKeyRef.current = writeEntryKey;
+    let cancelled = false;
 
     void (async () => {
-      const paramPostId =
-        params && (params as any).postId ? String((params as any).postId) : null;
+      resetWriteState();
 
-      if (paramPostId) {
+      if (routePostId) {
         setEditLoading(true);
         setEditError(null);
         try {
-          const editable = await getEditablePost(paramPostId);
+          const editable = await getEditablePost(routePostId);
+          if (cancelled) return;
           logger.debug("[write] edit post restored", { postId: editable.id });
           setEditPostId(editable.id);
           setTitle(editable.title);
@@ -533,19 +585,18 @@ export default function Write() {
           setLayout(parseLayoutJson(editable.layoutJson));
           setActiveBoxId("text_box");
         } catch (err) {
+          if (cancelled) return;
           logger.warn("[write] edit post load error", err);
           setEditError(normalizeApiError(err));
         } finally {
-          setEditLoading(false);
+          if (!cancelled) setEditLoading(false);
         }
         return;
       }
 
-      const paramDraftId =
-        params && (params as any).draftId ? String((params as any).draftId) : null;
-
-      if (paramDraftId) {
-        const d = await loadWriteDraftById(paramDraftId);
+      if (routeDraftId) {
+        const d = await loadWriteDraftById(routeDraftId);
+        if (cancelled) return;
         if (d) {
           logger.debug("[write] draft restored by param", { draftId: d.id });
           setDraftId(d.id);
@@ -568,6 +619,7 @@ export default function Write() {
       }
 
       if (promptQuestFromParams) {
+        if (cancelled) return;
         logger.debug("[write] prompt quest restored", {
           stateId: promptQuestFromParams.stateId,
           promptKey: promptQuestFromParams.promptKey,
@@ -580,7 +632,10 @@ export default function Write() {
         return;
       }
 
+      if (routeNewDraft) return;
+
       const drafts = await listWriteDrafts();
+      if (cancelled) return;
       if (drafts.length === 0) return;
 
       // ✅ 임시저장 존재 시 먼저 선택 Alert
@@ -590,7 +645,10 @@ export default function Write() {
           {
             text: "새로 쓰기",
             variant: "cancel",
-            onPress: () => closeDraftPrompt(),
+            onPress: () => {
+              resetWriteState();
+              closeDraftPrompt();
+            },
             testID: "confirm-draft-new",
           },
           {
@@ -604,8 +662,20 @@ export default function Write() {
         ],
       });
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    closeDraftPrompt,
+    openDraftPrompt,
+    isFocused,
+    promptQuestFromParams,
+    resetWriteState,
+    routeDraftId,
+    routeNewDraft,
+    routePostId,
+    writeEntryKey,
+  ]);
 
   const activeConfirm = draftPrompt ?? leaveConfirm;
 
