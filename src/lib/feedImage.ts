@@ -123,6 +123,45 @@ export function buildFeedPreviewUrl({
   return buildApiUrl(`/api/feed-images/preview?${query.toString()}`);
 }
 
+export function buildFallbackFeedPreview({
+  title,
+  content,
+  category,
+  createdAt,
+  layout,
+  template,
+  fontKey = "serif",
+}: PreviewInput): FeedPreviewRenderImages {
+  const templateKey = normalizePostBackgroundTemplateId(template ?? layout.presetId);
+  const imageUrl = buildFeedPreviewUrl({
+    title,
+    content,
+    category,
+    createdAt,
+    layout,
+    template: templateKey,
+    fontKey,
+  });
+
+  return {
+    imageUrl,
+    primaryImage: imageUrl,
+    images: [imageUrl],
+    hasMultiple: false,
+    renderImages: {
+      primaryImage: imageUrl,
+      images: [imageUrl],
+      hasMultiple: false,
+      pageCount: 1,
+      pageCap: 1,
+      isTruncated: false,
+      template: templateKey,
+      scale: 2,
+      version: buildFeedImageVersion([title, content, category, templateKey, fontKey]),
+    },
+  };
+}
+
 function toAbsoluteApiUrl(value: unknown) {
   const raw = typeof value === "string" ? value.trim() : "";
   if (!raw) return "";

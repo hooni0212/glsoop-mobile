@@ -159,6 +159,7 @@ export default function Write() {
   const hasChanges =
     title.trim().length > 0 ||
     body.trim().length > 0 ||
+    hashtagsInput.trim().length > 0 ||
     selectedType !== null ||
     questContext !== null ||
     fontKey !== "serif" ||
@@ -193,9 +194,11 @@ export default function Write() {
     const trimmedTitle = title.trim();
     const trimmedBody = body.trim();
     const hasDraftableChanges =
-      Boolean(trimmedTitle || trimmedBody || selectedType) ||
+      Boolean(trimmedTitle || trimmedBody || selectedType || hashtagChips.length > 0) ||
       Boolean(questContext) ||
       fontKey !== "serif" ||
+      visibility !== "public" ||
+      commentPolicy !== "logged_in" ||
       hasLayoutChanges;
     if (!hasDraftableChanges) {
       showToast("임시저장할 내용이 없어요.");
@@ -207,6 +210,7 @@ export default function Write() {
       titleLen: trimmedTitle.length,
       bodyLen: trimmedBody.length,
       category: selectedType,
+      hashtagCount: hashtagChips.length,
     });
 
     try {
@@ -215,6 +219,7 @@ export default function Write() {
         title: trimmedTitle,
         body: trimmedBody,
         category: selectedType ?? undefined,
+        hashtags: hashtagChips,
         fontKey,
         layoutJson: buildLayoutPayload(layout),
         visibility,
@@ -231,7 +236,7 @@ export default function Write() {
       showToast("임시저장에 실패했어요. 잠시 후 다시 시도해주세요.", { tone: "error" });
       return false;
     }
-  }, [title, body, draftId, editPostId, selectedType, fontKey, layout, visibility, commentPolicy, questContext, hasLayoutChanges, showToast]);
+  }, [title, body, draftId, editPostId, selectedType, hashtagChips, fontKey, layout, visibility, commentPolicy, questContext, hasLayoutChanges, showToast]);
 
   const { confirm: leaveConfirm, requestLeave, allowNextLeave } = useConfirmBeforeLeave({
     hasChanges,
@@ -547,12 +552,13 @@ export default function Write() {
           setTitle(d.title);
           setBody(d.body);
           setSelectedType(d.category ?? null);
-          setHashtagsInput("");
+          const draftHashtags = Array.isArray(d.hashtags) ? d.hashtags : [];
+          setHashtagsInput(draftHashtags.length > 0 ? draftHashtags.join(", ") : "");
           setFontKey(d.fontKey ?? "serif");
           setVisibility(d.visibility ?? "public");
           setCommentPolicy(d.commentPolicy ?? "logged_in");
           setQuestContext(d.questContext ?? null);
-          if (d.questContext?.suggestedHashtags?.length) {
+          if (draftHashtags.length === 0 && d.questContext?.suggestedHashtags?.length) {
             setHashtagsInput(d.questContext.suggestedHashtags.join(", "));
           }
           setLayout(parseLayoutJson(d.layoutJson));

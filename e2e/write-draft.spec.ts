@@ -12,6 +12,7 @@ type DraftSeed = {
   body: string;
   updatedAt: number;
   category?: string;
+  hashtags?: string[];
   layoutJson?: unknown;
   authNamespace?: string;
 };
@@ -166,7 +167,7 @@ test.describe("글쓰기 임시저장 (웹)", () => {
     await expect(page.getByTestId("draft-item-draft-b")).toHaveCount(0);
   });
 
-  test("S4) draft의 행간/자간 layout_json을 복구해서 그대로 전송한다", async ({ page }) => {
+  test("S4) draft의 paper02/해시태그/행간/자간 layout_json을 복구해서 그대로 전송한다", async ({ page }) => {
     const capture: { payload?: CapturedPostPayload } = {};
     await page.route("**/api/posts", async (route) => {
       if (route.request().method() !== "POST") {
@@ -189,9 +190,13 @@ test.describe("글쓰기 임시저장 (웹)", () => {
         title: "레이아웃 초안",
         body: "행간 자간이 저장된 본문",
         category: "essay",
+        hashtags: ["paper02", "draft"],
         layoutJson: {
           layout_version: 1,
           unit: "normalized",
+          canvas: {
+            presetId: "paper02",
+          },
           title_box: {
             x: 0.336,
             y: 0.256,
@@ -243,5 +248,7 @@ test.describe("글쓰기 임시저장 (웹)", () => {
     expect(layoutJson?.title_box?.letter_spacing).toBe(0.04);
     expect(layoutJson?.text_box?.line_height).toBe(1.45);
     expect(layoutJson?.text_box?.letter_spacing).toBe(-0.02);
+    expect(layoutJson?.canvas?.presetId).toBe("paper02");
+    expect(capture.payload?.hashtags).toEqual(["paper02", "draft"]);
   });
 });

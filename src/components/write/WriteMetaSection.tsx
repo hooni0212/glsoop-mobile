@@ -137,6 +137,7 @@ export function WriteMetaSection({
             placeholder="#감정, 봄밤, 기록"
             autoCapitalize="none"
             style={styles.metaInput}
+            testID="write-hashtags-input"
           />
           {hashtagChips.length > 0 ? (
             <View style={styles.metaChipWrap}>

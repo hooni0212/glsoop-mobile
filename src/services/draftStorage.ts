@@ -10,6 +10,7 @@ export type WriteDraft = {
   category?: PostType;
   visibility?: PostVisibility;
   commentPolicy?: PostCommentPolicy;
+  hashtags?: string[];
   fontKey?: PostFontKey;
   layoutJson?: unknown;
   mode?: "create" | "edit";
@@ -55,6 +56,26 @@ function safeJsonParse<T>(raw: string | null): T | null {
   }
 }
 
+function normalizeDraftHashtags(input: unknown): string[] {
+  const values = Array.isArray(input)
+    ? input
+    : typeof input === "string"
+      ? input.split(/[\s,]+/)
+      : [];
+  const seen = new Set<string>();
+  const tags: string[] = [];
+
+  for (const value of values) {
+    const tag = String(value).trim().replace(/^#+/, "").toLowerCase();
+    if (!tag || seen.has(tag)) continue;
+    seen.add(tag);
+    tags.push(tag);
+    if (tags.length >= 12) break;
+  }
+
+  return tags;
+}
+
 function normalizeDraft(input: any): WriteDraft | null {
   if (!input || typeof input !== "object") return null;
 
@@ -79,6 +100,7 @@ function normalizeDraft(input: any): WriteDraft | null {
     input.commentPolicy === "closed"
       ? input.commentPolicy
       : "logged_in";
+  const hashtags = normalizeDraftHashtags(input.hashtags);
   const fontKey =
     input.fontKey === "sans" || input.fontKey === "hand" || input.fontKey === "serif"
       ? input.fontKey
@@ -104,6 +126,7 @@ function normalizeDraft(input: any): WriteDraft | null {
     category,
     visibility,
     commentPolicy,
+    hashtags: hashtags.length > 0 ? hashtags : undefined,
     fontKey,
     layoutJson,
     mode,
@@ -163,16 +186,12 @@ async function loadAll(): Promise<WriteDraft[]> {
 }
 
 async function saveAll(drafts: WriteDraft[]): Promise<void> {
-  try {
-    // enforce newest-first & max
-    const sorted = [...drafts].sort((a, b) => b.updatedAt - a.updatedAt);
-    await AsyncStorage.setItem(
-      DRAFTS_KEY,
-      JSON.stringify(sorted.slice(0, MAX_DRAFTS))
-    );
-  } catch {
-    // ignore
-  }
+  // enforce newest-first & max
+  const sorted = [...drafts].sort((a, b) => b.updatedAt - a.updatedAt);
+  await AsyncStorage.setItem(
+    DRAFTS_KEY,
+    JSON.stringify(sorted.slice(0, MAX_DRAFTS))
+  );
 }
 
 export async function listWriteDrafts(): Promise<WriteDraft[]> {
@@ -218,6 +237,7 @@ export async function upsertWriteDraft(input: {
   category?: PostType;
   visibility?: PostVisibility;
   commentPolicy?: PostCommentPolicy;
+  hashtags?: string[] | string | null;
   fontKey?: PostFontKey;
   layoutJson?: unknown;
   mode?: "create" | "edit";
@@ -227,6 +247,7 @@ export async function upsertWriteDraft(input: {
   const id = buildDraftId(input);
   const mode = input.mode === "edit" ? "edit" : "create";
   const authNamespace = await getCurrentAuthNamespace();
+  const hashtags = normalizeDraftHashtags(input.hashtags);
   const payload: WriteDraft = {
     id,
     title: input.title ?? "",
@@ -234,6 +255,7 @@ export async function upsertWriteDraft(input: {
     category: input.category,
     visibility: input.visibility ?? "public",
     commentPolicy: input.commentPolicy ?? "logged_in",
+    hashtags: hashtags.length > 0 ? hashtags : undefined,
     fontKey: input.fontKey ?? "serif",
     layoutJson: input.layoutJson ?? null,
     mode,
@@ -244,13 +266,9 @@ export async function upsertWriteDraft(input: {
     expiresAt: Date.now() + DRAFT_TTL_MS,
   };
 
-  try {
-    const drafts = await loadAll();
-    const next = [payload, ...drafts.filter((d) => d.id !== id)];
-    await saveAll(next);
-  } catch {
-    // ignore
-  }
+  const drafts = await loadAll();
+  const next = [payload, ...drafts.filter((d) => d.id !== id)];
+  await saveAll(next);
 
   return id;
 }

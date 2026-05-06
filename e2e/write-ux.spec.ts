@@ -253,6 +253,67 @@ test.describe("Write 임시저장 UX", () => {
     expect(metricsAfterResize).not.toBe(metricsAfterNudge);
   });
 
+  test("S2-3: 웹 기본 배경 글을 paper02로 수정해도 저장 본문이 반복되지 않는다", async ({ page }) => {
+    await clearDrafts(page);
+    await page.unroute("**/api/posts**");
+
+    const capture: { payload?: CapturedPostPayload } = {};
+    await page.route("**/api/posts**", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ ok: true, posts: [], hasMore: false }),
+      });
+    });
+    await page.route("**/api/posts/web-basic-edit/edit", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          post: {
+            id: "web-basic-edit",
+            title: "웹 기본 배경 글",
+            content: "<p>첫 문장</p><p>둘째 문장</p>",
+            category: "short",
+            hashtags: ["웹"],
+            layout_json: null,
+            visibility: "public",
+            comment_policy: "logged_in",
+          },
+        }),
+      });
+    });
+    await page.route("**/api/posts/web-basic-edit", async (route) => {
+      if (route.request().method() !== "PUT") {
+        await route.fallback();
+        return;
+      }
+
+      capture.payload = route.request().postDataJSON() as CapturedPostPayload;
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ ok: true }),
+      });
+    });
+
+    await page.goto("/write?postId=web-basic-edit");
+    await expect(page.getByTestId("write-body-input")).toHaveValue("첫 문장\n\n둘째 문장");
+
+    const submitBtn = page.getByTestId("write-submit-btn");
+    await submitBtn.click();
+    await expect(page.getByText("미리보기", { exact: true })).toBeVisible();
+    await page.getByTestId("write-preview-panel-background").click();
+    await page.getByTestId("write-background-paper02").click();
+    await submitBtn.click();
+
+    await expect(page.getByText("완료되었어요")).toBeVisible();
+    expect(capture.payload).toBeTruthy();
+    expect(capture.payload?.layout_json?.canvas?.presetId).toBe("paper02");
+    expect(capture.payload?.content).toBe("<!--FONT:serif-->첫 문장\n\n둘째 문장");
+  });
+
   test("S3: 작성 중 X confirm (취소/그냥 닫기/임시 저장하기)", async ({ page }) => {
     await clearDrafts(page);
 

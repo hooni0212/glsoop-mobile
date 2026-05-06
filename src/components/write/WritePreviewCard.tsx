@@ -14,7 +14,11 @@ import { Image } from "expo-image";
 
 import { useAuth } from "@/auth/AuthContext";
 import { COOKIE_SESSION_TOKEN } from "@/lib/authToken";
-import { createFeedPreviewSession, type FeedPreviewRenderImages } from "@/lib/feedImage";
+import {
+  buildFallbackFeedPreview,
+  createFeedPreviewSession,
+  type FeedPreviewRenderImages,
+} from "@/lib/feedImage";
 import { logger } from "@/lib/logger";
 import type { PostFontKey } from "@/lib/postContent";
 import type { WriteLayoutModel } from "@/lib/postLayout";
@@ -32,11 +36,6 @@ type Props = {
   fontKey: PostFontKey;
   compact?: boolean;
 };
-
-function resolveErrorMessage(error: unknown) {
-  if (error instanceof Error && error.message) return error.message;
-  return "미리보기를 불러오지 못했어요. 저장은 계속할 수 있습니다.";
-}
 
 function isPreviewSessionImageUrl(uri: string) {
   return uri.includes(PREVIEW_SESSION_PATH);
@@ -62,6 +61,7 @@ export function WritePreviewCard({
 
   const requestSeqRef = useRef(0);
   const previewRef = useRef<FeedPreviewRenderImages | null>(null);
+  const previousVisualSignatureRef = useRef<string | null>(null);
   const previewCreatedAtRef = useRef(new Date().toISOString());
   const listRef = useRef<FlatList<string> | null>(null);
 
@@ -72,14 +72,33 @@ export function WritePreviewCard({
     }),
     [layout]
   );
+  const previewVisualSignature = useMemo(
+    () =>
+      JSON.stringify({
+        category: selectedType ?? "short",
+        fontKey,
+        layout: previewLayout,
+      }),
+    [fontKey, previewLayout, selectedType]
+  );
 
   useEffect(() => {
     const requestSeq = requestSeqRef.current + 1;
     requestSeqRef.current = requestSeq;
-    if (!previewRef.current) {
+    const shouldResetPreview = previousVisualSignatureRef.current !== previewVisualSignature;
+    previousVisualSignatureRef.current = previewVisualSignature;
+
+    if (shouldResetPreview) {
+      previewRef.current = null;
+      setPreview(null);
+      setCurrentPage(0);
+    }
+
+    if (shouldResetPreview || !previewRef.current) {
       setLoading(true);
     }
     setError(null);
+    setImageLoadError(null);
 
     const timer = setTimeout(() => {
       void (async () => {
@@ -102,7 +121,20 @@ export function WritePreviewCard({
           );
         } catch (nextError) {
           if (requestSeq !== requestSeqRef.current) return;
-          setError(resolveErrorMessage(nextError));
+          const fallbackPreview = buildFallbackFeedPreview({
+            title: previewTitle,
+            content: previewBody,
+            category: selectedType ?? "short",
+            layout: previewLayout,
+            template: previewLayout.presetId,
+            fontKey,
+            createdAt: previewCreatedAtRef.current,
+          });
+          logger.warn("[write-preview] session preview failed; using fallback URL", nextError);
+          previewRef.current = fallbackPreview;
+          setPreview(fallbackPreview);
+          setCurrentPage(0);
+          setError(null);
         } finally {
           if (requestSeq === requestSeqRef.current) {
             setLoading(false);
@@ -114,7 +146,7 @@ export function WritePreviewCard({
     return () => {
       clearTimeout(timer);
     };
-  }, [fontKey, previewBody, previewLayout, previewTitle, selectedType]);
+  }, [fontKey, previewBody, previewLayout, previewTitle, previewVisualSignature, selectedType]);
 
   useEffect(() => {
     previewRef.current = preview;

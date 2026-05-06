@@ -31,7 +31,7 @@ export function extractPostFontKey(input: unknown): PostFontKey {
 
 export function withPostFontMeta(input: string, fontKey: PostFontKey): string {
   const safeFontKey = fontKey === "sans" || fontKey === "hand" ? fontKey : "serif";
-  const content = typeof input === "string" ? input.replace(FONT_META_RE, "").trim() : "";
+  const content = normalizePostEditorText(input);
   return `<!--FONT:${safeFontKey}-->${content}`;
 }
 
@@ -51,6 +51,7 @@ export function normalizePostEditorText(input: unknown): string {
     .replace(/\r\n/g, "\n")
     .replace(/\u00a0/g, " ")
     .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n[ \t]+/g, "\n")
     .replace(/\n{3,}/g, "\n\n")
     .replace(/[ \t]{2,}/g, " ");
 
