@@ -715,8 +715,6 @@ export default function Write() {
           submitAccessibilityLabel={primaryActionAccessibilityLabel}
           onPressDrafts={onPressDrafts}
           previewOpen={previewOpen}
-          isKeyboardVisible={isKeyboardVisible}
-          onPressHideKeyboard={dismissKeyboard}
           styles={styles}
         />
 

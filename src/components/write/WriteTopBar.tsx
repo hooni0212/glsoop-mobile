@@ -13,8 +13,6 @@ type Props = {
   submitAccessibilityLabel?: string;
   onPressDrafts?: () => void;
   previewOpen?: boolean;
-  isKeyboardVisible?: boolean;
-  onPressHideKeyboard?: () => void;
   styles: any;
 };
 
@@ -28,8 +26,6 @@ export function WriteTopBar({
   submitAccessibilityLabel = submitLabel,
   onPressDrafts,
   previewOpen,
-  isKeyboardVisible,
-  onPressHideKeyboard,
   styles,
 }: Props) {
   return (
@@ -75,23 +71,6 @@ export function WriteTopBar({
             testID="write-drafts-btn"
           >
             <Ionicons name="file-tray-outline" size={20} color={tokens.colors.text} />
-          </Pressable>
-        )}
-
-        {!!isKeyboardVisible && !!onPressHideKeyboard && (
-          <Pressable
-            onPress={onPressHideKeyboard}
-            hitSlop={12}
-            style={styles.iconBtn}
-            accessibilityRole="button"
-            accessibilityLabel="키보드 내리기"
-            testID="write-hide-keyboard-btn"
-          >
-            <Ionicons
-              name="chevron-down-circle-outline"
-              size={20}
-              color={tokens.colors.text}
-            />
           </Pressable>
         )}
 
