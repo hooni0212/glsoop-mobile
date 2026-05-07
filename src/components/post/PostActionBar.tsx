@@ -10,9 +10,13 @@ export type PostActionBarProps = {
   onPressLike: () => void;
   onPressBookmark: () => void;
   onPressShare: () => void;
+  onPressSaveImage?: () => void;
   likeDisabled?: boolean;
+  shareDisabled?: boolean;
+  saveImageDisabled?: boolean;
   likeTestID?: string;
   bookmarkTestID?: string;
+  saveImageTestID?: string;
   shareTestID?: string;
   height: number;
   paddingBottom: number;
@@ -31,9 +35,13 @@ export function PostActionBar({
   onPressLike,
   onPressBookmark,
   onPressShare,
+  onPressSaveImage,
   likeDisabled,
+  shareDisabled,
+  saveImageDisabled,
   likeTestID,
   bookmarkTestID,
+  saveImageTestID,
   shareTestID,
   height,
   paddingBottom,
@@ -70,7 +78,27 @@ export function PostActionBar({
         <Text style={styles.actionLabel}>저장</Text>
       </Pressable>
 
-      <Pressable onPress={onPressShare} style={styles.actionBtn} hitSlop={10} testID={shareTestID}>
+      {onPressSaveImage ? (
+        <Pressable
+          onPress={onPressSaveImage}
+          style={styles.actionBtn}
+          hitSlop={10}
+          disabled={saveImageDisabled}
+          accessibilityLabel="사진 앱에 저장"
+          testID={saveImageTestID}
+        >
+          <Ionicons name="download-outline" size={22} color={tokens.colors.textMuted} />
+          <Text style={styles.actionLabel}>사진 저장</Text>
+        </Pressable>
+      ) : null}
+
+      <Pressable
+        onPress={onPressShare}
+        style={styles.actionBtn}
+        hitSlop={10}
+        disabled={shareDisabled}
+        testID={shareTestID}
+      >
         <Ionicons name="share-social-outline" size={22} color={tokens.colors.textMuted} />
         <Text style={styles.actionLabel}>공유</Text>
       </Pressable>

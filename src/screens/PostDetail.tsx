@@ -50,6 +50,7 @@ import {
   ActivityIndicator,
   Alert,
   InteractionManager,
+  Linking,
   Modal,
   Platform,
   Pressable,
@@ -154,23 +155,66 @@ async function downloadPostShareImage(postId: string, imageUrl: string) {
   return downloaded.uri;
 }
 
-async function ensureMediaLibrarySavePermission() {
+type MediaLibrarySavePermissionResult =
+  | { status: "granted" }
+  | { status: "unavailable"; message: string }
+  | {
+      status: "denied";
+      source: "existing" | "request";
+      message: string;
+    };
+
+async function requestMediaLibrarySavePermission(): Promise<MediaLibrarySavePermissionResult> {
   const isAvailable = await MediaLibrary.isAvailableAsync();
   if (!isAvailable) {
-    throw new Error("이 기기에서는 사진 앱 저장을 지원하지 않아요.");
+    return {
+      status: "unavailable",
+      message: "이 기기에서는 사진 앱 저장을 지원하지 않아요.",
+    };
   }
 
   const currentPermission = await MediaLibrary.getPermissionsAsync(true);
-  if (currentPermission.granted) return;
+  if (currentPermission.granted) {
+    return { status: "granted" };
+  }
 
   if (!currentPermission.canAskAgain) {
-    throw new Error("사진 앱 저장 권한이 꺼져 있어요. 기기 설정에서 글숲의 사진 권한을 허용해주세요.");
+    return {
+      status: "denied",
+      source: "existing",
+      message: "사진 앱 저장 권한이 꺼져 있어요. 기기 설정에서 글숲의 사진 권한을 허용해주세요.",
+    };
   }
 
   const nextPermission = await MediaLibrary.requestPermissionsAsync(true);
   if (!nextPermission.granted) {
-    throw new Error("사진 앱에 저장하려면 사진 추가 권한이 필요해요.");
+    return {
+      status: "denied",
+      source: "request",
+      message: "사진 앱에 저장하려면 사진 추가 권한이 필요해요.",
+    };
   }
+
+  return { status: "granted" };
+}
+
+async function shareImageFile({
+  imageUri,
+  shareTitle,
+}: {
+  imageUri: string;
+  shareTitle: string;
+}) {
+  const canShareFile = await Sharing.isAvailableAsync();
+  if (!canShareFile) {
+    throw new Error("이 기기에서는 이미지 공유를 지원하지 않아요.");
+  }
+
+  await Sharing.shareAsync(imageUri, {
+    dialogTitle: shareTitle,
+    mimeType: "image/png",
+    UTI: "public.png",
+  });
 }
 
 function getShareFailureMessage(mode: ShareMode, error: unknown) {
@@ -214,6 +258,7 @@ export default function PostDetail() {
   const [bookmarkLists, setBookmarkLists] = useState<BookmarkList[]>([]);
   const [bookmarkPending, setBookmarkPending] = useState<Record<string, boolean>>({});
   const [shareSubmitting, setShareSubmitting] = useState<ShareMode | null>(null);
+  const [photoSavePermissionDeniedOnce, setPhotoSavePermissionDeniedOnce] = useState(false);
   const [canManagePost, setCanManagePost] = useState(false);
   const [manageBusy, setManageBusy] = useState(false);
   const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
@@ -752,8 +797,63 @@ export default function PostDetail() {
         const imageUri = await downloadPostShareImage(post.id, imageUrl);
 
         if (mode === "imageSave") {
-          await ensureMediaLibrarySavePermission();
+          const permission = await requestMediaLibrarySavePermission();
+          if (permission.status === "unavailable") {
+            throw new Error(permission.message);
+          }
+
+          if (permission.status === "denied") {
+            const shouldOpenSettingsPrompt =
+              photoSavePermissionDeniedOnce || permission.source === "existing";
+            setPhotoSavePermissionDeniedOnce(true);
+
+            if (shouldOpenSettingsPrompt) {
+              Alert.alert(
+                "사진 저장 권한이 꺼져 있어요",
+                "설정에서 글숲의 사진 추가 권한을 허용하면 글 이미지를 사진 앱에 저장할 수 있어요.",
+                [
+                  { text: "나중에", style: "cancel" },
+                  {
+                    text: "설정 열기",
+                    onPress: () => {
+                      Linking.openSettings().catch((settingsError) => {
+                        if (__DEV__) {
+                          logger.warn("[share] failed to open app settings", settingsError);
+                        }
+                        showToast("설정을 열지 못했어요. 기기 설정에서 글숲 권한을 확인해주세요.", {
+                          tone: "error",
+                        });
+                      });
+                    },
+                  },
+                ]
+              );
+              logShareEventSafely("failed", {
+                ...baseMeta,
+                image_format: "png",
+                image_template: shareTemplate,
+                image_url: imageUrl,
+                action: "photo_permission_settings_prompt",
+                permission_source: permission.source,
+              });
+              return;
+            }
+
+            await shareImageFile({ imageUri, shareTitle });
+            logShareEventSafely("shared", {
+              ...baseMeta,
+              image_format: "png",
+              image_template: shareTemplate,
+              image_url: imageUrl,
+              action: "photo_permission_share_fallback",
+              permission_source: permission.source,
+            });
+            showToast("사진 앱 권한이 없어 공유 화면으로 대신 열었어요.");
+            return;
+          }
+
           await MediaLibrary.saveToLibraryAsync(imageUri);
+          setPhotoSavePermissionDeniedOnce(false);
           logShareEventSafely("shared", {
             ...baseMeta,
             image_format: "png",
@@ -765,16 +865,7 @@ export default function PostDetail() {
           return;
         }
 
-        const canShareFile = await Sharing.isAvailableAsync();
-        if (!canShareFile) {
-          throw new Error("이 기기에서는 이미지 공유를 지원하지 않아요.");
-        }
-
-        await Sharing.shareAsync(imageUri, {
-          dialogTitle: shareTitle,
-          mimeType: "image/png",
-          UTI: "public.png",
-        });
+        await shareImageFile({ imageUri, shareTitle });
         logShareEventSafely("shared", {
           ...baseMeta,
           image_format: "png",
@@ -1085,9 +1176,15 @@ export default function PostDetail() {
             onPressLike={onPressLike}
             onPressBookmark={() => void openBookmarkModal()}
             onPressShare={() => void onPressShare()}
+            onPressSaveImage={
+              Platform.OS !== "web" ? () => void sharePost("imageSave") : undefined
+            }
             likeDisabled={likePending}
+            shareDisabled={Boolean(shareSubmitting)}
+            saveImageDisabled={Boolean(shareSubmitting)}
             likeTestID="post-like-btn"
             bookmarkTestID="post-bookmark-btn"
+            saveImageTestID="post-save-image-btn"
             shareTestID="post-share-btn"
             height={dock.action.height}
             paddingBottom={dock.action.paddingBottom}
@@ -1424,19 +1521,6 @@ export default function PostDetail() {
             <View style={styles.bookmarkModalList}>
               {Platform.OS !== "web" ? (
                 <>
-                  <Pressable
-                    onPress={() => void sharePost("imageSave")}
-                    disabled={Boolean(shareSubmitting)}
-                    style={[
-                      styles.bookmarkModalListItem,
-                      shareSubmitting && styles.bookmarkModalListItemDisabled,
-                    ]}
-                  >
-                    <Text style={styles.bookmarkModalListItemName}>이미지 저장</Text>
-                    <Text style={styles.bookmarkModalListItemStatus}>
-                      {shareSubmitting === "imageSave" ? "저장 중" : "사진 앱"}
-                    </Text>
-                  </Pressable>
                   <Pressable
                     onPress={() => void sharePost("imageShare")}
                     disabled={Boolean(shareSubmitting)}
