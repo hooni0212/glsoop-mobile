@@ -6,13 +6,14 @@
 
 - 로컬 모바일 문서 인덱스: `docs/README.md`
 - 모바일 API 문서: `docs/api/README.md`
-- 작업 시작용 canonical 문서: `../glsoop-ops/docs/operations/agent-start-here.md`
-- 공통 release canonical: `../glsoop-ops/docs/release/mobile/`
-- App Review canonical: `../glsoop-ops/docs/app-review/ios/`
-- 문서 표준 canonical: `../glsoop-ops/docs/operations/documentation-standard.md`
-- Notion sync 표준 canonical: `../glsoop-ops/docs/operations/notion-sync-standard.md`
-- QA taxonomy canonical: `../glsoop-ops/docs/qa/README.md`
-- 공통 운영/아카이브 canonical: `../glsoop-ops/docs/operations/glsoop-mobile/`, `../glsoop-ops/docs/archive/glsoop-mobile/`
+- 문서 허브: `../glsoop-docs/00_Index/문서-허브.md`
+- 작업 시작용 canonical 문서: `../glsoop-docs/08_Operations/agent-start-here.md`
+- 공통 release canonical: `../glsoop-docs/06_Release/mobile/`
+- App Review canonical: `../glsoop-docs/07_App_Review/ios/`
+- 문서 표준 canonical: `../glsoop-docs/08_Operations/documentation-standard.md`
+- Notion sync 표준 canonical: `../glsoop-docs/08_Operations/notion-sync-standard.md`
+- QA taxonomy canonical: `../glsoop-docs/05_QA/README.md`
+- 공통 운영/아카이브 canonical: `../glsoop-docs/08_Operations/glsoop-mobile/`, `../glsoop-docs/90_Archive/glsoop-mobile/`
 
 실행/빌드와 직접 연결된 Expo/EAS 설정, 앱 자산, runtime URL 관련 코드는 이 저장소를 기준으로 유지합니다.
 
@@ -107,12 +108,13 @@ npx playwright test e2e/search.spec.ts
 
 ## iOS 시뮬레이터 캡처
 
-네이티브 iOS 시뮬레이터에서 대표 화면을 캡처해 `glsoop-ops` archive 경로에 날짜별로 저장할 수 있습니다.
+네이티브 iOS 시뮬레이터에서 대표 화면을 캡처해 날짜별 archive 경로에 저장할 수 있습니다.
+새 canonical 보관 위치는 `../glsoop-docs/90_Archive/glsoop-mobile/ios-simulator-screenshots/`입니다.
 
 사전 준비:
 
 - Maestro CLI 설치 및 PATH 등록
-- sibling repo `../glsoop-ops` 존재
+- sibling repo `../glsoop-docs` 존재
 - QA 계정 env 설정
 
 ```bash
@@ -130,14 +132,14 @@ npm run ops:ios:screenshots
 
 ```bash
 npm run ops:ios:screenshots -- --device=iphone
-IOS_SCREENSHOT_OUTPUT_ROOT=../glsoop-ops/docs/archive/glsoop-mobile/ios-simulator-screenshots npm run ops:ios:screenshots
+IOS_SCREENSHOT_OUTPUT_ROOT=../glsoop-docs/90_Archive/glsoop-mobile/ios-simulator-screenshots npm run ops:ios:screenshots
 IOS_SCREENSHOT_APP_BINARY=/absolute/path/to/Glsoop.app npm run ops:ios:screenshots
 ```
 
 기본 동작:
 
 - 디바이스: `iPhone 16e`, `iPad Air 11-inch (M3)`
-- 출력 루트: `../glsoop-ops/docs/archive/glsoop-mobile/ios-simulator-screenshots/YYYY-MM-DD/run-HHMMSS/`
+- 출력 루트: 스크립트 기본값은 legacy `../glsoop-ops/docs/archive/glsoop-mobile/ios-simulator-screenshots/YYYY-MM-DD/run-HHMMSS/`이며, canonical 보관은 `IOS_SCREENSHOT_OUTPUT_ROOT`로 `../glsoop-docs/90_Archive/glsoop-mobile/ios-simulator-screenshots/`를 지정한다.
 - 공개 최신 글 기준으로 글 상세/작가 화면 캡처
 - 앱이 설치되어 있지 않으면 `npx expo run:ios`로 빌드/설치를 시도
 
