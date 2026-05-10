@@ -23,6 +23,21 @@ import {
   type ProfileCosmeticsState,
 } from "@/types/cosmetics";
 
+const PROFILE_UI_COLORS = {
+  paper: "#FAF8F1",
+  ink: "#222222",
+  muted: "#77736A",
+  border: "#E6E0D5",
+  green: "#3F7A4C",
+  greenSoft: "#EAF4EC",
+  warmSoft: "#FFF8E9",
+  blueSoft: "#EEF5FB",
+};
+
+const NON_SELECTABLE_TEXT = {
+  userSelect: "none",
+} as const;
+
 function toEmoji(value: string | null | undefined, fallback: string) {
   if (!value) return fallback;
   const trimmed = value.trim();
@@ -41,6 +56,8 @@ function backgroundTone(key: string | null | undefined) {
       backgroundColor: "#EAF5EE",
       borderColor: "#9EC9AD",
       accentColor: tokens.colors.green700,
+      surfaceColor: "#DCEFE4",
+      lineColor: "#A7CDB4",
     };
   }
   if (key === "background_deep_forest") {
@@ -48,6 +65,8 @@ function backgroundTone(key: string | null | undefined) {
       backgroundColor: "#DCEFE5",
       borderColor: "#7DAE91",
       accentColor: tokens.colors.green900,
+      surfaceColor: "#C7E1D2",
+      lineColor: "#7DAE91",
     };
   }
   if (key === "background_prompt_letters") {
@@ -55,12 +74,48 @@ function backgroundTone(key: string | null | undefined) {
       backgroundColor: "#FFF1E8",
       borderColor: "#E6BDA6",
       accentColor: "#8A4B2A",
+      surfaceColor: "#FFE3D1",
+      lineColor: "#D49A7C",
     };
   }
   return {
-    backgroundColor: tokens.colors.surfaceStrong,
-    borderColor: tokens.colors.border,
+    backgroundColor: PROFILE_UI_COLORS.paper,
+    borderColor: PROFILE_UI_COLORS.border,
     accentColor: tokens.colors.green700,
+    surfaceColor: "#F2ECDF",
+    lineColor: "#D9CEBE",
+  };
+}
+
+function badgeTone(item: CosmeticItem | null) {
+  const key = item?.key ?? "";
+  const rarity = item?.rarity ?? "";
+
+  if (key.includes("like") || key.includes("loved")) {
+    return {
+      backgroundColor: PROFILE_UI_COLORS.blueSoft,
+      borderColor: "#C9DDEB",
+      accentColor: "#326A8F",
+    };
+  }
+  if (key.includes("streak") || key.includes("posts") || key.includes("post")) {
+    return {
+      backgroundColor: PROFILE_UI_COLORS.greenSoft,
+      borderColor: "#C9DDC8",
+      accentColor: PROFILE_UI_COLORS.green,
+    };
+  }
+  if (rarity === "rare" || rarity === "epic") {
+    return {
+      backgroundColor: "#FFF6DB",
+      borderColor: "#E7D69A",
+      accentColor: "#8A6A20",
+    };
+  }
+  return {
+    backgroundColor: PROFILE_UI_COLORS.warmSoft,
+    borderColor: PROFILE_UI_COLORS.border,
+    accentColor: PROFILE_UI_COLORS.green,
   };
 }
 
@@ -75,7 +130,7 @@ function buildSlotSelection(state: ProfileCosmeticsState) {
 export default function ProfileCustomizeScreen() {
   const pathname = usePathname();
   const { showToast } = useToast();
-  const { inventory, profile, loading, error, refetch } = useMyCosmetics();
+  const { inventory, profile, loading, loaded, error, refetch } = useMyCosmetics();
 
   const [selection, setSelection] = React.useState<ProfileCosmeticsState>(
     createEmptyProfileCosmeticsState
@@ -85,10 +140,10 @@ export default function ProfileCustomizeScreen() {
   const hydratedRef = React.useRef(false);
 
   React.useEffect(() => {
-    if (loading || hydratedRef.current) return;
+    if (!loaded || loading || hydratedRef.current) return;
     setSelection(normalizeProfileCosmeticsState(profile));
     hydratedRef.current = true;
-  }, [loading, profile]);
+  }, [loaded, loading, profile]);
 
   const slotSelection = React.useMemo(() => buildSlotSelection(selection), [selection]);
   const hasInventory =
@@ -203,7 +258,7 @@ export default function ProfileCustomizeScreen() {
     }
   }, [pathname, selection, showToast]);
 
-  const showInitialLoading = loading && !hydratedRef.current;
+  const showInitialLoading = !loaded || (loading && !hydratedRef.current);
 
   if (showInitialLoading) {
     return (
@@ -270,15 +325,15 @@ export default function ProfileCustomizeScreen() {
         />
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>프로필 배경</Text>
-          <Text style={styles.sectionHint}>작가 프로필 카드에 적용돼요.</Text>
+          <Text style={styles.sectionTitle}>프로필 분위기</Text>
+          <Text style={styles.sectionHint}>프로필 카드에 담길 분위기를 골라요.</Text>
 
           {inventory.backgrounds.length === 0 ? (
             <Text style={styles.emptyText}>사용할 수 있는 배경이 아직 없어요.</Text>
           ) : (
-            <View style={styles.optionWrap}>
+            <View style={styles.cardGrid}>
               {inventory.backgrounds.map((item) => (
-                <CosmeticChip
+                <BackgroundOptionCard
                   key={item.key}
                   item={item}
                   selected={selection.profile_background_key === item.key}
@@ -292,13 +347,13 @@ export default function ProfileCustomizeScreen() {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>대표 뱃지</Text>
-          <Text style={styles.sectionHint}>닉네임 옆에 표시돼요.</Text>
+          <Text style={styles.sectionHint}>프로필에 가장 먼저 보여줄 나의 흔적을 골라요.</Text>
 
           {inventory.badges.length === 0 ? (
             <Text style={styles.emptyText}>보유한 뱃지가 아직 없어요.</Text>
           ) : (
-            <View style={styles.optionWrap}>
-              <ChoiceChip
+            <View style={styles.cardGrid}>
+              <BadgeOptionCard
                 label="없음"
                 emoji="—"
                 selected={selection.primary_badge_key === null}
@@ -306,9 +361,11 @@ export default function ProfileCustomizeScreen() {
                 testID="profile-primary-none"
               />
               {inventory.badges.map((item) => (
-                <CosmeticChip
+                <BadgeOptionCard
                   key={item.key}
-                  item={item}
+                  label={item.name}
+                  emoji={toEmoji(item.icon_emoji, "🏷️")}
+                  tone={badgeTone(item)}
                   selected={selection.primary_badge_key === item.key}
                   onPress={() => pickPrimaryBadge(item.key)}
                   testID={`profile-primary-${item.key}`}
@@ -320,18 +377,20 @@ export default function ProfileCustomizeScreen() {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>
-            쇼케이스 뱃지 {selection.showcase_badge_keys.length}/{MAX_SHOWCASE_BADGES}
+            표시 배지 {selection.showcase_badge_keys.length}/{MAX_SHOWCASE_BADGES}
           </Text>
-          <Text style={styles.sectionHint}>작가 카드에 최대 6개까지 보여요.</Text>
+          <Text style={styles.sectionHint}>다른 사람에게 보여줄 배지를 선택해요.</Text>
 
           {inventory.badges.length === 0 ? (
-            <Text style={styles.emptyText}>쇼케이스에 올릴 뱃지가 없어요.</Text>
+            <Text style={styles.emptyText}>표시할 뱃지가 없어요.</Text>
           ) : (
-            <View style={styles.optionWrap}>
+            <View style={styles.cardGrid}>
               {inventory.badges.map((item) => (
-                <CosmeticChip
+                <BadgeOptionCard
                   key={`showcase-${item.key}`}
-                  item={item}
+                  label={item.name}
+                  emoji={toEmoji(item.icon_emoji, "🏷️")}
+                  tone={badgeTone(item)}
                   selected={selection.showcase_badge_keys.includes(item.key)}
                   onPress={() => toggleShowcaseBadge(item.key)}
                   testID={`profile-showcase-${item.key}`}
@@ -349,29 +408,42 @@ export default function ProfileCustomizeScreen() {
             <Text style={styles.emptyText}>보유한 스티커가 아직 없어요.</Text>
           ) : (
             <View style={styles.slotList}>
-              {COSMETIC_STICKER_SLOTS.map((slot) => (
-                <View key={slot} style={styles.slotCard}>
-                  <Text style={styles.slotTitle}>{slotLabel(slot)}</Text>
-                  <View style={styles.optionWrap}>
-                    <ChoiceChip
-                      label="없음"
-                      emoji="—"
-                      selected={!slotSelection.get(slot)}
-                      onPress={() => pickStickerForSlot(slot, null)}
-                      testID={`profile-sticker-${slot}-none`}
-                    />
-                    {inventory.stickers.map((item) => (
-                      <CosmeticChip
-                        key={`${slot}-${item.key}`}
-                        item={item}
-                        selected={slotSelection.get(slot) === item.key}
-                        onPress={() => pickStickerForSlot(slot, item.key)}
-                        testID={`profile-sticker-${slot}-${item.key}`}
+              {COSMETIC_STICKER_SLOTS.map((slot) => {
+                const selectedKey = slotSelection.get(slot);
+                const selectedSticker = inventory.stickers.find(
+                  (item) => item.key === selectedKey
+                );
+
+                return (
+                  <View key={slot} style={styles.slotCard}>
+                    <View style={styles.slotHeaderRow}>
+                      <Text style={styles.slotTitle}>{slotLabel(slot)}</Text>
+                      <Text style={styles.slotSelectedText} numberOfLines={1}>
+                        {selectedSticker?.name ?? "비워둘게요"}
+                      </Text>
+                    </View>
+                    <View style={styles.stickerGrid}>
+                      <StickerOptionCard
+                        label="없음"
+                        emoji="—"
+                        selected={!selectedKey}
+                        onPress={() => pickStickerForSlot(slot, null)}
+                        testID={`profile-sticker-${slot}-none`}
                       />
-                    ))}
+                      {inventory.stickers.map((item) => (
+                        <StickerOptionCard
+                          key={`${slot}-${item.key}`}
+                          label={item.name}
+                          emoji={toEmoji(item.icon_emoji, "🏷️")}
+                          selected={selectedKey === item.key}
+                          onPress={() => pickStickerForSlot(slot, item.key)}
+                          testID={`profile-sticker-${slot}-${item.key}`}
+                        />
+                      ))}
+                    </View>
                   </View>
-                </View>
-              ))}
+                );
+              })}
             </View>
           )}
         </View>
@@ -430,6 +502,11 @@ function ProfilePreview({
     () => new Map(stickerInventory.map((item) => [item.key, item])),
     [stickerInventory]
   );
+  const hasTopLeftSticker = stickers.some(
+    (entry) => entry.slot === "tl" && stickerByKey.has(entry.key)
+  );
+  const previewBadges = showcaseBadges.slice(0, 3);
+  const remainingBadgeCount = Math.max(0, showcaseBadges.length - previewBadges.length);
 
   return (
     <View
@@ -439,6 +516,19 @@ function ProfilePreview({
       ]}
       testID="profile-cosmetics-preview"
     >
+      <View
+        pointerEvents="none"
+        style={[styles.previewPaperWash, { backgroundColor: tone.surfaceColor }]}
+      />
+      <View
+        pointerEvents="none"
+        style={[styles.previewPaperLine, styles.previewPaperLineTop, { backgroundColor: tone.lineColor }]}
+      />
+      <View
+        pointerEvents="none"
+        style={[styles.previewPaperLine, styles.previewPaperLineBottom, { backgroundColor: tone.lineColor }]}
+      />
+
       {stickers.map((entry) => {
         const sticker = stickerByKey.get(entry.key);
         if (!sticker) return null;
@@ -453,24 +543,53 @@ function ProfilePreview({
         );
       })}
 
-      <View style={styles.previewNameRow}>
-        <Text style={styles.previewName}>내 프로필</Text>
-        {primaryBadge ? (
-          <Text accessibilityLabel={`대표 뱃지 ${primaryBadge.name}`} style={styles.previewBadge}>
-            {toEmoji(primaryBadge.icon_emoji, "🏅")}
-          </Text>
-        ) : null}
+      <View style={[styles.previewHeader, hasTopLeftSticker && styles.previewHeaderWithLeftSticker]}>
+        <View
+          style={[
+            styles.previewAvatar,
+            { borderColor: tone.borderColor, backgroundColor: "rgba(255,255,255,0.72)" },
+          ]}
+        >
+          <Text style={styles.previewAvatarText}>글</Text>
+        </View>
+
+        <View
+          style={[
+            styles.previewIdentity,
+            hasTopLeftSticker && styles.previewNameRowWithLeftSticker,
+          ]}
+        >
+          <Text style={styles.previewKicker}>프로필 미리보기</Text>
+          <View style={styles.previewNameRow}>
+            <Text style={styles.previewName}>나의 글숲</Text>
+            {primaryBadge ? (
+              <Text
+                accessibilityLabel={`대표 뱃지 ${primaryBadge.name}`}
+                style={styles.previewBadge}
+              >
+                {toEmoji(primaryBadge.icon_emoji, "🏅")}
+              </Text>
+            ) : null}
+          </View>
+        </View>
       </View>
-      <Text style={styles.previewBio}>업적과 캠페인 보상으로 꾸민 모습입니다.</Text>
-      {showcaseBadges.length > 0 ? (
+
+      <Text style={styles.previewBio}>업적과 캠페인 보상으로 차곡차곡 가꾼 프로필입니다.</Text>
+
+      {previewBadges.length > 0 ? (
         <View style={styles.previewShowcase}>
-          {showcaseBadges.slice(0, MAX_SHOWCASE_BADGES).map((badge) => (
+          {previewBadges.map((badge) => (
             <View key={badge.key} style={styles.previewShowcaseChip}>
               <Text style={styles.previewShowcaseText}>
                 {toEmoji(badge.icon_emoji, "🏅")} {badge.name}
               </Text>
             </View>
           ))}
+          {remainingBadgeCount > 0 ? (
+            <View style={styles.previewShowcaseChip}>
+              <Text style={styles.previewShowcaseText}>+{remainingBadgeCount}</Text>
+            </View>
+          ) : null}
         </View>
       ) : null}
       <Text style={[styles.previewBackgroundLabel, { color: tone.accentColor }]}>
@@ -486,7 +605,7 @@ function getPreviewStickerAnchor(slot: CosmeticStickerSlot) {
   return styles.previewStickerBR;
 }
 
-function CosmeticChip({
+function BackgroundOptionCard({
   item,
   selected,
   onPress,
@@ -497,26 +616,110 @@ function CosmeticChip({
   onPress: () => void;
   testID?: string;
 }) {
+  const tone = backgroundTone(item.key);
+  const emoji = toEmoji(item.icon_emoji, "📜");
+
   return (
-    <ChoiceChip
-      emoji={toEmoji(item.icon_emoji, "🏷️")}
-      label={item.name}
-      selected={selected}
+    <Pressable
       onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`${item.name}${selected ? " 선택됨" : ""}`}
+      accessibilityState={{ selected }}
+      style={({ pressed }) => [
+        styles.backgroundCard,
+        selected && styles.optionCardSelected,
+        pressed && styles.choiceChipPressed,
+      ]}
       testID={testID}
-    />
+    >
+      {selected ? (
+        <View style={styles.optionCheck}>
+          <Ionicons name="checkmark" size={12} color={tokens.colors.textInverse} />
+        </View>
+      ) : null}
+      <View
+        style={[
+          styles.backgroundSwatch,
+          { backgroundColor: tone.backgroundColor, borderColor: tone.borderColor },
+        ]}
+      >
+        <View
+          style={[
+            styles.backgroundSwatchPanel,
+            { backgroundColor: tone.surfaceColor, borderColor: tone.borderColor },
+          ]}
+        />
+        <View style={[styles.backgroundSwatchLine, { backgroundColor: tone.lineColor }]} />
+        <Text style={styles.backgroundSwatchEmoji}>{emoji}</Text>
+      </View>
+      <Text style={[styles.optionCardTitle, selected && styles.optionCardTitleSelected]} numberOfLines={2}>
+        {item.name}
+      </Text>
+    </Pressable>
   );
 }
 
-function ChoiceChip({
-  emoji,
+function BadgeOptionCard({
   label,
+  emoji,
+  selected,
+  onPress,
+  testID,
+  tone,
+}: {
+  label: string;
+  emoji: string;
+  selected: boolean;
+  onPress: () => void;
+  testID?: string;
+  tone?: ReturnType<typeof badgeTone>;
+}) {
+  const cardTone =
+    tone ??
+    {
+      backgroundColor: PROFILE_UI_COLORS.paper,
+      borderColor: PROFILE_UI_COLORS.border,
+      accentColor: PROFILE_UI_COLORS.green,
+    };
+
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`${label}${selected ? " 선택됨" : ""}`}
+      accessibilityState={{ selected }}
+      style={({ pressed }) => [
+        styles.badgeCard,
+        { backgroundColor: cardTone.backgroundColor, borderColor: cardTone.borderColor },
+        selected && styles.optionCardSelected,
+        pressed && styles.choiceChipPressed,
+      ]}
+      testID={testID}
+    >
+      {selected ? (
+        <View style={styles.optionCheck}>
+          <Ionicons name="checkmark" size={12} color={tokens.colors.textInverse} />
+        </View>
+      ) : null}
+      <View style={[styles.badgeIconFrame, { borderColor: cardTone.borderColor }]}>
+        <Text style={styles.badgeCardEmoji}>{emoji}</Text>
+      </View>
+      <Text style={[styles.optionCardTitle, selected && styles.optionCardTitleSelected]} numberOfLines={2}>
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
+function StickerOptionCard({
+  label,
+  emoji,
   selected,
   onPress,
   testID,
 }: {
-  emoji: string;
   label: string;
+  emoji: string;
   selected: boolean;
   onPress: () => void;
   testID?: string;
@@ -524,16 +727,24 @@ function ChoiceChip({
   return (
     <Pressable
       onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`${label}${selected ? " 선택됨" : ""}`}
+      accessibilityState={{ selected }}
       style={({ pressed }) => [
-        styles.choiceChip,
-        selected && styles.choiceChipSelected,
+        styles.stickerOptionCard,
+        selected && styles.stickerOptionCardSelected,
         pressed && styles.choiceChipPressed,
       ]}
       testID={testID}
     >
-      <Text style={styles.choiceEmoji}>{emoji}</Text>
+      {selected ? (
+        <View style={styles.stickerOptionCheck}>
+          <Ionicons name="checkmark" size={10} color={tokens.colors.textInverse} />
+        </View>
+      ) : null}
+      <Text style={styles.stickerOptionEmoji}>{emoji}</Text>
       <Text
-        style={[styles.choiceLabel, selected && styles.choiceLabelSelected]}
+        style={[styles.stickerOptionLabel, selected && styles.stickerOptionLabelSelected]}
         numberOfLines={1}
       >
         {label}
@@ -546,6 +757,7 @@ const styles = StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: tokens.colors.bg,
+    ...NON_SELECTABLE_TEXT,
   },
   center: {
     flex: 1,
@@ -568,6 +780,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   topBarTitle: {
+    ...NON_SELECTABLE_TEXT,
     flex: 1,
     textAlign: "center",
     fontSize: 16,
@@ -579,13 +792,14 @@ const styles = StyleSheet.create({
     height: 40,
   },
   content: {
+    ...NON_SELECTABLE_TEXT,
     width: "100%",
     maxWidth: 760,
     alignSelf: "center",
-    paddingHorizontal: tokens.space.xl,
+    paddingHorizontal: tokens.space.lg,
     paddingTop: tokens.space.sm,
-    paddingBottom: tokens.space.xl,
-    gap: tokens.space.md as any,
+    paddingBottom: 156,
+    gap: tokens.space.lg as any,
   },
   notice: {
     borderRadius: tokens.radius.lg,
@@ -595,61 +809,143 @@ const styles = StyleSheet.create({
     padding: tokens.space.md,
   },
   noticeText: {
+    ...NON_SELECTABLE_TEXT,
     fontSize: tokens.font.small,
     color: tokens.colors.textMuted,
     lineHeight: 18,
   },
   previewCard: {
-    minHeight: 150,
-    borderRadius: tokens.radius.xl,
+    ...NON_SELECTABLE_TEXT,
+    minHeight: 224,
+    borderRadius: 28,
     borderWidth: 1,
-    padding: tokens.space.lg,
-    gap: tokens.space.sm as any,
+    paddingHorizontal: 22,
+    paddingVertical: 22,
+    gap: tokens.space.md as any,
     position: "relative",
     overflow: "hidden",
+    shadowColor: tokens.shadow.color,
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 3,
+  },
+  previewPaperWash: {
+    position: "absolute",
+    top: 18,
+    right: 18,
+    width: 112,
+    height: 74,
+    borderRadius: 18,
+    opacity: 0.42,
+    transform: [{ rotate: "-5deg" }],
+  },
+  previewPaperLine: {
+    position: "absolute",
+    height: 1,
+    opacity: 0.32,
+  },
+  previewPaperLineTop: {
+    top: 86,
+    left: 24,
+    right: 62,
+  },
+  previewPaperLineBottom: {
+    bottom: 38,
+    left: 82,
+    right: 24,
+  },
+  previewHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: tokens.space.md as any,
+    paddingRight: 54,
+  },
+  previewHeaderWithLeftSticker: {
+    paddingTop: 18,
+  },
+  previewAvatar: {
+    width: 58,
+    height: 58,
+    borderRadius: 18,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  previewAvatarText: {
+    ...NON_SELECTABLE_TEXT,
+    fontSize: 21,
+    fontWeight: "900",
+    color: PROFILE_UI_COLORS.green,
+  },
+  previewIdentity: {
+    flex: 1,
+    minWidth: 0,
+    gap: 3,
+  },
+  previewKicker: {
+    ...NON_SELECTABLE_TEXT,
+    fontSize: 12,
+    color: PROFILE_UI_COLORS.muted,
+    fontWeight: "800",
   },
   previewNameRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: tokens.space.xs as any,
-    paddingRight: 72,
+  },
+  previewNameRowWithLeftSticker: {
+    paddingLeft: 4,
   },
   previewName: {
-    fontSize: 21,
+    ...NON_SELECTABLE_TEXT,
+    fontSize: 25,
     fontWeight: "900",
-    color: tokens.colors.text,
+    color: PROFILE_UI_COLORS.ink,
+    flexShrink: 1,
   },
   previewBadge: {
-    fontSize: 18,
-    lineHeight: 22,
+    ...NON_SELECTABLE_TEXT,
+    fontSize: 22,
+    lineHeight: 26,
   },
   previewBio: {
+    ...NON_SELECTABLE_TEXT,
     fontSize: tokens.font.body,
-    color: tokens.colors.textMuted,
-    lineHeight: 21,
+    color: PROFILE_UI_COLORS.muted,
+    lineHeight: 22,
+    paddingRight: 28,
   },
   previewShowcase: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 6,
+    gap: 7,
   },
   previewShowcaseChip: {
     borderRadius: tokens.radius.pill,
     borderWidth: 1,
-    borderColor: tokens.colors.borderStrong,
-    backgroundColor: "rgba(255,255,255,0.58)",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    borderColor: "rgba(63,122,76,0.22)",
+    backgroundColor: "rgba(255,255,255,0.66)",
+    paddingHorizontal: 9,
+    paddingVertical: 5,
   },
   previewShowcaseText: {
+    ...NON_SELECTABLE_TEXT,
     fontSize: tokens.font.small,
     fontWeight: "800",
     color: tokens.colors.green900,
   },
   previewBackgroundLabel: {
+    ...NON_SELECTABLE_TEXT,
+    alignSelf: "flex-start",
     marginTop: 2,
     fontSize: tokens.font.small,
     fontWeight: "900",
+    borderRadius: tokens.radius.pill,
+    backgroundColor: "rgba(255,255,255,0.56)",
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    overflow: "hidden",
   },
   previewSticker: {
     position: "absolute",
@@ -663,94 +959,236 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.78)",
   },
   previewStickerTL: {
-    top: 12,
-    left: 12,
+    top: 13,
+    left: 14,
   },
   previewStickerTR: {
-    top: 12,
-    right: 12,
+    top: 13,
+    right: 14,
   },
   previewStickerBR: {
-    right: 12,
-    bottom: 12,
+    right: 14,
+    bottom: 14,
   },
   previewStickerText: {
+    ...NON_SELECTABLE_TEXT,
     fontSize: 14,
     lineHeight: 16,
   },
   section: {
-    borderRadius: tokens.radius.xl,
+    ...NON_SELECTABLE_TEXT,
+    borderRadius: 22,
     borderWidth: 1,
-    borderColor: tokens.colors.border,
-    backgroundColor: tokens.colors.surfaceStrong,
-    padding: tokens.space.md,
-    gap: tokens.space.sm as any,
+    borderColor: PROFILE_UI_COLORS.border,
+    backgroundColor: "#FFFCF6",
+    padding: tokens.space.lg,
+    gap: tokens.space.md as any,
   },
   sectionTitle: {
-    fontSize: tokens.font.body,
+    ...NON_SELECTABLE_TEXT,
+    fontSize: 17,
     fontWeight: "900",
-    color: tokens.colors.text,
+    color: PROFILE_UI_COLORS.ink,
   },
   sectionHint: {
+    ...NON_SELECTABLE_TEXT,
     fontSize: tokens.font.small,
-    color: tokens.colors.textMuted,
+    color: PROFILE_UI_COLORS.muted,
     lineHeight: 18,
   },
   emptyText: {
+    ...NON_SELECTABLE_TEXT,
     fontSize: tokens.font.small,
     color: tokens.colors.textFaint,
   },
-  optionWrap: {
+  cardGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: tokens.space.xs as any,
+    gap: 10,
+  },
+  backgroundCard: {
+    ...NON_SELECTABLE_TEXT,
+    width: "48%",
+    minHeight: 132,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: PROFILE_UI_COLORS.border,
+    backgroundColor: PROFILE_UI_COLORS.paper,
+    padding: 10,
+    gap: 8,
+    position: "relative",
+  },
+  backgroundSwatch: {
+    height: 68,
+    borderRadius: 14,
+    borderWidth: 1,
+    overflow: "hidden",
+    position: "relative",
+    justifyContent: "center",
+    paddingHorizontal: 10,
+  },
+  backgroundSwatchPanel: {
+    position: "absolute",
+    top: 12,
+    right: 10,
+    width: 44,
+    height: 30,
+    borderRadius: 10,
+    borderWidth: 1,
+    opacity: 0.62,
+  },
+  backgroundSwatchLine: {
+    position: "absolute",
+    left: 10,
+    right: 28,
+    bottom: 13,
+    height: 1,
+    opacity: 0.55,
+  },
+  backgroundSwatchEmoji: {
+    ...NON_SELECTABLE_TEXT,
+    fontSize: 21,
+    lineHeight: 26,
+  },
+  badgeCard: {
+    ...NON_SELECTABLE_TEXT,
+    width: "48%",
+    minHeight: 118,
+    borderRadius: 18,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    position: "relative",
+  },
+  badgeIconFrame: {
+    width: 44,
+    height: 44,
+    borderRadius: 16,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.62)",
+  },
+  badgeCardEmoji: {
+    ...NON_SELECTABLE_TEXT,
+    fontSize: 24,
+    lineHeight: 28,
+  },
+  optionCardSelected: {
+    borderWidth: 2,
+    borderColor: PROFILE_UI_COLORS.green,
+    backgroundColor: "#EEF7EF",
+  },
+  optionCheck: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: PROFILE_UI_COLORS.green,
+    zIndex: 2,
+  },
+  optionCardTitle: {
+    ...NON_SELECTABLE_TEXT,
+    fontSize: tokens.font.small,
+    lineHeight: 17,
+    color: PROFILE_UI_COLORS.ink,
+    fontWeight: "800",
+    textAlign: "center",
+  },
+  optionCardTitleSelected: {
+    color: PROFILE_UI_COLORS.green,
   },
   slotList: {
-    gap: tokens.space.sm as any,
+    gap: tokens.space.md as any,
   },
   slotCard: {
-    borderRadius: tokens.radius.lg,
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: tokens.colors.border,
-    backgroundColor: tokens.colors.bg,
-    padding: tokens.space.sm,
-    gap: tokens.space.xs as any,
+    borderColor: PROFILE_UI_COLORS.border,
+    backgroundColor: "#FFF8ED",
+    padding: tokens.space.md,
+    gap: tokens.space.sm as any,
   },
-  slotTitle: {
-    fontSize: tokens.font.small,
-    color: tokens.colors.textMuted,
-    fontWeight: "800",
-  },
-  choiceChip: {
-    maxWidth: "100%",
+  slotHeaderRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    borderRadius: tokens.radius.pill,
-    borderWidth: 1,
-    borderColor: tokens.colors.borderStrong,
-    backgroundColor: tokens.colors.surfaceStrong,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
+    justifyContent: "space-between",
+    gap: tokens.space.sm as any,
   },
-  choiceChipSelected: {
-    backgroundColor: tokens.colors.green050,
-    borderColor: tokens.colors.green700,
+  slotTitle: {
+    ...NON_SELECTABLE_TEXT,
+    fontSize: tokens.font.body,
+    color: PROFILE_UI_COLORS.ink,
+    fontWeight: "900",
+  },
+  slotSelectedText: {
+    ...NON_SELECTABLE_TEXT,
+    flexShrink: 1,
+    fontSize: tokens.font.small,
+    color: PROFILE_UI_COLORS.muted,
+    fontWeight: "800",
+  },
+  stickerGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  stickerOptionCard: {
+    ...NON_SELECTABLE_TEXT,
+    width: "48%",
+    minHeight: 60,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: PROFILE_UI_COLORS.border,
+    backgroundColor: "rgba(255,255,255,0.72)",
+    paddingHorizontal: 10,
+    paddingVertical: 9,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 5,
+    position: "relative",
+  },
+  stickerOptionCardSelected: {
+    borderWidth: 2,
+    borderColor: PROFILE_UI_COLORS.green,
+    backgroundColor: "#EAF4EC",
   },
   choiceChipPressed: {
     opacity: 0.78,
   },
-  choiceEmoji: {
-    fontSize: 13,
-    lineHeight: 16,
+  stickerOptionCheck: {
+    position: "absolute",
+    top: 6,
+    right: 6,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: PROFILE_UI_COLORS.green,
   },
-  choiceLabel: {
+  stickerOptionEmoji: {
+    ...NON_SELECTABLE_TEXT,
+    fontSize: 18,
+    lineHeight: 22,
+  },
+  stickerOptionLabel: {
+    ...NON_SELECTABLE_TEXT,
     fontSize: tokens.font.small,
-    color: tokens.colors.textMuted,
-    fontWeight: "700",
+    lineHeight: 17,
+    color: PROFILE_UI_COLORS.muted,
+    fontWeight: "800",
+    textAlign: "center",
   },
-  choiceLabelSelected: {
-    color: tokens.colors.green900,
+  stickerOptionLabelSelected: {
+    color: PROFILE_UI_COLORS.green,
   },
   saveButton: {
     marginTop: tokens.space.sm,
@@ -766,6 +1204,7 @@ const styles = StyleSheet.create({
     opacity: 0.84,
   },
   saveButtonText: {
+    ...NON_SELECTABLE_TEXT,
     fontSize: 15,
     fontWeight: "900",
     color: tokens.colors.textInverse,

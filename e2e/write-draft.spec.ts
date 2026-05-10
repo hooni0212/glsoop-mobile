@@ -2,7 +2,9 @@ import { expect, test, type Page } from "@playwright/test";
 
 const AUTH_TOKEN = "mock-token-for-write-draft";
 const AUTH_TOKEN_KEY = "glsoop_auth_token_v1";
-const DRAFTS_KEY = "glsoop:write:drafts:v1";
+const COOKIE_SESSION_TOKEN = "__glsoop_cookie_session__";
+const TEST_USER_ID = 1;
+const DRAFTS_KEY = `glsoop:write:drafts:v2:user:${TEST_USER_ID}`;
 type CapturedPostPayload = Record<string, any> & {
   layout_json?: Record<string, any>;
 };
@@ -18,7 +20,8 @@ type DraftSeed = {
 };
 
 function toAuthNamespace(token: string) {
-  return `bearer:${token.slice(0, 16)}`;
+  void token;
+  return `user:${TEST_USER_ID}`;
 }
 
 async function setAuthToken(page: Page, token: string) {
@@ -165,6 +168,49 @@ test.describe("글쓰기 임시저장 (웹)", () => {
     await page.goto("/write-drafts");
     await page.getByTestId("draft-delete-draft-b").click();
     await expect(page.getByTestId("draft-item-draft-b")).toHaveCount(0);
+  });
+
+  test("S3-1) 다른 계정의 로컬 임시저장은 현재 계정에 표시하지 않는다", async ({ page }) => {
+    await resetDrafts(page);
+    await page.goto("/");
+    await page.waitForLoadState("domcontentloaded");
+    await page.evaluate(() => {
+      localStorage.setItem(
+        "glsoop:write:drafts:v2:user:2",
+        JSON.stringify([
+          {
+            id: "other-user-draft",
+            title: "다른 계정 초안",
+            body: "보이면 안 되는 본문",
+            authNamespace: "user:2",
+            updatedAt: Date.now(),
+            expiresAt: Date.now() + 30 * 24 * 60 * 60 * 1000,
+          },
+        ])
+      );
+    });
+
+    await page.goto("/write");
+    await expect(page.getByTestId("write-confirm-modal")).toHaveCount(0);
+    await expect(page.getByTestId("write-title-input")).toHaveValue("");
+    await expect(page.getByTestId("write-body-input")).toHaveValue("");
+  });
+
+  test("S3-2) 쿠키 세션 임시저장도 계정 id 기준으로 표시한다", async ({ page }) => {
+    await setAuthToken(page, COOKIE_SESSION_TOKEN);
+    await resetDrafts(page, [
+      {
+        id: "cookie-session-draft",
+        title: "쿠키 세션 초안",
+        body: "계정 id로 분리되어야 하는 본문",
+        updatedAt: Date.now(),
+      },
+    ]);
+
+    await page.goto("/write");
+    await expect(page.getByTestId("write-confirm-modal")).toBeVisible();
+    await page.getByTestId("confirm-draft-list").click();
+    await expect(page.getByTestId("draft-item-cookie-session-draft")).toBeVisible();
   });
 
   test("S4) draft의 paper02/해시태그/행간/자간 layout_json을 복구해서 그대로 전송한다", async ({ page }) => {

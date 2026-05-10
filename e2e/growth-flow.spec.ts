@@ -173,6 +173,18 @@ function growthDashboardFixture(options: GrowthMockOptions = {}) {
             is_locked: true,
             required_entitlement: "pass:2026_spring",
             lock_reason: "SEASON_PASS_REQUIRED",
+            reward_cosmetic_keys: ["badge_spring_2026"],
+            reward_cosmetics: [
+              {
+                key: "badge_spring_2026",
+                type: "badge",
+                name: "봄 시즌 배지",
+                icon_emoji: "🌸",
+                rarity: "rare",
+                season: "2026_spring",
+                meta: null,
+              },
+            ],
           },
         ],
       },
@@ -334,10 +346,12 @@ async function mockGrowthApis(page: Page, options: GrowthMockOptions = {}) {
           gained_cosmetics: [
             {
               key: "sticker_star",
+              type: "sticker",
               name: "스타 스티커",
               icon_emoji: "✨",
               rarity: "common",
               season: null,
+              meta: null,
             },
           ],
         }),

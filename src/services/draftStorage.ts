@@ -1,5 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { apiGet } from "@/lib/api";
 import { getAuthToken, COOKIE_SESSION_TOKEN } from "@/lib/authToken";
+import type { MeResponse } from "@/features/me/accountCenter";
 import type { PostFontKey } from "@/lib/postContent";
 import type { PostCommentPolicy, PostType, PostVisibility } from "@/types/post";
 
@@ -30,21 +32,74 @@ export type WriteDraftQuestContext = {
   suggestedHashtags?: string[];
 };
 
-const DRAFTS_KEY = "glsoop:write:drafts:v1";
+const DRAFTS_KEY_PREFIX = "glsoop:write:drafts:v2";
 
 // NOTE: Keep drafts reasonably small. This app stores plain text only (no images).
 const MAX_DRAFTS = 30;
 const DRAFT_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+const IDENTITY_CACHE_TTL_MS = 60 * 1000;
 
-function toAuthNamespace(token: string | null) {
+let identityCache:
+  | { token: string; namespace: string | null; cachedAt: number }
+  | null = null;
+
+function toBearerNamespace(token: string | null) {
   if (!token) return "anon";
   if (token === COOKIE_SESSION_TOKEN) return "cookie_session";
   return `bearer:${token.slice(0, 16)}`;
 }
 
-async function getCurrentAuthNamespace() {
+function toUserNamespace(me: Partial<MeResponse> | null | undefined) {
+  const id = Number(me?.id);
+  if (Number.isInteger(id) && id > 0) return `user:${id}`;
+
+  const email = typeof me?.email === "string" ? me.email.trim().toLowerCase() : "";
+  if (email) return `email:${email}`;
+
+  return null;
+}
+
+async function getCurrentAuthNamespace(): Promise<string | null> {
   const token = await getAuthToken();
-  return toAuthNamespace(token);
+  if (!token) return "anon";
+
+  const now = Date.now();
+  if (
+    token !== COOKIE_SESSION_TOKEN &&
+    identityCache &&
+    identityCache.token === token &&
+    now - identityCache.cachedAt < IDENTITY_CACHE_TTL_MS
+  ) {
+    return identityCache.namespace;
+  }
+
+  try {
+    const me = await apiGet<MeResponse>("/api/me");
+    const namespace = toUserNamespace(me);
+    if (namespace) {
+      if (token !== COOKIE_SESSION_TOKEN) {
+        identityCache = { token, namespace, cachedAt: now };
+      }
+      return namespace;
+    }
+  } catch {
+    // Keep draft privacy first. Cookie-session users must resolve to a concrete account.
+  }
+
+  const namespace = token === COOKIE_SESSION_TOKEN ? null : toBearerNamespace(token);
+  if (token !== COOKIE_SESSION_TOKEN) {
+    identityCache = { token, namespace, cachedAt: now };
+  }
+  return namespace;
+}
+
+async function getCurrentDraftStorageContext() {
+  const namespace = await getCurrentAuthNamespace();
+  if (!namespace) return null;
+  return {
+    namespace,
+    storageKey: `${DRAFTS_KEY_PREFIX}:${namespace}`,
+  };
 }
 
 function safeJsonParse<T>(raw: string | null): T | null {
@@ -76,7 +131,7 @@ function normalizeDraftHashtags(input: unknown): string[] {
   return tags;
 }
 
-function normalizeDraft(input: any): WriteDraft | null {
+function normalizeDraft(input: any, fallbackAuthNamespace: string): WriteDraft | null {
   if (!input || typeof input !== "object") return null;
 
   const id = typeof input.id === "string" ? input.id : "";
@@ -111,7 +166,7 @@ function normalizeDraft(input: any): WriteDraft | null {
   const authNamespace =
     typeof input.authNamespace === "string" && input.authNamespace.trim()
       ? input.authNamespace.trim()
-      : "anon";
+      : fallbackAuthNamespace;
   const updatedAt =
     typeof input.updatedAt === "number" ? input.updatedAt : Date.now();
   const expiresAt =
@@ -171,13 +226,13 @@ function buildDraftId(input: { id?: string | null; mode?: "create" | "edit"; pos
   return `create:${uuidLike()}`;
 }
 
-async function loadAll(): Promise<WriteDraft[]> {
-  const raw = await AsyncStorage.getItem(DRAFTS_KEY);
+async function loadAll(storageKey: string, authNamespace: string): Promise<WriteDraft[]> {
+  const raw = await AsyncStorage.getItem(storageKey);
   const parsed = safeJsonParse<any>(raw);
   if (!Array.isArray(parsed)) return [];
 
   const drafts = parsed
-    .map(normalizeDraft)
+    .map((draft) => normalizeDraft(draft, authNamespace))
     .filter(Boolean) as WriteDraft[];
 
   // newest first
@@ -185,20 +240,21 @@ async function loadAll(): Promise<WriteDraft[]> {
   return drafts;
 }
 
-async function saveAll(drafts: WriteDraft[]): Promise<void> {
+async function saveAll(storageKey: string, drafts: WriteDraft[]): Promise<void> {
   // enforce newest-first & max
   const sorted = [...drafts].sort((a, b) => b.updatedAt - a.updatedAt);
   await AsyncStorage.setItem(
-    DRAFTS_KEY,
+    storageKey,
     JSON.stringify(sorted.slice(0, MAX_DRAFTS))
   );
 }
 
 export async function listWriteDrafts(): Promise<WriteDraft[]> {
   try {
-    const namespace = await getCurrentAuthNamespace();
-    const drafts = await loadAll();
-    return drafts.filter((draft) => (draft.authNamespace ?? "anon") === namespace);
+    const context = await getCurrentDraftStorageContext();
+    if (!context) return [];
+    const drafts = await loadAll(context.storageKey, context.namespace);
+    return drafts.filter((draft) => (draft.authNamespace ?? context.namespace) === context.namespace);
   } catch {
     return [];
   }
@@ -207,10 +263,10 @@ export async function listWriteDrafts(): Promise<WriteDraft[]> {
 export async function loadWriteDraftById(id: string): Promise<WriteDraft | null> {
   if (!id) return null;
   try {
-    const namespace = await getCurrentAuthNamespace();
-    const drafts = await loadAll();
-    const scoped = drafts.filter((draft) => (draft.authNamespace ?? "anon") === namespace);
-    return scoped.find((d) => d.id === id) ?? null;
+    const context = await getCurrentDraftStorageContext();
+    if (!context) return null;
+    const drafts = await loadAll(context.storageKey, context.namespace);
+    return drafts.find((d) => d.id === id && d.authNamespace === context.namespace) ?? null;
   } catch {
     return null;
   }
@@ -218,10 +274,10 @@ export async function loadWriteDraftById(id: string): Promise<WriteDraft | null>
 
 export async function loadLatestWriteDraft(): Promise<WriteDraft | null> {
   try {
-    const namespace = await getCurrentAuthNamespace();
-    const drafts = await loadAll();
-    const scoped = drafts.filter((draft) => (draft.authNamespace ?? "anon") === namespace);
-    return scoped[0] ?? null;
+    const context = await getCurrentDraftStorageContext();
+    if (!context) return null;
+    const drafts = await loadAll(context.storageKey, context.namespace);
+    return drafts.find((draft) => draft.authNamespace === context.namespace) ?? null;
   } catch {
     return null;
   }
@@ -246,7 +302,11 @@ export async function upsertWriteDraft(input: {
 }): Promise<string> {
   const id = buildDraftId(input);
   const mode = input.mode === "edit" ? "edit" : "create";
-  const authNamespace = await getCurrentAuthNamespace();
+  const context = await getCurrentDraftStorageContext();
+  if (!context) {
+    throw new Error("현재 계정 정보를 확인하지 못해 임시저장할 수 없어요.");
+  }
+  const authNamespace = context.namespace;
   const hashtags = normalizeDraftHashtags(input.hashtags);
   const payload: WriteDraft = {
     id,
@@ -266,9 +326,12 @@ export async function upsertWriteDraft(input: {
     expiresAt: Date.now() + DRAFT_TTL_MS,
   };
 
-  const drafts = await loadAll();
-  const next = [payload, ...drafts.filter((d) => d.id !== id)];
-  await saveAll(next);
+  const drafts = await loadAll(context.storageKey, context.namespace);
+  const next = [
+    payload,
+    ...drafts.filter((d) => !(d.id === id && d.authNamespace === authNamespace)),
+  ];
+  await saveAll(context.storageKey, next);
 
   return id;
 }
@@ -276,8 +339,13 @@ export async function upsertWriteDraft(input: {
 export async function deleteWriteDraft(id: string): Promise<void> {
   if (!id) return;
   try {
-    const drafts = await loadAll();
-    await saveAll(drafts.filter((d) => d.id !== id));
+    const context = await getCurrentDraftStorageContext();
+    if (!context) return;
+    const drafts = await loadAll(context.storageKey, context.namespace);
+    await saveAll(
+      context.storageKey,
+      drafts.filter((d) => !(d.id === id && d.authNamespace === context.namespace))
+    );
   } catch {
     // ignore
   }
@@ -285,7 +353,9 @@ export async function deleteWriteDraft(id: string): Promise<void> {
 
 export async function clearAllWriteDrafts(): Promise<void> {
   try {
-    await AsyncStorage.removeItem(DRAFTS_KEY);
+    const context = await getCurrentDraftStorageContext();
+    if (!context) return;
+    await AsyncStorage.removeItem(context.storageKey);
   } catch {
     // ignore
   }

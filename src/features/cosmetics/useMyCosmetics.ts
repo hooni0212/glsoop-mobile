@@ -18,6 +18,7 @@ type UseMyCosmeticsResult = {
   inventory: CosmeticsInventory;
   profile: ProfileCosmeticsState;
   loading: boolean;
+  loaded: boolean;
   error: AppErrorModel | null;
   refetch: () => Promise<void>;
 };
@@ -32,6 +33,7 @@ type CosmeticsSnapshot = {
   inventory: CosmeticsInventory;
   profile: ProfileCosmeticsState;
   loading: boolean;
+  loaded: boolean;
   error: AppErrorModel | null;
 };
 
@@ -39,6 +41,7 @@ const INITIAL_SNAPSHOT: CosmeticsSnapshot = {
   inventory: EMPTY_INVENTORY,
   profile: createEmptyProfileCosmeticsState(),
   loading: false,
+  loaded: false,
   error: null,
 };
 
@@ -70,12 +73,14 @@ export async function refreshMyCosmetics(force = false): Promise<void> {
         inventory: response.inventory,
         profile: response.profile,
         loading: false,
+        loaded: true,
         error: null,
       });
     } catch (err) {
       publishSnapshot({
         ...cosmeticsSnapshot,
         loading: false,
+        loaded: true,
         error: normalizeApiError(err),
       });
     }
@@ -112,6 +117,7 @@ export function useMyCosmetics(): UseMyCosmeticsResult {
     inventory: snapshot.inventory,
     profile: snapshot.profile,
     loading: snapshot.loading,
+    loaded: snapshot.loaded,
     error: snapshot.error,
     refetch: fetchMyCosmetics,
   };

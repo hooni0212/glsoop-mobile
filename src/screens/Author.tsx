@@ -435,23 +435,24 @@ export default function Author() {
 
   const listHeader = useMemo(
     () => {
-	      const primaryBadge = profileCosmetics.primary_badge;
-	      const profileBackground = profileCosmetics.profile_background;
-	      const backgroundTone = getProfileBackgroundTone(profileBackground?.key);
-	      const showcaseBadges = profileCosmetics.showcase_badges.slice(0, 6);
+      const primaryBadge = profileCosmetics.primary_badge;
+      const profileBackground = profileCosmetics.profile_background;
+      const backgroundTone = getProfileBackgroundTone(profileBackground?.key);
+      const showcaseBadges = profileCosmetics.showcase_badges.slice(0, 6);
       const headerStickers = profileCosmetics.header_stickers;
+      const hasTopLeftSticker = headerStickers.some(({ slot }) => slot === "tl");
 
       return (
         <View>
-	          <View
-	            style={[
-	              authorScreenStyles.profileCard,
-	              {
-	                backgroundColor: backgroundTone.backgroundColor,
-	                borderColor: backgroundTone.borderColor,
-	              },
-	            ]}
-	          >
+          <View
+            style={[
+              authorScreenStyles.profileCard,
+              {
+                backgroundColor: backgroundTone.backgroundColor,
+                borderColor: backgroundTone.borderColor,
+              },
+            ]}
+          >
             {headerStickers.map(({ slot, sticker }) => (
               <View
                 key={`${slot}-${sticker.key}`}
@@ -467,7 +468,12 @@ export default function Author() {
               </View>
             ))}
 
-            <View style={authorScreenStyles.nameRow}>
+            <View
+              style={[
+                authorScreenStyles.nameRow,
+                hasTopLeftSticker && authorScreenStyles.nameRowWithLeftSticker,
+              ]}
+            >
               <Text style={authorScreenStyles.name}>{name}</Text>
               {primaryBadge ? (
                 <Text
@@ -479,12 +485,12 @@ export default function Author() {
               ) : null}
             </View>
 
-	            <Text style={authorScreenStyles.bio}>{collapsedAbout || bio}</Text>
-	            {profileBackground ? (
-	              <Text style={authorScreenStyles.profileBackgroundLabel}>
-	                {emojiOrFallback(profileBackground.icon_emoji, "🎨")} {profileBackground.name}
-	              </Text>
-	            ) : null}
+            <Text style={authorScreenStyles.bio}>{collapsedAbout || bio}</Text>
+            {profileBackground ? (
+              <Text style={authorScreenStyles.profileBackgroundLabel}>
+                {emojiOrFallback(profileBackground.icon_emoji, "🎨")} {profileBackground.name}
+              </Text>
+            ) : null}
             {about.length > 96 ? (
               <Pressable
                 onPress={() => setBioExpanded((current) => !current)}

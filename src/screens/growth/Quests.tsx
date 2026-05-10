@@ -10,6 +10,7 @@ import { AppLoading } from "@/components/state/AppLoading";
 import { buildAuthRoute } from "@/lib/authRedirect";
 import { useToast } from "@/feedback/ToastProvider";
 import { refreshMyCosmetics } from "@/features/cosmetics/useMyCosmetics";
+import { buildRewardCosmeticPreviews } from "@/features/growth/rewardCosmetics";
 import { trackGrowthTelemetry, toGrowthTelemetryError } from "@/features/growth/growthTelemetry";
 import type { GrowthQuest } from "@/features/growth/useGrowthData";
 import { parseGrowthPromptQuest, useGrowthData } from "@/features/growth/useGrowthData";
@@ -21,22 +22,6 @@ const STATUS_ORDER: Record<GrowthQuest["status"], number> = {
   in_progress: 0,
   completed: 1,
   locked: 2,
-};
-
-type QuestCosmeticRewardPreview = {
-  key: string;
-  icon: string;
-  label: string;
-};
-
-const COSMETIC_REWARD_PRESETS: Record<string, QuestCosmeticRewardPreview> = {
-  badge_spring_2026: { key: "badge_spring_2026", icon: "🌸", label: "봄 시즌 배지" },
-  badge_summer_2026: { key: "badge_summer_2026", icon: "☀️", label: "여름 시즌 배지" },
-  badge_autumn_2026: { key: "badge_autumn_2026", icon: "🍂", label: "가을 시즌 배지" },
-  badge_winter_2026: { key: "badge_winter_2026", icon: "❄️", label: "겨울 시즌 배지" },
-  sticker_leaf: { key: "sticker_leaf", icon: "🍃", label: "리프 스티커" },
-  sticker_star: { key: "sticker_star", icon: "✨", label: "스타 스티커" },
-  sticker_moon: { key: "sticker_moon", icon: "🌙", label: "문 스티커" },
 };
 
 function clampPercent(value: number) {
@@ -65,29 +50,6 @@ function formatCampaignType(value: string) {
   if (value === "event") return "이벤트";
   if (value === "permanent") return "상시";
   return "이벤트";
-}
-
-function parseQuestRewardCosmetics(quest: GrowthQuest): QuestCosmeticRewardPreview[] {
-  if (!quest.uiJson) return [];
-  try {
-    const parsed = JSON.parse(quest.uiJson) as { rewards?: { cosmetics?: unknown } };
-    if (!Array.isArray(parsed?.rewards?.cosmetics)) return [];
-    const uniqueKeys = Array.from(
-      new Set(
-        parsed.rewards.cosmetics
-          .map((value) => (typeof value === "string" ? value.trim() : ""))
-          .filter(Boolean)
-      )
-    ).slice(0, 4);
-
-    return uniqueKeys.map((key) => {
-      if (COSMETIC_REWARD_PRESETS[key]) return COSMETIC_REWARD_PRESETS[key];
-      if (key.startsWith("badge_")) return { key, icon: "🏅", label: "시즌 배지" };
-      return { key, icon: "✨", label: "스티커" };
-    });
-  } catch {
-    return [];
-  }
 }
 
 export default function QuestsScreen() {
@@ -356,7 +318,7 @@ function QuestItem({
   const statusMeta = getQuestStatusMeta(quest);
   const lockHint = getQuestLockHint(quest);
   const prompt = parseGrowthPromptQuest(quest);
-  const cosmeticRewards = parseQuestRewardCosmetics(quest);
+  const cosmeticRewards = buildRewardCosmeticPreviews(quest);
   const percent = quest.target > 0 ? clampPercent((quest.progress / quest.target) * 100) : 0;
   const progressCurrent = Math.min(quest.progress, quest.target);
   const canClaim = quest.status === "completed" && !quest.rewardClaimedAt && !quest.isLocked;

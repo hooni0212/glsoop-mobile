@@ -9,6 +9,7 @@ import { AppError } from "@/components/state/AppError";
 import { AppLoading } from "@/components/state/AppLoading";
 import { useToast } from "@/feedback/ToastProvider";
 import { refreshMyCosmetics } from "@/features/cosmetics/useMyCosmetics";
+import { buildRewardCosmeticPreviews } from "@/features/growth/rewardCosmetics";
 import type { GrowthAchievement } from "@/features/growth/useGrowthData";
 import { trackGrowthTelemetry, toGrowthTelemetryError } from "@/features/growth/growthTelemetry";
 import { useGrowthData } from "@/features/growth/useGrowthData";
@@ -23,56 +24,6 @@ function getStatusMeta(status: GrowthAchievement["status"]) {
   if (status === "completed") return { label: "완료", color: tokens.colors.green700 };
   if (status === "in_progress") return { label: "진행 중", color: tokens.colors.green900 };
   return { label: "잠금", color: tokens.colors.textMuted };
-}
-
-type RewardPreview = {
-  key: string;
-  icon: string;
-  label: string;
-  type: "badge" | "background" | "sticker";
-};
-
-const REWARD_PRESETS: Record<string, RewardPreview> = {
-  badge_first_post: { key: "badge_first_post", icon: "🌱", label: "첫 글 배지", type: "badge" },
-  badge_posts_10: { key: "badge_posts_10", icon: "🌿", label: "열 편 배지", type: "badge" },
-  badge_posts_50: { key: "badge_posts_50", icon: "🌳", label: "나무 배지", type: "badge" },
-  badge_first_like: { key: "badge_first_like", icon: "✨", label: "첫 공감 배지", type: "badge" },
-  badge_loved_post: { key: "badge_loved_post", icon: "💙", label: "인기 글 배지", type: "badge" },
-  badge_streak_3: { key: "badge_streak_3", icon: "🔥", label: "리듬 배지", type: "badge" },
-  badge_streak_7: { key: "badge_streak_7", icon: "🌠", label: "7일 배지", type: "badge" },
-  badge_streak_30: { key: "badge_streak_30", icon: "🏆", label: "30일 배지", type: "badge" },
-  badge_first_bookmark: { key: "badge_first_bookmark", icon: "📌", label: "북마크 배지", type: "badge" },
-  background_writer_grove: {
-    key: "background_writer_grove",
-    icon: "🌳",
-    label: "작가의 작은 숲",
-    type: "background",
-  },
-  background_deep_forest: {
-    key: "background_deep_forest",
-    icon: "🌲",
-    label: "깊은 숲 배경",
-    type: "background",
-  },
-};
-
-function parseRewardPreviews(item: GrowthAchievement): RewardPreview[] {
-  if (!item.uiJson) return [];
-  try {
-    const parsed = JSON.parse(item.uiJson) as { rewards?: { cosmetics?: unknown } };
-    if (!Array.isArray(parsed?.rewards?.cosmetics)) return [];
-    const keys = Array.from(
-      new Set(parsed.rewards.cosmetics.map((value) => String(value || "").trim()).filter(Boolean))
-    ).slice(0, 4);
-    return keys.map((key) => {
-      if (REWARD_PRESETS[key]) return REWARD_PRESETS[key];
-      if (key.startsWith("background_")) return { key, icon: "🎨", label: "프로필 배경", type: "background" };
-      if (key.startsWith("badge_")) return { key, icon: "🏅", label: "업적 배지", type: "badge" };
-      return { key, icon: "✨", label: "스티커", type: "sticker" };
-    });
-  } catch {
-    return [];
-  }
 }
 
 export default function AchievementsScreen() {
@@ -137,7 +88,7 @@ export default function AchievementsScreen() {
         item.status === "completed" &&
         item.stateId > 0 &&
         !item.rewardClaimedAt &&
-        parseRewardPreviews(item).length > 0
+        buildRewardCosmeticPreviews(item).length > 0
     ).length;
     const progressPercent = achievements.length > 0 ? clampPercent((completedCount / achievements.length) * 100) : 0;
     return { completedCount, claimableCount, progressPercent };
@@ -292,7 +243,7 @@ function AchievementCard({
   const statusMeta = getStatusMeta(item.status);
   const percent = item.target > 0 ? clampPercent((item.progress / item.target) * 100) : 0;
   const unlockedLabel = item.unlockedAt ? `달성일 ${formatKstDateDot(item.unlockedAt)}` : "미달성";
-  const rewards = parseRewardPreviews(item);
+  const rewards = buildRewardCosmeticPreviews(item);
   const canClaim = item.status === "completed" && item.stateId > 0 && !item.rewardClaimedAt && rewards.length > 0;
   const claimed = item.status === "completed" && Boolean(item.rewardClaimedAt);
 

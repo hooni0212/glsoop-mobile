@@ -2,14 +2,16 @@ import { expect, test, type Page } from "@playwright/test";
 
 const AUTH_TOKEN = "mock-token-for-write-ux";
 const AUTH_TOKEN_KEY = "glsoop_auth_token_v1";
-const DRAFTS_KEY = "glsoop:write:drafts:v1";
+const TEST_USER_ID = 1;
+const DRAFTS_KEY = `glsoop:write:drafts:v2:user:${TEST_USER_ID}`;
 const PUBLIC_UGC_NOTICE_STORAGE_KEY = "glsoop.public_ugc_notice_ack";
 type CapturedPostPayload = Record<string, unknown> & {
   layout_json?: Record<string, any>;
 };
 
 function toAuthNamespace(token: string) {
-  return `bearer:${token.slice(0, 16)}`;
+  void token;
+  return `user:${TEST_USER_ID}`;
 }
 
 async function setAuthToken(page: Page, token: string) {

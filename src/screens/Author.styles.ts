@@ -53,10 +53,14 @@ export const authorScreenStyles = StyleSheet.create({
     gap: tokens.space.xs as any,
     paddingRight: 70,
   },
+  nameRowWithLeftSticker: {
+    paddingLeft: 36,
+  },
   name: {
     fontSize: 22,
     fontWeight: "900",
     color: tokens.colors.text,
+    flexShrink: 1,
   },
   badgeEmoji: {
     fontSize: 18,

@@ -38,6 +38,8 @@ export type GrowthAchievement = {
   positionIndex: number;
   icon: string;
   uiJson: string;
+  rewardCosmeticKeys: string[];
+  rewardCosmetics: GrowthCosmeticReward[];
 };
 
 export type GrowthQuest = {
@@ -62,6 +64,8 @@ export type GrowthQuest = {
   isLocked: boolean;
   requiredEntitlement: string | null;
   lockReason: string | null;
+  rewardCosmeticKeys: string[];
+  rewardCosmetics: GrowthCosmeticReward[];
 };
 
 export type GrowthPromptQuest = {
@@ -82,6 +86,7 @@ export type GrowthCosmeticReward = {
   iconEmoji: string | null;
   rarity: string;
   season: string | null;
+  meta: Record<string, unknown> | null;
 };
 
 export type GrowthCampaign = {
@@ -229,6 +234,11 @@ function toRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
 }
 
+function toNullableRecord(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  return value as Record<string, unknown>;
+}
+
 function toStringArray(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
   return value.map((item) => String(item || "").trim()).filter(Boolean).slice(0, 12);
@@ -301,6 +311,8 @@ function normalizeAchievement(input: unknown): GrowthAchievement {
     positionIndex: toNumber(row.position_index),
     icon: toText(row.icon, "🌿"),
     uiJson: toText(row.ui_json),
+    rewardCosmeticKeys: toStringArray(row.reward_cosmetic_keys ?? row.rewardCosmeticKeys),
+    rewardCosmetics: normalizeClaimCosmetics(row.reward_cosmetics ?? row.rewardCosmetics),
   };
 }
 
@@ -335,6 +347,8 @@ function normalizeQuest(input: unknown): GrowthQuest {
     isLocked,
     requiredEntitlement: toNullableText(row.required_entitlement),
     lockReason: toNullableText(row.lock_reason),
+    rewardCosmeticKeys: toStringArray(row.reward_cosmetic_keys ?? row.rewardCosmeticKeys),
+    rewardCosmetics: normalizeClaimCosmetics(row.reward_cosmetics ?? row.rewardCosmetics),
   };
 }
 
@@ -397,9 +411,10 @@ function normalizeClaimCosmetic(input: unknown): GrowthCosmeticReward | null {
     key,
     type: toNullableText(row.type),
     name,
-    iconEmoji: toNullableText(row.icon_emoji),
+    iconEmoji: toNullableText(row.icon_emoji ?? row.iconEmoji),
     rarity: toText(row.rarity, "common"),
     season: toNullableText(row.season),
+    meta: toNullableRecord(row.meta),
   };
 }
 
