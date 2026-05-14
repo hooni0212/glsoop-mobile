@@ -16,6 +16,8 @@ type AuthorProfileResponse = {
   user?: any;
   stats?: any;
   viewer?: any;
+  profile_cosmetics?: unknown;
+  profileCosmetics?: unknown;
 };
 
 function extractProfilePayload(res: AuthorProfileResponse) {
@@ -27,6 +29,26 @@ function extractProfilePayload(res: AuthorProfileResponse) {
   const user = base?.user ?? base?.profile ?? base?.author ?? base ?? null;
   const stats = base?.stats ?? base?.userStats ?? null;
   const viewer = base?.viewer ?? res?.viewer ?? null;
+  const userRecord = user && typeof user === "object" && !Array.isArray(user) ? user : null;
+  const profileCosmetics =
+    userRecord?.profile_cosmetics ??
+    userRecord?.profileCosmetics ??
+    base?.profile_cosmetics ??
+    base?.profileCosmetics ??
+    res?.profile_cosmetics ??
+    res?.profileCosmetics ??
+    null;
+
+  if (userRecord) {
+    return {
+      user: {
+        ...userRecord,
+        profile_cosmetics: profileCosmetics,
+      },
+      stats,
+      viewer,
+    };
+  }
 
   return { user, stats, viewer };
 }

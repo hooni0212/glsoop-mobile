@@ -50,6 +50,8 @@ import {
   ActivityIndicator,
   Alert,
   InteractionManager,
+  Keyboard,
+  KeyboardAvoidingView,
   Linking,
   Modal,
   Platform,
@@ -268,6 +270,7 @@ export default function PostDetail() {
   const [commentInput, setCommentInput] = useState("");
   const [commentsExpanded, setCommentsExpanded] = useState(false);
   const [commentSubmitting, setCommentSubmitting] = useState(false);
+  const [commentKeyboardVisible, setCommentKeyboardVisible] = useState(false);
   const [replyTarget, setReplyTarget] = useState<PostComment | null>(null);
   const [deletingCommentId, setDeletingCommentId] = useState<number | null>(null);
   const [commentLikePending, setCommentLikePending] = useState<Record<number, boolean>>({});
@@ -406,8 +409,31 @@ export default function PostDetail() {
     void loadComments();
   }, [error, loadComments, loadedPostId, loading, postId]);
 
+  React.useEffect(() => {
+    const showEvent = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hideEvent = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+    const showSub = Keyboard.addListener(showEvent, () => setCommentKeyboardVisible(true));
+    const hideSub = Keyboard.addListener(hideEvent, () => setCommentKeyboardVisible(false));
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
   const openCommentsSheet = React.useCallback(() => {
     setCommentsExpanded(true);
+  }, []);
+
+  const closeCommentsSheet = React.useCallback(() => {
+    Keyboard.dismiss();
+    setCommentsExpanded(false);
+    setReplyTarget(null);
+    setCommentKeyboardVisible(false);
+  }, []);
+
+  const dismissCommentKeyboard = React.useCallback(() => {
+    Keyboard.dismiss();
   }, []);
 
   const clearCommentDraft = React.useCallback(() => {
@@ -447,6 +473,7 @@ export default function PostDetail() {
       setComments((prev) => [...prev, created]);
       setCommentInput("");
       setReplyTarget(null);
+      Keyboard.dismiss();
       showToast(replyTarget ? "답글을 남겼어요." : "댓글을 남겼어요.", { tone: "success" });
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
@@ -1197,44 +1224,44 @@ export default function PostDetail() {
         visible={commentsExpanded}
         transparent
         animationType="slide"
-        onRequestClose={() => {
-          setCommentsExpanded(false);
-          setReplyTarget(null);
-        }}
+        onRequestClose={closeCommentsSheet}
       >
-        <View style={styles.commentSheetOverlay}>
-          <View style={styles.commentSheet}>
-            <View style={styles.commentSheetHandle} />
-            <View style={styles.commentHeaderRow}>
-              <View>
-                <Text style={styles.commentKicker}>COMMENTS</Text>
-                <Text style={styles.commentTitle}>댓글 {commentCount}</Text>
+        <KeyboardAvoidingView
+          style={styles.commentKeyboardAvoider}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          keyboardVerticalOffset={0}
+        >
+          <View style={styles.commentSheetOverlay}>
+            <Pressable
+              style={styles.commentDismissLayer}
+              onPress={closeCommentsSheet}
+              accessibilityRole="button"
+              accessibilityLabel="댓글창 닫기"
+            />
+            <View style={styles.commentSheet}>
+              {commentKeyboardVisible ? (
+                <View pointerEvents="none" style={styles.commentKeyboardCornerFill} />
+              ) : null}
+              <View style={styles.commentSheetHandle} />
+              <View style={styles.commentHeaderRow}>
+                <View>
+                  <Text style={styles.commentKicker}>COMMENTS</Text>
+                  <Text style={styles.commentTitle}>댓글 {commentCount}</Text>
+                </View>
               </View>
-              <View style={styles.commentHeaderActions}>
-                <Pressable
-                  onPress={() => {
-                    setCommentsExpanded(false);
-                    setReplyTarget(null);
-                  }}
-                  accessibilityRole="button"
-                  accessibilityLabel="댓글 닫기"
-                  style={styles.commentIconBtn}
-                  testID="post-comments-close-btn"
-                >
-                  <Ionicons name="close" size={19} color="#2d5a3d" />
-                </Pressable>
-              </View>
-            </View>
 
-            <ScrollView
-              contentContainerStyle={styles.commentSheetContent}
-              refreshControl={
-                <RefreshControl
-                  refreshing={commentsLoading}
-                  onRefresh={() => void loadComments()}
-                />
-              }
-            >
+              <ScrollView
+                contentContainerStyle={styles.commentSheetContent}
+                keyboardShouldPersistTaps="handled"
+                keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
+                onScrollBeginDrag={dismissCommentKeyboard}
+                refreshControl={
+                  <RefreshControl
+                    refreshing={commentsLoading}
+                    onRefresh={() => void loadComments()}
+                  />
+                }
+              >
               {canWriteComment ? (
                 <View style={styles.commentComposer}>
                   {replyTarget ? (
@@ -1449,9 +1476,10 @@ export default function PostDetail() {
                   })}
                 </View>
               ) : null}
-            </ScrollView>
+              </ScrollView>
+            </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       <Modal visible={bookmarkModalVisible} transparent animationType="fade">

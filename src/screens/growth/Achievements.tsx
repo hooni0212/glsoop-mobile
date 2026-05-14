@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -105,13 +105,26 @@ export default function AchievementsScreen() {
         showToast(gainedCount > 0 ? `보상 ${gainedCount}개를 받았어요.` : "보상을 받았어요.", {
           tone: "success",
         });
+        if (gainedCount > 0) {
+          Alert.alert(
+            "코스메틱 획득",
+            "방금 받은 보상을 바로 프로필 카드에 적용해볼까요?",
+            [
+              { text: "나중에", style: "cancel" },
+              {
+                text: "프로필 꾸미기",
+                onPress: () => router.push("/profile-customize?source=growth-reward"),
+              },
+            ]
+          );
+        }
       } catch {
         showToast("업적 보상 수령에 실패했어요.", { tone: "error" });
       } finally {
         setClaimPendingByStateId((current) => ({ ...current, [item.stateId]: false }));
       }
     },
-    [claimPendingByStateId, claimQuestReward, showToast]
+    [claimPendingByStateId, claimQuestReward, router, showToast]
   );
 
   if (error?.kind === "auth") {
@@ -216,7 +229,7 @@ export default function AchievementsScreen() {
 	                      item={item}
 	                      claimPending={Boolean(claimPendingByStateId[item.stateId])}
 	                      onClaim={handleClaimAchievement}
-	                      onCustomize={() => router.push("/profile-customize")}
+                      onCustomize={() => router.push("/profile-customize?source=growth-reward")}
 	                    />
 	                  ))}
                 </View>
@@ -307,7 +320,7 @@ function AchievementCard({
           style={({ pressed }) => [styles.customizeBtn, pressed && styles.claimBtnPressed]}
           testID={`achievement-customize-btn-${item.stateId}`}
         >
-          <Text style={styles.customizeBtnText}>프로필에 적용하기</Text>
+          <Text style={styles.customizeBtnText}>받은 보상 꾸미기</Text>
         </Pressable>
       ) : null}
     </View>

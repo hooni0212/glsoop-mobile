@@ -135,8 +135,8 @@ export function AuthGate() {
     return (
       <View pointerEvents="auto" style={styles.blockingOverlay}>
         <AppBootScreen
-          title="로그인 상태를 확인하고 있어요"
-          message="조금만 기다리면 안정적으로 이어서 열어드릴게요."
+          title="글숲"
+          message="이어 읽을 공간을 준비하고 있어요."
         />
       </View>
     );

@@ -303,6 +303,20 @@ export function createPostDetailStyles(actionBarHeight: number, topInset = 0) {
       justifyContent: "flex-end",
       backgroundColor: tokens.colors.overlay,
     },
+    commentKeyboardAvoider: {
+      flex: 1,
+    },
+    commentDismissLayer: {
+      ...StyleSheet.absoluteFillObject,
+    },
+    commentKeyboardCornerFill: {
+      position: "absolute",
+      left: -2,
+      right: -2,
+      bottom: -58,
+      height: 58,
+      backgroundColor: "#26272a",
+    },
     commentSheet: {
       width: "100%",
       maxHeight: "82%",

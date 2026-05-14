@@ -134,7 +134,7 @@ export default function QuestsScreen() {
               { text: "나중에", style: "cancel" },
               {
                 text: "프로필 꾸미기",
-                onPress: () => router.push("/profile-customize"),
+                onPress: () => router.push("/profile-customize?source=growth-reward"),
               },
             ]
           );
@@ -292,6 +292,7 @@ export default function QuestsScreen() {
                       claimPending={Boolean(claimPendingByStateId[quest.stateId])}
                       onClaim={handleClaimReward}
                       onStartPromptQuest={handleStartPromptQuest}
+                      onCustomize={() => router.push("/profile-customize?source=growth-reward")}
                     />
                   ))}
                 </View>
@@ -309,11 +310,13 @@ function QuestItem({
   claimPending,
   onClaim,
   onStartPromptQuest,
+  onCustomize,
 }: {
   quest: GrowthQuest;
   claimPending: boolean;
   onClaim: (stateId: number) => void;
   onStartPromptQuest: (quest: GrowthQuest) => void;
+  onCustomize: () => void;
 }) {
   const statusMeta = getQuestStatusMeta(quest);
   const lockHint = getQuestLockHint(quest);
@@ -401,7 +404,20 @@ function QuestItem({
       ) : null}
 
       {!canClaim && quest.rewardClaimedAt ? (
-        <Text style={styles.claimedText}>보상 수령됨</Text>
+        cosmeticRewards.length > 0 ? (
+          <View style={styles.claimedActionRow}>
+            <Text style={styles.claimedText}>보상 수령됨</Text>
+            <Pressable
+              onPress={onCustomize}
+              style={({ pressed }) => [styles.customizeBtn, pressed && styles.claimBtnPressed]}
+              testID={`quest-customize-btn-${quest.stateId}`}
+            >
+              <Text style={styles.customizeBtnText}>프로필에 적용하기</Text>
+            </Pressable>
+          </View>
+        ) : (
+          <Text style={styles.claimedText}>보상 수령됨</Text>
+        )
       ) : null}
     </View>
   );
@@ -655,5 +671,25 @@ const styles = StyleSheet.create({
     fontSize: tokens.font.small,
     fontWeight: "800",
     color: tokens.colors.textMuted,
+  },
+  claimedActionRow: {
+    marginTop: 2,
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  customizeBtn: {
+    borderRadius: tokens.radius.pill,
+    borderWidth: 1,
+    borderColor: tokens.colors.green700,
+    backgroundColor: tokens.colors.green050,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  customizeBtnText: {
+    fontSize: tokens.font.small,
+    fontWeight: "900",
+    color: tokens.colors.green700,
   },
 });

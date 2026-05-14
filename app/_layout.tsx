@@ -48,7 +48,7 @@ function RootLayoutContent() {
         <ToastProvider>
           <NotificationBridge />
           {!ready ? (
-            <AppBootScreen message="로그인 상태를 준비하고 있어요..." />
+            <AppBootScreen />
           ) : (
             <>
               <AuthGate />

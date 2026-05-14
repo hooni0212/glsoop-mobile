@@ -1,6 +1,6 @@
 import React from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { router, usePathname } from "expo-router";
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { router, useLocalSearchParams, usePathname } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -45,9 +45,15 @@ function toEmoji(value: string | null | undefined, fallback: string) {
 }
 
 function slotLabel(slot: CosmeticStickerSlot) {
-  if (slot === "tl") return "좌상단";
-  if (slot === "tr") return "우상단";
-  return "우하단";
+  if (slot === "tl") return "왼쪽 위";
+  if (slot === "tr") return "오른쪽 위";
+  return "오른쪽 아래";
+}
+
+function slotHint(slot: CosmeticStickerSlot) {
+  if (slot === "tl") return "프로필 카드의 첫인상 옆에 놓여요.";
+  if (slot === "tr") return "카드 오른쪽 위에 작은 장식처럼 보여요.";
+  return "카드 오른쪽 아래에 조용히 남겨져요.";
 }
 
 function backgroundTone(key: string | null | undefined) {
@@ -119,6 +125,54 @@ function badgeTone(item: CosmeticItem | null) {
   };
 }
 
+function toMetaText(item: CosmeticItem | null, keys: string[]) {
+  if (!item?.meta) return "";
+  for (const key of keys) {
+    const value = item.meta[key];
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+  return "";
+}
+
+function rarityLabel(rarity: string | null | undefined) {
+  if (rarity === "epic") return "희귀한 보상";
+  if (rarity === "rare") return "특별 보상";
+  return "기본 보상";
+}
+
+function seasonLabel(season: string | null | undefined) {
+  if (!season) return "";
+  return season.replace(/_/g, " ");
+}
+
+function badgeDetail(item: CosmeticItem | null, fallback = "보유 중") {
+  if (!item) return fallback;
+  const metaText = toMetaText(item, ["description", "condition", "unlock_hint", "requirement"]);
+  if (metaText) return metaText;
+
+  const key = item.key;
+  if (key.includes("first_post")) return "첫 글을 남기면 얻는 흔적";
+  if (key.includes("posts_10")) return "열 편의 글을 쌓아 얻는 배지";
+  if (key.includes("posts_50")) return "꾸준히 쓴 작가에게 주어져요";
+  if (key.includes("first_like")) return "첫 공감을 받으면 열려요";
+  if (key.includes("loved")) return "많은 공감을 받은 글의 기록";
+  if (key.includes("streak_30")) return "긴 글쓰기 리듬을 지킨 보상";
+  if (key.includes("streak_7")) return "일주일의 발걸음을 남긴 배지";
+  if (key.includes("streak_3")) return "짧은 리듬을 시작한 기록";
+
+  const season = seasonLabel(item.season);
+  return season ? `${season} 시즌` : rarityLabel(item.rarity);
+}
+
+function backgroundDetail(item: CosmeticItem) {
+  const metaText = toMetaText(item, ["description", "mood", "unlock_hint"]);
+  if (metaText) return metaText;
+  if (item.key.includes("writer_grove")) return "연한 숲빛으로 차분하게";
+  if (item.key.includes("deep_forest")) return "깊은 초록 리듬의 카드";
+  if (item.key.includes("prompt_letters")) return "따뜻한 편지지의 온도";
+  return "가장 기본이 되는 종이 질감";
+}
+
 function buildSlotSelection(state: ProfileCosmeticsState) {
   const map = new Map<CosmeticStickerSlot, string>();
   for (const entry of state.header_stickers) {
@@ -129,6 +183,7 @@ function buildSlotSelection(state: ProfileCosmeticsState) {
 
 export default function ProfileCustomizeScreen() {
   const pathname = usePathname();
+  const params = useLocalSearchParams<{ source?: string }>();
   const { showToast } = useToast();
   const { inventory, profile, loading, loaded, error, refetch } = useMyCosmetics();
 
@@ -146,6 +201,7 @@ export default function ProfileCustomizeScreen() {
   }, [loaded, loading, profile]);
 
   const slotSelection = React.useMemo(() => buildSlotSelection(selection), [selection]);
+  const openedFromGrowthReward = params.source === "growth-reward";
   const hasInventory =
     inventory.badges.length > 0 ||
     inventory.stickers.length > 0 ||
@@ -258,6 +314,22 @@ export default function ProfileCustomizeScreen() {
     }
   }, [pathname, selection, showToast]);
 
+  const handlePressBack = React.useCallback(() => {
+    if (!dirty || saving) {
+      router.back();
+      return;
+    }
+
+    Alert.alert(
+      "변경사항이 저장되지 않았어요",
+      "지금 나가면 방금 고른 프로필 꾸미기가 사라져요.",
+      [
+        { text: "계속 꾸미기", style: "cancel" },
+        { text: "나가기", style: "destructive", onPress: () => router.back() },
+      ]
+    );
+  }, [dirty, saving]);
+
   const showInitialLoading = !loaded || (loading && !hydratedRef.current);
 
   if (showInitialLoading) {
@@ -302,10 +374,13 @@ export default function ProfileCustomizeScreen() {
 
   return (
     <SafeAreaView style={styles.safe} testID="profile-customize-screen">
-      <ProfileCustomizeTopBar />
+      <ProfileCustomizeTopBar onPressBack={handlePressBack} />
 
       <ScrollView
+        style={styles.scroll}
         contentContainerStyle={styles.content}
+        contentInsetAdjustmentBehavior="automatic"
+        showsVerticalScrollIndicator={false}
         testID="profile-customize-scroll"
       >
         {error ? (
@@ -313,6 +388,20 @@ export default function ProfileCustomizeScreen() {
             <Text style={styles.noticeText}>
               일부 데이터를 새로고침하지 못했어요. 저장은 계속할 수 있어요.
             </Text>
+          </View>
+        ) : null}
+
+        {openedFromGrowthReward ? (
+          <View style={styles.rewardNotice} testID="profile-growth-reward-notice">
+            <View style={styles.rewardNoticeIcon}>
+              <Text style={styles.rewardNoticeIconText}>✓</Text>
+            </View>
+            <View style={styles.rewardNoticeCopy}>
+              <Text style={styles.rewardNoticeTitle}>새 보상을 프로필에 적용해보세요</Text>
+              <Text style={styles.rewardNoticeText}>
+                방금 받은 배지와 스티커가 보유 목록에 반영됐어요.
+              </Text>
+            </View>
           </View>
         ) : null}
 
@@ -347,7 +436,7 @@ export default function ProfileCustomizeScreen() {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>대표 뱃지</Text>
-          <Text style={styles.sectionHint}>프로필에 가장 먼저 보여줄 나의 흔적을 골라요.</Text>
+          <Text style={styles.sectionHint}>닉네임 옆에 가장 먼저 보여줄 나의 흔적을 골라요.</Text>
 
           {inventory.badges.length === 0 ? (
             <Text style={styles.emptyText}>보유한 뱃지가 아직 없어요.</Text>
@@ -356,6 +445,7 @@ export default function ProfileCustomizeScreen() {
               <BadgeOptionCard
                 label="없음"
                 emoji="—"
+                detail="대표 배지를 비워둘게요"
                 selected={selection.primary_badge_key === null}
                 onPress={() => pickPrimaryBadge(null)}
                 testID="profile-primary-none"
@@ -365,6 +455,7 @@ export default function ProfileCustomizeScreen() {
                   key={item.key}
                   label={item.name}
                   emoji={toEmoji(item.icon_emoji, "🏷️")}
+                  detail={badgeDetail(item)}
                   tone={badgeTone(item)}
                   selected={selection.primary_badge_key === item.key}
                   onPress={() => pickPrimaryBadge(item.key)}
@@ -390,6 +481,7 @@ export default function ProfileCustomizeScreen() {
                   key={`showcase-${item.key}`}
                   label={item.name}
                   emoji={toEmoji(item.icon_emoji, "🏷️")}
+                  detail={badgeDetail(item)}
                   tone={badgeTone(item)}
                   selected={selection.showcase_badge_keys.includes(item.key)}
                   onPress={() => toggleShowcaseBadge(item.key)}
@@ -402,7 +494,7 @@ export default function ProfileCustomizeScreen() {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>헤더 스티커</Text>
-          <Text style={styles.sectionHint}>세 슬롯을 각각 고를 수 있어요.</Text>
+          <Text style={styles.sectionHint}>프로필 카드 모서리에 은은한 표시를 남겨요.</Text>
 
           {inventory.stickers.length === 0 ? (
             <Text style={styles.emptyText}>보유한 스티커가 아직 없어요.</Text>
@@ -417,10 +509,13 @@ export default function ProfileCustomizeScreen() {
                 return (
                   <View key={slot} style={styles.slotCard}>
                     <View style={styles.slotHeaderRow}>
-                      <Text style={styles.slotTitle}>{slotLabel(slot)}</Text>
-                      <Text style={styles.slotSelectedText} numberOfLines={1}>
-                        {selectedSticker?.name ?? "비워둘게요"}
-                      </Text>
+                      <View style={styles.slotTitleBlock}>
+                        <Text style={styles.slotTitle}>{slotLabel(slot)}</Text>
+                        <Text style={styles.slotSelectedText} numberOfLines={2}>
+                          {selectedSticker?.name ?? "스티커 없음"} · {slotHint(slot)}
+                        </Text>
+                      </View>
+                      <StickerSlotMiniMap slot={slot} sticker={selectedSticker} />
                     </View>
                     <View style={styles.stickerGrid}>
                       <StickerOptionCard
@@ -447,10 +542,22 @@ export default function ProfileCustomizeScreen() {
             </View>
           )}
         </View>
+      </ScrollView>
 
+      <View style={styles.saveDock}>
+        <View style={styles.saveDockCopy}>
+          <Text style={styles.saveDockTitle}>
+            {saving ? "저장 중이에요" : dirty ? "변경사항이 있어요" : "저장됨"}
+          </Text>
+          <Text style={styles.saveDockHint}>
+            {dirty ? "저장하면 작가 프로필에 바로 반영돼요." : "프로필 카드가 최신 상태예요."}
+          </Text>
+        </View>
         <Pressable
           onPress={saveProfileCosmetics}
           disabled={saving || loading || !dirty}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: saving || loading || !dirty }}
           style={({ pressed }) => [
             styles.saveButton,
             (saving || loading || !dirty) && styles.saveButtonDisabled,
@@ -459,19 +566,19 @@ export default function ProfileCustomizeScreen() {
           testID="profile-cosmetics-save-btn"
         >
           <Text style={styles.saveButtonText}>
-            {saving ? "저장 중..." : "저장"}
+            {saving ? "저장 중..." : dirty ? "변경사항 저장" : "저장됨"}
           </Text>
         </Pressable>
-      </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }
 
-function ProfileCustomizeTopBar() {
+function ProfileCustomizeTopBar({ onPressBack }: { onPressBack?: () => void }) {
   return (
     <View style={styles.topBar}>
       <Pressable
-        onPress={() => router.back()}
+        onPress={onPressBack ?? (() => router.back())}
         hitSlop={12}
         style={styles.backBtn}
         testID="profile-customize-back-btn"
@@ -655,6 +762,9 @@ function BackgroundOptionCard({
       <Text style={[styles.optionCardTitle, selected && styles.optionCardTitleSelected]} numberOfLines={2}>
         {item.name}
       </Text>
+      <Text style={styles.optionCardDetail} numberOfLines={2}>
+        {backgroundDetail(item)}
+      </Text>
     </Pressable>
   );
 }
@@ -666,6 +776,7 @@ function BadgeOptionCard({
   onPress,
   testID,
   tone,
+  detail,
 }: {
   label: string;
   emoji: string;
@@ -673,6 +784,7 @@ function BadgeOptionCard({
   onPress: () => void;
   testID?: string;
   tone?: ReturnType<typeof badgeTone>;
+  detail?: string;
 }) {
   const cardTone =
     tone ??
@@ -707,8 +819,50 @@ function BadgeOptionCard({
       <Text style={[styles.optionCardTitle, selected && styles.optionCardTitleSelected]} numberOfLines={2}>
         {label}
       </Text>
+      {detail ? (
+        <Text style={styles.optionCardDetail} numberOfLines={2}>
+          {detail}
+        </Text>
+      ) : null}
     </Pressable>
   );
+}
+
+function StickerSlotMiniMap({
+  slot,
+  sticker,
+}: {
+  slot: CosmeticStickerSlot;
+  sticker: CosmeticItem | undefined;
+}) {
+  return (
+    <View style={styles.slotMiniMap} pointerEvents="none">
+      <View style={styles.slotMiniMapLine} />
+      {COSMETIC_STICKER_SLOTS.map((candidate) => {
+        const active = candidate === slot;
+        return (
+          <View
+            key={candidate}
+            style={[
+              styles.slotMiniDot,
+              getSlotMiniDotAnchor(candidate),
+              active && styles.slotMiniDotActive,
+            ]}
+          >
+            {active && sticker ? (
+              <Text style={styles.slotMiniDotText}>{toEmoji(sticker.icon_emoji, "✨")}</Text>
+            ) : null}
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
+function getSlotMiniDotAnchor(slot: CosmeticStickerSlot) {
+  if (slot === "tl") return styles.slotMiniDotTL;
+  if (slot === "tr") return styles.slotMiniDotTR;
+  return styles.slotMiniDotBR;
 }
 
 function StickerOptionCard({
@@ -765,6 +919,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: tokens.space.xl,
   },
+  scroll: {
+    flex: 1,
+  },
   topBar: {
     paddingTop: tokens.space.xs,
     paddingHorizontal: tokens.space.md,
@@ -798,8 +955,49 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     paddingHorizontal: tokens.space.lg,
     paddingTop: tokens.space.sm,
-    paddingBottom: 156,
+    paddingBottom: tokens.space.xl,
     gap: tokens.space.lg as any,
+  },
+  rewardNotice: {
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#C9DDC8",
+    backgroundColor: PROFILE_UI_COLORS.greenSoft,
+    padding: tokens.space.md,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: tokens.space.sm as any,
+  },
+  rewardNoticeIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: PROFILE_UI_COLORS.green,
+  },
+  rewardNoticeIconText: {
+    ...NON_SELECTABLE_TEXT,
+    fontSize: 16,
+    fontWeight: "900",
+    color: tokens.colors.textInverse,
+  },
+  rewardNoticeCopy: {
+    flex: 1,
+    gap: 2,
+  },
+  rewardNoticeTitle: {
+    ...NON_SELECTABLE_TEXT,
+    fontSize: tokens.font.body,
+    fontWeight: "900",
+    color: PROFILE_UI_COLORS.ink,
+  },
+  rewardNoticeText: {
+    ...NON_SELECTABLE_TEXT,
+    fontSize: tokens.font.small,
+    lineHeight: 18,
+    fontWeight: "700",
+    color: PROFILE_UI_COLORS.muted,
   },
   notice: {
     borderRadius: tokens.radius.lg,
@@ -1053,7 +1251,7 @@ const styles = StyleSheet.create({
   badgeCard: {
     ...NON_SELECTABLE_TEXT,
     width: "48%",
-    minHeight: 118,
+    minHeight: 142,
     borderRadius: 18,
     borderWidth: 1,
     paddingHorizontal: 10,
@@ -1102,6 +1300,15 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     textAlign: "center",
   },
+  optionCardDetail: {
+    ...NON_SELECTABLE_TEXT,
+    minHeight: 34,
+    fontSize: 11,
+    lineHeight: 16,
+    color: PROFILE_UI_COLORS.muted,
+    fontWeight: "700",
+    textAlign: "center",
+  },
   optionCardTitleSelected: {
     color: PROFILE_UI_COLORS.green,
   },
@@ -1122,6 +1329,10 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     gap: tokens.space.sm as any,
   },
+  slotTitleBlock: {
+    flex: 1,
+    gap: 3,
+  },
   slotTitle: {
     ...NON_SELECTABLE_TEXT,
     fontSize: tokens.font.body,
@@ -1134,6 +1345,60 @@ const styles = StyleSheet.create({
     fontSize: tokens.font.small,
     color: PROFILE_UI_COLORS.muted,
     fontWeight: "800",
+    lineHeight: 18,
+  },
+  slotMiniMap: {
+    width: 78,
+    height: 58,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: PROFILE_UI_COLORS.border,
+    backgroundColor: "rgba(255,255,255,0.72)",
+    position: "relative",
+    overflow: "hidden",
+  },
+  slotMiniMapLine: {
+    position: "absolute",
+    left: 12,
+    right: 16,
+    top: 31,
+    height: 1,
+    backgroundColor: "#E7D8C6",
+  },
+  slotMiniDot: {
+    position: "absolute",
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 1,
+    borderColor: "#D9CEBE",
+    backgroundColor: "#F8F3E9",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  slotMiniDotActive: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderColor: PROFILE_UI_COLORS.green,
+    backgroundColor: "#EAF4EC",
+  },
+  slotMiniDotTL: {
+    top: 8,
+    left: 8,
+  },
+  slotMiniDotTR: {
+    top: 8,
+    right: 8,
+  },
+  slotMiniDotBR: {
+    right: 8,
+    bottom: 8,
+  },
+  slotMiniDotText: {
+    ...NON_SELECTABLE_TEXT,
+    fontSize: 13,
+    lineHeight: 15,
   },
   stickerGrid: {
     flexDirection: "row",
@@ -1191,11 +1456,13 @@ const styles = StyleSheet.create({
     color: PROFILE_UI_COLORS.green,
   },
   saveButton: {
-    marginTop: tokens.space.sm,
     borderRadius: tokens.radius.lg,
     backgroundColor: tokens.colors.green900,
-    paddingVertical: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     alignItems: "center",
+    justifyContent: "center",
+    minWidth: 118,
   },
   saveButtonDisabled: {
     opacity: 0.45,
@@ -1208,5 +1475,33 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "900",
     color: tokens.colors.textInverse,
+  },
+  saveDock: {
+    borderTopWidth: 1,
+    borderTopColor: PROFILE_UI_COLORS.border,
+    backgroundColor: "#FFFCF6",
+    paddingHorizontal: tokens.space.lg,
+    paddingTop: tokens.space.md,
+    paddingBottom: tokens.space.md,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: tokens.space.md as any,
+  },
+  saveDockCopy: {
+    flex: 1,
+    gap: 2,
+  },
+  saveDockTitle: {
+    ...NON_SELECTABLE_TEXT,
+    fontSize: tokens.font.body,
+    fontWeight: "900",
+    color: PROFILE_UI_COLORS.ink,
+  },
+  saveDockHint: {
+    ...NON_SELECTABLE_TEXT,
+    fontSize: tokens.font.small,
+    fontWeight: "700",
+    color: PROFILE_UI_COLORS.muted,
+    lineHeight: 17,
   },
 });

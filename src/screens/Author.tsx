@@ -93,15 +93,39 @@ function emojiOrFallback(value: unknown, fallback: string): string {
 
 function getProfileBackgroundTone(key: string | null | undefined) {
   if (key === "background_writer_grove") {
-    return { backgroundColor: "#EAF5EE", borderColor: "#9EC9AD" };
+    return {
+      backgroundColor: "#EAF5EE",
+      borderColor: "#9EC9AD",
+      accentColor: tokens.colors.green700,
+      surfaceColor: "#DCEFE4",
+      lineColor: "#A7CDB4",
+    };
   }
   if (key === "background_deep_forest") {
-    return { backgroundColor: "#DCEFE5", borderColor: "#7DAE91" };
+    return {
+      backgroundColor: "#DCEFE5",
+      borderColor: "#7DAE91",
+      accentColor: tokens.colors.green900,
+      surfaceColor: "#C7E1D2",
+      lineColor: "#7DAE91",
+    };
   }
   if (key === "background_prompt_letters") {
-    return { backgroundColor: "#FFF1E8", borderColor: "#E6BDA6" };
+    return {
+      backgroundColor: "#FFF1E8",
+      borderColor: "#E6BDA6",
+      accentColor: "#8A4B2A",
+      surfaceColor: "#FFE3D1",
+      lineColor: "#D49A7C",
+    };
   }
-  return { backgroundColor: tokens.colors.surface, borderColor: tokens.colors.border };
+  return {
+    backgroundColor: "#FAF8F1",
+    borderColor: "#E6E0D5",
+    accentColor: tokens.colors.green700,
+    surfaceColor: "#F2ECDF",
+    lineColor: "#D9CEBE",
+  };
 }
 
 function getStickerAnchorStyle(slot: CosmeticStickerSlot) {
@@ -164,8 +188,11 @@ export default function Author() {
   const showProfileCustomize = isOwnProfile(viewer, user);
   const showFollowButton = Boolean(userId && !showProfileCustomize);
   const profileCosmetics = useMemo(
-    () => normalizeProfileCosmeticsExpanded(user?.profile_cosmetics ?? null),
-    [user?.profile_cosmetics]
+    () =>
+      normalizeProfileCosmeticsExpanded(
+        user?.profile_cosmetics ?? user?.profileCosmetics ?? null
+      ),
+    [user?.profileCosmetics, user?.profile_cosmetics]
   );
   const legalGuidelinesUrl = resolveRuntimeLegalDocumentUrl(
     runtimeLegalConfig,
@@ -441,6 +468,7 @@ export default function Author() {
       const showcaseBadges = profileCosmetics.showcase_badges.slice(0, 6);
       const headerStickers = profileCosmetics.header_stickers;
       const hasTopLeftSticker = headerStickers.some(({ slot }) => slot === "tl");
+      const avatarInitial = name.trim().slice(0, 1) || "글";
 
       return (
         <View>
@@ -453,6 +481,29 @@ export default function Author() {
               },
             ]}
           >
+            <View
+              pointerEvents="none"
+              style={[
+                authorScreenStyles.profilePaperWash,
+                { backgroundColor: backgroundTone.surfaceColor },
+              ]}
+            />
+            <View
+              pointerEvents="none"
+              style={[
+                authorScreenStyles.profilePaperLine,
+                authorScreenStyles.profilePaperLineTop,
+                { backgroundColor: backgroundTone.lineColor },
+              ]}
+            />
+            <View
+              pointerEvents="none"
+              style={[
+                authorScreenStyles.profilePaperLine,
+                authorScreenStyles.profilePaperLineBottom,
+                { backgroundColor: backgroundTone.lineColor },
+              ]}
+            />
             {headerStickers.map(({ slot, sticker }) => (
               <View
                 key={`${slot}-${sticker.key}`}
@@ -470,27 +521,38 @@ export default function Author() {
 
             <View
               style={[
-                authorScreenStyles.nameRow,
-                hasTopLeftSticker && authorScreenStyles.nameRowWithLeftSticker,
+                authorScreenStyles.profileHeader,
+                hasTopLeftSticker && authorScreenStyles.profileHeaderWithLeftSticker,
               ]}
             >
-              <Text style={authorScreenStyles.name}>{name}</Text>
-              {primaryBadge ? (
-                <Text
-                  style={authorScreenStyles.badgeEmoji}
-                  accessibilityLabel={`대표 뱃지 ${primaryBadge.name}`}
-                >
-                  {emojiOrFallback(primaryBadge.icon_emoji, "🏅")}
-                </Text>
-              ) : null}
+              <View
+                style={[
+                  authorScreenStyles.avatar,
+                  {
+                    borderColor: backgroundTone.borderColor,
+                    backgroundColor: "rgba(255,255,255,0.72)",
+                  },
+                ]}
+              >
+                <Text style={authorScreenStyles.avatarText}>{avatarInitial}</Text>
+              </View>
+              <View style={authorScreenStyles.identityBlock}>
+                <Text style={authorScreenStyles.profileKicker}>작가의 글숲</Text>
+                <View style={authorScreenStyles.nameRow}>
+                  <Text style={authorScreenStyles.name}>{name}</Text>
+                  {primaryBadge ? (
+                    <Text
+                      style={authorScreenStyles.badgeEmoji}
+                      accessibilityLabel={`대표 뱃지 ${primaryBadge.name}`}
+                    >
+                      {emojiOrFallback(primaryBadge.icon_emoji, "🏅")}
+                    </Text>
+                  ) : null}
+                </View>
+              </View>
             </View>
 
             <Text style={authorScreenStyles.bio}>{collapsedAbout || bio}</Text>
-            {profileBackground ? (
-              <Text style={authorScreenStyles.profileBackgroundLabel}>
-                {emojiOrFallback(profileBackground.icon_emoji, "🎨")} {profileBackground.name}
-              </Text>
-            ) : null}
             {about.length > 96 ? (
               <Pressable
                 onPress={() => setBioExpanded((current) => !current)}
@@ -521,6 +583,17 @@ export default function Author() {
                   </View>
                 ))}
               </View>
+            ) : null}
+
+            {profileBackground ? (
+              <Text
+                style={[
+                  authorScreenStyles.profileBackgroundLabel,
+                  { color: backgroundTone.accentColor },
+                ]}
+              >
+                {emojiOrFallback(profileBackground.icon_emoji, "🎨")} {profileBackground.name}
+              </Text>
             ) : null}
 
             <View style={authorScreenStyles.statsRow}>

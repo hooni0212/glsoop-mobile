@@ -273,4 +273,32 @@ test.describe("프로필 꾸미기 코스메틱 플로우", () => {
       "true"
     );
   });
+
+  test("성장 보상에서 진입하면 보상 안내와 꾸미기 목록을 함께 보여준다", async ({ page }) => {
+    const capture: Capture = { payloads: [] };
+    await mockProfileCosmeticsApis(
+      page,
+      {
+        primary_badge_key: "badge_spring_2026",
+        profile_background_key: "background_writer_grove",
+        showcase_badge_keys: ["badge_spring_2026"],
+        header_stickers: [{ slot: "tl", key: "sticker_leaf" }],
+      },
+      capture
+    );
+    await setAuthToken(page, "mock-token-for-profile-cosmetics");
+
+    await page.goto("/profile-customize?source=growth-reward");
+    await expect(page.getByTestId("profile-customize-screen")).toBeVisible();
+    await expect(page.getByTestId("profile-growth-reward-notice")).toContainText(
+      "새 보상을 프로필에 적용해보세요"
+    );
+    await expect(page.getByTestId("profile-cosmetics-preview")).toContainText(
+      "작가의 작은 숲"
+    );
+    await expect(page.getByTestId("profile-cosmetics-save-btn")).toHaveAttribute(
+      "aria-disabled",
+      "true"
+    );
+  });
 });

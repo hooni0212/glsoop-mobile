@@ -70,6 +70,51 @@ const NEWEST_POSTS = Array.from({ length: 12 }, (_, index) => {
 
 const OLDEST_POSTS = [...NEWEST_POSTS].reverse();
 const LIKES_POSTS = [...NEWEST_POSTS].sort((a, b) => b.like_count - a.like_count || Number(b.id) - Number(a.id));
+const AUTHOR_PROFILE_COSMETICS = {
+  primaryBadge: {
+    key: "badge_spring_2026",
+    type: "badge",
+    name: "2026 봄 배지",
+    iconEmoji: "🌸",
+    rarity: "rare",
+    season: "spring_2026",
+    meta: null,
+  },
+  profileBackground: {
+    key: "background_writer_grove",
+    type: "background",
+    name: "작가의 작은 숲",
+    iconEmoji: "🌳",
+    rarity: "rare",
+    season: "spring_2026",
+    meta: null,
+  },
+  showcaseBadges: [
+    {
+      key: "badge_loved_post",
+      type: "badge",
+      name: "사랑받은 글 배지",
+      iconEmoji: "💙",
+      rarity: "rare",
+      season: null,
+      meta: null,
+    },
+  ],
+  headerStickers: [
+    {
+      slot: "tr",
+      sticker: {
+        key: "sticker_leaf",
+        type: "sticker",
+        name: "리프 스티커",
+        iconEmoji: "🍃",
+        rarity: "common",
+        season: null,
+        meta: null,
+      },
+    },
+  ],
+};
 
 function getPostsForSort(sort: string) {
   if (sort === "oldest") return OLDEST_POSTS;
@@ -111,7 +156,7 @@ async function mockAuthorApis(page: Page, logs: AuthorRequestLog[]) {
             total_likes: 120,
             follower_count: 3,
             following_count: 1,
-            profile_cosmetics: null,
+            profileCosmetics: AUTHOR_PROFILE_COSMETICS,
           },
           stats: {
             postCount: 12,
@@ -175,6 +220,9 @@ test.describe("작가 화면 흐름", () => {
     await page.goto(`/users/${AUTHOR_ID}`);
     await expect(page.getByTestId("author-screen")).toBeVisible();
     await expect(page.getByTestId("author-post-card-1200")).toBeVisible();
+    await expect(page.getByText(/작가의 작은 숲/)).toBeVisible();
+    await expect(page.getByLabel("대표 뱃지 2026 봄 배지")).toBeVisible();
+    await expect(page.getByText("사랑받은 글 배지")).toBeVisible();
 
     await expect.poll(() => logs.filter((entry) => entry.sort === "newest" && entry.offset === 0).length).toBeGreaterThan(0);
 
@@ -200,7 +248,7 @@ test.describe("작가 화면 흐름", () => {
     await expect(page.getByTestId("author-post-card-1190")).toBeVisible();
 
     await page.goto("/");
-    await expect(page.getByText("글숲")).toBeVisible();
+    await expect(page.getByRole("button", { name: "검색" })).toBeVisible();
     await page.goto(`/users/${AUTHOR_ID}`);
     await expect(page.getByTestId("author-screen")).toBeVisible();
     await expect.poll(() => logs.filter((entry) => entry.sort === "newest" && entry.offset === 0).length).toBeGreaterThan(1);

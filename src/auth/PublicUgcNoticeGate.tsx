@@ -172,8 +172,8 @@ export function PublicUgcNoticeGate({ active }: Props) {
     return (
       <View pointerEvents="auto" style={styles.overlay}>
         <AppBootScreen
-          title="이용 안내를 준비하고 있어요"
-          message="공개 글을 보기 전에 필요한 문서를 먼저 정리하고 있어요."
+          title="글숲"
+          message="읽을 준비를 하고 있어요."
         />
       </View>
     );

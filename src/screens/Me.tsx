@@ -333,10 +333,31 @@ export default function MeScreen() {
               </View>
               <View style={styles.quickActionCopy}>
                 <Text style={styles.quickActionBtnTitle}>프로필 꾸미기</Text>
-                <Text style={styles.quickActionBtnDescription}>뱃지와 스티커</Text>
+                <Text style={styles.quickActionBtnDescription}>뱃지, 스티커, 배경</Text>
               </View>
               <Ionicons name="chevron-forward" size={16} color={tokens.colors.textFaint} />
             </Pressable>
+            {publicProfileId ? (
+              <Pressable
+                onPress={() => router.push(`/users/${publicProfileId}`)}
+                style={({ pressed }) => [
+                  styles.quickActionBtn,
+                  pressed && styles.quickActionBtnPressed,
+                ]}
+                testID="me-public-profile-btn"
+                accessibilityRole="button"
+                accessibilityLabel="내 공개 프로필 보기"
+              >
+                <View style={styles.quickActionIcon}>
+                  <Ionicons name="id-card-outline" size={18} color={tokens.colors.green700} />
+                </View>
+                <View style={styles.quickActionCopy}>
+                  <Text style={styles.quickActionBtnTitle}>내 공개 프로필</Text>
+                  <Text style={styles.quickActionBtnDescription}>꾸민 프로필 확인</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={tokens.colors.textFaint} />
+              </Pressable>
+            ) : null}
             <Pressable
               onPress={() => router.push("/account-center")}
               style={({ pressed }) => [styles.quickActionBtn, pressed && styles.quickActionBtnPressed]}
@@ -556,6 +577,8 @@ export default function MeScreen() {
       </SafeAreaView>
     );
   }
+
+  const publicProfileId = String(me.id ?? "");
 
   return (
     <SafeAreaView style={styles.safe}>

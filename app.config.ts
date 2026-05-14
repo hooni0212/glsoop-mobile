@@ -3,10 +3,11 @@ import type { ExpoConfig } from "expo/config";
 const baseConfig = require("./app.json").expo as ExpoConfig;
 
 // iOS buildNumber / Android versionCode를 한 곳에서 같이 관리합니다.
-const MOBILE_BUILD_NUMBER = 29;
+const MOBILE_BUILD_NUMBER = 33;
 
 export default (): ExpoConfig => ({
   ...baseConfig,
+  newArchEnabled: true,
   plugins: [
     ...(baseConfig.plugins ?? []),
     [
@@ -32,6 +33,7 @@ export default (): ExpoConfig => ({
   },
   android: {
     ...baseConfig.android,
+    edgeToEdgeEnabled: true,
     versionCode: MOBILE_BUILD_NUMBER,
   },
   extra: {
