@@ -14,6 +14,8 @@ type AuthState = {
   ready: boolean;
   /** Bearer token (없으면 null) */
   token: string | null;
+  /** 현재 앱 세션에서 로그인 완료가 발생한 횟수 */
+  signInSerial: number;
   /** token 저장 + state 반영 */
   signIn: (token: string) => Promise<void>;
   /** token 삭제 + state 반영 */
@@ -25,6 +27,7 @@ const AuthContext = React.createContext<AuthState | null>(null);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = React.useState(false);
   const [token, setToken] = React.useState<string | null>(null);
+  const [signInSerial, setSignInSerial] = React.useState(0);
 
   React.useEffect(() => {
     let mounted = true;
@@ -47,6 +50,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     resetMyCosmeticsSnapshot();
     await setAuthToken(nextToken);
     setToken(nextToken);
+    setSignInSerial((current) => current + 1);
   }, []);
 
   const signOut = React.useCallback(async () => {
@@ -62,6 +66,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     await clearAuthToken();
     setToken(null);
+    setSignInSerial(0);
     clearLikes();
     clearBookmarks();
     clearBlockedUserIds();
@@ -70,8 +75,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const value = React.useMemo<AuthState>(
-    () => ({ ready, token, signIn, signOut }),
-    [ready, token, signIn, signOut]
+    () => ({ ready, token, signInSerial, signIn, signOut }),
+    [ready, token, signInSerial, signIn, signOut]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

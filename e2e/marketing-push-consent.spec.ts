@@ -82,7 +82,9 @@ test.describe("마케팅 푸시 수신 동의", () => {
         marketing_version: "2026-02-27.marketing.v1",
       },
     ]);
-    await expect(page.getByText("마케팅 알림 수신에 동의했어요.")).toBeVisible();
+    await expect(
+      page.getByText("설정은 저장했어요. 이 환경에서는 기기 알림 권한을 확인할 수 없어요.")
+    ).toBeVisible();
 
     await page.getByTestId("marketing-push-opt-out-btn").click();
     await expect.poll(() => patchRequests.length).toBe(2);

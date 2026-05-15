@@ -13,6 +13,10 @@ import { buildAuthRoute } from "@/lib/authRedirect";
 import { apiGet, apiPost, apiPut } from "@/lib/api";
 import { normalizeApiError } from "@/lib/errors";
 import {
+  describePushRegistrationResult,
+  registerForPushNotificationsAsync,
+} from "@/lib/pushNotifications";
+import {
   type MeResponse,
   type SessionsResponse,
   type SessionItem,
@@ -112,12 +116,26 @@ export default function AccountCenterSecuritySettingsScreen() {
         marketingVersion: previous.marketingVersion,
       });
       setMarketingPushConsent(nextConsent);
-      showToast(
-        nextValue
-          ? "마케팅 알림 수신에 동의했어요."
-          : "마케팅 알림 수신 동의를 철회했어요.",
-        { tone: "success" }
-      );
+
+      if (nextValue) {
+        try {
+          const pushResult = await registerForPushNotificationsAsync({
+            requestPermission: true,
+          });
+          showToast(describePushRegistrationResult(pushResult), {
+            tone: "success",
+            durationMs: 2600,
+          });
+        } catch {
+          showToast("동의는 저장했어요. 알림 등록은 나중에 다시 시도돼요.", {
+            tone: "success",
+            durationMs: 2600,
+          });
+        }
+        return;
+      }
+
+      showToast("마케팅 알림 수신 동의를 철회했어요.", { tone: "success" });
     } catch (e) {
       setMarketingPushConsent(previous);
       const normalized = normalizeApiError(e);
