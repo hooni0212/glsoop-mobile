@@ -67,6 +67,21 @@ export function isPushNotificationSupported() {
   return PUSH_NOTIFICATIONS_SUPPORTED;
 }
 
+export function describePushRegistrationResult(result: PushRegistrationResult) {
+  switch (result.status) {
+    case "registered":
+      return "설정을 저장했어요. 이 기기에서 알림을 받을 준비가 됐어요.";
+    case "denied":
+      return result.canAskAgain
+        ? "설정은 저장했어요. 기기 알림 권한은 다시 허용할 수 있어요."
+        : "설정은 저장했어요. 기기 알림은 iOS/Android 설정에서 허용할 수 있어요.";
+    case "missing-project":
+      return "설정은 저장했어요. 알림 등록은 앱 설정 확인 후 다시 시도돼요.";
+    case "unsupported":
+      return "설정은 저장했어요. 이 환경에서는 기기 알림 권한을 확인할 수 없어요.";
+  }
+}
+
 export async function getPushNotificationPermissionStateAsync(): Promise<PushNotificationPermissionState> {
   if (!isPushNotificationSupported()) {
     return {

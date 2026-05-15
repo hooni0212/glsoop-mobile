@@ -2,6 +2,7 @@ import React from "react";
 import * as SplashScreen from "expo-splash-screen";
 import { AuthGate } from "@/auth/AuthGate";
 import { AuthProvider, useAuth } from "@/auth/AuthContext";
+import { PostLoginPreferencesPrompt } from "@/auth/PostLoginPreferencesPrompt";
 import { AppBootScreen } from "@/components/state/AppBootScreen";
 import { refreshNotificationUnreadCount } from "@/features/notifications/notificationStore";
 import { ToastProvider, useToast } from "@/feedback/ToastProvider";
@@ -108,6 +109,7 @@ function RootLayoutContent() {
                 <Stack.Screen name="profile-customize" options={{ headerShown: false }} />
                 <Stack.Screen name="ui-kit" options={{ headerShown: false }} />
               </Stack>
+              <PostLoginPreferencesPrompt />
             </>
           )}
         </ToastProvider>

@@ -11,6 +11,8 @@
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
     "bump:build": "node tools/release/bump-mobile-build-number.mjs",
+    "bump:version": "node tools/release/bump-mobile-app-version.mjs",
+    "check:version": "node tools/release/check-mobile-version.mjs",
     "e2e:web": "playwright test",
     "release:android:context": "sh tools/release/record-android-build-context.sh",
     "release:android:verify:config": "node tools/release/verify-android-production-config.mjs",
