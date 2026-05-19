@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   FlatList,
   Platform,
+  Pressable,
   StyleSheet,
   Text,
   View,
@@ -12,9 +13,8 @@ import {
 } from "react-native";
 import { Image } from "expo-image";
 
-import { useAuth } from "@/auth/AuthContext";
-import { COOKIE_SESSION_TOKEN } from "@/lib/authToken";
 import {
+  appendRenderedImageFormat,
   buildFallbackFeedPreview,
   createFeedPreviewSession,
   type FeedPreviewRenderImages,
@@ -22,40 +22,54 @@ import {
 import { logger } from "@/lib/logger";
 import type { PostFontKey } from "@/lib/postContent";
 import type { WriteLayoutModel } from "@/lib/postLayout";
+import {
+  getWritePostTypeLabel,
+  type WriteEditorInsight,
+} from "@/lib/writeEditorInsights";
 import { tokens } from "@/theme/tokens";
 import type { PostType } from "@/types/post";
 
 const PREVIEW_REQUEST_DEBOUNCE_MS = 450;
-const PREVIEW_SESSION_PATH = "/api/feed-images/preview/sessions/";
+const EMPTY_IMAGES: string[] = [];
 
 type Props = {
   title: string;
   body: string;
+  contentPages?: string[];
   selectedType?: PostType | null;
   layout: WriteLayoutModel;
   fontKey: PostFontKey;
+  insight?: WriteEditorInsight;
   compact?: boolean;
 };
-
-function isPreviewSessionImageUrl(uri: string) {
-  return uri.includes(PREVIEW_SESSION_PATH);
-}
 
 export function WritePreviewCard({
   title,
   body,
+  contentPages,
   selectedType,
   layout,
   fontKey,
+  insight,
   compact = false,
 }: Props) {
-  const { token } = useAuth();
   const previewTitle = title.trim() || "제목 미리보기";
   const previewBody = body.trim() || "본문이 여기에 보여요.";
+  const previewContentPages = useMemo(
+    () =>
+      Array.isArray(contentPages)
+        ? contentPages.map((page) => String(page || "").trim()).filter((page, index, arr) => {
+            if (page) return true;
+            return index < arr.length - 1;
+          })
+        : [],
+    [contentPages]
+  );
   const [preview, setPreview] = useState<FeedPreviewRenderImages | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [imageLoadError, setImageLoadError] = useState<string | null>(null);
+  const [usePngFallback, setUsePngFallback] = useState(false);
   const [currentPage, setCurrentPage] = useState(0);
   const [viewportWidth, setViewportWidth] = useState(0);
 
@@ -78,8 +92,9 @@ export function WritePreviewCard({
         category: selectedType ?? "short",
         fontKey,
         layout: previewLayout,
+        contentPages: previewContentPages,
       }),
-    [fontKey, previewLayout, selectedType]
+    [fontKey, previewContentPages, previewLayout, selectedType]
   );
 
   useEffect(() => {
@@ -99,6 +114,7 @@ export function WritePreviewCard({
     }
     setError(null);
     setImageLoadError(null);
+    setUsePngFallback(false);
 
     const timer = setTimeout(() => {
       void (async () => {
@@ -106,6 +122,7 @@ export function WritePreviewCard({
           const nextPreview = await createFeedPreviewSession({
             title: previewTitle,
             content: previewBody,
+            contentPages: previewContentPages,
             category: selectedType ?? "short",
             layout: previewLayout,
             template: previewLayout.presetId,
@@ -116,6 +133,7 @@ export function WritePreviewCard({
           if (requestSeq !== requestSeqRef.current) return;
           previewRef.current = nextPreview;
           setPreview(nextPreview);
+          setUsePngFallback(false);
           setCurrentPage((prevPage) =>
             Math.max(0, Math.min(prevPage, Math.max(0, nextPreview.images.length - 1)))
           );
@@ -133,6 +151,7 @@ export function WritePreviewCard({
           logger.warn("[write-preview] session preview failed; using fallback URL", nextError);
           previewRef.current = fallbackPreview;
           setPreview(fallbackPreview);
+          setUsePngFallback(false);
           setCurrentPage(0);
           setError(null);
         } finally {
@@ -146,7 +165,7 @@ export function WritePreviewCard({
     return () => {
       clearTimeout(timer);
     };
-  }, [fontKey, previewBody, previewLayout, previewTitle, previewVisualSignature, selectedType]);
+  }, [fontKey, previewBody, previewContentPages, previewLayout, previewTitle, previewVisualSignature, selectedType]);
 
   useEffect(() => {
     previewRef.current = preview;
@@ -154,6 +173,7 @@ export function WritePreviewCard({
 
   useEffect(() => {
     setImageLoadError(null);
+    setUsePngFallback(false);
   }, [preview?.renderImages.previewSessionId]);
 
   useEffect(() => {
@@ -163,31 +183,45 @@ export function WritePreviewCard({
     listRef.current.scrollToOffset({ offset: currentPage * viewportWidth, animated: false });
   }, [currentPage, preview?.renderImages.previewSessionId, viewportWidth]);
 
-  const images = preview?.images ?? [];
-  const requiresAuthorizedImages = images.some(isPreviewSessionImageUrl);
-  const previewImageHeaders = useMemo<Record<string, string> | undefined>(() => {
-    if (!requiresAuthorizedImages) return undefined;
-    if (token && token !== COOKIE_SESSION_TOKEN) {
-      return { Authorization: `Bearer ${token}` };
-    }
-    if (Platform.OS === "web") {
-      // expo-image on web uses fetch when headers is present, which preserves same-origin cookies.
-      return {} as Record<string, string>;
-    }
-    return undefined;
-  }, [requiresAuthorizedImages, token]);
+  const rawImages = preview?.images ?? EMPTY_IMAGES;
+  const images = useMemo(() => {
+    if (Platform.OS !== "android" || !usePngFallback) return rawImages;
+    return rawImages.map((item) => appendRenderedImageFormat(item, "png"));
+  }, [rawImages, usePngFallback]);
   const totalPages = Math.max(
     1,
     preview?.renderImages.pageCount ?? images.length ?? 1
   );
   const isTruncated = Boolean(preview?.renderImages.isTruncated);
   const visibleError = error || imageLoadError;
+  const summaryPageCount = preview?.renderImages.pageCount ?? insight?.estimatedPageCount ?? totalPages;
+  const summaryTypeLabel = selectedType
+    ? getWritePostTypeLabel(selectedType)
+    : insight?.detectedLabel ?? "자동";
+  const summaryDensityLabel = insight?.densityLabel ?? "미리보기";
+  const imageFormatLabel = Platform.OS === "android" && usePngFallback ? "png" : "webp";
 
   const buildPreviewImageSource = (uri: string) => {
-    if (!isPreviewSessionImageUrl(uri) || !previewImageHeaders) {
-      return { uri };
+    return { uri };
+  };
+
+  const onPreviewImageError = (uri: string) => {
+    if (Platform.OS === "android" && !usePngFallback) {
+      logger.warn("[write-preview] image load failed; retrying png fallback", {
+        platform: Platform.OS,
+        uri,
+      });
+      setImageLoadError(null);
+      setUsePngFallback(true);
+      return;
     }
-    return { uri, headers: previewImageHeaders };
+
+    logger.warn("[write-preview] image load failed", {
+      platform: Platform.OS,
+      format: imageFormatLabel,
+      uri,
+    });
+    setImageLoadError("미리보기 이미지를 불러오지 못했어요. 다시 열어 주세요.");
   };
 
   const onLayoutViewport = (event: LayoutChangeEvent) => {
@@ -204,8 +238,28 @@ export function WritePreviewCard({
     setCurrentPage(Math.max(0, Math.min(nextPage, totalPages - 1)));
   };
 
+  const onPressPageThumbnail = (index: number) => {
+    const nextPage = Math.max(0, Math.min(index, totalPages - 1));
+    setCurrentPage(nextPage);
+    if (viewportWidth > 0) {
+      listRef.current?.scrollToOffset({ offset: nextPage * viewportWidth, animated: true });
+    }
+  };
+
   return (
     <View style={[styles.wrap, compact && styles.wrapCompact]}>
+      <View style={styles.summaryBar}>
+        <View style={styles.summaryCopy}>
+          <Text style={styles.summaryEyebrow}>출판 미리보기</Text>
+          <Text style={styles.summaryTitle}>
+            {summaryTypeLabel} · 총 {Math.max(1, summaryPageCount)}장
+          </Text>
+        </View>
+        <View style={styles.summaryPill}>
+          <Text style={styles.summaryPillText}>{summaryDensityLabel}</Text>
+        </View>
+      </View>
+
       <View style={[styles.frame, compact && styles.frameCompact]}>
         <View
           style={[styles.viewport, compact && styles.viewportCompact]}
@@ -220,6 +274,9 @@ export function WritePreviewCard({
               pagingEnabled
               showsHorizontalScrollIndicator={false}
               onMomentumScrollEnd={onMomentumScrollEnd}
+              initialNumToRender={1}
+              maxToRenderPerBatch={1}
+              windowSize={2}
               renderItem={({ item }) => (
                 <View
                   style={[
@@ -234,15 +291,7 @@ export function WritePreviewCard({
                     contentFit="contain"
                     cachePolicy="none"
                     transition={120}
-                    onError={() => {
-                      logger.warn("[write-preview] image load failed", {
-                        platform: Platform.OS,
-                        requiresAuthorizedImages,
-                        hasToken: Boolean(token && token !== COOKIE_SESSION_TOKEN),
-                        uri: item,
-                      });
-                      setImageLoadError("미리보기 이미지를 불러오지 못했어요. 다시 열어 주세요.");
-                    }}
+                    onError={() => onPreviewImageError(item)}
                   />
                 </View>
               )}
@@ -270,6 +319,42 @@ export function WritePreviewCard({
           </View>
         ) : null}
 
+        {images.length > 1 ? (
+          <View style={styles.thumbnailStrip}>
+            {images.slice(0, 6).map((item, index) => {
+              const active = index === currentPage;
+              return (
+                <Pressable
+                  key={`${item}-thumb-${index}`}
+                  onPress={() => onPressPageThumbnail(index)}
+                  style={[styles.thumbnailButton, active && styles.thumbnailButtonActive]}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${index + 1}페이지 미리보기`}
+                  accessibilityState={{ selected: active }}
+                >
+                  {Platform.OS === "android" ? (
+                    <Text
+                      style={[
+                        styles.thumbnailText,
+                        active && styles.thumbnailTextActive,
+                      ]}
+                    >
+                      {index + 1}
+                    </Text>
+                  ) : (
+                    <Image
+                      source={buildPreviewImageSource(item)}
+                      style={styles.thumbnailImage}
+                      contentFit="cover"
+                      cachePolicy="none"
+                    />
+                  )}
+                </Pressable>
+              );
+            })}
+          </View>
+        ) : null}
+
         {visibleError ? (
           <View style={styles.errorBox}>
             <Text style={styles.errorText}>{visibleError}</Text>
@@ -294,6 +379,51 @@ const styles = StyleSheet.create({
   },
   wrapCompact: {
     marginBottom: 8,
+  },
+  summaryBar: {
+    marginBottom: 10,
+    borderRadius: 18,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    backgroundColor: "#fffefa",
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  summaryCopy: {
+    flex: 1,
+    gap: 3,
+  },
+  summaryEyebrow: {
+    fontSize: 11,
+    fontWeight: "900",
+    color: tokens.colors.textFaint,
+    letterSpacing: 0,
+  },
+  summaryTitle: {
+    fontSize: 14,
+    fontWeight: "900",
+    color: tokens.colors.text,
+    letterSpacing: 0,
+  },
+  summaryPill: {
+    minHeight: 30,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: tokens.colors.green050,
+    borderWidth: 1,
+    borderColor: tokens.colors.green100,
+  },
+  summaryPillText: {
+    fontSize: 12,
+    fontWeight: "900",
+    color: tokens.colors.green700,
+    letterSpacing: 0,
   },
   frame: {
     borderRadius: 24,
@@ -370,6 +500,40 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "800",
     color: tokens.colors.textMuted,
+  },
+  thumbnailStrip: {
+    marginTop: 12,
+    paddingHorizontal: 12,
+    paddingBottom: 12,
+    flexDirection: "row",
+    gap: 8,
+  },
+  thumbnailButton: {
+    width: 42,
+    height: 56,
+    borderRadius: 10,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+    backgroundColor: "#f2eddc",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  thumbnailButtonActive: {
+    borderWidth: 2,
+    borderColor: tokens.colors.green700,
+  },
+  thumbnailImage: {
+    width: "100%",
+    height: "100%",
+  },
+  thumbnailText: {
+    fontSize: 13,
+    fontWeight: "900",
+    color: tokens.colors.textMuted,
+  },
+  thumbnailTextActive: {
+    color: tokens.colors.green700,
   },
   errorBox: {
     marginTop: 12,

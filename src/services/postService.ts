@@ -12,6 +12,7 @@ export type CreatePostInput = {
   category?: PostType;
   title?: string;
   content: string;
+  contentPages?: string[];
   contentFormat?: "plain";
   hashtags?: string[];
   layoutJson?: unknown;
@@ -49,6 +50,7 @@ type EditablePostResponse = {
     id?: string | number;
     title?: string;
     content?: string;
+    content_pages?: string[];
     category?: PostType;
     hashtags?: string[];
     layout_json?: unknown;
@@ -74,6 +76,9 @@ export async function createPost(input: CreatePostInput): Promise<{
   };
 
   if (input.title) payload.title = input.title;
+  if (input.contentPages && input.contentPages.length > 0) {
+    payload.content_pages = input.contentPages;
+  }
   if (input.hashtags && input.hashtags.length > 0) payload.hashtags = input.hashtags;
   if (input.layoutJson) payload.layout_json = input.layoutJson;
   if (input.visibility) payload.visibility = input.visibility;
@@ -110,6 +115,7 @@ export async function getEditablePost(postId: string): Promise<{
   id: string;
   title: string;
   content: string;
+  contentPages: string[];
   category: PostType;
   hashtags: string[];
   layoutJson: unknown;
@@ -127,6 +133,9 @@ export async function getEditablePost(postId: string): Promise<{
     id: String(res.post.id),
     title: typeof res.post.title === "string" ? res.post.title : "",
     content: normalizePostEditorText(res.post.content),
+    contentPages: Array.isArray(res.post.content_pages)
+      ? res.post.content_pages.map(normalizePostEditorText)
+      : [],
     category: (res.post.category ?? "short") as PostType,
     hashtags: Array.isArray(res.post.hashtags)
       ? res.post.hashtags.map(String).filter(Boolean)
@@ -143,6 +152,7 @@ export async function updatePost(input: {
   type: PostType;
   title?: string;
   content: string;
+  contentPages?: string[];
   hashtags?: string[];
   layoutJson?: unknown;
   fontKey?: PostFontKey;
@@ -152,6 +162,9 @@ export async function updatePost(input: {
   const res = await apiPut<UpdatePostResponse>(`/api/posts/${encodeURIComponent(input.postId)}`, {
     title: input.title,
     content: withPostFontMeta(input.content, input.fontKey ?? "serif"),
+    ...(input.contentPages && input.contentPages.length > 0
+      ? { content_pages: input.contentPages }
+      : {}),
     category: input.type,
     hashtags: input.hashtags ?? [],
     layout_json: input.layoutJson,

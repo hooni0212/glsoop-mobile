@@ -3,12 +3,18 @@ import { apiGet } from "@/lib/api";
 import { getAuthToken, COOKIE_SESSION_TOKEN } from "@/lib/authToken";
 import type { MeResponse } from "@/features/me/accountCenter";
 import type { PostFontKey } from "@/lib/postContent";
+import {
+  flattenWritePages,
+  normalizeWritePageDrafts,
+  type WritePageDraft,
+} from "@/lib/writePages";
 import type { PostCommentPolicy, PostType, PostVisibility } from "@/types/post";
 
 export type WriteDraft = {
   id: string;
   title: string;
   body: string;
+  pages?: WritePageDraft[];
   category?: PostType;
   visibility?: PostVisibility;
   commentPolicy?: PostCommentPolicy;
@@ -139,6 +145,8 @@ function normalizeDraft(input: any, fallbackAuthNamespace: string): WriteDraft |
 
   const title = typeof input.title === "string" ? input.title : "";
   const body = typeof input.body === "string" ? input.body : "";
+  const pages = normalizeWritePageDrafts(input.pages, body);
+  const normalizedBody = body || flattenWritePages(pages);
   const category =
     input.category === "poem" || input.category === "essay" || input.category === "short"
       ? input.category
@@ -177,7 +185,8 @@ function normalizeDraft(input: any, fallbackAuthNamespace: string): WriteDraft |
   return {
     id,
     title,
-    body,
+    body: normalizedBody,
+    pages,
     category,
     visibility,
     commentPolicy,
@@ -290,6 +299,7 @@ export async function upsertWriteDraft(input: {
   id?: string | null;
   title: string;
   body: string;
+  pages?: WritePageDraft[] | null;
   category?: PostType;
   visibility?: PostVisibility;
   commentPolicy?: PostCommentPolicy;
@@ -308,10 +318,13 @@ export async function upsertWriteDraft(input: {
   }
   const authNamespace = context.namespace;
   const hashtags = normalizeDraftHashtags(input.hashtags);
+  const pages = normalizeWritePageDrafts(input.pages, input.body ?? "");
+  const body = input.body ?? flattenWritePages(pages);
   const payload: WriteDraft = {
     id,
     title: input.title ?? "",
-    body: input.body ?? "",
+    body,
+    pages,
     category: input.category,
     visibility: input.visibility ?? "public",
     commentPolicy: input.commentPolicy ?? "logged_in",

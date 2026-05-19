@@ -9,6 +9,7 @@ import { buildLayoutPayload, type WriteLayoutModel } from "@/lib/postLayout";
 type PreviewInput = {
   title: string;
   content: string;
+  contentPages?: string[];
   category: string;
   createdAt?: string;
   layout: WriteLayoutModel;
@@ -194,6 +195,7 @@ function parsePositiveInt(value: unknown, fallback: number) {
 export async function createFeedPreviewSession({
   title,
   content,
+  contentPages,
   category,
   createdAt,
   layout,
@@ -205,6 +207,7 @@ export async function createFeedPreviewSession({
   const response = await apiPost<PreviewSessionResponse>("/api/feed-images/preview/sessions", {
     title: title || "미리보기 제목",
     content: withPostFontMeta(content || "", fontKey),
+    ...(contentPages && contentPages.length > 0 ? { content_pages: contentPages } : {}),
     content_format: "plain",
     category: category || "short",
     template: templateKey,
@@ -297,6 +300,23 @@ export function buildRenderedPostImageUrl(
 }
 
 export type RenderedPostImageFormat = "webp" | "png";
+
+export function appendRenderedImageFormat(
+  imageUrl: string,
+  format: RenderedPostImageFormat
+) {
+  const raw = String(imageUrl || "").trim();
+  if (!raw) return raw;
+
+  try {
+    const parsed = new URL(raw);
+    parsed.searchParams.set("format", format);
+    return parsed.toString();
+  } catch {
+    const separator = raw.includes("?") ? "&" : "?";
+    return `${raw}${separator}format=${encodeURIComponent(format)}`;
+  }
+}
 
 type RenderedPostShareImageOptions = {
   format?: RenderedPostImageFormat;

@@ -214,6 +214,7 @@ test.describe("Write 임시저장 UX", () => {
 
     await expect(page.getByText("완료되었어요")).toBeVisible();
     expect(capture.payload).toBeTruthy();
+    expect(capture.payload?.content_pages).toEqual(["행간 자간 본문"]);
 
     const layoutJson = capture.payload?.layout_json;
     expect(layoutJson?.canvas?.presetId).toBe("paper02");
@@ -314,6 +315,7 @@ test.describe("Write 임시저장 UX", () => {
     expect(capture.payload).toBeTruthy();
     expect(capture.payload?.layout_json?.canvas?.presetId).toBe("paper02");
     expect(capture.payload?.content).toBe("<!--FONT:serif-->첫 문장\n\n둘째 문장");
+    expect(capture.payload?.content_pages).toEqual(["첫 문장\n\n둘째 문장"]);
   });
 
   test("S3: 작성 중 X confirm (취소/그냥 닫기/임시 저장하기)", async ({ page }) => {
