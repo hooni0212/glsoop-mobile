@@ -214,6 +214,7 @@ test.describe("Write 임시저장 UX", () => {
 
     await expect(page.getByText("완료되었어요")).toBeVisible();
     expect(capture.payload).toBeTruthy();
+    expect(capture.payload?.content_pages).toEqual(["행간 자간 본문"]);
 
     const layoutJson = capture.payload?.layout_json;
     expect(layoutJson?.canvas?.presetId).toBe("paper02");
@@ -222,6 +223,56 @@ test.describe("Write 임시저장 UX", () => {
     expect(layoutJson?.text_box?.line_height).toBe(1.45);
     expect(layoutJson?.text_box?.letter_spacing).toBe(-0.02);
     expect(layoutJson?.footer_box?.letter_spacing).toBeUndefined();
+  });
+
+  test("S2-1-1: 미리보기는 서버 세션 없이 로컬 렌더를 사용하고 저장 payload와 같은 입력을 쓴다", async ({ page }) => {
+    await clearDrafts(page);
+    await page.unroute("**/api/posts**");
+
+    let previewSessionCalls = 0;
+    const capture: { payload?: CapturedPostPayload } = {};
+    await page.route("**/api/feed-images/preview/sessions**", async (route) => {
+      previewSessionCalls += 1;
+      await route.fulfill({
+        status: 503,
+        contentType: "application/json",
+        body: JSON.stringify({ ok: false, message: "preview sessions should not be called" }),
+      });
+    });
+    await page.route("**/api/posts", async (route) => {
+      if (route.request().method() !== "POST") {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ ok: true, posts: [], hasMore: false }),
+        });
+        return;
+      }
+
+      capture.payload = route.request().postDataJSON() as CapturedPostPayload;
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ ok: true, post_id: "post-local-preview" }),
+      });
+    });
+
+    await page.goto("/write");
+    await page.getByTestId("write-title-input").fill("로컬 미리보기 제목");
+    await page.getByTestId("write-body-input").fill("로컬 미리보기 본문");
+
+    const submitBtn = page.getByTestId("write-submit-btn");
+    await submitBtn.click();
+    await expect(page.getByText("미리보기", { exact: true })).toBeVisible();
+    await expect(page.getByTestId("write-local-preview-page-1")).toBeVisible();
+    expect(previewSessionCalls).toBe(0);
+
+    await submitBtn.click();
+    await expect(page.getByText("완료되었어요")).toBeVisible();
+    expect(previewSessionCalls).toBe(0);
+    expect(capture.payload?.content).toBe("<!--FONT:serif-->로컬 미리보기 본문");
+    expect(capture.payload?.content_pages).toEqual(["로컬 미리보기 본문"]);
+    expect(capture.payload?.layout_json?.text_box).toBeTruthy();
   });
 
   test("S2-2: 세부 조정은 기본 닫힘이며 열면 위치/크기 미세 조정이 가능하다", async ({ page }) => {
@@ -314,6 +365,7 @@ test.describe("Write 임시저장 UX", () => {
     expect(capture.payload).toBeTruthy();
     expect(capture.payload?.layout_json?.canvas?.presetId).toBe("paper02");
     expect(capture.payload?.content).toBe("<!--FONT:serif-->첫 문장\n\n둘째 문장");
+    expect(capture.payload?.content_pages).toEqual(["첫 문장\n\n둘째 문장"]);
   });
 
   test("S3: 작성 중 X confirm (취소/그냥 닫기/임시 저장하기)", async ({ page }) => {

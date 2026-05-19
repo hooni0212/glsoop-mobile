@@ -36,32 +36,71 @@ export type WriteLayoutModel = {
   showFooter: boolean;
 };
 
-const DEFAULT_TITLE_BOX: LayoutBox = {
-  x: 0.336,
-  y: 0.256,
-  w: 0.424,
-  h: 0.122,
+const SHORT_TITLE_BOX: LayoutBox = {
+  x: 0.24,
+  y: 0.248,
+  w: 0.54,
+  h: 0.124,
   hidden: false,
   lock: false,
 };
 
-const DEFAULT_BODY_BOX: LayoutBox = {
-  x: 0.336,
-  y: 0.364,
-  w: 0.424,
-  h: 0.346,
+const SHORT_BODY_BOX: LayoutBox = {
+  x: 0.23,
+  y: 0.354,
+  w: 0.56,
+  h: 0.405,
+  hidden: false,
+  lock: false,
+};
+
+const POEM_TITLE_BOX: LayoutBox = {
+  x: 0.2,
+  y: 0.24,
+  w: 0.64,
+  h: 0.126,
+  hidden: false,
+  lock: false,
+};
+
+const POEM_BODY_BOX: LayoutBox = {
+  x: 0.2,
+  y: 0.344,
+  w: 0.64,
+  h: 0.49,
+  hidden: false,
+  lock: false,
+};
+
+const ESSAY_TITLE_BOX: LayoutBox = {
+  x: 0.22,
+  y: 0.226,
+  w: 0.64,
+  h: 0.134,
+  hidden: false,
+  lock: false,
+};
+
+const ESSAY_BODY_BOX: LayoutBox = {
+  x: 0.22,
+  y: 0.366,
+  w: 0.64,
+  h: 0.55,
   hidden: false,
   lock: false,
 };
 
 const DEFAULT_FOOTER_BOX: LayoutBox = {
-  x: 0.78,
+  x: 0.74,
   y: 0.9,
-  w: 0.16,
+  w: 0.2,
   h: 0.06,
   hidden: false,
   lock: false,
 };
+
+const DEFAULT_TITLE_BOX = SHORT_TITLE_BOX;
+const DEFAULT_BODY_BOX = SHORT_BODY_BOX;
 
 export const DEFAULT_WRITE_LAYOUT: WriteLayoutModel = {
   layoutVersion: 1,
@@ -70,25 +109,47 @@ export const DEFAULT_WRITE_LAYOUT: WriteLayoutModel = {
   titleBox: DEFAULT_TITLE_BOX,
   bodyBox: DEFAULT_BODY_BOX,
   footerBox: DEFAULT_FOOTER_BOX,
-  titleStyle: { align: "center", fontScale: 1, lineHeight: 1.15 },
-  bodyStyle: { align: "center", fontScale: 1, lineHeight: 1.15 },
+  titleStyle: { align: "center", fontScale: 0.98, lineHeight: 1.12 },
+  bodyStyle: { align: "center", fontScale: 0.98, lineHeight: 1.12 },
   footerStyle: { align: "right", fontScale: 1, lineHeight: 1.1 },
   showFooter: true,
 };
 
+function withLayoutBoxes(
+  layout: WriteLayoutModel,
+  boxes: {
+    titleBox: LayoutBox;
+    bodyBox: LayoutBox;
+    footerBox?: LayoutBox;
+  }
+): WriteLayoutModel {
+  return {
+    ...layout,
+    titleBox: { ...boxes.titleBox },
+    bodyBox: { ...boxes.bodyBox },
+    footerBox: { ...(boxes.footerBox ?? layout.footerBox) },
+  };
+}
+
 export function getFallbackLayoutForPostType(type?: string | null): WriteLayoutModel {
   if (type === "essay") {
     return {
-      ...cloneDefaultLayout(),
-      titleStyle: { align: "left", fontScale: 1, lineHeight: 1.18 },
-      bodyStyle: { align: "left", fontScale: 1, lineHeight: 1.24 },
+      ...withLayoutBoxes(cloneDefaultLayout(), {
+        titleBox: ESSAY_TITLE_BOX,
+        bodyBox: ESSAY_BODY_BOX,
+      }),
+      titleStyle: { align: "left", fontScale: 0.98, lineHeight: 1.13 },
+      bodyStyle: { align: "left", fontScale: 1, lineHeight: 1.12 },
     };
   }
   if (type === "poem") {
     return {
-      ...cloneDefaultLayout(),
-      titleStyle: { align: "center", fontScale: 1, lineHeight: 1.16 },
-      bodyStyle: { align: "center", fontScale: 1.04, lineHeight: 1.28 },
+      ...withLayoutBoxes(cloneDefaultLayout(), {
+        titleBox: POEM_TITLE_BOX,
+        bodyBox: POEM_BODY_BOX,
+      }),
+      titleStyle: { align: "center", fontScale: 0.98, lineHeight: 1.13 },
+      bodyStyle: { align: "center", fontScale: 0.98, lineHeight: 1.2 },
     };
   }
   return cloneDefaultLayout();
@@ -103,7 +164,6 @@ export const LAYOUT_ALIGN_OPTIONS: { value: LayoutAlign; label: string }[] = [
 export const LAYOUT_SCALE_OPTIONS: { value: number; label: string }[] = [
   { value: 0.9, label: "작게" },
   { value: 1, label: "보통" },
-  { value: 1.15, label: "조금 크게" },
   { value: 1.3, label: "크게" },
 ];
 

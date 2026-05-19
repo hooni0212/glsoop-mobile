@@ -27,6 +27,7 @@ export function WriteBackgroundSection({ styles, selectedId, onSelect }: Props) 
       <View style={styles.backgroundOptionRow}>
         {POST_BACKGROUND_TEMPLATES.map((template) => {
           const active = selectedId === template.id;
+          const previewResizeMode = template.id === "paper02" ? "cover" : template.resizeMode;
           const imageScale = template.imageWidthScale;
           return (
             <Pressable
@@ -41,13 +42,14 @@ export function WriteBackgroundSection({ styles, selectedId, onSelect }: Props) 
               <View style={[styles.backgroundPreview, { backgroundColor: template.backgroundColor }]}>
                 <Image
                   source={template.source}
-                  resizeMode={template.resizeMode}
+                  resizeMode={previewResizeMode}
                   style={[
                     styles.backgroundPreviewImage,
-                    template.resizeMode === "cover"
+                    previewResizeMode === "cover"
                       ? styles.backgroundPreviewImageCover
                       : styles.backgroundPreviewImageContainTop,
-                    template.resizeMode === "contain"
+                    template.id === "paper02" ? styles.backgroundPreviewImagePaper02 : null,
+                    previewResizeMode === "contain"
                       ? {
                           aspectRatio: template.imageAspectRatio,
                           left: `${((1 - imageScale) / 2) * 100}%`,
@@ -57,7 +59,7 @@ export function WriteBackgroundSection({ styles, selectedId, onSelect }: Props) 
                       : null,
                   ]}
                 />
-                <View style={styles.backgroundPreviewWash} />
+                {template.id === "paper02" ? null : <View style={styles.backgroundPreviewWash} />}
               </View>
               {active ? (
                 <View style={styles.backgroundSelectedBadge}>
