@@ -1,8 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
-  ActivityIndicator,
   FlatList,
-  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -10,18 +8,19 @@ import {
   type LayoutChangeEvent,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
+  type TextStyle,
 } from "react-native";
 import { Image } from "expo-image";
 
 import {
-  appendRenderedImageFormat,
-  buildFallbackFeedPreview,
-  createFeedPreviewSession,
-  type FeedPreviewRenderImages,
-} from "@/lib/feedImage";
-import { logger } from "@/lib/logger";
+  buildLocalFeedPreview,
+  LOCAL_FEED_PREVIEW_CANVAS,
+  type LocalFeedPreviewPage,
+  type LocalFeedPreviewTextBlock,
+} from "@/lib/localFeedPreview";
 import type { PostFontKey } from "@/lib/postContent";
 import type { WriteLayoutModel } from "@/lib/postLayout";
+import { getPreviewFontFamily } from "@/lib/previewFonts";
 import {
   getWritePostTypeLabel,
   type WriteEditorInsight,
@@ -29,8 +28,7 @@ import {
 import { tokens } from "@/theme/tokens";
 import type { PostType } from "@/types/post";
 
-const PREVIEW_REQUEST_DEBOUNCE_MS = 450;
-const EMPTY_IMAGES: string[] = [];
+const EMPTY_PAGES: LocalFeedPreviewPage[] = [];
 
 type Props = {
   title: string;
@@ -42,6 +40,148 @@ type Props = {
   insight?: WriteEditorInsight;
   compact?: boolean;
 };
+
+function resolveBlockTextTop(block: LocalFeedPreviewTextBlock) {
+  const rawTextBlockHeight = block.lineHeightPx * block.lines.length;
+  if (block.verticalAlign !== "center") return 0;
+  return Math.max(0, (block.box.height - rawTextBlockHeight) / 2);
+}
+
+function renderScaledNumber(value: number, scale: number) {
+  return Math.round(value * scale * 100) / 100;
+}
+
+function PreviewTextBlock({
+  block,
+  scale,
+  fontFamily,
+}: {
+  block: LocalFeedPreviewTextBlock;
+  scale: number;
+  fontFamily?: string;
+}) {
+  const resolvedFontFamily = block.id === "footer" ? getPreviewFontFamily("serif") : fontFamily;
+  const textTop = resolveBlockTextTop(block);
+  const lineHeight = renderScaledNumber(block.lineHeightPx, scale);
+  const fontSize = renderScaledNumber(block.fontSizePx, scale);
+  const letterSpacing = renderScaledNumber(block.fontSizePx * block.letterSpacingEm, scale);
+  const textStyle: TextStyle = {
+    color: block.id === "footer" ? "rgba(71, 63, 54, 0.74)" : "#473f36",
+    fontFamily: resolvedFontFamily,
+    fontSize,
+    lineHeight,
+    fontWeight: block.fontWeight,
+    textAlign: block.textAlign,
+    letterSpacing,
+    includeFontPadding: false,
+  };
+
+  return (
+    <View
+      pointerEvents="none"
+      style={[
+        styles.textClip,
+        {
+          left: renderScaledNumber(block.box.x, scale),
+          top: renderScaledNumber(Math.max(0, block.box.y - block.clipPadTopPx), scale),
+          width: renderScaledNumber(block.box.width, scale),
+          height: renderScaledNumber(
+            block.box.height + block.clipPadTopPx + block.clipPadBottomPx,
+            scale
+          ),
+          paddingTop: renderScaledNumber(block.clipPadTopPx + textTop, scale),
+        },
+      ]}
+    >
+      {block.lines.map((line, index) => (
+        <Text
+          key={`${block.id}-line-${index}`}
+          numberOfLines={1}
+          ellipsizeMode="clip"
+          style={[styles.previewLine, textStyle, { height: lineHeight }]}
+        >
+          {line || " "}
+        </Text>
+      ))}
+    </View>
+  );
+}
+
+function PreviewBackground({ page }: { page: LocalFeedPreviewPage }) {
+  if (page.templateId === "paper02") {
+    return (
+      <>
+        <View
+          pointerEvents="none"
+          style={[
+            StyleSheet.absoluteFill,
+            { backgroundColor: page.template.backgroundColor },
+          ]}
+        />
+        <Image
+          pointerEvents="none"
+          source={page.template.source}
+          contentFit="fill"
+          style={styles.paper02Image}
+        />
+      </>
+    );
+  }
+
+  return (
+    <Image
+      pointerEvents="none"
+      source={page.template.source}
+      contentFit="cover"
+      style={StyleSheet.absoluteFill}
+    />
+  );
+}
+
+function LocalPreviewPageCanvas({
+  page,
+  fontKey,
+  compact = false,
+  thumbnail = false,
+}: {
+  page: LocalFeedPreviewPage;
+  fontKey: PostFontKey;
+  compact?: boolean;
+  thumbnail?: boolean;
+}) {
+  const [displayWidth, setDisplayWidth] = useState(0);
+  const scale =
+    displayWidth > 0 ? displayWidth / LOCAL_FEED_PREVIEW_CANVAS.width : 1;
+  const fontFamily = getPreviewFontFamily(fontKey);
+
+  const onCanvasLayout = (event: LayoutChangeEvent) => {
+    const nextWidth = Math.round(event.nativeEvent.layout.width);
+    if (nextWidth > 0 && nextWidth !== displayWidth) {
+      setDisplayWidth(nextWidth);
+    }
+  };
+
+  return (
+    <View
+      testID={thumbnail ? undefined : `write-local-preview-page-${page.pageNumber}`}
+      onLayout={onCanvasLayout}
+      style={[
+        styles.localCanvas,
+        compact && styles.localCanvasCompact,
+        thumbnail && styles.localCanvasThumbnail,
+      ]}
+    >
+      <PreviewBackground page={page} />
+      {page.title ? (
+        <PreviewTextBlock block={page.title} scale={scale} fontFamily={fontFamily} />
+      ) : null}
+      <PreviewTextBlock block={page.body} scale={scale} fontFamily={fontFamily} />
+      {page.footer ? (
+        <PreviewTextBlock block={page.footer} scale={scale} fontFamily={fontFamily} />
+      ) : null}
+    </View>
+  );
+}
 
 export function WritePreviewCard({
   title,
@@ -65,20 +205,6 @@ export function WritePreviewCard({
         : [],
     [contentPages]
   );
-  const [preview, setPreview] = useState<FeedPreviewRenderImages | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [imageLoadError, setImageLoadError] = useState<string | null>(null);
-  const [usePngFallback, setUsePngFallback] = useState(false);
-  const [currentPage, setCurrentPage] = useState(0);
-  const [viewportWidth, setViewportWidth] = useState(0);
-
-  const requestSeqRef = useRef(0);
-  const previewRef = useRef<FeedPreviewRenderImages | null>(null);
-  const previousVisualSignatureRef = useRef<string | null>(null);
-  const previewCreatedAtRef = useRef(new Date().toISOString());
-  const listRef = useRef<FlatList<string> | null>(null);
-
   const previewLayout = useMemo(
     () => ({
       ...layout,
@@ -86,143 +212,39 @@ export function WritePreviewCard({
     }),
     [layout]
   );
-  const previewVisualSignature = useMemo(
+  const preview = useMemo(
     () =>
-      JSON.stringify({
-        category: selectedType ?? "short",
-        fontKey,
-        layout: previewLayout,
+      buildLocalFeedPreview({
+        title: previewTitle,
+        content: previewBody,
         contentPages: previewContentPages,
+        category: selectedType ?? "short",
+        layout: previewLayout,
+        fontKey,
       }),
-    [fontKey, previewContentPages, previewLayout, selectedType]
+    [fontKey, previewBody, previewContentPages, previewLayout, previewTitle, selectedType]
   );
-
-  useEffect(() => {
-    const requestSeq = requestSeqRef.current + 1;
-    requestSeqRef.current = requestSeq;
-    const shouldResetPreview = previousVisualSignatureRef.current !== previewVisualSignature;
-    previousVisualSignatureRef.current = previewVisualSignature;
-
-    if (shouldResetPreview) {
-      previewRef.current = null;
-      setPreview(null);
-      setCurrentPage(0);
-    }
-
-    if (shouldResetPreview || !previewRef.current) {
-      setLoading(true);
-    }
-    setError(null);
-    setImageLoadError(null);
-    setUsePngFallback(false);
-
-    const timer = setTimeout(() => {
-      void (async () => {
-        try {
-          const nextPreview = await createFeedPreviewSession({
-            title: previewTitle,
-            content: previewBody,
-            contentPages: previewContentPages,
-            category: selectedType ?? "short",
-            layout: previewLayout,
-            template: previewLayout.presetId,
-            fontKey,
-            createdAt: previewCreatedAtRef.current,
-          });
-
-          if (requestSeq !== requestSeqRef.current) return;
-          previewRef.current = nextPreview;
-          setPreview(nextPreview);
-          setUsePngFallback(false);
-          setCurrentPage((prevPage) =>
-            Math.max(0, Math.min(prevPage, Math.max(0, nextPreview.images.length - 1)))
-          );
-        } catch (nextError) {
-          if (requestSeq !== requestSeqRef.current) return;
-          const fallbackPreview = buildFallbackFeedPreview({
-            title: previewTitle,
-            content: previewBody,
-            category: selectedType ?? "short",
-            layout: previewLayout,
-            template: previewLayout.presetId,
-            fontKey,
-            createdAt: previewCreatedAtRef.current,
-          });
-          logger.warn("[write-preview] session preview failed; using fallback URL", nextError);
-          previewRef.current = fallbackPreview;
-          setPreview(fallbackPreview);
-          setUsePngFallback(false);
-          setCurrentPage(0);
-          setError(null);
-        } finally {
-          if (requestSeq === requestSeqRef.current) {
-            setLoading(false);
-          }
-        }
-      })();
-    }, PREVIEW_REQUEST_DEBOUNCE_MS);
-
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [fontKey, previewBody, previewContentPages, previewLayout, previewTitle, previewVisualSignature, selectedType]);
-
-  useEffect(() => {
-    previewRef.current = preview;
-  }, [preview]);
-
-  useEffect(() => {
-    setImageLoadError(null);
-    setUsePngFallback(false);
-  }, [preview?.renderImages.previewSessionId]);
-
-  useEffect(() => {
-    if (!preview?.renderImages.previewSessionId) return;
-    if (!listRef.current) return;
-    if (viewportWidth <= 0) return;
-    listRef.current.scrollToOffset({ offset: currentPage * viewportWidth, animated: false });
-  }, [currentPage, preview?.renderImages.previewSessionId, viewportWidth]);
-
-  const rawImages = preview?.images ?? EMPTY_IMAGES;
-  const images = useMemo(() => {
-    if (Platform.OS !== "android" || !usePngFallback) return rawImages;
-    return rawImages.map((item) => appendRenderedImageFormat(item, "png"));
-  }, [rawImages, usePngFallback]);
-  const totalPages = Math.max(
-    1,
-    preview?.renderImages.pageCount ?? images.length ?? 1
-  );
-  const isTruncated = Boolean(preview?.renderImages.isTruncated);
-  const visibleError = error || imageLoadError;
-  const summaryPageCount = preview?.renderImages.pageCount ?? insight?.estimatedPageCount ?? totalPages;
+  const [currentPage, setCurrentPage] = useState(0);
+  const [viewportWidth, setViewportWidth] = useState(0);
+  const listRef = useRef<FlatList<LocalFeedPreviewPage> | null>(null);
+  const pages = preview.pages ?? EMPTY_PAGES;
+  const totalPages = Math.max(1, preview.pageCount || pages.length || 1);
+  const isTruncated = Boolean(preview.isTruncated);
+  const summaryPageCount = preview.pageCount ?? insight?.estimatedPageCount ?? totalPages;
   const summaryTypeLabel = selectedType
     ? getWritePostTypeLabel(selectedType)
     : insight?.detectedLabel ?? "자동";
   const summaryDensityLabel = insight?.densityLabel ?? "미리보기";
-  const imageFormatLabel = Platform.OS === "android" && usePngFallback ? "png" : "webp";
 
-  const buildPreviewImageSource = (uri: string) => {
-    return { uri };
-  };
+  useEffect(() => {
+    setCurrentPage((prevPage) => Math.max(0, Math.min(prevPage, totalPages - 1)));
+  }, [totalPages]);
 
-  const onPreviewImageError = (uri: string) => {
-    if (Platform.OS === "android" && !usePngFallback) {
-      logger.warn("[write-preview] image load failed; retrying png fallback", {
-        platform: Platform.OS,
-        uri,
-      });
-      setImageLoadError(null);
-      setUsePngFallback(true);
-      return;
-    }
-
-    logger.warn("[write-preview] image load failed", {
-      platform: Platform.OS,
-      format: imageFormatLabel,
-      uri,
-    });
-    setImageLoadError("미리보기 이미지를 불러오지 못했어요. 다시 열어 주세요.");
-  };
+  useEffect(() => {
+    if (!listRef.current) return;
+    if (viewportWidth <= 0) return;
+    listRef.current.scrollToOffset({ offset: currentPage * viewportWidth, animated: false });
+  }, [currentPage, viewportWidth]);
 
   const onLayoutViewport = (event: LayoutChangeEvent) => {
     const nextWidth = Math.round(event.nativeEvent.layout.width);
@@ -265,18 +287,18 @@ export function WritePreviewCard({
           style={[styles.viewport, compact && styles.viewportCompact]}
           onLayout={onLayoutViewport}
         >
-          {images.length > 0 ? (
+          {pages.length > 0 ? (
             <FlatList
               ref={listRef}
-              data={images}
-              keyExtractor={(item, index) => `${item}-${index}`}
+              data={pages}
+              keyExtractor={(item, index) => `${item.id}-${index}`}
               horizontal
               pagingEnabled
               showsHorizontalScrollIndicator={false}
               onMomentumScrollEnd={onMomentumScrollEnd}
               initialNumToRender={1}
-              maxToRenderPerBatch={1}
-              windowSize={2}
+              maxToRenderPerBatch={2}
+              windowSize={3}
               renderItem={({ item }) => (
                 <View
                   style={[
@@ -285,33 +307,18 @@ export function WritePreviewCard({
                     compact && styles.pageCompact,
                   ]}
                 >
-                  <Image
-                    source={buildPreviewImageSource(item)}
-                    style={[styles.image, compact && styles.imageCompact]}
-                    contentFit="contain"
-                    cachePolicy="none"
-                    transition={120}
-                    onError={() => onPreviewImageError(item)}
-                  />
+                  <LocalPreviewPageCanvas page={item} fontKey={fontKey} compact={compact} />
                 </View>
               )}
             />
           ) : (
             <View style={[styles.emptyState, compact && styles.emptyStateCompact]}>
-              <Text style={styles.emptyStateText}>
-                {visibleError || "미리보기를 준비하고 있어요."}
-              </Text>
+              <Text style={styles.emptyStateText}>미리보기를 준비하고 있어요.</Text>
             </View>
           )}
-
-          {loading ? (
-            <View style={styles.loadingOverlay}>
-              <ActivityIndicator color="#5f4931" />
-            </View>
-          ) : null}
         </View>
 
-        {images.length > 1 ? (
+        {pages.length > 1 ? (
           <View style={styles.pageCounter}>
             <Text style={styles.pageCounterText}>
               {Math.min(currentPage + 1, totalPages)} / {totalPages}
@@ -319,45 +326,23 @@ export function WritePreviewCard({
           </View>
         ) : null}
 
-        {images.length > 1 ? (
+        {pages.length > 1 ? (
           <View style={styles.thumbnailStrip}>
-            {images.slice(0, 6).map((item, index) => {
+            {pages.slice(0, 6).map((item, index) => {
               const active = index === currentPage;
               return (
                 <Pressable
-                  key={`${item}-thumb-${index}`}
+                  key={`${item.id}-thumb-${index}`}
                   onPress={() => onPressPageThumbnail(index)}
                   style={[styles.thumbnailButton, active && styles.thumbnailButtonActive]}
                   accessibilityRole="button"
                   accessibilityLabel={`${index + 1}페이지 미리보기`}
                   accessibilityState={{ selected: active }}
                 >
-                  {Platform.OS === "android" ? (
-                    <Text
-                      style={[
-                        styles.thumbnailText,
-                        active && styles.thumbnailTextActive,
-                      ]}
-                    >
-                      {index + 1}
-                    </Text>
-                  ) : (
-                    <Image
-                      source={buildPreviewImageSource(item)}
-                      style={styles.thumbnailImage}
-                      contentFit="cover"
-                      cachePolicy="none"
-                    />
-                  )}
+                  <LocalPreviewPageCanvas page={item} fontKey={fontKey} thumbnail />
                 </Pressable>
               );
             })}
-          </View>
-        ) : null}
-
-        {visibleError ? (
-          <View style={styles.errorBox}>
-            <Text style={styles.errorText}>{visibleError}</Text>
           </View>
         ) : null}
 
@@ -452,22 +437,42 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  image: {
+  localCanvas: {
     width: "100%",
-    aspectRatio: 500 / 666,
+    aspectRatio: LOCAL_FEED_PREVIEW_CANVAS.width / LOCAL_FEED_PREVIEW_CANVAS.height,
     borderRadius: 24,
     overflow: "hidden",
     backgroundColor: "#f2eddc",
   },
-  imageCompact: {
+  localCanvasCompact: {
     width: 210,
     height: 280,
     alignSelf: "center",
     borderRadius: 18,
   },
+  localCanvasThumbnail: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 8,
+  },
+  paper02Image: {
+    position: "absolute",
+    left: "-4%",
+    top: "-4.1%",
+    width: "108%",
+    aspectRatio: 580 / 723,
+  },
+  textClip: {
+    position: "absolute",
+    overflow: "hidden",
+  },
+  previewLine: {
+    width: "100%",
+    backgroundColor: "transparent",
+  },
   emptyState: {
     width: "100%",
-    aspectRatio: 500 / 666,
+    aspectRatio: LOCAL_FEED_PREVIEW_CANVAS.width / LOCAL_FEED_PREVIEW_CANVAS.height,
     borderRadius: 24,
     alignItems: "center",
     justifyContent: "center",
@@ -485,12 +490,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: 20,
     fontWeight: "700",
-  },
-  loadingOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(255,254,250,0.42)",
   },
   pageCounter: {
     marginTop: 12,
@@ -522,32 +521,6 @@ const styles = StyleSheet.create({
   thumbnailButtonActive: {
     borderWidth: 2,
     borderColor: tokens.colors.green700,
-  },
-  thumbnailImage: {
-    width: "100%",
-    height: "100%",
-  },
-  thumbnailText: {
-    fontSize: 13,
-    fontWeight: "900",
-    color: tokens.colors.textMuted,
-  },
-  thumbnailTextActive: {
-    color: tokens.colors.green700,
-  },
-  errorBox: {
-    marginTop: 12,
-    borderRadius: 16,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    backgroundColor: tokens.colors.dangerSoft,
-    borderWidth: 1,
-    borderColor: tokens.colors.dangerBorder,
-  },
-  errorText: {
-    color: tokens.colors.danger,
-    lineHeight: 20,
-    fontWeight: "700",
   },
   noticeBox: {
     marginTop: 12,
