@@ -32,12 +32,24 @@ import type { PostFontKey } from "@/lib/postContent";
 import {
   DEFAULT_WRITE_LAYOUT,
   buildLayoutPayload,
+  getFallbackLayoutForPostType,
   parseLayoutJson,
   updateLayoutBox,
   type LayoutAlign,
   type LayoutBoxId,
   type WriteLayoutModel,
 } from "@/lib/postLayout";
+import { analyzeWriteEditorContent } from "@/lib/writeEditorInsights";
+import {
+  WRITE_PAGE_MAX_CHARS,
+  WRITE_PAGE_MAX_COUNT,
+  WRITE_TOTAL_MAX_CHARS,
+  createWritePageDraft,
+  flattenWritePages,
+  getSubmissionContentPages,
+  normalizeWritePageDrafts,
+  type WritePageDraft,
+} from "@/lib/writePages";
 import {
   deleteWriteDraft,
   listWriteDrafts,
@@ -100,7 +112,9 @@ export default function Write() {
   const isLargeScreen = width >= 768;
 
   const [title, setTitle] = useState("");
-  const [body, setBody] = useState("");
+  const [pageDrafts, setPageDrafts] = useState<WritePageDraft[]>(() =>
+    normalizeWritePageDrafts(null)
+  );
   const [draftId, setDraftId] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState<PostType | null>(null);
   const [hashtagsInput, setHashtagsInput] = useState("");
@@ -130,6 +144,20 @@ export default function Write() {
 
   const lastInitializedEntryKeyRef = useRef<string | null>(null);
   const isEditMode = Boolean(editPostId);
+  const body = useMemo(() => flattenWritePages(pageDrafts), [pageDrafts]);
+  const submissionContentPages = useMemo(
+    () => getSubmissionContentPages(pageDrafts),
+    [pageDrafts]
+  );
+  const hasOverLimitPage = useMemo(
+    () =>
+      submissionContentPages.some(
+        (page) => Array.from(page.replace(/\s/g, "")).length > WRITE_PAGE_MAX_CHARS
+      ) ||
+      Array.from(submissionContentPages.join("").replace(/\s/g, "")).length >
+        WRITE_TOTAL_MAX_CHARS,
+    [submissionContentPages]
+  );
 
   const hashtagChips = useMemo(() => {
     return hashtagsInput
@@ -139,6 +167,10 @@ export default function Write() {
       .filter((item, index, arr) => arr.indexOf(item) === index)
       .slice(0, 12);
   }, [hashtagsInput]);
+  const editorInsight = useMemo(
+    () => analyzeWriteEditorContent({ title, body }),
+    [title, body]
+  );
   const layoutSignature = useMemo(() => JSON.stringify(buildLayoutPayload(layout)), [layout]);
   const hasLayoutChanges = layoutSignature !== DEFAULT_WRITE_LAYOUT_SIGNATURE;
   const promptQuestFromParams = useMemo<WriteDraftQuestContext | null>(() => {
@@ -189,7 +221,7 @@ export default function Write() {
     commentPolicy !== "logged_in" ||
     hasLayoutChanges;
   const canSubmit =
-    title.trim().length > 0 && body.trim().length > 0 && selectedType !== null;
+    title.trim().length > 0 && submissionContentPages.length > 0 && !hasOverLimitPage;
   const submissionLayout = useMemo(
     () => ({
       ...layout,
@@ -215,7 +247,7 @@ export default function Write() {
   const resetWriteState = useCallback(() => {
     setDraftId(null);
     setTitle("");
-    setBody("");
+    setPageDrafts(normalizeWritePageDrafts(null));
     setSelectedType(null);
     setHashtagsInput("");
     setFontKey("serif");
@@ -240,6 +272,8 @@ export default function Write() {
   const saveDraftExplicit = useCallback(async () => {
     const trimmedTitle = title.trim();
     const trimmedBody = body.trim();
+    const draftCategory =
+      selectedType ?? (trimmedTitle || trimmedBody ? editorInsight.detectedType : undefined);
     const hasDraftableChanges =
       Boolean(trimmedTitle || trimmedBody || selectedType || hashtagChips.length > 0) ||
       Boolean(questContext) ||
@@ -256,7 +290,7 @@ export default function Write() {
       draftId,
       titleLen: trimmedTitle.length,
       bodyLen: trimmedBody.length,
-      category: selectedType,
+      category: draftCategory,
       hashtagCount: hashtagChips.length,
     });
 
@@ -265,7 +299,8 @@ export default function Write() {
         id: draftId,
         title: trimmedTitle,
         body: trimmedBody,
-        category: selectedType ?? undefined,
+        pages: pageDrafts,
+        category: draftCategory,
         hashtags: hashtagChips,
         fontKey,
         layoutJson: buildLayoutPayload(layout),
@@ -283,7 +318,7 @@ export default function Write() {
       showToast("임시저장에 실패했어요. 잠시 후 다시 시도해주세요.", { tone: "error" });
       return false;
     }
-  }, [title, body, draftId, editPostId, selectedType, hashtagChips, fontKey, layout, visibility, commentPolicy, questContext, hasLayoutChanges, showToast]);
+  }, [title, body, pageDrafts, draftId, editPostId, selectedType, editorInsight.detectedType, hashtagChips, fontKey, layout, visibility, commentPolicy, questContext, hasLayoutChanges, showToast]);
 
   const { confirm: leaveConfirm, requestLeave, allowNextLeave } = useConfirmBeforeLeave({
     hasChanges,
@@ -356,6 +391,33 @@ export default function Write() {
     lastInitializedEntryKeyRef.current = null;
     resetWriteState();
   }, [resetWriteState]);
+
+  const selectPostType = useCallback((type: PostType) => {
+    setSelectedType(type);
+    if (!hasLayoutChanges) {
+      setLayout(getFallbackLayoutForPostType(type));
+    }
+  }, [hasLayoutChanges]);
+
+  const updatePageBody = useCallback((pageId: string, value: string) => {
+    setPageDrafts((current) =>
+      current.map((page) => (page.id === pageId ? { ...page, body: value } : page))
+    );
+  }, []);
+
+  const addPageDraft = useCallback(() => {
+    setPageDrafts((current) => {
+      if (current.length >= WRITE_PAGE_MAX_COUNT) return current;
+      return [...current, createWritePageDraft("", current.length)];
+    });
+  }, []);
+
+  const removePageDraft = useCallback((pageId: string) => {
+    setPageDrafts((current) => {
+      const next = current.filter((page) => page.id !== pageId);
+      return next.length > 0 ? next : normalizeWritePageDrafts(null);
+    });
+  }, []);
 
   const updateTitleAlign = useCallback((value: LayoutAlign) => {
     setLayout((current) => ({
@@ -435,22 +497,34 @@ export default function Write() {
   }, []);
 
   const onPressSubmit = useCallback(async () => {
+    const resolvedType = selectedType ?? editorInsight.detectedType;
+
     if (!previewOpen) {
       dismissKeyboard();
+      if (!selectedType) {
+        setSelectedType(resolvedType);
+      }
+      if (!hasLayoutChanges) {
+        setLayout(getFallbackLayoutForPostType(resolvedType));
+      }
       setPreviewPanel("settings");
       setPreviewOpen(true);
       return;
     }
 
-    if (!selectedType) return;
+    if (!resolvedType) return;
+    if (hasOverLimitPage) {
+      showToast("페이지당 글자 수를 줄인 뒤 다시 시도해주세요.", { tone: "error" });
+      return;
+    }
 
     logger.debug("[write] submit start", { draftId, titleLen: title.length, bodyLen: body.length });
 
     const trimmedTitle = title.trim();
     const trimmedBody = body.trim();
     logger.debug("[write] submit payload", {
-      type: selectedType,
-      category: selectedType,
+      type: resolvedType,
+      category: resolvedType,
       titleLen: trimmedTitle.length,
       contentLen: trimmedBody.length,
     });
@@ -463,9 +537,10 @@ export default function Write() {
       if (editPostId) {
         await updatePost({
           postId: editPostId,
-          type: selectedType,
+          type: resolvedType,
           title: trimmedTitle || undefined,
           content: trimmedBody,
+          contentPages: submissionContentPages,
           hashtags: hashtagChips,
           layoutJson: buildLayoutPayload(submissionLayout),
           fontKey,
@@ -476,10 +551,11 @@ export default function Write() {
         logger.debug("[write] update success", { postId: editPostId });
       } else {
         const created = await createPost({
-          type: selectedType,
-          category: selectedType,
+          type: resolvedType,
+          category: resolvedType,
           title: trimmedTitle || undefined,
           content: trimmedBody,
+          contentPages: submissionContentPages,
           contentFormat: "plain",
           hashtags: hashtagChips,
           layoutJson: buildLayoutPayload(submissionLayout),
@@ -508,18 +584,23 @@ export default function Write() {
     }
   }, [
     selectedType,
+    editorInsight.detectedType,
     draftId,
     editPostId,
     hashtagChips,
     submissionLayout,
     title,
     body,
+    submissionContentPages,
+    hasOverLimitPage,
     fontKey,
     visibility,
     commentPolicy,
     questContext,
     previewOpen,
+    hasLayoutChanges,
     dismissKeyboard,
+    showToast,
   ]);
 
   const onSuccessGoHome = useCallback(() => {
@@ -575,7 +656,7 @@ export default function Write() {
           logger.debug("[write] edit post restored", { postId: editable.id });
           setEditPostId(editable.id);
           setTitle(editable.title);
-          setBody(editable.content);
+          setPageDrafts(normalizeWritePageDrafts(editable.contentPages, editable.content));
           setSelectedType(editable.category ?? null);
           setHashtagsInput(editable.hashtags.join(", "));
           setFontKey(editable.fontKey ?? "serif");
@@ -601,7 +682,7 @@ export default function Write() {
           logger.debug("[write] draft restored by param", { draftId: d.id });
           setDraftId(d.id);
           setTitle(d.title);
-          setBody(d.body);
+          setPageDrafts(normalizeWritePageDrafts(d.pages, d.body));
           setSelectedType(d.category ?? null);
           const draftHashtags = Array.isArray(d.hashtags) ? d.hashtags : [];
           setHashtagsInput(draftHashtags.length > 0 ? draftHashtags.join(", ") : "");
@@ -754,9 +835,11 @@ export default function Write() {
                 <WritePreviewCard
                   title={title}
                   body={body}
-                  selectedType={selectedType}
+                  contentPages={submissionContentPages}
+                  selectedType={selectedType ?? editorInsight.detectedType}
                   layout={submissionLayout}
                   fontKey={fontKey}
+                  insight={editorInsight}
                   compact={previewPanel === "layout"}
                 />
                 <View style={styles.previewControlStack}>
@@ -792,8 +875,8 @@ export default function Write() {
                   {previewPanel === "settings" ? (
                     <WriteMetaSection
                       styles={styles}
-                      selectedType={selectedType}
-                      onSelectType={setSelectedType}
+                      selectedType={selectedType ?? editorInsight.detectedType}
+                      onSelectType={selectPostType}
                       hashtagsInput={hashtagsInput}
                       hashtagChips={hashtagChips}
                       onChangeHashtagsInput={setHashtagsInput}
@@ -842,11 +925,14 @@ export default function Write() {
             ) : (
               <WriteEditor
                 title={title}
-                body={body}
+                pageDrafts={pageDrafts}
                 selectedType={selectedType}
+                insight={editorInsight}
                 onChangeTitle={setTitle}
-                onChangeBody={setBody}
-                onSelectType={setSelectedType}
+                onChangePageBody={updatePageBody}
+                onAddPage={addPageDraft}
+                onRemovePage={removePageDraft}
+                onSelectType={selectPostType}
                 styles={styles}
               />
             )}

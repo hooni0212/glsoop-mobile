@@ -1,10 +1,12 @@
 import { tokens } from "@/theme/tokens";
 import { resolvePostRenderImages } from "@/lib/postRenderImages";
+import { appendRenderedImageFormat } from "@/lib/feedImage";
 import type { Post } from "@/types/post";
 import { formatRelativeKorean } from "@/lib/dateTime";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import {
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -205,6 +207,27 @@ function RenderedImage({
   showPageBadge: boolean;
   pageCount: number;
 }) {
+  const [usePngFallback, setUsePngFallback] = React.useState(false);
+  const [renderFailed, setRenderFailed] = React.useState(false);
+  const imageUri =
+    Platform.OS === "android" && usePngFallback
+      ? appendRenderedImageFormat(primaryImage, "png")
+      : primaryImage;
+
+  React.useEffect(() => {
+    setUsePngFallback(false);
+    setRenderFailed(false);
+  }, [primaryImage]);
+
+  const onRenderedImageError = () => {
+    if (Platform.OS === "android" && !usePngFallback) {
+      setRenderFailed(false);
+      setUsePngFallback(true);
+      return;
+    }
+    setRenderFailed(true);
+  };
+
   return (
     <View style={styles.renderedImageWrap}>
       {showPageBadge ? (
@@ -212,12 +235,21 @@ function RenderedImage({
           <Text style={styles.renderedPageBadgeText}>{pageCount}장</Text>
         </View>
       ) : null}
-      <Image
-        source={{ uri: primaryImage }}
-        style={styles.renderedImage}
-        contentFit="contain"
-        transition={120}
-      />
+      {renderFailed ? (
+        <View style={[styles.renderedImage, styles.renderedImageFallback]}>
+          <Text style={styles.renderedImageFallbackText}>
+            이미지를 불러오지 못했어요.
+          </Text>
+        </View>
+      ) : (
+        <Image
+          source={{ uri: imageUri }}
+          style={styles.renderedImage}
+          contentFit="contain"
+          transition={120}
+          onError={onRenderedImageError}
+        />
+      )}
     </View>
   );
 }
@@ -287,6 +319,17 @@ const styles = StyleSheet.create({
     width: "100%",
     aspectRatio: 500 / 666,
     backgroundColor: "#f7f3ea",
+  },
+  renderedImageFallback: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 18,
+  },
+  renderedImageFallbackText: {
+    color: tokens.colors.textMuted,
+    fontSize: 13,
+    fontWeight: "800",
+    textAlign: "center",
   },
   renderedPageBadge: {
     position: "absolute",

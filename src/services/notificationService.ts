@@ -4,7 +4,9 @@ export type NotificationType =
   | "post_reaction"
   | "post_comment"
   | "comment_reply"
-  | "new_follower";
+  | "new_follower"
+  | "admin_operational_alert"
+  | "marketing_campaign";
 
 export type AppNotification = {
   id: string;
@@ -76,7 +78,9 @@ function normalizeType(value: unknown): NotificationType {
     raw === "post_reaction" ||
     raw === "post_comment" ||
     raw === "comment_reply" ||
-    raw === "new_follower"
+    raw === "new_follower" ||
+    raw === "admin_operational_alert" ||
+    raw === "marketing_campaign"
   ) {
     return raw;
   }

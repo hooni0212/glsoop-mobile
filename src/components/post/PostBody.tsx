@@ -1,9 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Platform, Pressable, ScrollView, Text, View } from "react-native";
 import { Image } from "expo-image";
 
 import { PaperReadingCard } from "@/components/paper/PaperReadingCard";
-import { buildRenderedPostImageUrl } from "@/lib/feedImage";
+import {
+  appendRenderedImageFormat,
+  buildRenderedPostImageUrl,
+} from "@/lib/feedImage";
 import { normalizePostBackgroundTemplateId } from "@/lib/postBackgroundTemplates";
 import type { WriteLayoutModel } from "@/lib/postLayout";
 import type { PostRenderImages, PostType } from "@/types/post";
@@ -33,6 +36,7 @@ export function PostBody({
   renderImages,
 }: PostBodyProps) {
   const [renderFailed, setRenderFailed] = useState(false);
+  const [usePngFallback, setUsePngFallback] = useState(false);
   const [carouselWidth, setCarouselWidth] = useState(0);
   const [activePage, setActivePage] = useState(0);
   const scrollRef = useRef<ScrollView | null>(null);
@@ -50,12 +54,17 @@ export function PostBody({
     if (explicit.length > 0) return explicit;
     return fallbackImageUrl ? [fallbackImageUrl] : [];
   }, [fallbackImageUrl, renderImages?.images]);
+  const visibleImageUrls = useMemo(() => {
+    if (Platform.OS !== "android" || !usePngFallback) return imageUrls;
+    return imageUrls.map((item) => appendRenderedImageFormat(item, "png"));
+  }, [imageUrls, usePngFallback]);
   const pageCount = Math.max(1, renderImages?.pageCount ?? (imageUrls.length || 1));
   const showCarousel = imageUrls.length > 1;
   const imageSeed = useMemo(() => imageUrls.join("|"), [imageUrls]);
 
   useEffect(() => {
     setRenderFailed(false);
+    setUsePngFallback(false);
     setActivePage(0);
   }, [imageSeed]);
 
@@ -66,7 +75,16 @@ export function PostBody({
     setActivePage(safeIndex);
   };
 
-  if (imageUrls.length > 0 && !renderFailed) {
+  const onRenderImageError = () => {
+    if (Platform.OS === "android" && !usePngFallback) {
+      setRenderFailed(false);
+      setUsePngFallback(true);
+      return;
+    }
+    setRenderFailed(true);
+  };
+
+  if (visibleImageUrls.length > 0 && !renderFailed) {
     return (
       <View style={styles.wrap}>
         <View style={styles.frame}>
@@ -92,7 +110,7 @@ export function PostBody({
                 setActivePage(Math.max(0, Math.min(nextIndex, imageUrls.length - 1)));
               }}
             >
-              {imageUrls.map((imageUrl, index) => (
+              {visibleImageUrls.map((imageUrl, index) => (
                 <View
                   key={`${imageUrl}-${index}`}
                   style={[styles.carouselSlide, { width: Math.max(carouselWidth, 1) }]}
@@ -102,7 +120,7 @@ export function PostBody({
                     style={styles.image}
                     contentFit="contain"
                     transition={120}
-                    onError={() => setRenderFailed(true)}
+                    onError={onRenderImageError}
                   />
                 </View>
               ))}

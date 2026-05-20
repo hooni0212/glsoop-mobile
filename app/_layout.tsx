@@ -1,11 +1,13 @@
 import React from "react";
 import * as SplashScreen from "expo-splash-screen";
+import { useFonts } from "expo-font";
 import { AuthGate } from "@/auth/AuthGate";
 import { AuthProvider, useAuth } from "@/auth/AuthContext";
 import { PostLoginPreferencesPrompt } from "@/auth/PostLoginPreferencesPrompt";
 import { AppBootScreen } from "@/components/state/AppBootScreen";
 import { refreshNotificationUnreadCount } from "@/features/notifications/notificationStore";
 import { ToastProvider, useToast } from "@/feedback/ToastProvider";
+import { PREVIEW_FONT_ASSETS } from "@/lib/previewFonts";
 import { usePushNotifications } from "@/lib/pushNotifications";
 import { BottomDockProvider } from "@/navigation/bottomDock";
 import { Stack } from "expo-router";
@@ -31,24 +33,26 @@ export default function RootLayout() {
 
 function RootLayoutContent() {
   const { ready } = useAuth();
+  const [fontsLoaded, fontLoadError] = useFonts(PREVIEW_FONT_ASSETS);
   const [layoutReady, setLayoutReady] = React.useState(false);
   const splashHiddenRef = React.useRef(false);
+  const bootReady = ready && (fontsLoaded || Boolean(fontLoadError));
 
   React.useEffect(() => {
-    if (!ready || !layoutReady || splashHiddenRef.current) return;
+    if (!bootReady || !layoutReady || splashHiddenRef.current) return;
 
     splashHiddenRef.current = true;
     SplashScreen.hideAsync().catch(() => {
       splashHiddenRef.current = false;
     });
-  }, [layoutReady, ready]);
+  }, [bootReady, layoutReady]);
 
   return (
     <View style={styles.root} onLayout={() => setLayoutReady(true)}>
       <BottomDockProvider>
         <ToastProvider>
-          <NotificationBridge />
-          {!ready ? (
+          <NotificationBridge navigationReady={bootReady} />
+          {!bootReady ? (
             <AppBootScreen />
           ) : (
             <>
@@ -118,10 +122,11 @@ function RootLayoutContent() {
   );
 }
 
-function NotificationBridge() {
+function NotificationBridge({ navigationReady }: { navigationReady: boolean }) {
   const { token } = useAuth();
   const { showToast } = useToast();
   usePushNotifications(token, showToast, {
+    navigationReady,
     onNotificationReceived: () => {
       void refreshNotificationUnreadCount().catch(() => undefined);
     },
