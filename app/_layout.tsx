@@ -51,7 +51,7 @@ function RootLayoutContent() {
     <View style={styles.root} onLayout={() => setLayoutReady(true)}>
       <BottomDockProvider>
         <ToastProvider>
-          <NotificationBridge />
+          <NotificationBridge navigationReady={bootReady} />
           {!bootReady ? (
             <AppBootScreen />
           ) : (
@@ -122,10 +122,11 @@ function RootLayoutContent() {
   );
 }
 
-function NotificationBridge() {
+function NotificationBridge({ navigationReady }: { navigationReady: boolean }) {
   const { token } = useAuth();
   const { showToast } = useToast();
   usePushNotifications(token, showToast, {
+    navigationReady,
     onNotificationReceived: () => {
       void refreshNotificationUnreadCount().catch(() => undefined);
     },
