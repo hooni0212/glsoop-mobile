@@ -3,9 +3,10 @@ import Constants from "expo-constants";
 import * as Notifications from "expo-notifications";
 import { type Href, router } from "expo-router";
 import React from "react";
-import { Platform } from "react-native";
+import { InteractionManager, Platform } from "react-native";
 
 import * as haptics from "@/lib/haptics";
+import { buildAuthRoute } from "@/lib/authRedirect";
 import { logger } from "@/lib/logger";
 import { registerPushToken, unregisterPushToken } from "@/services/pushTokenService";
 
@@ -32,6 +33,7 @@ type PushRegistrationOptions = {
 };
 
 type PushNotificationHookOptions = {
+  navigationReady?: boolean;
   onNotificationReceived?: () => void;
 };
 
@@ -135,20 +137,51 @@ function asInternalRoute(value: unknown) {
   return trimmed as Href;
 }
 
-function openNotificationTarget(data: Record<string, unknown>) {
-  const targetPath = asInternalRoute(data.target_path ?? data.targetPath ?? data.path ?? data.url);
-  if (targetPath) {
-    router.push(targetPath);
-    return true;
+function asNotificationData(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
+function notificationType(data: Record<string, unknown>) {
+  const raw = data.type ?? data.notification_type ?? data.notificationType;
+  return typeof raw === "string" ? raw.trim() : "";
+}
+
+export function resolveNotificationTarget(data: Record<string, unknown>) {
+  const targetPath = asInternalRoute(
+    data.target_path ?? data.targetPath ?? data.path ?? data.url ?? data.route
+  );
+  if (targetPath) return targetPath;
+
+  const type = notificationType(data);
+  const postId = asPostId(data.post_id ?? data.postId ?? data.postID);
+  if (postId) return `/posts/${postId}` as Href;
+
+  const fallbackId = asPostId(data.id);
+  if (
+    fallbackId &&
+    (type === "post_reaction" || type === "post_comment" || type === "comment_reply")
+  ) {
+    return `/posts/${fallbackId}` as Href;
   }
 
-  const postId = asPostId(data.post_id ?? data.postId ?? data.postID ?? data.id);
-  if (postId) {
-    router.push(`/posts/${postId}`);
-    return true;
+  const userId = asPostId(data.user_id ?? data.userId ?? data.actor_user_id ?? data.actorUserId);
+  if (type === "new_follower" && userId) {
+    return `/users/${userId}` as Href;
   }
 
-  return false;
+  if (type === "marketing_campaign" || type === "admin_operational_alert") {
+    return "/notifications";
+  }
+
+  return null;
+}
+
+function pushRouteAfterInteractions(route: Href) {
+  InteractionManager.runAfterInteractions(() => {
+    router.push(route);
+  });
 }
 
 export async function registerForPushNotificationsAsync(
@@ -214,11 +247,38 @@ export function usePushNotifications(
   options: PushNotificationHookOptions = {}
 ) {
   const handledResponseRef = React.useRef<string | null>(null);
+  const pendingTargetRef = React.useRef<Href | null>(null);
   const onNotificationReceivedRef = React.useRef(options.onNotificationReceived);
+  const navigationReady = options.navigationReady !== false;
 
   React.useEffect(() => {
     onNotificationReceivedRef.current = options.onNotificationReceived;
   }, [options.onNotificationReceived]);
+
+  const openOrQueueTarget = React.useCallback(
+    (target: Href | null) => {
+      if (!target) return false;
+
+      if (!navigationReady) {
+        pendingTargetRef.current = target;
+        return true;
+      }
+
+      pendingTargetRef.current = null;
+      const route = authToken ? target : buildAuthRoute("/(auth)/login", target);
+      pushRouteAfterInteractions(route);
+      return true;
+    },
+    [authToken, navigationReady]
+  );
+
+  React.useEffect(() => {
+    if (!navigationReady || !pendingTargetRef.current) return;
+    const target = pendingTargetRef.current;
+    pendingTargetRef.current = null;
+    const route = authToken ? target : buildAuthRoute("/(auth)/login", target);
+    pushRouteAfterInteractions(route);
+  }, [authToken, navigationReady]);
 
   const handleNotificationResponse = React.useCallback(
     (response: Notifications.NotificationResponse) => {
@@ -227,13 +287,14 @@ export function usePushNotifications(
       if (handledResponseRef.current === key) return;
 
       handledResponseRef.current = key;
-      const opened = openNotificationTarget(request.content.data || {});
+      const target = resolveNotificationTarget(asNotificationData(request.content.data));
+      const opened = openOrQueueTarget(target);
       onNotificationReceivedRef.current?.();
       if (opened) {
         haptics.selection();
       }
     },
-    []
+    [openOrQueueTarget]
   );
 
   React.useEffect(() => {

@@ -41,6 +41,8 @@ function iconForType(type: NotificationType) {
   if (type === "post_reaction") return "heart-outline";
   if (type === "post_comment") return "chatbubble-outline";
   if (type === "comment_reply") return "return-down-forward-outline";
+  if (type === "admin_operational_alert") return "alert-circle-outline";
+  if (type === "marketing_campaign") return "leaf-outline";
   return "person-add-outline";
 }
 
