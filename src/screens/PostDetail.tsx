@@ -544,7 +544,7 @@ export default function PostDetail() {
 
   const onPressCommentLike = async (comment: PostComment) => {
     if (!token) {
-      promptAuthForAction("댓글 공감은 로그인한 회원만 남길 수 있어요.");
+      promptAuthForAction("댓글 좋아요는 로그인한 회원만 남길 수 있어요.");
       return;
     }
     if (comment.status !== "active" || commentLikePending[comment.id]) return;
@@ -585,7 +585,7 @@ export default function PostDetail() {
         await handleAuthError();
         return;
       }
-      showToast("댓글 공감 처리에 실패했어요. 잠시 후 다시 시도해주세요.", { tone: "error" });
+      showToast("댓글 좋아요 처리에 실패했어요. 잠시 후 다시 시도해주세요.", { tone: "error" });
     } finally {
       setCommentLikePending((prev) => ({ ...prev, [comment.id]: false }));
     }
@@ -593,7 +593,7 @@ export default function PostDetail() {
 
   const onPressLike = async () => {
     if (!token) {
-      promptAuthForAction("공감은 로그인한 회원만 남길 수 있어요.");
+      promptAuthForAction("좋아요는 로그인한 회원만 남길 수 있어요.");
       return;
     }
     if (!post || likePending) return;
@@ -632,7 +632,7 @@ export default function PostDetail() {
       if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
         await handleAuthError();
       } else {
-        showToast("공감 처리에 실패했어요. 잠시 후 다시 시도해주세요.", { tone: "error" });
+        showToast("좋아요 처리에 실패했어요. 잠시 후 다시 시도해주세요.", { tone: "error" });
       }
     } finally {
       setLikePending(false);
@@ -1832,7 +1832,7 @@ function RelatedPostCard({
         <Text style={styles.relatedFeedTitle} numberOfLines={2}>
           {title}
         </Text>
-        <View style={styles.relatedFeedMetaRow} accessibilityLabel={`공감 ${likeCount}개`}>
+        <View style={styles.relatedFeedMetaRow} accessibilityLabel={`좋아요 ${likeCount}개`}>
           <Ionicons name="heart" size={13} color={tokens.colors.green700} />
           <Text style={styles.relatedFeedMeta} numberOfLines={1}>
             {likeCount}

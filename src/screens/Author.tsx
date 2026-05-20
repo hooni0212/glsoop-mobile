@@ -41,6 +41,7 @@ import { resolveRuntimeLegalDocumentUrl } from "@/services/runtimeConfigService"
 import { toggleFollowUser } from "@/services/userService";
 import { ApiError } from "@/lib/errors";
 import { useRuntimeLegalConfig } from "@/hooks/useRuntimeLegalConfig";
+import { useBottomDock } from "@/navigation/bottomDock";
 import {
   normalizeProfileCosmeticsExpanded,
   type CosmeticStickerSlot,
@@ -48,6 +49,13 @@ import {
 import type { Post } from "@/types/post";
 import { filterBlockedPosts, useBlockedUserIds } from "@/features/safety/blockedUsersStore";
 import { tokens } from "@/theme/tokens";
+
+type AuthorProps = {
+  userIdOverride?: string;
+  hideTopBar?: boolean;
+  reserveBottomDock?: boolean;
+  forceOwnProfile?: boolean;
+};
 
 function toRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
@@ -68,6 +76,11 @@ function toIdText(value: unknown): string {
   if (typeof value === "string" && value.trim()) return value.trim();
   if (typeof value === "number" && Number.isFinite(value)) return String(value);
   return "";
+}
+
+function toNumber(value: unknown): number {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
 }
 
 function isOwnProfile(viewer: unknown, user: unknown): boolean {
@@ -134,12 +147,19 @@ function getStickerAnchorStyle(slot: CosmeticStickerSlot) {
   return authorScreenStyles.stickerBR;
 }
 
-export default function Author() {
+export default function Author({
+  userIdOverride,
+  hideTopBar = false,
+  reserveBottomDock = false,
+  forceOwnProfile = false,
+}: AuthorProps = {}) {
   const params = useLocalSearchParams<{ id: string }>();
   const pathname = usePathname();
-  const userId = params?.id ? String(params.id) : undefined;
+  const routeUserId = params?.id ? String(params.id) : undefined;
+  const userId = userIdOverride || routeUserId;
   const { config: runtimeLegalConfig } = useRuntimeLegalConfig();
   const blockedUserIds = useBlockedUserIds();
+  const dock = useBottomDock();
 
   const [sort, setSort] = useState<AuthorPostSort>("newest");
   const {
@@ -180,12 +200,15 @@ export default function Author() {
   const bio = user?.bio || "소개가 아직 없어요.";
   const postCount = stats?.postCount ?? user?.postCount ?? user?.post_count ?? 0;
   const totalLikes = stats?.totalLikes ?? user?.totalLikes ?? user?.total_likes ?? 0;
+  const followingCount = toNumber(
+    stats?.followingCount ?? user?.followingCount ?? user?.following_count
+  );
   const about = user?.about || user?.bio || "";
   const collapsedAbout =
     about.length > 96 && !bioExpanded ? `${about.slice(0, 96).trim()}...` : about;
   const joinedAtValue = user?.joinedAt ?? user?.joined_at;
   const joinedAtLabel = joinedAtValue ? `${formatKstDateKorean(joinedAtValue)} 가입` : "";
-  const showProfileCustomize = isOwnProfile(viewer, user);
+  const showProfileCustomize = forceOwnProfile || isOwnProfile(viewer, user);
   const showFollowButton = Boolean(userId && !showProfileCustomize);
   const profileCosmetics = useMemo(
     () =>
@@ -247,7 +270,7 @@ export default function Author() {
 
   const handleLike = async (postId: string) => {
     if (!token) {
-      promptAuthForAction("공감은 로그인한 회원만 남길 수 있어요.");
+      promptAuthForAction("좋아요는 로그인한 회원만 남길 수 있어요.");
       return;
     }
     if (likePending[postId]) return;
@@ -288,7 +311,7 @@ export default function Author() {
       if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
         await handleAuthError();
       } else {
-        showToast("공감 처리에 실패했어요. 잠시 후 다시 시도해주세요.", { tone: "error" });
+        showToast("좋아요 처리에 실패했어요. 잠시 후 다시 시도해주세요.", { tone: "error" });
       }
     } finally {
       setPending(postId, false);
@@ -570,42 +593,42 @@ export default function Author() {
                   <View
                     key={badge.key}
                     style={authorScreenStyles.showcaseChip}
+                    accessibilityLabel={`배지 ${badge.name}`}
                   >
                     <Text style={authorScreenStyles.showcaseEmoji}>
                       {emojiOrFallback(badge.icon_emoji, "🏅")}
-                    </Text>
-                    <Text
-                      style={authorScreenStyles.showcaseText}
-                      numberOfLines={1}
-                    >
-                      {badge.name}
                     </Text>
                   </View>
                 ))}
               </View>
             ) : null}
 
-            {profileBackground ? (
-              <Text
-                style={[
-                  authorScreenStyles.profileBackgroundLabel,
-                  { color: backgroundTone.accentColor },
-                ]}
-              >
-                {emojiOrFallback(profileBackground.icon_emoji, "🎨")} {profileBackground.name}
-              </Text>
-            ) : null}
-
             <View style={authorScreenStyles.statsRow}>
               <Text style={authorScreenStyles.statText}>글 {postCount}</Text>
               <View
                 style={authorScreenStyles.statMetric}
-                accessibilityLabel={`공감 ${totalLikes}개`}
+                accessibilityLabel={`좋아요 ${totalLikes}개`}
               >
                 <Ionicons name="heart" size={13} color={tokens.colors.textMuted} />
                 <Text style={authorScreenStyles.statText}>{totalLikes}</Text>
               </View>
               <Text style={authorScreenStyles.statText}>팔로워 {followerCount}</Text>
+              {showProfileCustomize ? (
+                <Pressable
+                  onPress={() => router.push("/me/followings")}
+                  style={authorScreenStyles.statLink}
+                  testID="author-own-followings-toggle"
+                  accessibilityRole="button"
+                  accessibilityLabel={`팔로잉 ${followingCount}명 목록 보기`}
+                >
+                  <Text style={authorScreenStyles.statLinkText}>팔로잉 {followingCount}</Text>
+                  <Ionicons
+                    name="chevron-forward"
+                    size={13}
+                    color={tokens.colors.textFaint}
+                  />
+                </Pressable>
+              ) : null}
             </View>
 
             {joinedAtLabel ? (
@@ -631,6 +654,22 @@ export default function Author() {
                     <Text style={authorScreenStyles.profileCustomizeBtnText}>
                       프로필 꾸미기
                     </Text>
+                  </Pressable>
+                ) : null}
+                {showProfileCustomize ? (
+                  <Pressable
+                    onPress={() => router.push("/account-center")}
+                    style={authorScreenStyles.settingsBtn}
+                    testID="author-account-center-btn"
+                    accessibilityRole="button"
+                    accessibilityLabel="설정 열기"
+                  >
+                    <Ionicons
+                      name="settings-outline"
+                      size={15}
+                      color={tokens.colors.green700}
+                    />
+                    <Text style={authorScreenStyles.settingsBtnText}>설정</Text>
                   </Pressable>
                 ) : null}
               </View>
@@ -732,7 +771,7 @@ export default function Author() {
                     onPress={() => setSort(value)}
                     testID={`author-sort-${value}`}
                     accessibilityRole="button"
-                    accessibilityLabel={"label" in item ? item.label : "공감 많은 순"}
+                    accessibilityLabel={"label" in item ? item.label : "좋아요 많은 순"}
                     accessibilityState={{ selected: active }}
                     style={[
                       authorScreenStyles.sortChip,
@@ -768,6 +807,7 @@ export default function Author() {
       bio,
       bioExpanded,
       collapsedAbout,
+      followingCount,
       followerCount,
       followBusy,
       handleFollowToggle,
@@ -793,11 +833,13 @@ export default function Author() {
   if (showInitialLoading) {
     return (
       <SafeAreaView style={authorScreenStyles.safe} testID="author-screen">
-        <PostTopBar
-          onPressBack={() => router.back()}
-          styles={authorScreenStyles}
-          backButtonTestID="author-back-btn"
-        />
+        {hideTopBar ? null : (
+          <PostTopBar
+            onPressBack={() => router.back()}
+            styles={authorScreenStyles}
+            backButtonTestID="author-back-btn"
+          />
+        )}
         <View style={authorScreenStyles.center}>
           <AppLoading />
         </View>
@@ -808,11 +850,13 @@ export default function Author() {
   if (profileError && !user) {
     return (
       <SafeAreaView style={authorScreenStyles.safe} testID="author-screen">
-        <PostTopBar
-          onPressBack={() => router.back()}
-          styles={authorScreenStyles}
-          backButtonTestID="author-back-btn"
-        />
+        {hideTopBar ? null : (
+          <PostTopBar
+            onPressBack={() => router.back()}
+            styles={authorScreenStyles}
+            backButtonTestID="author-back-btn"
+          />
+        )}
         <View style={authorScreenStyles.center}>
           <AppError error={profileError} onRetry={refetchProfile} />
         </View>
@@ -822,16 +866,21 @@ export default function Author() {
 
   return (
     <SafeAreaView style={authorScreenStyles.safe} testID="author-screen">
-      <PostTopBar
-        onPressBack={() => router.back()}
-        styles={authorScreenStyles}
-        backButtonTestID="author-back-btn"
-      />
+      {hideTopBar ? null : (
+        <PostTopBar
+          onPressBack={() => router.back()}
+          styles={authorScreenStyles}
+          backButtonTestID="author-back-btn"
+        />
+      )}
 
       <FlatList<Post>
         data={visibleItems}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={authorScreenStyles.listContent}
+        contentContainerStyle={[
+          authorScreenStyles.listContent,
+          reserveBottomDock && { paddingBottom: dock.tab.height + tokens.space.xl },
+        ]}
         ListHeaderComponent={listHeader}
         ItemSeparatorComponent={() => (
           <View style={authorScreenStyles.listItemSpacer} />

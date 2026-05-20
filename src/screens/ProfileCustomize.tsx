@@ -154,8 +154,8 @@ function badgeDetail(item: CosmeticItem | null, fallback = "보유 중") {
   if (key.includes("first_post")) return "첫 글을 남기면 얻는 흔적";
   if (key.includes("posts_10")) return "열 편의 글을 쌓아 얻는 배지";
   if (key.includes("posts_50")) return "꾸준히 쓴 작가에게 주어져요";
-  if (key.includes("first_like")) return "첫 공감을 받으면 열려요";
-  if (key.includes("loved")) return "많은 공감을 받은 글의 기록";
+  if (key.includes("first_like")) return "첫 좋아요를 받으면 열려요";
+  if (key.includes("loved")) return "많은 좋아요를 받은 글의 기록";
   if (key.includes("streak_30")) return "긴 글쓰기 리듬을 지킨 보상";
   if (key.includes("streak_7")) return "일주일의 발걸음을 남긴 배지";
   if (key.includes("streak_3")) return "짧은 리듬을 시작한 기록";
