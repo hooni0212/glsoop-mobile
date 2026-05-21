@@ -403,10 +403,21 @@ test.describe("Growth 플로우", () => {
     await page.goto("/growth");
 
     await expect(page.getByTestId("growth-screen")).toBeVisible();
-    await expect(page.getByText("오늘의 리포트")).toBeVisible();
-    await expect(page.getByTestId("growth-campaign-preview")).toBeVisible();
-    await expect(page.getByTestId("growth-campaign-preview-item-201")).toContainText("데일리 캠페인");
+    await expect(page.getByText("나의 숲")).toBeVisible();
+    await expect(page.getByText("오늘의 리포트")).toHaveCount(0);
+    await expect(page.getByTestId("growth-forest-card")).toContainText("다음 레벨까지 90 XP");
+    await expect(page.getByTestId("growth-achievement-highlight")).toContainText("7일 연속 기록");
+    await expect(page.getByTestId("growth-reflection-card")).toContainText("이번 주 4편의 글이 쌓였어요.");
+    await expect(page.getByTestId("growth-campaign-preview")).toHaveCount(0);
     await expect(page.getByTestId("top-posts-list")).toHaveCount(0);
+
+    await activateByTestId(page, "growth-action-records");
+    await expect(page.getByTestId("growth-records-screen")).toBeVisible();
+    await expect(page.getByText("최근의 숲")).toBeVisible();
+    await expect(page.getByText("이번 흐름")).toBeVisible();
+    await expect(page.getByText("오늘 XP")).toBeVisible();
+    await page.goBack();
+    await expect(page.getByTestId("growth-screen")).toBeVisible();
 
     await activateByTestId(page, "growth-action-achievements");
     await expect(page.getByTestId("growth-achievements-screen")).toBeVisible();
@@ -439,7 +450,9 @@ test.describe("Growth 플로우", () => {
     await page.goto("/growth");
 
     await expect(page.getByTestId("growth-screen")).toBeVisible();
-    await expect(page.getByLabel("데이터 소스: 대체 데이터")).toBeVisible();
+    await expect(page.getByTestId("growth-forest-card")).toBeVisible();
+    await expect(page.getByText("나의 숲")).toBeVisible();
+    await expect(page.getByText("오늘의 리포트")).toHaveCount(0);
     await expect(page.getByTestId("top-posts-empty")).toHaveCount(0);
   });
 

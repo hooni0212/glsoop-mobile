@@ -298,6 +298,7 @@ export default function ProfileCustomizeScreen() {
       setDirty(false);
       showToast("저장했어요", { tone: "success" });
       await refreshMyCosmetics(true);
+      router.replace("/me");
     } catch (err) {
       const normalized = normalizeApiError(err);
       if (normalized.kind === "auth") {
@@ -686,10 +687,12 @@ function ProfilePreview({
       {previewBadges.length > 0 ? (
         <View style={styles.previewShowcase}>
           {previewBadges.map((badge) => (
-            <View key={badge.key} style={styles.previewShowcaseChip}>
-              <Text style={styles.previewShowcaseText}>
-                {toEmoji(badge.icon_emoji, "🏅")} {badge.name}
-              </Text>
+            <View
+              key={badge.key}
+              style={styles.previewShowcaseChip}
+              accessibilityLabel={`표시 뱃지 ${badge.name}`}
+            >
+              <Text style={styles.previewShowcaseText}>{toEmoji(badge.icon_emoji, "🏅")}</Text>
             </View>
           ))}
           {remainingBadgeCount > 0 ? (
@@ -699,9 +702,6 @@ function ProfilePreview({
           ) : null}
         </View>
       ) : null}
-      <Text style={[styles.previewBackgroundLabel, { color: tone.accentColor }]}>
-        {background?.name ?? "기본 배경"}
-      </Text>
     </View>
   );
 }
@@ -1124,26 +1124,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(63,122,76,0.22)",
     backgroundColor: "rgba(255,255,255,0.66)",
-    paddingHorizontal: 9,
-    paddingVertical: 5,
+    minWidth: 30,
+    height: 30,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 7,
   },
   previewShowcaseText: {
     ...NON_SELECTABLE_TEXT,
     fontSize: tokens.font.small,
     fontWeight: "800",
     color: tokens.colors.green900,
-  },
-  previewBackgroundLabel: {
-    ...NON_SELECTABLE_TEXT,
-    alignSelf: "flex-start",
-    marginTop: 2,
-    fontSize: tokens.font.small,
-    fontWeight: "900",
-    borderRadius: tokens.radius.pill,
-    backgroundColor: "rgba(255,255,255,0.56)",
-    paddingHorizontal: 9,
-    paddingVertical: 5,
-    overflow: "hidden",
   },
   previewSticker: {
     position: "absolute",
