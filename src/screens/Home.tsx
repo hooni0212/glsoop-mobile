@@ -394,6 +394,7 @@ export default function Home() {
         error={error}
         hasMore={hasMore}
         sectionLabel={sectionLabel}
+        scrollToTopKey={active}
         onRefresh={refresh}
         onEndReached={() => {
           if (!loading && hasMore) loadMore();
