@@ -154,8 +154,8 @@ function badgeDetail(item: CosmeticItem | null, fallback = "보유 중") {
   if (key.includes("first_post")) return "첫 글을 남기면 얻는 흔적";
   if (key.includes("posts_10")) return "열 편의 글을 쌓아 얻는 배지";
   if (key.includes("posts_50")) return "꾸준히 쓴 작가에게 주어져요";
-  if (key.includes("first_like")) return "첫 공감을 받으면 열려요";
-  if (key.includes("loved")) return "많은 공감을 받은 글의 기록";
+  if (key.includes("first_like")) return "첫 좋아요를 받으면 열려요";
+  if (key.includes("loved")) return "많은 좋아요를 받은 글의 기록";
   if (key.includes("streak_30")) return "긴 글쓰기 리듬을 지킨 보상";
   if (key.includes("streak_7")) return "일주일의 발걸음을 남긴 배지";
   if (key.includes("streak_3")) return "짧은 리듬을 시작한 기록";
@@ -298,6 +298,7 @@ export default function ProfileCustomizeScreen() {
       setDirty(false);
       showToast("저장했어요", { tone: "success" });
       await refreshMyCosmetics(true);
+      router.replace("/me");
     } catch (err) {
       const normalized = normalizeApiError(err);
       if (normalized.kind === "auth") {
@@ -686,10 +687,12 @@ function ProfilePreview({
       {previewBadges.length > 0 ? (
         <View style={styles.previewShowcase}>
           {previewBadges.map((badge) => (
-            <View key={badge.key} style={styles.previewShowcaseChip}>
-              <Text style={styles.previewShowcaseText}>
-                {toEmoji(badge.icon_emoji, "🏅")} {badge.name}
-              </Text>
+            <View
+              key={badge.key}
+              style={styles.previewShowcaseChip}
+              accessibilityLabel={`표시 뱃지 ${badge.name}`}
+            >
+              <Text style={styles.previewShowcaseText}>{toEmoji(badge.icon_emoji, "🏅")}</Text>
             </View>
           ))}
           {remainingBadgeCount > 0 ? (
@@ -699,9 +702,6 @@ function ProfilePreview({
           ) : null}
         </View>
       ) : null}
-      <Text style={[styles.previewBackgroundLabel, { color: tone.accentColor }]}>
-        {background?.name ?? "기본 배경"}
-      </Text>
     </View>
   );
 }
@@ -1124,26 +1124,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(63,122,76,0.22)",
     backgroundColor: "rgba(255,255,255,0.66)",
-    paddingHorizontal: 9,
-    paddingVertical: 5,
+    minWidth: 30,
+    height: 30,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 7,
   },
   previewShowcaseText: {
     ...NON_SELECTABLE_TEXT,
     fontSize: tokens.font.small,
     fontWeight: "800",
     color: tokens.colors.green900,
-  },
-  previewBackgroundLabel: {
-    ...NON_SELECTABLE_TEXT,
-    alignSelf: "flex-start",
-    marginTop: 2,
-    fontSize: tokens.font.small,
-    fontWeight: "900",
-    borderRadius: tokens.radius.pill,
-    backgroundColor: "rgba(255,255,255,0.56)",
-    paddingHorizontal: 9,
-    paddingVertical: 5,
-    overflow: "hidden",
   },
   previewSticker: {
     position: "absolute",

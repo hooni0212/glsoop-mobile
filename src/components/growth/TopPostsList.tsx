@@ -88,7 +88,7 @@ export function TopPostsList({
                 <View style={styles.metaRow}>
                   {item.authorName ? <Text style={styles.metaText}>{item.authorName}</Text> : null}
                   {createdAtLabel ? <Text style={styles.metaText}>{createdAtLabel}</Text> : null}
-                  <View style={styles.metaMetric} accessibilityLabel={`공감 ${item.likeCount ?? 0}개`}>
+                  <View style={styles.metaMetric} accessibilityLabel={`좋아요 ${item.likeCount ?? 0}개`}>
                     <Ionicons name="heart" size={13} color={tokens.colors.textFaint} />
                     <Text style={styles.metaText}>{item.likeCount ?? 0}</Text>
                   </View>

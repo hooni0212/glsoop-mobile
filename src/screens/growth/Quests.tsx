@@ -229,7 +229,7 @@ export default function QuestsScreen() {
         testID="growth-quests-scroll"
         contentContainerStyle={[
           styles.content,
-          (showLoading || showError || showEmpty) && styles.contentCentered,
+          (showLoading || showError) && styles.contentCentered,
         ]}
         refreshControl={
           <RefreshControl
@@ -255,10 +255,12 @@ export default function QuestsScreen() {
         ) : null}
 
         {showEmpty ? (
-          <AppEmpty
-            title="진행 가능한 퀘스트가 없어요"
-            description="지금은 표시할 퀘스트가 없어요. 새 이벤트가 열리면 자동으로 표시돼요."
-          />
+          <View style={styles.emptyQuestCard} testID="growth-quests-empty">
+            <Text style={styles.emptyQuestTitle}>지금은 열린 퀘스트가 없어요</Text>
+            <Text style={styles.emptyQuestText}>
+              새 이벤트가 열리면 이곳에 조용히 모아둘게요.
+            </Text>
+          </View>
         ) : null}
 
         {!showLoading && !showError && !showEmpty ? (
@@ -443,6 +445,25 @@ const styles = StyleSheet.create({
   contentCentered: {
     flexGrow: 1,
     justifyContent: "center",
+  },
+  emptyQuestCard: {
+    borderRadius: tokens.radius.xl,
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+    backgroundColor: tokens.colors.surfaceStrong,
+    padding: tokens.space.lg,
+    gap: tokens.space.xs as any,
+  },
+  emptyQuestTitle: {
+    fontSize: tokens.font.body,
+    fontWeight: "900",
+    color: tokens.colors.text,
+  },
+  emptyQuestText: {
+    fontSize: tokens.font.small,
+    lineHeight: 18,
+    fontWeight: "700",
+    color: tokens.colors.textMuted,
   },
   notice: {
     borderRadius: tokens.radius.lg,

@@ -144,7 +144,7 @@ export default function Home() {
 
   const handleLike = async (postId: string) => {
     if (!token) {
-      promptAuthForAction("공감은 로그인한 회원만 남길 수 있어요.");
+      promptAuthForAction("좋아요는 로그인한 회원만 남길 수 있어요.");
       return;
     }
     if (likePending[postId]) return;
@@ -186,7 +186,7 @@ export default function Home() {
       if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
         await handleAuthError();
       } else {
-        showToast("공감 처리에 실패했어요. 잠시 후 다시 시도해주세요.", { tone: "error" });
+        showToast("좋아요 처리에 실패했어요. 잠시 후 다시 시도해주세요.", { tone: "error" });
       }
     } finally {
       setPending(postId, false);

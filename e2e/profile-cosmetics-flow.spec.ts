@@ -146,6 +146,45 @@ async function mockProfileCosmeticsApis(page: Page, initialProfile: ProfileState
       return;
     }
 
+    if (isApiRequest(route, "/api/users/11/profile")) {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          data: {
+            user: {
+              id: 11,
+              nickname: "cosmetics_qa",
+              name: "코스메틱 QA",
+              bio: "프로필 꾸미기 테스트 계정",
+              profile_cosmetics: buildExpandedProfile(profileState),
+            },
+            stats: {
+              posts_count: 0,
+              likes_count: 0,
+              followers_count: 0,
+              following_count: 0,
+            },
+            viewer: {
+              is_owner: true,
+              is_following: false,
+            },
+          },
+        }),
+      });
+      return;
+    }
+
+    if (isApiRequest(route, "/api/users/11/posts")) {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ ok: true, posts: [], has_more: false }),
+      });
+      return;
+    }
+
     if (isApiRequest(route, "/api/posts")) {
       await route.fulfill({
         status: 200,
@@ -229,11 +268,12 @@ test.describe("프로필 꾸미기 코스메틱 플로우", () => {
     await page.getByTestId("profile-cosmetics-save-btn").click();
     await expect(page.getByText("저장했어요")).toBeVisible();
     expect(capture.payloads.at(-1)).toEqual(expectedProfile);
+    await expect(page).toHaveURL(/\/me$/);
 
-    await page.reload();
+    await page.goto("/profile-customize");
     await expect(page.getByTestId("profile-customize-screen")).toBeVisible();
-    await expect(page.getByTestId("profile-cosmetics-preview")).toContainText("보내지 못한 편지");
-    await expect(page.getByTestId("profile-cosmetics-preview")).toContainText("단단한 나무 배지");
+    await expect(page.getByTestId("profile-cosmetics-preview")).not.toContainText("보내지 못한 편지");
+    await expect(page.getByTestId("profile-cosmetics-preview")).not.toContainText("단단한 나무 배지");
     await expect(page.getByTestId("profile-cosmetics-preview")).toContainText("+3");
     await expect(page.getByText("표시 배지 6/6")).toBeVisible();
   });
@@ -257,6 +297,7 @@ test.describe("프로필 꾸미기 코스메틱 플로우", () => {
     await page.getByTestId("profile-primary-none").click();
     await page.getByTestId("profile-cosmetics-save-btn").click();
     await expect(page.getByText("저장했어요")).toBeVisible();
+    await expect(page).toHaveURL(/\/me$/);
 
     expect(capture.payloads.at(-1)).toEqual({
       primary_badge_key: null,
@@ -265,7 +306,7 @@ test.describe("프로필 꾸미기 코스메틱 플로우", () => {
       header_stickers: [{ slot: "tr", key: "sticker_star" }],
     });
 
-    await page.reload();
+    await page.goto("/profile-customize");
     await expect(page.getByTestId("profile-customize-screen")).toBeVisible();
     await expect(page.getByTestId("profile-primary-none")).toHaveAttribute("aria-label", "없음 선택됨");
     await expect(page.getByTestId("profile-cosmetics-save-btn")).toHaveAttribute(
@@ -293,9 +334,7 @@ test.describe("프로필 꾸미기 코스메틱 플로우", () => {
     await expect(page.getByTestId("profile-growth-reward-notice")).toContainText(
       "새 보상을 프로필에 적용해보세요"
     );
-    await expect(page.getByTestId("profile-cosmetics-preview")).toContainText(
-      "작가의 작은 숲"
-    );
+    await expect(page.getByTestId("profile-cosmetics-preview")).not.toContainText("작가의 작은 숲");
     await expect(page.getByTestId("profile-cosmetics-save-btn")).toHaveAttribute(
       "aria-disabled",
       "true"

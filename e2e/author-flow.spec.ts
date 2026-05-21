@@ -220,9 +220,10 @@ test.describe("작가 화면 흐름", () => {
     await page.goto(`/users/${AUTHOR_ID}`);
     await expect(page.getByTestId("author-screen")).toBeVisible();
     await expect(page.getByTestId("author-post-card-1200")).toBeVisible();
-    await expect(page.getByText(/작가의 작은 숲/)).toBeVisible();
+    await expect(page.getByText(/작가의 작은 숲/)).toHaveCount(0);
     await expect(page.getByLabel("대표 뱃지 2026 봄 배지")).toBeVisible();
-    await expect(page.getByText("사랑받은 글 배지")).toBeVisible();
+    await expect(page.getByLabel("배지 사랑받은 글 배지")).toBeVisible();
+    await expect(page.getByText("사랑받은 글 배지")).toHaveCount(0);
 
     await expect.poll(() => logs.filter((entry) => entry.sort === "newest" && entry.offset === 0).length).toBeGreaterThan(0);
 

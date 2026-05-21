@@ -11,32 +11,44 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 
-import { GrowthChart } from "@/components/growth/GrowthChart";
 import { trackGrowthTelemetry, toGrowthTelemetryError } from "@/features/growth/growthTelemetry";
 import { AppEmpty } from "@/components/state/AppEmpty";
-import { useGrowthData } from "@/features/growth/useGrowthData";
+import { AppError } from "@/components/state/AppError";
+import { AppLoading } from "@/components/state/AppLoading";
+import {
+  type GrowthAchievement,
+  type GrowthCampaign,
+  type GrowthSummary,
+  useGrowthData,
+} from "@/features/growth/useGrowthData";
+import { toTimestampMs } from "@/lib/dateTime";
 import { tokens } from "@/theme/tokens";
 
-type ProgressItem = {
+type AchievementHighlight = {
   id: string;
   title: string;
-  subtitle: string;
-  status: "in_progress" | "completed" | "locked";
+  progressText: string;
+  percent: number;
 };
 
 type CampaignPreviewItem = {
   id: number;
   title: string;
   typeLabel: string;
-  questCount: number;
-  inProgressCount: number;
-  completedCount: number;
 };
 
-function getStatusMeta(status: ProgressItem["status"]) {
-  if (status === "completed") return { label: "완료", color: tokens.colors.green700 };
-  if (status === "in_progress") return { label: "진행 중", color: tokens.colors.green900 };
-  return { label: "잠금", color: tokens.colors.textMuted };
+function clampPercent(value: number) {
+  return Math.max(0, Math.min(100, Math.round(value)));
+}
+
+function getXpPercent(summary: GrowthSummary | null) {
+  if (!summary || summary.nextLevelXp <= 0) return 0;
+  return clampPercent((summary.currentXp / summary.nextLevelXp) * 100);
+}
+
+function getRemainingXp(summary: GrowthSummary | null) {
+  if (!summary) return 0;
+  return Math.max(0, summary.nextLevelXp - summary.currentXp);
 }
 
 function formatCampaignType(value: string) {
@@ -48,103 +60,72 @@ function formatCampaignType(value: string) {
   return "이벤트";
 }
 
+function selectAchievementHighlight(achievements: GrowthAchievement[]): AchievementHighlight | null {
+  const inProgress = achievements
+    .filter((item) => item.status === "in_progress" && item.target > 0 && item.progress > 0)
+    .map((item) => ({
+      item,
+      percent: clampPercent((item.progress / item.target) * 100),
+    }))
+    .sort((a, b) => {
+      if (b.percent !== a.percent) return b.percent - a.percent;
+      return b.item.progress - a.item.progress;
+    });
+
+  const picked =
+    inProgress[0]?.item ??
+    [...achievements]
+      .filter((item) => item.status === "completed")
+      .sort((a, b) => (toTimestampMs(b.unlockedAt) || 0) - (toTimestampMs(a.unlockedAt) || 0))[0] ??
+    null;
+
+  if (!picked || picked.target <= 0) return null;
+  return {
+    id: String(picked.id),
+    title: picked.name,
+    progressText: `${Math.min(picked.progress, picked.target)} / ${picked.target}`,
+    percent: clampPercent((picked.progress / picked.target) * 100),
+  };
+}
+
+function selectCampaignPreview(campaigns: GrowthCampaign[]): CampaignPreviewItem | null {
+  const [picked] = campaigns
+    .filter(
+      (campaign) =>
+        campaign.quests.length > 0 &&
+        (campaign.campaignType === "event" || campaign.campaignType === "season")
+    )
+    .map((campaign) => ({
+      id: campaign.id,
+      title: campaign.name,
+      typeLabel: formatCampaignType(campaign.campaignType),
+      inProgressCount: campaign.quests.filter((quest) => quest.status === "in_progress").length,
+      questCount: campaign.quests.length,
+    }))
+    .sort((a, b) => b.inProgressCount - a.inProgressCount || b.questCount - a.questCount);
+
+  if (!picked) return null;
+  return {
+    id: picked.id,
+    title: picked.title,
+    typeLabel: picked.typeLabel,
+  };
+}
+
 export default function GrowthScreen() {
   const router = useRouter();
-  const { summary, achievements, campaigns, loading, error, source, refetch } = useGrowthData();
+  const { summary, achievements, campaigns, loading, error, refetch } = useGrowthData();
   const [refreshing, setRefreshing] = useState(false);
 
-  const questSummary = useMemo(() => {
-    const all = campaigns.flatMap((campaign) => campaign.quests);
-    const completed = all.filter((q) => q.status === "completed").length;
-    const inProgress = all.filter((q) => q.status === "in_progress").length;
-
-    return {
-      total: all.length,
-      completed,
-      inProgress,
-      locked: Math.max(0, all.length - completed - inProgress),
-    };
-  }, [campaigns]);
-
-  const achievementSummary = useMemo(() => {
-    const completed = achievements.filter((a) => a.status === "completed").length;
-    const inProgress = achievements.filter((a) => a.status === "in_progress").length;
-
-    return {
-      total: achievements.length,
-      completed,
-      inProgress,
-      locked: Math.max(0, achievements.length - completed - inProgress),
-    };
-  }, [achievements]);
-
-  const questHighlights = useMemo<ProgressItem[]>(() => {
-    return campaigns
-      .flatMap((campaign) =>
-        campaign.quests.map((quest) => ({
-          id: `${campaign.id}-${quest.id}`,
-          title: quest.name,
-          subtitle: quest.isLocked
-            ? `${campaign.name} · 시즌 패스 필요 · +${quest.rewardXp} XP`
-            : `${campaign.name} · ${Math.min(quest.progress, quest.target)}/${quest.target} · +${quest.rewardXp} XP`,
-          status: quest.isLocked ? "locked" : quest.status,
-          order: quest.isLocked ? 2 : quest.status === "in_progress" ? 0 : quest.status === "completed" ? 1 : 2,
-          progress: quest.progress,
-        }))
-      )
-      .sort((a, b) => {
-        if (a.order !== b.order) return a.order - b.order;
-        return b.progress - a.progress;
-      })
-      .slice(0, 3)
-      .map(({ id, title, subtitle, status }) => ({ id, title, subtitle, status }));
-  }, [campaigns]);
-
-  const campaignPreview = useMemo<CampaignPreviewItem[]>(() => {
-    return campaigns
-      .map((campaign) => {
-        const inProgressCount = campaign.quests.filter((quest) => quest.status === "in_progress").length;
-        const completedCount = campaign.quests.filter((quest) => quest.status === "completed").length;
-        return {
-          id: campaign.id,
-          title: campaign.name,
-          typeLabel: formatCampaignType(campaign.campaignType),
-          questCount: campaign.quests.length,
-          inProgressCount,
-          completedCount,
-        };
-      })
-      .filter((campaign) => campaign.questCount > 0)
-      .sort((a, b) => b.inProgressCount - a.inProgressCount || b.questCount - a.questCount)
-      .slice(0, 3);
-  }, [campaigns]);
-
-  const achievementHighlights = useMemo<ProgressItem[]>(() => {
-    return achievements
-      .map((achievement) => ({
-        id: String(achievement.id),
-        title: `${achievement.icon || "🌿"} ${achievement.name}`,
-        subtitle: `${Math.min(achievement.progress, achievement.target)}/${achievement.target}`,
-        status: achievement.status,
-        order: achievement.status === "in_progress" ? 0 : achievement.status === "completed" ? 1 : 2,
-        progress: achievement.progress,
-      }))
-      .sort((a, b) => {
-        if (a.order !== b.order) return a.order - b.order;
-        return b.progress - a.progress;
-      })
-      .slice(0, 3)
-      .map(({ id, title, subtitle, status }) => ({ id, title, subtitle, status }));
-  }, [achievements]);
+  const achievementHighlight = useMemo(
+    () => selectAchievementHighlight(achievements),
+    [achievements]
+  );
+  const campaignPreview = useMemo(() => selectCampaignPreview(campaigns), [campaigns]);
 
   useEffect(() => {
     trackGrowthTelemetry("growth_screen_viewed", { screen: "home" });
   }, []);
-
-  useEffect(() => {
-    if (!source) return;
-    trackGrowthTelemetry("growth_screen_source_updated", { screen: "home", source });
-  }, [source]);
 
   const onRefresh = useCallback(async () => {
     if (refreshing || loading) return;
@@ -203,250 +184,224 @@ export default function GrowthScreen() {
           />
         }
       >
-        <View style={styles.heroCard}>
-          <View style={styles.heroHeaderRow}>
-            <View style={styles.heroTitleBlock}>
-              <Text style={styles.heroEyebrow}>오늘의 리포트</Text>
-              <Text style={styles.h1}>성장</Text>
-              <Text style={styles.subtitle}>지금 진행 중인 흐름을 확인해요.</Text>
-              <Text style={styles.heroQuickStatus}>
-                {summary
-                  ? `Lv.${summary.level} · 오늘 +${summary.todayXp} XP`
-                  : "데이터를 불러오는 중이에요."}
-              </Text>
-            </View>
-          </View>
+        <Text style={styles.screenTitle}>성장</Text>
 
-          <View style={styles.heroStatsRow}>
-            <HeroStat label="활성 이벤트" value={`${campaigns.length}`} />
-            <HeroStat label="진행 업적" value={`${achievementSummary.inProgress}`} />
-            <HeroStat label="진행 퀘스트" value={`${questSummary.inProgress}`} />
-          </View>
-        </View>
+        <ForestCard summary={summary} loading={loading} error={error} />
 
-        <GrowthChart
-          summary={summary}
-          loading={loading}
-          error={error}
-          source={source}
-        />
+        <Pressable
+          onPress={() => {
+            trackGrowthTelemetry("growth_action_clicked", { action: "open_records" });
+            router.push("/growth/records" as never);
+          }}
+          style={({ pressed }) => [styles.recordButton, pressed && styles.pressed]}
+          accessibilityRole="button"
+          accessibilityLabel="성장 기록 보기"
+          testID="growth-action-records"
+        >
+          <Text style={styles.recordButtonText}>기록 보기</Text>
+          <Ionicons name="chevron-forward" size={16} color={tokens.colors.green700} />
+        </Pressable>
 
         <View style={styles.actionRow}>
-          <ActionCard
-            title="업적 보기"
-            description={`${achievementSummary.total}개`}
+          <ActionButton
+            title="업적"
             icon="trophy-outline"
             onPress={() => {
               trackGrowthTelemetry("growth_action_clicked", { action: "open_achievements" });
               router.push("/growth/achievements");
             }}
-            accessibilityHint="업적 상세 화면으로 이동"
             testID="growth-action-achievements"
           />
-          <ActionCard
-            title="퀘스트 보기"
-            description={`${questSummary.total}개`}
+          <ActionButton
+            title="퀘스트"
             icon="trail-sign-outline"
             onPress={() => {
               trackGrowthTelemetry("growth_action_clicked", { action: "open_quests" });
               router.push("/growth/quests");
             }}
-            accessibilityHint="퀘스트 상세 화면으로 이동"
             testID="growth-action-quests"
           />
         </View>
 
-        <CampaignPreviewSection
-          items={campaignPreview}
-          onPressMore={() => router.push("/growth/quests")}
-        />
+        {achievementHighlight ? (
+          <AchievementCard item={achievementHighlight} />
+        ) : null}
 
-        <PreviewSection
-          title="업적 하이라이트"
-          caption={`${achievementSummary.inProgress}개 진행 중`}
-          items={achievementHighlights}
-          emptyText="진행 중인 업적이 없어요."
-          onPressMore={() => router.push("/growth/achievements")}
-          moreButtonTestID="growth-achievements-more"
-        />
+        <ReflectionCard summary={summary} />
 
-        <PreviewSection
-          title="퀘스트 진행 하이라이트"
-          caption={`${questSummary.inProgress}개 진행 중`}
-          items={questHighlights}
-          emptyText="진행 중인 퀘스트가 없어요."
-          onPressMore={() => router.push("/growth/quests")}
-          moreButtonTestID="growth-quests-more"
-        />
+        {campaignPreview ? (
+          <CampaignCard item={campaignPreview} onPress={() => router.push("/growth/quests")} />
+        ) : null}
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-function HeroStat({ label, value }: { label: string; value: string }) {
+function ForestCard({
+  summary,
+  loading,
+  error,
+}: {
+  summary: GrowthSummary | null;
+  loading: boolean;
+  error: ReturnType<typeof useGrowthData>["error"];
+}) {
+  if (loading && !summary) {
+    return (
+      <View style={styles.forestCard}>
+        <AppLoading message="성장 정보를 불러오는 중..." />
+      </View>
+    );
+  }
+
+  if (error && !summary) {
+    return (
+      <View style={styles.forestCard}>
+        <AppError error={error} />
+      </View>
+    );
+  }
+
+  if (!summary) {
+    return (
+      <View style={styles.forestCard}>
+        <AppEmpty
+          title="아직 성장 데이터가 없어요"
+          description="활동이 쌓이면 여기에 표시돼요."
+        />
+      </View>
+    );
+  }
+
+  const remainingXp = getRemainingXp(summary);
+  const xpPercent = getXpPercent(summary);
+
   return (
-    <View style={styles.heroStatPill}>
-      <Text style={styles.heroStatLabel}>{label}</Text>
-      <Text style={styles.heroStatValue}>{value}</Text>
+    <View style={styles.forestCard} testID="growth-forest-card">
+      <View style={styles.forestHeader}>
+        <Text style={styles.forestEyebrow}>나의 숲</Text>
+        <Text style={styles.forestTitle}>천천히 자라고 있어요.</Text>
+      </View>
+
+      <View style={styles.levelRow}>
+        <Text style={styles.levelText}>Lv. {summary.level}</Text>
+        <Text style={styles.levelTitle}>{summary.title || "새싹"}</Text>
+      </View>
+
+      <View style={styles.progressBlock}>
+        <Text style={styles.progressHint}>다음 레벨까지 {remainingXp} XP</Text>
+        <View style={styles.progressTrack}>
+          <View style={[styles.progressBar, { width: `${xpPercent}%` }]} />
+        </View>
+      </View>
+
+      {error ? (
+        <Text style={styles.subtleNotice}>
+          일부 데이터가 최신이 아닐 수 있어요. 아래로 당겨 새로고침해 주세요.
+        </Text>
+      ) : null}
     </View>
   );
 }
 
-function ActionCard({
+function ActionButton({
   title,
-  description,
   icon,
   onPress,
-  accessibilityHint,
   testID,
 }: {
   title: string;
-  description: string;
   icon: React.ComponentProps<typeof Ionicons>["name"];
   onPress: () => void;
-  accessibilityHint?: string;
   testID: string;
 }) {
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [styles.actionCard, pressed && styles.pressed]}
+      style={({ pressed }) => [styles.actionButton, pressed && styles.pressed]}
       accessibilityRole="button"
-      accessibilityLabel={title}
-      accessibilityHint={accessibilityHint}
+      accessibilityLabel={`${title} 보기`}
       testID={testID}
     >
-      <View style={styles.actionIcon}>
-        <Ionicons name={icon} size={18} color={tokens.colors.green900} />
-      </View>
-      <View style={styles.actionTextBlock}>
-        <Text style={styles.actionTitle}>{title}</Text>
-        <Text style={styles.actionDesc}>{description}</Text>
-      </View>
-      <Ionicons name="chevron-forward" size={16} color={tokens.colors.textMuted} />
+      <Ionicons name={icon} size={17} color={tokens.colors.green700} />
+      <Text style={styles.actionButtonText}>{title}</Text>
     </Pressable>
   );
 }
 
-function CampaignPreviewSection({
-  items,
-  onPressMore,
-}: {
-  items: CampaignPreviewItem[];
-  onPressMore: () => void;
-}) {
+function AchievementCard({ item }: { item: AchievementHighlight }) {
   return (
-    <View style={styles.sectionCard} testID="growth-campaign-preview">
-      <View style={styles.sectionHeaderRow}>
-        <View style={styles.sectionHeading}>
-          <Text style={styles.sectionTitle}>진행 이벤트</Text>
-          <Text style={styles.sectionCaption}>
-            {items.length > 0 ? `${items.length}개 이벤트 표시 중` : "열린 이벤트를 확인해요"}
-          </Text>
+    <View style={styles.sectionCard} testID="growth-achievement-highlight">
+      <Text style={styles.sectionLabel}>가까워진 업적</Text>
+      <Text style={styles.sectionTitle}>{item.title}</Text>
+      <View style={styles.progressBlock}>
+        <View style={styles.progressHeader}>
+          <Text style={styles.progressSmallText}>{item.progressText}</Text>
+          <Text style={styles.progressSmallText}>{item.percent}%</Text>
         </View>
-        <Pressable
-          onPress={onPressMore}
-          style={styles.moreBtn}
-          testID="growth-campaigns-more"
-          accessibilityRole="button"
-          accessibilityLabel="진행 이벤트 전체보기"
-          accessibilityHint="퀘스트 상세 화면으로 이동"
-        >
-          <Text style={styles.moreBtnText}>전체보기</Text>
-        </Pressable>
+        <View style={styles.progressTrackSoft}>
+          <View style={[styles.progressBarSoft, { width: `${item.percent}%` }]} />
+        </View>
       </View>
-
-      {items.length === 0 ? (
-        <Text style={styles.emptyText}>진행 중인 이벤트가 없어요.</Text>
-      ) : (
-        <View style={styles.campaignPreviewList}>
-          {items.map((item) => (
-            <Pressable
-              key={item.id}
-              onPress={onPressMore}
-              style={({ pressed }) => [styles.campaignPreviewItem, pressed && styles.pressed]}
-              testID={`growth-campaign-preview-item-${item.id}`}
-              accessibilityRole="button"
-              accessibilityLabel={`${item.title} 이벤트 보기`}
-              accessibilityHint="퀘스트 상세 화면으로 이동"
-            >
-              <View style={styles.campaignPreviewBody}>
-                <View style={styles.campaignPreviewTitleRow}>
-                  <Text numberOfLines={1} style={styles.campaignPreviewTitle}>
-                    {item.title}
-                  </Text>
-                  <Text style={styles.campaignPreviewBadge}>{item.typeLabel}</Text>
-                </View>
-                <Text style={styles.campaignPreviewMeta}>
-                  퀘스트 {item.questCount}개 · 진행 {item.inProgressCount}개 · 완료 {item.completedCount}개
-                </Text>
-              </View>
-              <Ionicons name="chevron-forward" size={16} color={tokens.colors.textMuted} />
-            </Pressable>
-          ))}
-        </View>
-      )}
     </View>
   );
 }
 
-function PreviewSection({
-  title,
-  caption,
-  items,
-  emptyText,
-  onPressMore,
-  moreButtonTestID,
+function ReflectionCard({ summary }: { summary: GrowthSummary | null }) {
+  if (!summary) return null;
+
+  const hasWeeklyPosts = summary.weeklyPosts > 0;
+  const title = hasWeeklyPosts
+    ? `이번 주 ${summary.weeklyPosts}편의 글이 쌓였어요.`
+    : "이번 주는 아직 조용해요.";
+  const streakText =
+    summary.streakDays > 0 ? `${summary.streakDays}일째 이어지는 중` : "오늘부터 다시 시작";
+  const remainingXp = getRemainingXp(summary);
+
+  return (
+    <View style={styles.reflectionCard} testID="growth-reflection-card">
+      <Text style={styles.sectionLabel}>오늘의 숲</Text>
+      <Text style={styles.reflectionTitle}>{title}</Text>
+      <Text style={styles.reflectionBody}>
+        남기고 싶은 문장부터 천천히 적어도 괜찮아요.
+      </Text>
+      <View style={styles.reflectionMetaRow}>
+        <View style={styles.reflectionPill}>
+          <Ionicons name="leaf-outline" size={14} color={tokens.colors.green700} />
+          <Text style={styles.reflectionPillText}>{streakText}</Text>
+        </View>
+        <View style={styles.reflectionPill}>
+          <Ionicons name="flag-outline" size={14} color={tokens.colors.green700} />
+          <Text style={styles.reflectionPillText}>다음까지 {remainingXp} XP</Text>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+function CampaignCard({
+  item,
+  onPress,
 }: {
-  title: string;
-  caption: string;
-  items: ProgressItem[];
-  emptyText: string;
-  onPressMore: () => void;
-  moreButtonTestID: string;
+  item: CampaignPreviewItem;
+  onPress: () => void;
 }) {
   return (
-    <View style={styles.sectionCard}>
-      <View style={styles.sectionHeaderRow}>
-        <View style={styles.sectionHeading}>
-          <Text style={styles.sectionTitle}>{title}</Text>
-          <Text style={styles.sectionCaption}>{caption}</Text>
-        </View>
-        <Pressable
-          onPress={onPressMore}
-          style={styles.moreBtn}
-          testID={moreButtonTestID}
-          accessibilityRole="button"
-          accessibilityLabel={`${title} 전체보기`}
-          accessibilityHint="상세 화면으로 이동"
-        >
-          <Text style={styles.moreBtnText}>전체보기</Text>
-        </Pressable>
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [styles.eventCard, pressed && styles.pressed]}
+      testID="growth-campaign-preview"
+      accessibilityRole="button"
+      accessibilityLabel={`${item.title} 이벤트 보기`}
+    >
+      <View style={styles.eventBody}>
+        <Text style={styles.sectionLabel}>진행 중인 이벤트</Text>
+        <Text style={styles.sectionTitle} numberOfLines={1}>
+          {item.title}
+        </Text>
       </View>
-
-      {items.length === 0 ? (
-        <Text style={styles.emptyText}>{emptyText}</Text>
-      ) : (
-        <View style={styles.previewList}>
-          {items.map((item) => {
-            const statusMeta = getStatusMeta(item.status);
-            return (
-              <View key={item.id} style={styles.previewItem}>
-                <View style={styles.previewItemBody}>
-                  <Text numberOfLines={1} style={styles.previewTitle}>
-                    {item.title}
-                  </Text>
-                  <Text numberOfLines={1} style={styles.previewSubtitle}>
-                    {item.subtitle}
-                  </Text>
-                </View>
-                <Text style={[styles.previewStatus, { color: statusMeta.color }]}>{statusMeta.label}</Text>
-              </View>
-            );
-          })}
-        </View>
-      )}
-    </View>
+      <Text style={styles.eventBadge}>{item.typeLabel}</Text>
+    </Pressable>
   );
 }
 
@@ -457,12 +412,12 @@ const styles = StyleSheet.create({
   },
   content: {
     width: "100%",
-    maxWidth: 820,
+    maxWidth: 560,
     alignSelf: "center",
     paddingHorizontal: tokens.space.xl,
     paddingTop: tokens.space.lg,
     paddingBottom: 120,
-    gap: tokens.space.lg as any,
+    gap: tokens.space.md as any,
   },
   center: {
     flex: 1,
@@ -470,66 +425,94 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     padding: tokens.space.xl,
   },
-  heroCard: {
-    borderRadius: tokens.radius.xl,
-    borderWidth: 1,
-    borderColor: tokens.colors.borderStrong,
-    backgroundColor: tokens.colors.green050,
-    padding: tokens.space.lg,
-    gap: tokens.space.md as any,
-  },
-  heroHeaderRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    gap: tokens.space.sm as any,
-  },
-  heroTitleBlock: {
-    flex: 1,
-    gap: 4,
-  },
-  heroEyebrow: {
-    fontSize: tokens.font.small,
-    fontWeight: "900",
-    color: tokens.colors.green900,
-    letterSpacing: 0.2,
-  },
-  h1: {
+  screenTitle: {
     fontSize: tokens.font.h1,
     fontWeight: "900",
     color: tokens.colors.text,
   },
-  subtitle: {
+  forestCard: {
+    backgroundColor: tokens.colors.surfaceStrong,
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+    borderRadius: 26,
+    padding: tokens.space.lg,
+    gap: tokens.space.md as any,
+    shadowColor: tokens.shadow.color,
+    shadowOpacity: 0.05,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 7 },
+    elevation: 2,
+  },
+  forestHeader: {
+    gap: 5,
+  },
+  forestEyebrow: {
+    fontSize: tokens.font.body,
+    fontWeight: "900",
+    color: tokens.colors.text,
+  },
+  forestTitle: {
     fontSize: tokens.font.small,
+    fontWeight: "700",
     color: tokens.colors.textMuted,
   },
-  heroQuickStatus: {
-    marginTop: 2,
-    fontSize: tokens.font.small,
-    color: tokens.colors.text,
-    fontWeight: "700",
-  },
-  heroStatsRow: {
+  levelRow: {
     flexDirection: "row",
-    flexWrap: "wrap",
+    alignItems: "baseline",
     gap: tokens.space.sm as any,
   },
-  heroStatPill: {
-    flex: 1,
-    borderRadius: tokens.radius.lg,
+  levelText: {
+    fontSize: 24,
+    fontWeight: "900",
+    color: tokens.colors.green900,
+  },
+  levelTitle: {
+    fontSize: tokens.font.body,
+    fontWeight: "800",
+    color: tokens.colors.text,
+  },
+  progressBlock: {
+    gap: tokens.space.xs as any,
+  },
+  progressHint: {
+    fontSize: tokens.font.small,
+    fontWeight: "800",
+    color: tokens.colors.textMuted,
+  },
+  progressHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: tokens.space.sm as any,
+  },
+  progressTrack: {
+    height: 8,
+    borderRadius: tokens.radius.pill,
+    backgroundColor: tokens.colors.green100,
+    overflow: "hidden",
+  },
+  progressBar: {
+    height: "100%",
+    borderRadius: tokens.radius.pill,
+    backgroundColor: tokens.colors.green700,
+  },
+  subtleNotice: {
+    fontSize: tokens.font.small,
+    lineHeight: 18,
+    color: tokens.colors.textMuted,
+  },
+  recordButton: {
+    minHeight: 46,
+    borderRadius: tokens.radius.pill,
     borderWidth: 1,
     borderColor: tokens.colors.border,
     backgroundColor: tokens.colors.surface,
-    paddingHorizontal: tokens.space.sm,
-    paddingVertical: tokens.space.sm,
-    gap: 2,
+    paddingHorizontal: tokens.space.md,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
-  heroStatLabel: {
-    fontSize: tokens.font.small,
-    fontWeight: "700",
-    color: tokens.colors.textMuted,
-  },
-  heroStatValue: {
+  recordButtonText: {
     fontSize: tokens.font.body,
     fontWeight: "900",
     color: tokens.colors.text,
@@ -538,40 +521,22 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: tokens.space.sm as any,
   },
-  actionCard: {
+  actionButton: {
     flex: 1,
-    borderRadius: tokens.radius.xl,
+    minHeight: 44,
+    borderRadius: tokens.radius.pill,
     borderWidth: 1,
     borderColor: tokens.colors.border,
     backgroundColor: tokens.colors.surfaceStrong,
-    padding: tokens.space.md,
     flexDirection: "row",
     alignItems: "center",
-    gap: tokens.space.sm as any,
-  },
-  pressed: {
-    opacity: 0.86,
-  },
-  actionIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: tokens.radius.pill,
-    backgroundColor: tokens.colors.green100,
-    alignItems: "center",
     justifyContent: "center",
+    gap: 6,
   },
-  actionTextBlock: {
-    flex: 1,
-    gap: 2,
-  },
-  actionTitle: {
+  actionButtonText: {
     fontSize: tokens.font.body,
     fontWeight: "900",
     color: tokens.colors.text,
-  },
-  actionDesc: {
-    fontSize: tokens.font.small,
-    color: tokens.colors.textMuted,
   },
   sectionCard: {
     backgroundColor: tokens.colors.surfaceStrong,
@@ -580,131 +545,96 @@ const styles = StyleSheet.create({
     borderRadius: tokens.radius.xl,
     padding: tokens.space.lg,
     gap: tokens.space.sm as any,
-    shadowColor: tokens.shadow.color,
-    shadowOpacity: tokens.shadow.opacity,
-    shadowRadius: tokens.shadow.radius,
-    shadowOffset: { width: 0, height: tokens.shadow.offsetY },
-    elevation: 1,
   },
-  sectionHeaderRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: tokens.space.sm as any,
-  },
-  sectionHeading: {
-    flex: 1,
-    gap: 2,
+  sectionLabel: {
+    fontSize: tokens.font.small,
+    fontWeight: "800",
+    color: tokens.colors.textFaint,
   },
   sectionTitle: {
     fontSize: tokens.font.body,
     fontWeight: "900",
     color: tokens.colors.text,
   },
-  sectionCaption: {
-    fontSize: tokens.font.small,
-    color: tokens.colors.textMuted,
-    fontWeight: "700",
-  },
-  moreBtn: {
-    borderRadius: tokens.radius.pill,
-    borderWidth: 1,
-    borderColor: tokens.colors.borderStrong,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    backgroundColor: tokens.colors.surface,
-  },
-  moreBtnText: {
-    fontSize: tokens.font.small,
-    fontWeight: "800",
-    color: tokens.colors.text,
-  },
-  emptyText: {
-    fontSize: tokens.font.small,
-    color: tokens.colors.textMuted,
-    lineHeight: 18,
-  },
-  previewList: {
-    gap: tokens.space.sm as any,
-  },
-  previewItem: {
-    borderRadius: tokens.radius.lg,
+  reflectionCard: {
+    backgroundColor: tokens.colors.surfaceStrong,
     borderWidth: 1,
     borderColor: tokens.colors.border,
-    backgroundColor: tokens.colors.surface,
-    paddingHorizontal: tokens.space.sm,
-    paddingVertical: tokens.space.sm,
-    flexDirection: "row",
-    alignItems: "center",
+    borderRadius: tokens.radius.xl,
+    padding: tokens.space.md,
     gap: tokens.space.sm as any,
-    minHeight: 62,
   },
-  previewItemBody: {
-    flex: 1,
-    gap: 2,
-  },
-  previewTitle: {
+  reflectionTitle: {
     fontSize: tokens.font.body,
-    fontWeight: "800",
-    color: tokens.colors.text,
+    lineHeight: 24,
+    fontWeight: "900",
+    color: tokens.colors.green900,
   },
-  previewSubtitle: {
+  reflectionBody: {
     fontSize: tokens.font.small,
+    lineHeight: 19,
+    fontWeight: "700",
     color: tokens.colors.textMuted,
   },
-  previewStatus: {
-    fontSize: tokens.font.small,
-    fontWeight: "900",
-    backgroundColor: tokens.colors.green050,
-    borderRadius: tokens.radius.pill,
-    overflow: "hidden",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  campaignPreviewList: {
+  reflectionMetaRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: tokens.space.sm as any,
+    paddingTop: 2,
   },
-  campaignPreviewItem: {
-    borderRadius: tokens.radius.lg,
+  reflectionPill: {
+    minHeight: 30,
+    borderRadius: tokens.radius.pill,
+    backgroundColor: tokens.colors.bgMuted,
     borderWidth: 1,
     borderColor: tokens.colors.border,
-    backgroundColor: tokens.colors.surface,
     paddingHorizontal: tokens.space.sm,
-    paddingVertical: tokens.space.sm,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  reflectionPillText: {
+    fontSize: tokens.font.small,
+    fontWeight: "800",
+    color: tokens.colors.green700,
+  },
+  progressSmallText: {
+    fontSize: tokens.font.small,
+    fontWeight: "800",
+    color: tokens.colors.textMuted,
+  },
+  progressTrackSoft: {
+    height: 7,
+    borderRadius: tokens.radius.pill,
+    backgroundColor: tokens.colors.green050,
+    overflow: "hidden",
+  },
+  progressBarSoft: {
+    height: "100%",
+    borderRadius: tokens.radius.pill,
+    backgroundColor: tokens.colors.green600,
+  },
+  eventCard: {
+    minHeight: 72,
+    borderRadius: tokens.radius.xl,
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+    backgroundColor: tokens.colors.surfaceStrong,
+    padding: tokens.space.lg,
     flexDirection: "row",
     alignItems: "center",
     gap: tokens.space.sm as any,
-    minHeight: 64,
   },
-  campaignPreviewBody: {
+  eventBody: {
     flex: 1,
     gap: 5,
   },
-  campaignPreviewTitleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: tokens.space.xs as any,
-  },
-  campaignPreviewTitle: {
-    flex: 1,
-    fontSize: tokens.font.body,
-    fontWeight: "900",
-    color: tokens.colors.text,
-  },
-  campaignPreviewBadge: {
-    flexShrink: 0,
-    borderRadius: tokens.radius.pill,
-    backgroundColor: tokens.colors.green100,
-    color: tokens.colors.green900,
+  eventBadge: {
     fontSize: tokens.font.small,
     fontWeight: "900",
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    overflow: "hidden",
+    color: tokens.colors.green700,
   },
-  campaignPreviewMeta: {
-    fontSize: tokens.font.small,
-    color: tokens.colors.textMuted,
-    fontWeight: "700",
+  pressed: {
+    opacity: 0.84,
   },
 });
