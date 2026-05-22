@@ -23,6 +23,7 @@ type Props<Item extends { id: string | number }> = {
   error?: AppErrorModel | null;
   hasMore: boolean;
   sectionLabel: string;
+  scrollToTopKey?: string | number;
   onRefresh: () => void;
   onEndReached: () => void;
   onPressItem: (id: Item["id"]) => void;
@@ -40,6 +41,7 @@ export function FeedSection<Item extends { id: string | number }>({
   error,
   hasMore,
   sectionLabel,
+  scrollToTopKey,
   onRefresh,
   onEndReached,
   onPressItem,
@@ -50,9 +52,22 @@ export function FeedSection<Item extends { id: string | number }>({
   getLikeDisabled,
 }: Props<Item>) {
   const dock = useBottomDock();
+  const listRef = React.useRef<FlatList<Item> | null>(null);
+
+  React.useEffect(() => {
+    if (scrollToTopKey == null) return;
+
+    listRef.current?.scrollToOffset({ offset: 0, animated: false });
+    const frame = requestAnimationFrame(() => {
+      listRef.current?.scrollToOffset({ offset: 0, animated: false });
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [scrollToTopKey]);
 
   return (
     <FlatList
+      ref={listRef}
       data={items}
       keyExtractor={(item) => String(item.id)}
       showsVerticalScrollIndicator

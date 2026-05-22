@@ -31,6 +31,11 @@ type FeedBatch = {
   hasMore: boolean;
 };
 
+type RecommendedBuildOptions = {
+  seenPostIds?: ReadonlySet<string>;
+  rotationSeed?: number;
+};
+
 function pickFirstString(...vals: any[]) {
   for (const v of vals) {
     if (typeof v === "string" && v.trim()) return v;
@@ -206,7 +211,20 @@ function getPreferenceSignals(posts: Post[]) {
   return { categories, tags };
 }
 
-function buildRecommendedPosts(latest: Post[], popular: Post[]) {
+function hashToUnitInterval(value: string) {
+  let hash = 2166136261;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0) / 4294967295;
+}
+
+function buildRecommendedPosts(
+  latest: Post[],
+  popular: Post[],
+  options: RecommendedBuildOptions = {}
+) {
   const byId = new Map<
     string,
     {
@@ -241,6 +259,8 @@ function buildRecommendedPosts(latest: Post[], popular: Post[]) {
   const picked: Post[] = [];
   const authorUse = new Map<string, number>();
   const categoryUse = new Map<string, number>();
+  const seenPostIds = options.seenPostIds;
+  const rotationSeed = options.rotationSeed ?? 0;
 
   while (candidates.length > 0) {
     let bestIndex = 0;
@@ -251,7 +271,12 @@ function buildRecommendedPosts(latest: Post[], popular: Post[]) {
       const authorId = candidate.post.author?.id || "";
       const authorPenalty = authorId ? (authorUse.get(authorId) ?? 0) * 14 : 0;
       const categoryPenalty = (categoryUse.get(candidate.post.type) ?? 0) * 6;
-      const adjustedScore = candidate.score - authorPenalty - categoryPenalty;
+      const seen = Boolean(seenPostIds?.has(candidate.post.id));
+      const seenPenalty = seen ? 1000 : 0;
+      const rotationBonus =
+        hashToUnitInterval(`${rotationSeed}:${candidate.post.id}`) * (seen ? 18 : 3);
+      const adjustedScore =
+        candidate.score - authorPenalty - categoryPenalty - seenPenalty + rotationBonus;
 
       if (adjustedScore > bestScore) {
         bestIndex = index;
@@ -273,7 +298,8 @@ function buildRecommendedPosts(latest: Post[], popular: Post[]) {
 async function fetchRecommendedBatch(
   baseParams: URLSearchParams,
   offset: number,
-  limit: number
+  limit: number,
+  options: RecommendedBuildOptions = {}
 ): Promise<FeedBatch> {
   const poolLimit = Math.min(50, Math.max(limit * 3, 18));
 
@@ -302,7 +328,7 @@ async function fetchRecommendedBatch(
 
   const popular = popularResult.status === "fulfilled" ? popularResult.value : { posts: [], hasMore: false };
   const latest = latestResult.status === "fulfilled" ? latestResult.value : { posts: [], hasMore: false };
-  const posts = buildRecommendedPosts(latest.posts, popular.posts).slice(0, limit);
+  const posts = buildRecommendedPosts(latest.posts, popular.posts, options).slice(0, limit);
 
   return {
     posts,
@@ -323,6 +349,9 @@ export function useFeed(query: FeedQuery = {}) {
 
   const offsetRef = useRef(0);
   const inflightRef = useRef(false);
+  const recommendedSeenPostIdsRef = useRef<Set<string>>(new Set());
+  const recommendedRefreshRoundRef = useRef(0);
+  const recommendedSessionKeyRef = useRef("");
 
   const baseParams = useMemo(() => {
     const p = new URLSearchParams();
@@ -353,7 +382,18 @@ export function useFeed(query: FeedQuery = {}) {
         let batch: FeedBatch;
 
         if (sort === "recommended" && type !== "following") {
-          batch = await fetchRecommendedBatch(baseParams, offsetRef.current, limit);
+          const sessionKey = baseParams.toString();
+          if (recommendedSessionKeyRef.current !== sessionKey) {
+            recommendedSessionKeyRef.current = sessionKey;
+            recommendedSeenPostIdsRef.current.clear();
+            recommendedRefreshRoundRef.current = 0;
+          }
+          if (reset) recommendedRefreshRoundRef.current += 1;
+
+          batch = await fetchRecommendedBatch(baseParams, offsetRef.current, limit, {
+            rotationSeed: recommendedRefreshRoundRef.current,
+            seenPostIds: recommendedSeenPostIdsRef.current,
+          });
         } else {
           const params = new URLSearchParams(baseParams);
           params.set("offset", String(offsetRef.current));
@@ -363,6 +403,17 @@ export function useFeed(query: FeedQuery = {}) {
         setItems((prev) => (reset ? batch.posts : appendUniquePosts(prev, batch.posts)));
         setHasMore(batch.hasMore);
         offsetRef.current += batch.posts.length;
+
+        if (sort === "recommended" && type !== "following") {
+          for (const post of batch.posts) {
+            recommendedSeenPostIdsRef.current.add(post.id);
+          }
+          while (recommendedSeenPostIdsRef.current.size > 120) {
+            const oldest = recommendedSeenPostIdsRef.current.values().next().value;
+            if (!oldest) break;
+            recommendedSeenPostIdsRef.current.delete(oldest);
+          }
+        }
       } catch (e: any) {
         setError(normalizeApiError(e));
       } finally {
