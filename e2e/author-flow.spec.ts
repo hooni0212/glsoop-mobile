@@ -212,6 +212,29 @@ async function mockAuthorApis(page: Page, logs: AuthorRequestLog[]) {
 }
 
 test.describe("작가 화면 흐름", () => {
+  test("작가 공유는 glsoop users 딥링크를 포함한다", async ({ page }) => {
+    const logs: AuthorRequestLog[] = [];
+    await page.addInitScript(() => {
+      Object.defineProperty(window.navigator, "share", {
+        configurable: true,
+        value: async (payload: unknown) => {
+          (window as any).__authorSharePayload = payload;
+          return { action: "sharedAction" };
+        },
+      });
+    });
+    await mockAuthorApis(page, logs);
+    await setAuthToken(page, COOKIE_SESSION_TOKEN);
+
+    await page.goto(`/users/${AUTHOR_ID}`);
+    await expect(page.getByTestId("author-screen")).toBeVisible();
+    await page.getByTestId("author-share-btn").click();
+
+    const sharePayload = await page.evaluate(() => (window as any).__authorSharePayload);
+    expect(sharePayload?.title).toBe("테스트 작가 작가 페이지");
+    expect(JSON.stringify(sharePayload)).toContain(`glsoop://users/${AUTHOR_ID}`);
+  });
+
   test("정렬 전환, 더보기, 재진입 시 refetch가 동작한다", async ({ page }) => {
     const logs: AuthorRequestLog[] = [];
     await mockAuthorApis(page, logs);
