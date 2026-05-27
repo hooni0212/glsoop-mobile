@@ -113,24 +113,12 @@ function buildPostPermalink(postId: string) {
 }
 
 function buildShareText({
-  mode,
   title,
-  content,
   permalink,
 }: {
-  mode: "title" | "full" | "link";
   title: string;
-  content: string;
   permalink: string;
 }) {
-  if (mode === "link") {
-    return `${title}\n${permalink}`;
-  }
-
-  if (mode === "full" && content) {
-    return `${title}\n\n${content}\n\n${permalink}`;
-  }
-
   return `${title}\n${permalink}`;
 }
 
@@ -220,12 +208,15 @@ async function shareImageFile({
 }
 
 function getShareFailureMessage(mode: ShareMode, error: unknown) {
-  if (error instanceof Error && error.message) return error.message;
-  if (mode === "imageSave") return "이미지 저장에 실패했어요. 잠시 후 다시 시도해주세요.";
+  if (mode === "imageSave") {
+    return error instanceof Error && error.message
+      ? error.message
+      : "이미지 저장에 실패했어요. 잠시 후 다시 시도해주세요.";
+  }
   return "공유에 실패했어요. 잠시 후 다시 시도해주세요.";
 }
 
-type ShareMode = "imageShare" | "imageSave" | "link" | "title" | "full";
+type ShareMode = "imageShare" | "imageSave" | "link";
 
 export default function PostDetail() {
   // 상세 화면은 Tab 도크가 아닌 Action 도크 규격을 사용
@@ -764,14 +755,12 @@ export default function PostDetail() {
     const shareContent = content.trim();
     const permalink = buildPostPermalink(post.id);
     const isImageMode = mode === "imageShare" || mode === "imageSave";
-    const textMode = isImageMode ? "link" : mode;
     const shareMessage = buildShareText({
-      mode: textMode,
       title: shareTitle,
-      content: shareContent,
       permalink,
     });
     const requestId = createShareRequestId(post.id);
+    const shouldCloseShareModal = shareModalVisible;
     const platform = Platform.OS === "web" ? "web" : "mobile";
     const dismissedAction =
       (Share as { dismissedAction?: string }).dismissedAction ?? "dismissedAction";
@@ -780,11 +769,7 @@ export default function PostDetail() {
         ? "share_modal_image_png"
         : mode === "imageSave"
           ? "share_modal_image_save"
-        : mode === "link"
-          ? "share_modal_link"
-          : mode === "full"
-            ? "share_modal_full"
-            : "share_modal_title_only";
+          : "share_modal_link";
 
     const logShareEventSafely = (result: "shared" | "dismissed" | "failed", meta?: Record<string, unknown>) => {
       void logShareEvent({
@@ -811,7 +796,6 @@ export default function PostDetail() {
 
     try {
       setShareSubmitting(mode);
-      setShareModalVisible(false);
 
       if (isImageMode && Platform.OS !== "web") {
         const shareTemplate = normalizePostBackgroundTemplateId(
@@ -944,6 +928,9 @@ export default function PostDetail() {
       showToast(getShareFailureMessage(mode, shareError), { tone: "error" });
     } finally {
       setShareSubmitting(null);
+      if (shouldCloseShareModal) {
+        setShareModalVisible(false);
+      }
     }
   };
 
@@ -1543,64 +1530,48 @@ export default function PostDetail() {
           <View style={styles.bookmarkModalCard}>
             <Text style={styles.bookmarkModalTitle}>공유 방식 선택</Text>
             <Text style={styles.bookmarkModalDescription}>
-              이미지, 링크, 본문 중 원하는 방식으로 보낼 수 있어요.
+              이미지나 링크로 글을 보낼 수 있어요.
             </Text>
+            {shareSubmitting ? (
+              <View style={styles.shareModalProgressRow}>
+                <ActivityIndicator size="small" color={tokens.colors.green700} />
+                <Text style={styles.shareModalProgressText}>
+                  {shareSubmitting === "imageShare"
+                    ? "이미지를 준비하고 있어요."
+                    : "공유 화면을 여는 중이에요."}
+                </Text>
+              </View>
+            ) : null}
 
             <View style={styles.bookmarkModalList}>
               {Platform.OS !== "web" ? (
-                <>
-                  <Pressable
-                    onPress={() => void sharePost("imageShare")}
-                    disabled={Boolean(shareSubmitting)}
-                    style={[
-                      styles.bookmarkModalListItem,
-                      shareSubmitting && styles.bookmarkModalListItemDisabled,
-                    ]}
-                  >
-                    <Text style={styles.bookmarkModalListItemName}>이미지 공유</Text>
-                    <Text style={styles.bookmarkModalListItemStatus}>
-                      {shareSubmitting === "imageShare" ? "준비 중" : "PNG"}
-                    </Text>
-                  </Pressable>
-                  <Pressable
-                    onPress={() => void sharePost("link")}
-                    disabled={Boolean(shareSubmitting)}
-                    style={[
-                      styles.bookmarkModalListItem,
-                      shareSubmitting && styles.bookmarkModalListItemDisabled,
-                    ]}
-                  >
-                    <Text style={styles.bookmarkModalListItemName}>링크 공유</Text>
-                    <Text style={styles.bookmarkModalListItemStatus}>
-                      {shareSubmitting === "link" ? "공유 중" : "추천"}
-                    </Text>
-                  </Pressable>
-                </>
+                <Pressable
+                  onPress={() => void sharePost("imageShare")}
+                  disabled={Boolean(shareSubmitting)}
+                  style={[
+                    styles.bookmarkModalListItem,
+                    shareSubmitting && styles.bookmarkModalListItemDisabled,
+                  ]}
+                  testID="post-share-option-image"
+                >
+                  <Text style={styles.bookmarkModalListItemName}>이미지 공유</Text>
+                  <Text style={styles.bookmarkModalListItemStatus}>
+                    {shareSubmitting === "imageShare" ? "준비 중" : "PNG"}
+                  </Text>
+                </Pressable>
               ) : null}
               <Pressable
-                onPress={() => void sharePost("full")}
+                onPress={() => void sharePost("link")}
                 disabled={Boolean(shareSubmitting)}
                 style={[
                   styles.bookmarkModalListItem,
                   shareSubmitting && styles.bookmarkModalListItemDisabled,
                 ]}
+                testID="post-share-option-link"
               >
-                <Text style={styles.bookmarkModalListItemName}>본문까지 공유</Text>
+                <Text style={styles.bookmarkModalListItemName}>링크 공유</Text>
                 <Text style={styles.bookmarkModalListItemStatus}>
-                  {shareSubmitting === "full" ? "공유 중" : Platform.OS === "web" ? "추천" : "텍스트"}
-                </Text>
-              </Pressable>
-              <Pressable
-                onPress={() => void sharePost("title")}
-                disabled={Boolean(shareSubmitting)}
-                style={[
-                  styles.bookmarkModalListItem,
-                  shareSubmitting && styles.bookmarkModalListItemDisabled,
-                ]}
-              >
-                <Text style={styles.bookmarkModalListItemName}>제목만 공유</Text>
-                <Text style={styles.bookmarkModalListItemStatus}>
-                  {shareSubmitting === "title" ? "공유 중" : "간단히"}
+                  {shareSubmitting === "link" ? "공유 중" : "추천"}
                 </Text>
               </Pressable>
             </View>
