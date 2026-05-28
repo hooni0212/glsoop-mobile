@@ -19,6 +19,7 @@
     "release:android:verify:prod-env": "npx eas-cli env:exec production 'node tools/release/verify-android-production-config.mjs --check-env'",
     "release:android:verify:api": "node tools/release/check-production-api.mjs",
     "release:android:aab": "npx eas-cli build --platform android --profile production",
+    "release:android:submit": "npx eas-cli submit --platform android --profile production --latest",
     "release:ios:context": "sh tools/release/record-ios-build-context.sh",
     "release:ios:verify:config": "node tools/release/verify-ios-production-config.mjs",
     "release:ios:verify:prod-env": "npx eas-cli env:exec production 'node tools/release/verify-ios-production-config.mjs --check-env'",
