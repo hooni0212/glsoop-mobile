@@ -24,11 +24,16 @@ type FeedResponse = {
   has_more?: boolean;
   hasMore?: boolean;
   message?: string;
+  context?: {
+    sort?: string;
+    recommendation_seed?: number | null;
+  };
 };
 
 type FeedBatch = {
   posts: Post[];
   hasMore: boolean;
+  context?: FeedResponse["context"];
 };
 
 type RecommendedBuildOptions = {
@@ -182,6 +187,7 @@ async function fetchFeedBatch(params: URLSearchParams, limit: number): Promise<F
   return {
     posts,
     hasMore: inferHasMore(res, posts.length, limit),
+    context: res.context,
   };
 }
 
@@ -301,6 +307,27 @@ async function fetchRecommendedBatch(
   limit: number,
   options: RecommendedBuildOptions = {}
 ): Promise<FeedBatch> {
+  const serverParams = new URLSearchParams(baseParams);
+  serverParams.set("sort", "recommended");
+  serverParams.set("offset", String(offset));
+  serverParams.set("seed", String(options.rotationSeed ?? 0));
+  if (offset === 0 && options.seenPostIds?.size) {
+    const excludedIds = Array.from(options.seenPostIds).slice(0, 100);
+    if (excludedIds.length > 0) {
+      serverParams.set("exclude_ids", excludedIds.join(","));
+    }
+  }
+
+  let serverRecommendationError: unknown = null;
+  try {
+    const serverBatch = await fetchFeedBatch(serverParams, limit);
+    if (serverBatch.context?.sort === "recommended") {
+      return serverBatch;
+    }
+  } catch (error) {
+    serverRecommendationError = error;
+  }
+
   const poolLimit = Math.min(50, Math.max(limit * 3, 18));
 
   const fetchWithSort = (sort: "latest" | "popular") => {
@@ -321,6 +348,7 @@ async function fetchRecommendedBatch(
   );
 
   if (fulfilled.length === 0) {
+    if (serverRecommendationError) throw serverRecommendationError;
     if (popularResult.status === "rejected") throw popularResult.reason;
     if (latestResult.status === "rejected") throw latestResult.reason;
     throw new Error("피드를 불러오지 못했어요.");
