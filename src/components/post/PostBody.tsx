@@ -61,6 +61,7 @@ export function PostBody({
   const pageCount = Math.max(1, renderImages?.pageCount ?? (imageUrls.length || 1));
   const showCarousel = imageUrls.length > 1;
   const imageSeed = useMemo(() => imageUrls.join("|"), [imageUrls]);
+  const allowImageDownscaling = Platform.OS !== "android";
 
   useEffect(() => {
     setRenderFailed(false);
@@ -85,6 +86,26 @@ export function PostBody({
   };
 
   if (visibleImageUrls.length > 0 && !renderFailed) {
+    if (!showCarousel) {
+      const imageUrl = visibleImageUrls[0];
+
+      return (
+        <View style={styles.wrap}>
+          <View style={styles.frame}>
+            <Image
+              source={{ uri: imageUrl }}
+              style={styles.image}
+              contentFit="contain"
+              transition={120}
+              allowDownscaling={allowImageDownscaling}
+              recyclingKey={imageUrl}
+              onError={onRenderImageError}
+            />
+          </View>
+        </View>
+      );
+    }
+
     return (
       <View style={styles.wrap}>
         <View style={styles.frame}>
@@ -97,58 +118,62 @@ export function PostBody({
               }
             }}
           >
-            <ScrollView
-              ref={scrollRef}
-              horizontal
-              pagingEnabled
-              nestedScrollEnabled
-              showsHorizontalScrollIndicator={false}
-              scrollEnabled={showCarousel}
-              onMomentumScrollEnd={(event) => {
-                if (carouselWidth <= 0) return;
-                const nextIndex = Math.round(event.nativeEvent.contentOffset.x / carouselWidth);
-                setActivePage(Math.max(0, Math.min(nextIndex, imageUrls.length - 1)));
-              }}
-            >
-              {visibleImageUrls.map((imageUrl, index) => (
-                <View
-                  key={`${imageUrl}-${index}`}
-                  style={[styles.carouselSlide, { width: Math.max(carouselWidth, 1) }]}
-                >
-                  <Image
-                    source={{ uri: imageUrl }}
-                    style={styles.image}
-                    contentFit="contain"
-                    transition={120}
-                    onError={onRenderImageError}
-                  />
-                </View>
-              ))}
-            </ScrollView>
-          </View>
-          {showCarousel ? (
-            <View style={styles.carouselFooter}>
-              <View style={styles.carouselStatus}>
-                <Text style={styles.carouselStatusText}>
-                  {activePage + 1} / {pageCount}
-                </Text>
-              </View>
-              <View style={styles.carouselDots}>
-                {imageUrls.map((imageUrl, index) => {
-                  const isActive = index === activePage;
-                  return (
-                    <Pressable
-                      key={`${imageUrl}-dot-${index}`}
-                      onPress={() => scrollToPage(index)}
-                      style={[styles.carouselDot, isActive ? styles.carouselDotActive : null]}
-                      accessibilityRole="button"
-                      accessibilityLabel={`${index + 1}번째 이미지로 이동`}
+            {carouselWidth > 0 ? (
+              <ScrollView
+                ref={scrollRef}
+                horizontal
+                pagingEnabled
+                nestedScrollEnabled
+                showsHorizontalScrollIndicator={false}
+                scrollEnabled
+                style={styles.carouselScroll}
+                onMomentumScrollEnd={(event) => {
+                  const nextIndex = Math.round(event.nativeEvent.contentOffset.x / carouselWidth);
+                  setActivePage(Math.max(0, Math.min(nextIndex, imageUrls.length - 1)));
+                }}
+              >
+                {visibleImageUrls.map((imageUrl, index) => (
+                  <View
+                    key={`${imageUrl}-${index}`}
+                    style={[styles.carouselSlide, { width: carouselWidth }]}
+                  >
+                    <Image
+                      source={{ uri: imageUrl }}
+                      style={styles.image}
+                      contentFit="contain"
+                      transition={120}
+                      allowDownscaling={allowImageDownscaling}
+                      recyclingKey={`${imageUrl}-${index}`}
+                      onError={onRenderImageError}
                     />
-                  );
-                })}
-              </View>
+                  </View>
+                ))}
+              </ScrollView>
+            ) : (
+              <View style={styles.carouselPlaceholder} />
+            )}
+          </View>
+          <View style={styles.carouselFooter}>
+            <View style={styles.carouselStatus}>
+              <Text style={styles.carouselStatusText}>
+                {activePage + 1} / {pageCount}
+              </Text>
             </View>
-          ) : null}
+            <View style={styles.carouselDots}>
+              {imageUrls.map((imageUrl, index) => {
+                const isActive = index === activePage;
+                return (
+                  <Pressable
+                    key={`${imageUrl}-dot-${index}`}
+                    onPress={() => scrollToPage(index)}
+                    style={[styles.carouselDot, isActive ? styles.carouselDotActive : null]}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${index + 1}번째 이미지로 이동`}
+                  />
+                );
+              })}
+            </View>
+          </View>
         </View>
       </View>
     );
@@ -177,10 +202,21 @@ const styles = {
   },
   carouselViewport: {
     overflow: "hidden" as const,
+    width: "100%" as const,
+    aspectRatio: 500 / 666,
+  },
+  carouselScroll: {
+    width: "100%" as const,
+    height: "100%" as const,
   },
   carouselSlide: {
     alignItems: "center" as const,
     justifyContent: "center" as const,
+  },
+  carouselPlaceholder: {
+    width: "100%" as const,
+    height: "100%" as const,
+    backgroundColor: "#f4ead8",
   },
   image: {
     width: "100%" as const,
