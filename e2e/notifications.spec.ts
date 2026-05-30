@@ -119,6 +119,53 @@ test.describe("알림함", () => {
     await expect(page).toHaveURL(/\/posts\/201$/);
   });
 
+  test("팔로잉 작가 새 글 알림을 보여주고 글 상세로 이동한다", async ({ page }) => {
+    let readCalls = 0;
+
+    await page.route("**/api/notifications?**", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          notifications: [
+            {
+              id: "n-following-post",
+              type: "following_new_post",
+              title: "루나님이 새 글을 올렸어요.",
+              body: "루나님이 「알림 대상 글」을 남겼어요.",
+              created_at: "2026-04-23T00:00:00.000Z",
+              read_at: null,
+              target_path: "/posts/201",
+              post_id: 201,
+              comment_id: null,
+              user_id: 9,
+              actor_count: 1,
+            },
+          ],
+          unread_count: 1,
+          has_more: false,
+        }),
+      });
+    });
+    await page.route("**/api/notifications/*/read", async (route) => {
+      readCalls += 1;
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ ok: true, message: "read" }),
+      });
+    });
+
+    await page.goto("/notifications");
+    await expect(page.getByText("루나님이 새 글을 올렸어요.")).toBeVisible();
+    await expect(page.getByText("루나님이 「알림 대상 글」을 남겼어요.")).toBeVisible();
+
+    await page.getByTestId("notification-item-n-following-post").click();
+    await expect.poll(() => readCalls).toBe(1);
+    await expect(page).toHaveURL(/\/posts\/201$/);
+  });
+
   test("빈 알림함에서는 빈 상태를 보여준다", async ({ page }) => {
     await page.route("**/api/notifications?**", async (route) => {
       await route.fulfill({

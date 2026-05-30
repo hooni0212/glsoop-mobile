@@ -3,17 +3,18 @@
 - 문서 타입: `API Spec`
 - 적용 범위: 모바일 알림함, 홈 알림 점 배지, 거래성 푸시, 마케팅 푸시 동의
 - 상태: `Review`
-- 최종 업데이트: `2026-05-29`
+- 최종 업데이트: `2026-05-31`
 
 ## 범위
 
 v1 알림은 아래 타입을 사용한다.
 
-- `post_reaction`: 같은 글 기준으로 서버에서 묶어서 내려준다. 기기 푸시는 보내지 않는다.
-- `post_comment`, `comment_reply`, `new_follower`: 개별 알림으로 저장하고, OS 권한이 허용되어 등록된 기기 토큰이 있는 경우에만 기기 푸시를 보낸다.
+- `post_reaction`: 같은 글 기준으로 서버에서 묶어서 내려준다. 원본 공감 이벤트는 OS 권한이 허용되어 등록된 기기 토큰이 있는 경우에만 기기 푸시를 보낸다.
+- `post_comment`, `comment_reply`, `new_follower`, `following_new_post`: 개별 알림으로 저장하고, OS 권한이 허용되어 등록된 기기 토큰이 있는 경우에만 기기 푸시를 보낸다.
 - `admin_operational_alert`: 운영 공지/장애 안내 등 관리자성 알림이다.
 - `marketing_campaign`: 별도 마케팅 푸시 동의가 있는 사용자에게만 생성/발송되는 광고성 캠페인 알림이다.
 - 자기 자신의 행동과 차단 관계가 있는 사용자 이벤트는 생성/노출하지 않는다.
+- `following_new_post`는 팔로잉한 작가가 `public` 또는 `followers` 공개 범위의 새 글을 발행했을 때 생성한다. `private`, `unlisted` 글은 대상에서 제외한다.
 
 ## 목록 조회
 
@@ -55,6 +56,7 @@ GET /api/notifications?limit=30&offset=0
 | `post_reaction` | heart | `target_path` 또는 `/posts/:postId` |
 | `post_comment` | chatbubble | `target_path` 또는 `/posts/:postId` |
 | `comment_reply` | return arrow | `target_path` 또는 `/posts/:postId` |
+| `following_new_post` | newspaper | `target_path` 또는 `/posts/:postId` |
 | `new_follower` | person add | `target_path` 또는 `/users/:userId` |
 | `admin_operational_alert` | alert | `target_path` 또는 `/notifications` |
 | `marketing_campaign` | leaf | `target_path` 또는 `/notifications` |
