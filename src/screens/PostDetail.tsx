@@ -317,6 +317,8 @@ export default function PostDetail() {
   const title = post?.title || "";
   const authorName = post?.author?.name || "익명";
   const authorId = post?.author?.id;
+  const authorProfilePhoto =
+    post?.author?.profilePhotoThumbnailUrl || post?.author?.profilePhotoUrl || "";
   const dateText = formatKstDateKorean((post as any)?.createdAt);
   const content = (post as any)?.content || "";
   const paragraphs = Array.isArray((post as any)?.paragraphs) ? (post as any).paragraphs : [];
@@ -1263,7 +1265,16 @@ export default function PostDetail() {
                     onPress={() => router.push(`/users/${authorId}`)}
                     accessibilityRole="button"
                     testID="post-author-btn"
+                    style={styles.metaAuthorPress}
                   >
+                    {authorProfilePhoto ? (
+                      <Image
+                        source={{ uri: authorProfilePhoto }}
+                        style={styles.metaAuthorPhoto}
+                        contentFit="cover"
+                        transition={120}
+                      />
+                    ) : null}
                     <Text style={styles.metaAuthor}>{authorName}</Text>
                   </Pressable>
                 ) : (

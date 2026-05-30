@@ -179,6 +179,55 @@ type RequestOptions = {
   credentials?: boolean;
 };
 
+async function parseApiResponse<T>(res: Response, context: { method: string; url: string }) {
+  const text = await res.text();
+  const parsed = safeJsonParse(text);
+
+  if (!parsed) {
+    throw new ApiError(`Non-JSON response (HTTP ${res.status}): ${text.slice(0, 160)}`, {
+      status: res.status,
+    });
+  }
+
+  apiLog("[api] response", {
+    method: context.method,
+    url: context.url,
+    status: res.status,
+  });
+
+  if (!res.ok) {
+    if (parsed?.success === false) {
+      throw new ApiError(
+        parsed?.error?.message || parsed?.error?.code || `HTTP ${res.status}`,
+        {
+          status: res.status,
+          code: parsed?.error?.code,
+          payload: parsed,
+        }
+      );
+    }
+    throw new ApiError(
+      parsed?.message || parsed?.error?.message || `HTTP ${res.status}`,
+      {
+        status: res.status,
+        code: parsed?.code || parsed?.error?.code,
+        payload: parsed,
+      }
+    );
+  }
+
+  if (parsed?.success === false) {
+    throw new ApiError(parsed?.error?.message || parsed?.error?.code, {
+      code: parsed?.error?.code,
+    });
+  }
+  if (parsed?.success === true && "data" in parsed) {
+    return (parsed as ApiOk<T>).data;
+  }
+
+  return parsed as T;
+}
+
 async function apiRequest<T>(path: string, options: RequestOptions): Promise<T> {
   const url = joinUrl(path);
   const { controller, clear } = withTimeout(options.timeoutMs ?? 12000);
@@ -212,58 +261,7 @@ async function apiRequest<T>(path: string, options: RequestOptions): Promise<T> 
       ...(Platform.OS === "web" ? { credentials: "include" } : null),
     } as any);
 
-    // ✅ res.json() 대신 text→parse (HTML/빈바디/에러페이지 대비)
-    const text = await res.text();
-    const parsed = safeJsonParse(text);
-
-    if (!parsed) {
-      throw new ApiError(`Non-JSON response (HTTP ${res.status}): ${text.slice(0, 160)}`, {
-        status: res.status,
-      });
-    }
-
-    apiLog("[api] response", {
-      method: options.method,
-      url,
-      status: res.status,
-    });
-
-    // ✅ HTTP 에러 처리
-    if (!res.ok) {
-      // 서버가 { success:false, error:{message} }를 지키는 경우
-      if (parsed?.success === false) {
-        throw new ApiError(
-          parsed?.error?.message || parsed?.error?.code || `HTTP ${res.status}`,
-          {
-            status: res.status,
-            code: parsed?.error?.code,
-            payload: parsed,
-          }
-        );
-      }
-      // 서버가 { ok:false, message } 같은 경우
-      throw new ApiError(
-        parsed?.message || parsed?.error?.message || `HTTP ${res.status}`,
-        {
-          status: res.status,
-          code: parsed?.code || parsed?.error?.code,
-          payload: parsed,
-        }
-      );
-    }
-
-    // ✅ (A) 공통 포맷: { success:true, data:T }
-    if (parsed?.success === false) {
-      throw new ApiError(parsed?.error?.message || parsed?.error?.code, {
-        code: parsed?.error?.code,
-      });
-    }
-    if (parsed?.success === true && "data" in parsed) {
-      return (parsed as ApiOk<T>).data;
-    }
-
-    // ✅ (B) 글숲 서버 포맷: { ok:true, ... } 등 -> json 자체 반환
-    return parsed as T;
+    return parseApiResponse<T>(res, { method: options.method, url });
   } catch (e: any) {
     if (e?.name === "AbortError") throw new ApiError("Request timeout", { code: "timeout" });
     throw e;
@@ -290,4 +288,44 @@ export function apiPatch<T>(path: string, body?: unknown): Promise<T> {
 
 export function apiDelete<T>(path: string): Promise<T> {
   return apiRequest<T>(path, { method: "DELETE" });
+}
+
+export async function apiFormData<T>(
+  path: string,
+  formData: FormData,
+  options: { method?: "POST" | "PUT" | "PATCH"; timeoutMs?: number } = {}
+): Promise<T> {
+  const method = options.method ?? "POST";
+  const url = joinUrl(path);
+  const { controller, clear } = withTimeout(options.timeoutMs ?? 30000);
+
+  try {
+    const token = await getAuthToken();
+    const bearerToken = token && token !== COOKIE_SESSION_TOKEN ? token : null;
+    const headers: Record<string, string> = {
+      Accept: "application/json",
+    };
+    if (bearerToken) headers["Authorization"] = `Bearer ${bearerToken}`;
+
+    apiLog("[api] form request", {
+      method,
+      url,
+      hasToken: Boolean(bearerToken),
+    });
+
+    const res = await fetch(url, {
+      method,
+      headers,
+      body: formData,
+      signal: controller.signal,
+      ...(Platform.OS === "web" ? { credentials: "include" } : null),
+    } as any);
+
+    return parseApiResponse<T>(res, { method, url });
+  } catch (e: any) {
+    if (e?.name === "AbortError") throw new ApiError("Request timeout", { code: "timeout" });
+    throw e;
+  } finally {
+    clear();
+  }
 }

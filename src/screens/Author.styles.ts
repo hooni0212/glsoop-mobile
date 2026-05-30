@@ -94,6 +94,11 @@ export const authorScreenStyles = StyleSheet.create({
     borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
+    overflow: "hidden",
+  },
+  avatarImage: {
+    width: "100%",
+    height: "100%",
   },
   avatarText: {
     fontSize: 21,

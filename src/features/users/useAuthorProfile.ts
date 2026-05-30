@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { apiGet } from "@/lib/api";
 import { normalizeApiError, type AppErrorModel } from "@/lib/errors";
+import { toAbsoluteProfilePhotoUrl } from "@/lib/profilePhoto";
 
 export type AuthorProfile = {
   user: any | null;
@@ -43,6 +44,14 @@ function extractProfilePayload(res: AuthorProfileResponse) {
     return {
       user: {
         ...userRecord,
+        profile_photo_url: toAbsoluteProfilePhotoUrl(
+          userRecord.profile_photo_url,
+          userRecord.profilePhotoUrl
+        ),
+        profile_photo_thumbnail_url: toAbsoluteProfilePhotoUrl(
+          userRecord.profile_photo_thumbnail_url,
+          userRecord.profilePhotoThumbnailUrl
+        ),
         profile_cosmetics: profileCosmetics,
       },
       stats,

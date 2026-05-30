@@ -12,6 +12,7 @@ import {
 import { router, useLocalSearchParams, usePathname } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
+import { Image } from "expo-image";
 
 import { FeedCard } from "@/components/FeedCard";
 import { SafetyReasonModal } from "@/components/safety/SafetyReasonModal";
@@ -492,6 +493,12 @@ export default function Author({
       const headerStickers = profileCosmetics.header_stickers;
       const hasTopLeftSticker = headerStickers.some(({ slot }) => slot === "tl");
       const avatarInitial = name.trim().slice(0, 1) || "글";
+      const profilePhoto =
+        user?.profile_photo_thumbnail_url ||
+        user?.profilePhotoThumbnailUrl ||
+        user?.profile_photo_url ||
+        user?.profilePhotoUrl ||
+        "";
 
       return (
         <View>
@@ -557,7 +564,16 @@ export default function Author({
                   },
                 ]}
               >
-                <Text style={authorScreenStyles.avatarText}>{avatarInitial}</Text>
+                {profilePhoto ? (
+                  <Image
+                    source={{ uri: profilePhoto }}
+                    style={authorScreenStyles.avatarImage}
+                    contentFit="cover"
+                    transition={120}
+                  />
+                ) : (
+                  <Text style={authorScreenStyles.avatarText}>{avatarInitial}</Text>
+                )}
               </View>
               <View style={authorScreenStyles.identityBlock}>
                 <Text style={authorScreenStyles.profileKicker}>작가의 글숲</Text>
@@ -826,6 +842,10 @@ export default function Author({
       overflowOpen,
       sort,
       totalLikes,
+      user?.profilePhotoThumbnailUrl,
+      user?.profilePhotoUrl,
+      user?.profile_photo_thumbnail_url,
+      user?.profile_photo_url,
       visibleItems,
     ]
   );

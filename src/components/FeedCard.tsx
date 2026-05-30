@@ -58,6 +58,8 @@ export function FeedCard({
   const cardTitle = post.title || "(제목 없음)";
   const primaryBadge = post.author?.profileCosmetics?.primary_badge;
   const authorBadge = primaryBadge?.icon_emoji?.trim();
+  const authorProfilePhoto =
+    post.author?.profilePhotoThumbnailUrl || post.author?.profilePhotoUrl || "";
   const canLike = Boolean(onLikePress);
   const canBookmark = Boolean(onBookmarkPress);
   const showSocialRow = Boolean(canLike || canBookmark);
@@ -72,6 +74,14 @@ export function FeedCard({
           accessibilityRole={onAuthorPress ? "button" : undefined}
           accessibilityLabel={onAuthorPress ? `작가 페이지 열기: ${author}` : undefined}
         >
+          {authorProfilePhoto ? (
+            <Image
+              source={{ uri: authorProfilePhoto }}
+              style={styles.authorPhoto}
+              contentFit="cover"
+              transition={120}
+            />
+          ) : null}
           <View style={styles.authorTextBlock}>
             <Text style={styles.authorName} numberOfLines={1}>
               {authorBadge ? <Text style={styles.authorBadge}>{authorBadge} </Text> : null}
@@ -286,6 +296,15 @@ const styles = StyleSheet.create({
   authorTextBlock: {
     flex: 1,
     minWidth: 0,
+  },
+  authorPhoto: {
+    width: 34,
+    height: 34,
+    borderRadius: 12,
+    marginRight: 10,
+    backgroundColor: tokens.colors.surfaceStrong,
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
   },
   authorName: {
     fontSize: 14,

@@ -29,6 +29,8 @@ export type Post = {
   author: {
     id: string;
     name: string;
+    profilePhotoUrl?: string | null;
+    profilePhotoThumbnailUrl?: string | null;
     profileCosmetics?: NormalizedProfileCosmeticsExpanded;
   };
 

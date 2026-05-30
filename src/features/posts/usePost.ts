@@ -2,6 +2,7 @@ import { apiGet } from "@/lib/api";
 import { normalizeApiError, type AppErrorModel } from "@/lib/errors";
 import { normalizePostReadText, splitPostParagraphs } from "@/lib/postContent";
 import { normalizePostRenderImageFields } from "@/lib/postRenderImages";
+import { toAbsoluteProfilePhotoUrl } from "@/lib/profilePhoto";
 import { normalizePublicDisplayName } from "@/lib/publicDisplayName";
 import { normalizeProfileCosmeticsExpanded } from "@/types/cosmetics";
 import type { Post } from "@/types/post";
@@ -132,6 +133,14 @@ function normalizePostDetail(row: any): any {
     author: {
       id: authorId || undefined,
       name: authorName,
+      profilePhotoUrl: toAbsoluteProfilePhotoUrl(
+        row?.author_profile_photo_url,
+        row?.authorProfilePhotoUrl
+      ),
+      profilePhotoThumbnailUrl: toAbsoluteProfilePhotoUrl(
+        row?.author_profile_photo_thumbnail_url,
+        row?.authorProfilePhotoThumbnailUrl
+      ),
       profileCosmetics: parseAuthorProfileCosmetics(row),
     },
     stats: { likeCount, bookmarkCount },

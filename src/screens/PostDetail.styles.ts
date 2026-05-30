@@ -91,6 +91,19 @@ export function createPostDetailStyles(actionBarHeight: number, topInset = 0) {
       fontWeight: "800",
       color: tokens.colors.text,
     },
+    metaAuthorPress: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+    },
+    metaAuthorPhoto: {
+      width: 24,
+      height: 24,
+      borderRadius: 9,
+      backgroundColor: tokens.colors.surfaceStrong,
+      borderWidth: 1,
+      borderColor: tokens.colors.border,
+    },
     metaDot: {
       fontSize: 13,
       fontWeight: "700",

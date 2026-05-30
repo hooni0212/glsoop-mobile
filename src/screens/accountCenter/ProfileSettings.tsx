@@ -1,8 +1,10 @@
 import React from "react";
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, usePathname } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { Image } from "expo-image";
+import * as ImagePicker from "expo-image-picker";
 
 import { useToast } from "@/feedback/ToastProvider";
 import { AppEmpty } from "@/components/state/AppEmpty";
@@ -11,7 +13,12 @@ import { AppLoading } from "@/components/state/AppLoading";
 import { buildAuthRoute } from "@/lib/authRedirect";
 import { apiGet, apiPut } from "@/lib/api";
 import { normalizeApiError } from "@/lib/errors";
+import { toAbsoluteProfilePhotoUrl } from "@/lib/profilePhoto";
 import { type MeResponse, type UpdateMeResponse } from "@/features/me/accountCenter";
+import {
+  deleteProfilePhoto,
+  uploadProfilePhoto,
+} from "@/services/profilePhotoService";
 import { tokens } from "@/theme/tokens";
 
 export default function AccountCenterProfileSettingsScreen() {
@@ -24,6 +31,7 @@ export default function AccountCenterProfileSettingsScreen() {
   const [bio, setBio] = React.useState("");
   const [about, setAbout] = React.useState("");
   const [saving, setSaving] = React.useState(false);
+  const [photoBusy, setPhotoBusy] = React.useState(false);
   const [message, setMessage] = React.useState<string | null>(null);
 
   const loadMe = React.useCallback(async () => {
@@ -80,6 +88,84 @@ export default function AccountCenterProfileSettingsScreen() {
     }
   }
 
+  async function onPickProfilePhoto() {
+    if (!me?.profile_photo_upload_allowed) {
+      Alert.alert(
+        "프리미엄 기능",
+        "프로필 사진 업로드는 프리미엄에서 사용할 수 있어요."
+      );
+      return;
+    }
+
+    try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert("사진 접근 권한", "프로필 사진을 고르려면 사진 보관함 접근 권한이 필요해요.");
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.88,
+      });
+
+      if (result.canceled || !result.assets?.[0]?.uri) return;
+      const asset = result.assets[0];
+
+      setPhotoBusy(true);
+      setMessage(null);
+      await uploadProfilePhoto({
+        uri: asset.uri,
+        fileName: asset.fileName,
+        mimeType: asset.mimeType,
+      });
+      showToast("프로필 사진을 저장했어요.", { tone: "success" });
+      await loadMe();
+    } catch (e) {
+      const normalized = normalizeApiError(e);
+      if (normalized.kind === "auth") {
+        router.replace(buildAuthRoute("/(auth)/login", pathname));
+        return;
+      }
+      Alert.alert("프로필 사진", normalized.description || normalized.title);
+    } finally {
+      setPhotoBusy(false);
+    }
+  }
+
+  function onDeleteProfilePhoto() {
+    if (!me?.profile_photo_url && !me?.profile_photo_thumbnail_url) return;
+
+    Alert.alert("프로필 사진 삭제", "현재 프로필 사진을 삭제할까요?", [
+      { text: "취소", style: "cancel" },
+      {
+        text: "삭제",
+        style: "destructive",
+        onPress: () => {
+          void (async () => {
+            setPhotoBusy(true);
+            try {
+              await deleteProfilePhoto();
+              showToast("프로필 사진을 삭제했어요.", { tone: "success" });
+              await loadMe();
+            } catch (e) {
+              const normalized = normalizeApiError(e);
+              if (normalized.kind === "auth") {
+                router.replace(buildAuthRoute("/(auth)/login", pathname));
+                return;
+              }
+              Alert.alert("프로필 사진", normalized.description || normalized.title);
+            } finally {
+              setPhotoBusy(false);
+            }
+          })();
+        },
+      },
+    ]);
+  }
+
   if (loading) {
     return (
       <SafeAreaView style={styles.safe}>
@@ -120,10 +206,58 @@ export default function AccountCenterProfileSettingsScreen() {
     );
   }
 
+  const profilePhotoUrl = toAbsoluteProfilePhotoUrl(
+    me?.profile_photo_thumbnail_url,
+    me?.profile_photo_url
+  );
+  const canUploadProfilePhoto = Boolean(me?.profile_photo_upload_allowed);
+  const profileInitial = (nickname.trim() || me?.nickname || me?.name || "글").trim().slice(0, 1) || "글";
+
   return (
     <SafeAreaView style={styles.safe}>
       <TopBar title="프로필 및 공개 정보" />
       <ScrollView contentContainerStyle={styles.content}>
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>프로필 사진</Text>
+          <View style={styles.photoRow}>
+            <View style={styles.photoPreview}>
+              {profilePhotoUrl ? (
+                <Image
+                  source={{ uri: profilePhotoUrl }}
+                  style={styles.photoImage}
+                  contentFit="cover"
+                  transition={120}
+                />
+              ) : (
+                <Text style={styles.photoInitial}>{profileInitial}</Text>
+              )}
+            </View>
+            <View style={styles.photoActions}>
+              <Pressable
+                onPress={() => void onPickProfilePhoto()}
+                disabled={photoBusy}
+                style={[styles.secondaryBtn, photoBusy && styles.disabledBtn]}
+              >
+                <Text style={styles.secondaryBtnText}>
+                  {photoBusy ? "처리 중..." : profilePhotoUrl ? "사진 변경" : "사진 업로드"}
+                </Text>
+              </Pressable>
+              {profilePhotoUrl ? (
+                <Pressable
+                  onPress={onDeleteProfilePhoto}
+                  disabled={photoBusy}
+                  style={[styles.ghostDangerBtn, photoBusy && styles.disabledBtn]}
+                >
+                  <Text style={styles.ghostDangerBtnText}>삭제</Text>
+                </Pressable>
+              ) : null}
+              {!canUploadProfilePhoto ? (
+                <Text style={styles.photoHint}>프리미엄에서 사용할 수 있어요.</Text>
+              ) : null}
+            </View>
+          </View>
+        </View>
+
         <View style={styles.card}>
           <Text style={styles.cardTitle}>공개 프로필 편집</Text>
           <Text style={styles.cardDescription}>
@@ -260,6 +394,41 @@ const styles = StyleSheet.create({
     color: tokens.colors.textMuted,
     lineHeight: 20,
   },
+  photoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: tokens.space.md as any,
+  },
+  photoPreview: {
+    width: 86,
+    height: 86,
+    borderRadius: 28,
+    borderWidth: 1,
+    borderColor: tokens.colors.borderStrong,
+    backgroundColor: tokens.colors.surface,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+  },
+  photoImage: {
+    width: "100%",
+    height: "100%",
+  },
+  photoInitial: {
+    fontSize: 30,
+    fontWeight: "900",
+    color: tokens.colors.green700,
+  },
+  photoActions: {
+    flex: 1,
+    minWidth: 0,
+    gap: tokens.space.sm as any,
+  },
+  photoHint: {
+    fontSize: tokens.font.small,
+    lineHeight: 18,
+    color: tokens.colors.textMuted,
+  },
   fieldGroup: {
     gap: 8,
   },
@@ -311,6 +480,19 @@ const styles = StyleSheet.create({
   secondaryBtnText: {
     color: tokens.colors.text,
     fontSize: 15,
+    fontWeight: "800",
+  },
+  ghostDangerBtn: {
+    backgroundColor: tokens.colors.surface,
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+    borderRadius: tokens.radius.lg,
+    paddingVertical: 12,
+    alignItems: "center",
+  },
+  ghostDangerBtnText: {
+    color: tokens.colors.danger,
+    fontSize: 14,
     fontWeight: "800",
   },
   disabledBtn: {

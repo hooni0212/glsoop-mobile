@@ -4,6 +4,7 @@ import { apiGet } from "@/lib/api";
 import { normalizeApiError, type AppErrorModel } from "@/lib/errors";
 import { buildPostExcerpt } from "@/lib/postContent";
 import { normalizePostRenderImageFields } from "@/lib/postRenderImages";
+import { toAbsoluteProfilePhotoUrl } from "@/lib/profilePhoto";
 import { normalizePublicDisplayName } from "@/lib/publicDisplayName";
 import type { Post } from "@/types/post";
 
@@ -111,6 +112,14 @@ function normalizePost(row: any): Post {
     author: {
       id: authorId || undefined,
       name: authorName,
+      profilePhotoUrl: toAbsoluteProfilePhotoUrl(
+        row?.author_profile_photo_url,
+        row?.authorProfilePhotoUrl
+      ),
+      profilePhotoThumbnailUrl: toAbsoluteProfilePhotoUrl(
+        row?.author_profile_photo_thumbnail_url,
+        row?.authorProfilePhotoThumbnailUrl
+      ),
     },
     stats: {
       likeCount,
