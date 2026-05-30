@@ -4,6 +4,42 @@ const baseConfig = require("./app.json").expo as ExpoConfig;
 
 // iOS buildNumber / Android versionCode를 한 곳에서 같이 관리합니다.
 const MOBILE_BUILD_NUMBER = 37;
+const ADMOB_TEST_ANDROID_APP_ID = "ca-app-pub-3940256099942544~3347511713";
+const ADMOB_TEST_IOS_APP_ID = "ca-app-pub-3940256099942544~1458002511";
+
+function readEnv(name: string) {
+  const value = process.env[name];
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function shouldRequireAdMobAppId(platform: "android" | "ios") {
+  if (process.env.EAS_BUILD_PROFILE !== "production") return false;
+
+  const buildPlatform = readEnv("EAS_BUILD_PLATFORM");
+  if (buildPlatform === "android" || buildPlatform === "ios") {
+    return buildPlatform === platform;
+  }
+
+  return true;
+}
+
+function resolveAdMobAppId(name: string, testAppId: string, platform: "android" | "ios") {
+  const configured = readEnv(name);
+  if (configured) return configured;
+
+  if (shouldRequireAdMobAppId(platform)) {
+    throw new Error(`${name} is required for production AdMob builds.`);
+  }
+
+  return testAppId;
+}
+
+const androidAdMobAppId = resolveAdMobAppId(
+  "ADMOB_ANDROID_APP_ID",
+  ADMOB_TEST_ANDROID_APP_ID,
+  "android"
+);
+const iosAdMobAppId = resolveAdMobAppId("ADMOB_IOS_APP_ID", ADMOB_TEST_IOS_APP_ID, "ios");
 
 export default (): ExpoConfig => ({
   ...baseConfig,
@@ -26,9 +62,21 @@ export default (): ExpoConfig => ({
         granularPermissions: [],
       },
     ],
+    [
+      "react-native-google-mobile-ads",
+      {
+        androidAppId: androidAdMobAppId,
+        iosAppId: iosAdMobAppId,
+      },
+    ],
   ],
   ios: {
     ...baseConfig.ios,
+    infoPlist: {
+      ...(baseConfig.ios?.infoPlist ?? {}),
+      NSUserTrackingUsageDescription:
+        "맞춤형 광고와 광고 성과 측정을 위해 앱 활동 사용 권한을 요청할 수 있습니다.",
+    },
     buildNumber: String(MOBILE_BUILD_NUMBER),
   },
   android: {
@@ -39,5 +87,12 @@ export default (): ExpoConfig => ({
   extra: {
     ...baseConfig.extra,
     mobileBuildNumber: MOBILE_BUILD_NUMBER,
+    adMob: {
+      androidAppId: androidAdMobAppId,
+      iosAppId: iosAdMobAppId,
+      usingTestAppIds:
+        androidAdMobAppId === ADMOB_TEST_ANDROID_APP_ID ||
+        iosAdMobAppId === ADMOB_TEST_IOS_APP_ID,
+    },
   },
 });

@@ -28,6 +28,13 @@ import {
 import { deletePost, getEditablePost } from "@/services/postService";
 import { blockUserById, pickSafetyReasons, reportPost } from "@/services/safetyService";
 import { logShareEvent } from "@/services/shareService";
+import {
+  consumePhotoSave,
+  getPhotoSavePlatform,
+  getPhotoSavePolicy,
+  PhotoSavePolicy,
+  recordPhotoSaveRewardedGrant,
+} from "@/services/photoSaveService";
 import { buildAuthRoute } from "@/lib/authRedirect";
 import { formatKstDateKorean } from "@/lib/dateTime";
 import { ApiError } from "@/lib/errors";
@@ -37,6 +44,7 @@ import { logger } from "@/lib/logger";
 import { normalizePostBackgroundTemplateId } from "@/lib/postBackgroundTemplates";
 import { resolvePostLayout } from "@/lib/postLayout";
 import { resolvePostRenderImages } from "@/lib/postRenderImages";
+import { showRewardedPhotoSaveAd } from "@/lib/rewardedPhotoSaveAd";
 import { tokens } from "@/theme/tokens";
 import type { Post } from "@/types/post";
 import * as FileSystem from "expo-file-system/legacy";
@@ -217,6 +225,46 @@ function getShareFailureMessage(mode: ShareMode, error: unknown) {
 }
 
 type ShareMode = "imageShare" | "imageSave" | "link";
+const PHOTO_SAVE_AD_CANCELLED = "PHOTO_SAVE_AD_CANCELLED";
+
+function createPhotoSaveAdCancelledError() {
+  const error = new Error("사진 저장 광고 시청을 취소했어요.");
+  (error as Error & { code?: string }).code = PHOTO_SAVE_AD_CANCELLED;
+  return error;
+}
+
+function isPhotoSaveAdCancelled(error: unknown) {
+  return (
+    error instanceof Error &&
+    (error as Error & { code?: string }).code === PHOTO_SAVE_AD_CANCELLED
+  );
+}
+
+function confirmRewardedPhotoSave(policy: PhotoSavePolicy) {
+  const freeLimit =
+    typeof policy.free_daily_limit === "number"
+      ? `하루 ${policy.free_daily_limit}회 무료 저장을 모두 사용했어요.`
+      : "무료 저장 횟수를 모두 사용했어요.";
+
+  return new Promise<boolean>((resolve) => {
+    let settled = false;
+    const settle = (value: boolean) => {
+      if (settled) return;
+      settled = true;
+      resolve(value);
+    };
+
+    Alert.alert(
+      "광고 보고 사진 저장",
+      `${freeLimit}\n광고를 끝까지 보면 이 글 이미지를 사진 앱에 저장할 수 있어요.`,
+      [
+        { text: "나중에", style: "cancel", onPress: () => settle(false) },
+        { text: "광고 보기", onPress: () => settle(true) },
+      ],
+      { cancelable: true, onDismiss: () => settle(false) }
+    );
+  });
+}
 
 export default function PostDetail() {
   // 상세 화면은 Tab 도크가 아닌 Action 도크 규격을 사용
@@ -747,6 +795,73 @@ export default function PostDetail() {
     }
   };
 
+  const ensurePhotoSaveAccess = async ({
+    currentPostId,
+    requestId,
+    meta,
+  }: {
+    currentPostId: string;
+    requestId: string;
+    meta: Record<string, unknown>;
+  }) => {
+    const platform = getPhotoSavePlatform();
+    if (!platform) {
+      return { accessType: "free", policy: null };
+    }
+
+    if (!token) {
+      promptAuthForAction("사진 저장은 로그인한 회원만 사용할 수 있어요.");
+      throw createPhotoSaveAdCancelledError();
+    }
+
+    const policy = await getPhotoSavePolicy(platform);
+    if (policy.can_save_without_ad) {
+      const method = policy.is_premium ? "premium" : "free";
+      const consumed = await consumePhotoSave({
+        postId: currentPostId,
+        platform,
+        method,
+        requestId,
+        meta,
+      });
+      return { accessType: consumed.event.access_type, policy: consumed.policy };
+    }
+
+    if (!policy.requires_ad || !policy.rewarded_ad_unit_id) {
+      throw new Error("사진 저장 광고를 준비하지 못했어요. 잠시 후 다시 시도해주세요.");
+    }
+
+    const shouldShowAd = await confirmRewardedPhotoSave(policy);
+    if (!shouldShowAd) {
+      throw createPhotoSaveAdCancelledError();
+    }
+
+    const reward = await showRewardedPhotoSaveAd(policy.rewarded_ad_unit_id);
+    const grant = await recordPhotoSaveRewardedGrant({
+      postId: currentPostId,
+      platform,
+      adUnitId: policy.rewarded_ad_unit_id,
+      rewardType: reward.type,
+      rewardAmount: reward.amount,
+      meta: {
+        ...meta,
+        requested_ad_unit_id: reward.requestedAdUnitId,
+        shown_ad_unit_id: reward.adUnitId,
+        used_test_ad_unit: reward.usedTestAdUnit,
+      },
+    });
+    const consumed = await consumePhotoSave({
+      postId: currentPostId,
+      platform,
+      method: "rewarded_ad",
+      rewardedGrantId: grant.id,
+      requestId,
+      meta,
+    });
+
+    return { accessType: consumed.event.access_type, policy: consumed.policy };
+  };
+
   const sharePost = async (mode: ShareMode) => {
     if (!post) return;
     if (shareSubmitting) return;
@@ -771,7 +886,10 @@ export default function PostDetail() {
           ? "share_modal_image_save"
           : "share_modal_link";
 
-    const logShareEventSafely = (result: "shared" | "dismissed" | "failed", meta?: Record<string, unknown>) => {
+    const logShareEventSafely = (
+      result: "shared" | "dismissed" | "failed",
+      meta?: Record<string, unknown>
+    ) => {
       void logShareEvent({
         postId: post.id,
         platform,
@@ -863,6 +981,17 @@ export default function PostDetail() {
             return;
           }
 
+          const photoSaveAccess = await ensurePhotoSaveAccess({
+            currentPostId: post.id,
+            requestId,
+            meta: {
+              ...baseMeta,
+              image_format: "png",
+              image_template: shareTemplate,
+              image_url: imageUrl,
+            },
+          });
+
           await MediaLibrary.saveToLibraryAsync(imageUri);
           setPhotoSavePermissionDeniedOnce(false);
           logShareEventSafely("shared", {
@@ -871,6 +1000,8 @@ export default function PostDetail() {
             image_template: shareTemplate,
             image_url: imageUrl,
             action: "saved_to_library",
+            photo_save_access_type: photoSaveAccess.accessType,
+            photo_save_free_remaining: photoSaveAccess.policy?.free_remaining ?? null,
           });
           showToast("이미지를 사진 앱에 저장했어요.", { tone: "success" });
           return;
@@ -918,6 +1049,22 @@ export default function PostDetail() {
         activity_type: result.activityType || null,
       });
     } catch (shareError) {
+      if (mode === "imageSave" && isPhotoSaveAdCancelled(shareError)) {
+        logShareEventSafely("dismissed", {
+          ...baseMeta,
+          action: "photo_save_ad_cancelled",
+        });
+        return;
+      }
+
+      if (
+        shareError instanceof ApiError &&
+        (shareError.status === 401 || shareError.status === 403)
+      ) {
+        await handleAuthError();
+        return;
+      }
+
       logShareEventSafely("failed", {
         ...baseMeta,
         error: shareError instanceof Error ? shareError.message : "unknown",
