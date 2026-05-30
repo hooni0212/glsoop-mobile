@@ -612,7 +612,24 @@ export default function Author({
                 <Ionicons name="heart" size={13} color={tokens.colors.textMuted} />
                 <Text style={authorScreenStyles.statText}>{totalLikes}</Text>
               </View>
-              <Text style={authorScreenStyles.statText}>팔로워 {followerCount}</Text>
+              {showProfileCustomize ? (
+                <Pressable
+                  onPress={() => router.push("/me/followers" as never)}
+                  style={authorScreenStyles.statLink}
+                  testID="author-own-followers-toggle"
+                  accessibilityRole="button"
+                  accessibilityLabel={`팔로워 ${followerCount}명 목록 보기`}
+                >
+                  <Text style={authorScreenStyles.statLinkText}>팔로워 {followerCount}</Text>
+                  <Ionicons
+                    name="chevron-forward"
+                    size={13}
+                    color={tokens.colors.textFaint}
+                  />
+                </Pressable>
+              ) : (
+                <Text style={authorScreenStyles.statText}>팔로워 {followerCount}</Text>
+              )}
               {showProfileCustomize ? (
                 <Pressable
                   onPress={() => router.push("/me/followings")}

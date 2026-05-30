@@ -118,6 +118,13 @@ function RootLayoutContent() {
                     animation: "slide_from_right",
                   }}
                 />
+                <Stack.Screen
+                  name="me/followers"
+                  options={{
+                    headerShown: false,
+                    animation: "slide_from_right",
+                  }}
+                />
                 <Stack.Screen name="ui-kit" options={{ headerShown: false }} />
               </Stack>
               <PostLoginPreferencesPrompt />
