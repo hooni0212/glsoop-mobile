@@ -118,12 +118,14 @@ type SetupApiRoutesOptions = {
   recentShouldFail?: boolean;
   shareEventStatus?: number;
   shareEventRequests?: Array<Record<string, unknown>>;
+  entitlements?: Array<Record<string, unknown>>;
 };
 
 async function setupApiRoutes(page: Page, options?: SetupApiRoutesOptions) {
   const recentShouldFail = Boolean(options?.recentShouldFail);
   const shareEventStatus = options?.shareEventStatus ?? 201;
   const shareEventRequests = options?.shareEventRequests;
+  const entitlements = options?.entitlements ?? [];
 
   await page.route("**/api/runtime-config", async (route) => {
     await route.fulfill({
@@ -150,6 +152,17 @@ async function setupApiRoutes(page: Page, options?: SetupApiRoutesOptions) {
       status: 200,
       contentType: "application/json",
       body: JSON.stringify({ ok: true, id: 1, name: "tester", nickname: "tester" }),
+    });
+  });
+
+  await page.route("**/api/entitlements/me", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        ok: true,
+        entitlements,
+      }),
     });
   });
 

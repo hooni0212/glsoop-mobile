@@ -4,6 +4,7 @@ export type NotificationType =
   | "post_reaction"
   | "post_comment"
   | "comment_reply"
+  | "following_new_post"
   | "new_follower"
   | "admin_operational_alert"
   | "marketing_campaign";
@@ -78,6 +79,7 @@ function normalizeType(value: unknown): NotificationType {
     raw === "post_reaction" ||
     raw === "post_comment" ||
     raw === "comment_reply" ||
+    raw === "following_new_post" ||
     raw === "new_follower" ||
     raw === "admin_operational_alert" ||
     raw === "marketing_campaign"

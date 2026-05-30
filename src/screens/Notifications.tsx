@@ -41,6 +41,7 @@ function iconForType(type: NotificationType) {
   if (type === "post_reaction") return "heart-outline";
   if (type === "post_comment") return "chatbubble-outline";
   if (type === "comment_reply") return "return-down-forward-outline";
+  if (type === "following_new_post") return "newspaper-outline";
   if (type === "admin_operational_alert") return "alert-circle-outline";
   if (type === "marketing_campaign") return "leaf-outline";
   return "person-add-outline";
@@ -258,7 +259,7 @@ export default function NotificationsScreen() {
       <View style={styles.emptyWrap}>
         <AppEmpty
           title="아직 알림이 없어요"
-          description="내 글의 댓글, 답글, 새 팔로워 소식이 생기면 여기에 모아둘게요."
+          description="내 글의 댓글, 답글, 새 팔로워와 팔로잉 작가의 새 글 소식이 생기면 여기에 모아둘게요."
         />
       </View>
     );

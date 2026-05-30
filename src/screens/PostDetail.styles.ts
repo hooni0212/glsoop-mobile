@@ -633,6 +633,33 @@ export function createPostDetailStyles(actionBarHeight: number, topInset = 0) {
       fontSize: 13,
       fontWeight: "800",
     },
+    shareSignatureToggle: {
+      marginTop: 14,
+      borderRadius: tokens.radius.md,
+      borderWidth: 1,
+      borderColor: tokens.colors.green100,
+      backgroundColor: tokens.colors.green050,
+      paddingHorizontal: tokens.space.md,
+      paddingVertical: 12,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: tokens.space.sm as any,
+    },
+    shareSignatureTextWrap: {
+      flex: 1,
+      minWidth: 0,
+    },
+    shareSignatureTitle: {
+      color: tokens.colors.green900,
+      fontSize: tokens.font.small,
+      fontWeight: "900",
+    },
+    shareSignatureHint: {
+      marginTop: 3,
+      color: tokens.colors.textMuted,
+      fontSize: 12,
+      fontWeight: "700",
+    },
     modalActionList: {
       marginTop: 16,
       gap: 10,
