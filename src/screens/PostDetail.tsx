@@ -113,16 +113,6 @@ function buildPostPermalink(postId: string) {
   return `${releaseConfig.siteUrl}/html/post.html?postId=${encodedPostId}`;
 }
 
-function buildShareText({
-  title,
-  permalink,
-}: {
-  title: string;
-  permalink: string;
-}) {
-  return `${title}\n${permalink}`;
-}
-
 function createShareFileName(postId: string) {
   const safePostId = postId.replace(/[^a-zA-Z0-9_-]/g, "-") || "card";
   return `glsoop_post_${safePostId}_${Date.now()}.png`;
@@ -224,6 +214,12 @@ function getShareFailureMessage(mode: ShareMode, error: unknown) {
       : "이미지 저장에 실패했어요. 잠시 후 다시 시도해주세요.";
   }
   return "공유에 실패했어요. 잠시 후 다시 시도해주세요.";
+}
+
+function getShareProgressMessage(mode: ShareMode) {
+  if (mode === "imageSave") return "이미지를 사진 앱에 저장하고 있어요.";
+  if (mode === "imageShare") return "이미지를 준비하고 있어요.";
+  return "공유 화면을 여는 중이에요.";
 }
 
 type ShareMode = "imageShare" | "imageSave" | "link";
@@ -799,10 +795,7 @@ export default function PostDetail() {
     const shareContent = content.trim();
     const permalink = buildPostPermalink(post.id);
     const isImageMode = mode === "imageShare" || mode === "imageSave";
-    const shareMessage = buildShareText({
-      title: shareTitle,
-      permalink,
-    });
+    const shareMessage = permalink;
     const requestId = createShareRequestId(post.id);
     const shouldCloseShareModal = shareModalVisible;
     const platform = Platform.OS === "web" ? "web" : "mobile";
@@ -850,6 +843,7 @@ export default function PostDetail() {
           format: "png",
           template: shareTemplate,
           authorSignature: includeAuthorSignature,
+          authorSignaturePosition: "bottomLeft",
         });
         const imageUri = await downloadPostShareImage(
           post.id,
@@ -1090,6 +1084,11 @@ export default function PostDetail() {
   const refreshDetail = React.useCallback(async () => {
     await refetch();
   }, [refetch]);
+
+  const showBlockingShareProgress = Boolean(shareSubmitting && !shareModalVisible);
+  const blockingShareProgressMessage = shareSubmitting
+    ? getShareProgressMessage(shareSubmitting)
+    : "";
 
   return (
     <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
@@ -1568,6 +1567,21 @@ export default function PostDetail() {
         </View>
       </Modal>
 
+      <Modal
+        visible={showBlockingShareProgress}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+      >
+        <View style={styles.shareBlockingOverlay}>
+          <View style={styles.shareBlockingCard}>
+            <ActivityIndicator size="large" color={tokens.colors.green700} />
+            <Text style={styles.shareBlockingTitle}>처리 중이에요</Text>
+            <Text style={styles.shareBlockingText}>{blockingShareProgressMessage}</Text>
+          </View>
+        </View>
+      </Modal>
+
       <Modal visible={shareModalVisible} transparent animationType="fade">
         <View style={styles.bookmarkModalOverlay}>
           <View style={styles.bookmarkModalCard}>
@@ -1579,9 +1593,7 @@ export default function PostDetail() {
               <View style={styles.shareModalProgressRow}>
                 <ActivityIndicator size="small" color={tokens.colors.green700} />
                 <Text style={styles.shareModalProgressText}>
-                  {shareSubmitting === "imageShare"
-                    ? "이미지를 준비하고 있어요."
-                    : "공유 화면을 여는 중이에요."}
+                  {getShareProgressMessage(shareSubmitting)}
                 </Text>
               </View>
             ) : null}
