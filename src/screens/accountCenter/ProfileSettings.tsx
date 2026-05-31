@@ -1,10 +1,10 @@
 import React from "react";
 import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { Image } from "expo-image";
+import * as ImagePicker from "expo-image-picker";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, usePathname } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { Image } from "expo-image";
-import * as ImagePicker from "expo-image-picker";
 
 import { useToast } from "@/feedback/ToastProvider";
 import { AppEmpty } from "@/components/state/AppEmpty";
@@ -13,11 +13,12 @@ import { AppLoading } from "@/components/state/AppLoading";
 import { buildAuthRoute } from "@/lib/authRedirect";
 import { apiGet, apiPut } from "@/lib/api";
 import { normalizeApiError } from "@/lib/errors";
-import { toAbsoluteProfilePhotoUrl } from "@/lib/profilePhoto";
 import { type MeResponse, type UpdateMeResponse } from "@/features/me/accountCenter";
 import {
   deleteProfilePhoto,
+  normalizeMeProfilePhoto,
   uploadProfilePhoto,
+  type ProfilePhoto,
 } from "@/services/profilePhotoService";
 import { tokens } from "@/theme/tokens";
 
@@ -31,8 +32,10 @@ export default function AccountCenterProfileSettingsScreen() {
   const [bio, setBio] = React.useState("");
   const [about, setAbout] = React.useState("");
   const [saving, setSaving] = React.useState(false);
-  const [photoBusy, setPhotoBusy] = React.useState(false);
   const [message, setMessage] = React.useState<string | null>(null);
+  const [profilePhoto, setProfilePhoto] = React.useState<ProfilePhoto | null>(null);
+  const [photoUploadAllowed, setPhotoUploadAllowed] = React.useState(false);
+  const [photoBusy, setPhotoBusy] = React.useState(false);
 
   const loadMe = React.useCallback(async () => {
     setLoading(true);
@@ -43,9 +46,13 @@ export default function AccountCenterProfileSettingsScreen() {
       setNickname(response.nickname ?? "");
       setBio(response.bio ?? "");
       setAbout(response.about ?? "");
+      setProfilePhoto(normalizeMeProfilePhoto(response));
+      setPhotoUploadAllowed(Boolean(response.profile_photo_upload_allowed));
     } catch (e) {
       setError(normalizeApiError(e));
       setMe(null);
+      setProfilePhoto(null);
+      setPhotoUploadAllowed(false);
     } finally {
       setLoading(false);
     }
@@ -89,78 +96,104 @@ export default function AccountCenterProfileSettingsScreen() {
   }
 
   async function onPickProfilePhoto() {
-    if (!me?.profile_photo_upload_allowed) {
+    if (!photoUploadAllowed) {
+      showToast("프로필 사진 업로드는 프리미엄에서 사용할 수 있어요.", { tone: "error" });
+      return;
+    }
+
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
       Alert.alert(
-        "프리미엄 기능",
-        "프로필 사진 업로드는 프리미엄에서 사용할 수 있어요."
+        "사진 접근 권한이 필요해요",
+        "프로필 사진으로 사용할 이미지를 선택하려면 사진 접근 권한을 허용해주세요."
       );
       return;
     }
 
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.9,
+      selectionLimit: 1,
+    });
+
+    if (result.canceled) return;
+
+    const asset = result.assets[0];
+    if (!asset?.uri) {
+      showToast("선택한 사진을 읽지 못했어요.", { tone: "error" });
+      return;
+    }
+
+    setPhotoBusy(true);
+    setMessage(null);
     try {
-      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!permission.granted) {
-        Alert.alert("사진 접근 권한", "프로필 사진을 고르려면 사진 보관함 접근 권한이 필요해요.");
-        return;
-      }
-
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ["images"],
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.88,
-      });
-
-      if (result.canceled || !result.assets?.[0]?.uri) return;
-      const asset = result.assets[0];
-
-      setPhotoBusy(true);
-      setMessage(null);
-      await uploadProfilePhoto({
+      const response = await uploadProfilePhoto({
         uri: asset.uri,
         fileName: asset.fileName,
         mimeType: asset.mimeType,
       });
+      const nextPhoto = response.profile_photo ?? null;
+      setProfilePhoto(nextPhoto);
+      setMe((prev) =>
+        prev
+          ? {
+              ...prev,
+              profile_photo_url: nextPhoto?.url ?? null,
+              profile_photo_thumbnail_url: nextPhoto?.thumbnail_url ?? null,
+              profile_photo_updated_at: nextPhoto?.updated_at ?? null,
+            }
+          : prev
+      );
       showToast("프로필 사진을 저장했어요.", { tone: "success" });
-      await loadMe();
     } catch (e) {
       const normalized = normalizeApiError(e);
       if (normalized.kind === "auth") {
         router.replace(buildAuthRoute("/(auth)/login", pathname));
         return;
       }
-      Alert.alert("프로필 사진", normalized.description || normalized.title);
+      showToast(normalized.description || normalized.title, { tone: "error" });
     } finally {
       setPhotoBusy(false);
     }
   }
 
   function onDeleteProfilePhoto() {
-    if (!me?.profile_photo_url && !me?.profile_photo_thumbnail_url) return;
+    if (!profilePhoto || photoBusy) return;
 
-    Alert.alert("프로필 사진 삭제", "현재 프로필 사진을 삭제할까요?", [
+    Alert.alert("프로필 사진을 삭제할까요?", "현재 프로필 사진이 기본 이니셜로 돌아갑니다.", [
       { text: "취소", style: "cancel" },
       {
         text: "삭제",
         style: "destructive",
-        onPress: () => {
-          void (async () => {
-            setPhotoBusy(true);
-            try {
-              await deleteProfilePhoto();
-              showToast("프로필 사진을 삭제했어요.", { tone: "success" });
-              await loadMe();
-            } catch (e) {
-              const normalized = normalizeApiError(e);
-              if (normalized.kind === "auth") {
-                router.replace(buildAuthRoute("/(auth)/login", pathname));
-                return;
-              }
-              Alert.alert("프로필 사진", normalized.description || normalized.title);
-            } finally {
-              setPhotoBusy(false);
+        onPress: async () => {
+          setPhotoBusy(true);
+          setMessage(null);
+          try {
+            await deleteProfilePhoto();
+            setProfilePhoto(null);
+            setMe((prev) =>
+              prev
+                ? {
+                    ...prev,
+                    profile_photo_url: null,
+                    profile_photo_thumbnail_url: null,
+                    profile_photo_updated_at: null,
+                  }
+                : prev
+            );
+            showToast("프로필 사진을 삭제했어요.", { tone: "success" });
+          } catch (e) {
+            const normalized = normalizeApiError(e);
+            if (normalized.kind === "auth") {
+              router.replace(buildAuthRoute("/(auth)/login", pathname));
+              return;
             }
-          })();
+            showToast(normalized.description || normalized.title, { tone: "error" });
+          } finally {
+            setPhotoBusy(false);
+          }
         },
       },
     ]);
@@ -206,54 +239,78 @@ export default function AccountCenterProfileSettingsScreen() {
     );
   }
 
-  const profilePhotoUrl = toAbsoluteProfilePhotoUrl(
-    me?.profile_photo_thumbnail_url,
-    me?.profile_photo_url
-  );
-  const canUploadProfilePhoto = Boolean(me?.profile_photo_upload_allowed);
-  const profileInitial = (nickname.trim() || me?.nickname || me?.name || "글").trim().slice(0, 1) || "글";
-
   return (
     <SafeAreaView style={styles.safe}>
       <TopBar title="프로필 및 공개 정보" />
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>프로필 사진</Text>
+          <View style={styles.photoHeaderRow}>
+            <View style={styles.photoHeaderCopy}>
+              <Text style={styles.cardTitle}>프로필 사진</Text>
+              <Text style={styles.cardDescription}>
+                JPG, PNG, WebP 이미지를 정사각형으로 맞춰 저장해요.
+              </Text>
+            </View>
+            {photoUploadAllowed ? (
+              <View style={styles.premiumPill}>
+                <Ionicons name="sparkles" size={13} color={tokens.colors.green700} />
+                <Text style={styles.premiumPillText}>프리미엄</Text>
+              </View>
+            ) : null}
+          </View>
+
           <View style={styles.photoRow}>
             <View style={styles.photoPreview}>
-              {profilePhotoUrl ? (
+              {profilePhoto?.thumbnail_url || profilePhoto?.url ? (
                 <Image
-                  source={{ uri: profilePhotoUrl }}
+                  source={{ uri: profilePhoto.thumbnail_url || profilePhoto.url }}
                   style={styles.photoImage}
                   contentFit="cover"
-                  transition={120}
                 />
               ) : (
-                <Text style={styles.photoInitial}>{profileInitial}</Text>
+                <Text style={styles.photoInitial}>
+                  {(nickname.trim() || me?.name || "글").slice(0, 1)}
+                </Text>
               )}
             </View>
-            <View style={styles.photoActions}>
-              <Pressable
-                onPress={() => void onPickProfilePhoto()}
-                disabled={photoBusy}
-                style={[styles.secondaryBtn, photoBusy && styles.disabledBtn]}
-              >
-                <Text style={styles.secondaryBtnText}>
-                  {photoBusy ? "처리 중..." : profilePhotoUrl ? "사진 변경" : "사진 업로드"}
+
+            <View style={styles.photoActionColumn}>
+              {!photoUploadAllowed ? (
+                <Text style={styles.photoHint}>
+                  프리미엄 계정에서 프로필 사진을 사용할 수 있어요.
                 </Text>
-              </Pressable>
-              {profilePhotoUrl ? (
+              ) : null}
+              <View style={styles.photoButtonRow}>
                 <Pressable
-                  onPress={onDeleteProfilePhoto}
-                  disabled={photoBusy}
-                  style={[styles.ghostDangerBtn, photoBusy && styles.disabledBtn]}
+                  onPress={() => void onPickProfilePhoto()}
+                  disabled={photoBusy || !photoUploadAllowed}
+                  style={({ pressed }) => [
+                    styles.photoPrimaryBtn,
+                    (photoBusy || !photoUploadAllowed) && styles.disabledBtn,
+                    pressed && !photoBusy && photoUploadAllowed && styles.photoBtnPressed,
+                  ]}
                 >
-                  <Text style={styles.ghostDangerBtnText}>삭제</Text>
+                  <Ionicons name="camera-outline" size={17} color="#fff" />
+                  <Text style={styles.photoPrimaryBtnText}>
+                    {photoBusy ? "처리 중..." : profilePhoto ? "사진 변경" : "사진 선택"}
+                  </Text>
                 </Pressable>
-              ) : null}
-              {!canUploadProfilePhoto ? (
-                <Text style={styles.photoHint}>프리미엄에서 사용할 수 있어요.</Text>
-              ) : null}
+
+                {profilePhoto ? (
+                  <Pressable
+                    onPress={onDeleteProfilePhoto}
+                    disabled={photoBusy}
+                    style={({ pressed }) => [
+                      styles.photoSecondaryBtn,
+                      photoBusy && styles.disabledBtn,
+                      pressed && !photoBusy && styles.photoBtnPressed,
+                    ]}
+                  >
+                    <Ionicons name="trash-outline" size={17} color={tokens.colors.text} />
+                    <Text style={styles.photoSecondaryBtnText}>삭제</Text>
+                  </Pressable>
+                ) : null}
+              </View>
             </View>
           </View>
         </View>
@@ -394,18 +451,44 @@ const styles = StyleSheet.create({
     color: tokens.colors.textMuted,
     lineHeight: 20,
   },
+  photoHeaderRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: tokens.space.md as any,
+  },
+  photoHeaderCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+  premiumPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    borderWidth: 1,
+    borderColor: tokens.colors.borderStrong,
+    borderRadius: tokens.radius.pill,
+    backgroundColor: tokens.colors.green050,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  premiumPillText: {
+    color: tokens.colors.green700,
+    fontSize: 12,
+    fontWeight: "900",
+  },
   photoRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: tokens.space.md as any,
   },
   photoPreview: {
-    width: 86,
-    height: 86,
-    borderRadius: 28,
+    width: 84,
+    height: 84,
+    borderRadius: 42,
     borderWidth: 1,
     borderColor: tokens.colors.borderStrong,
-    backgroundColor: tokens.colors.surface,
+    backgroundColor: tokens.colors.green050,
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
@@ -415,19 +498,58 @@ const styles = StyleSheet.create({
     height: "100%",
   },
   photoInitial: {
+    color: tokens.colors.green900,
     fontSize: 30,
     fontWeight: "900",
-    color: tokens.colors.green700,
   },
-  photoActions: {
+  photoActionColumn: {
     flex: 1,
-    minWidth: 0,
     gap: tokens.space.sm as any,
   },
   photoHint: {
-    fontSize: tokens.font.small,
-    lineHeight: 18,
     color: tokens.colors.textMuted,
+    fontSize: tokens.font.small,
+    lineHeight: 19,
+  },
+  photoButtonRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: tokens.space.sm as any,
+  },
+  photoPrimaryBtn: {
+    minHeight: 44,
+    borderRadius: tokens.radius.lg,
+    backgroundColor: tokens.colors.green900,
+    paddingHorizontal: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 7,
+  },
+  photoPrimaryBtnText: {
+    color: tokens.colors.textInverse,
+    fontSize: 14,
+    fontWeight: "900",
+  },
+  photoSecondaryBtn: {
+    minHeight: 44,
+    borderRadius: tokens.radius.lg,
+    borderWidth: 1,
+    borderColor: tokens.colors.borderStrong,
+    backgroundColor: tokens.colors.surface,
+    paddingHorizontal: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 7,
+  },
+  photoSecondaryBtnText: {
+    color: tokens.colors.text,
+    fontSize: 14,
+    fontWeight: "900",
+  },
+  photoBtnPressed: {
+    opacity: 0.82,
   },
   fieldGroup: {
     gap: 8,
@@ -480,19 +602,6 @@ const styles = StyleSheet.create({
   secondaryBtnText: {
     color: tokens.colors.text,
     fontSize: 15,
-    fontWeight: "800",
-  },
-  ghostDangerBtn: {
-    backgroundColor: tokens.colors.surface,
-    borderWidth: 1,
-    borderColor: tokens.colors.border,
-    borderRadius: tokens.radius.lg,
-    paddingVertical: 12,
-    alignItems: "center",
-  },
-  ghostDangerBtnText: {
-    color: tokens.colors.danger,
-    fontSize: 14,
     fontWeight: "800",
   },
   disabledBtn: {

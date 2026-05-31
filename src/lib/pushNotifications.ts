@@ -161,7 +161,10 @@ export function resolveNotificationTarget(data: Record<string, unknown>) {
   const fallbackId = asPostId(data.id);
   if (
     fallbackId &&
-    (type === "post_reaction" || type === "post_comment" || type === "comment_reply")
+    (type === "post_reaction" ||
+      type === "post_comment" ||
+      type === "comment_reply" ||
+      type === "following_new_post")
   ) {
     return `/posts/${fallbackId}` as Href;
   }

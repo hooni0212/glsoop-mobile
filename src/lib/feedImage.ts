@@ -322,6 +322,8 @@ type RenderedPostShareImageOptions = {
   format?: RenderedPostImageFormat;
   template?: PostBackgroundTemplateId;
   scale?: 1 | 2;
+  authorSignature?: boolean;
+  authorSignaturePosition?: "bottomLeft" | "bottomRight";
 };
 
 export function buildRenderedPostShareImageUrl(
@@ -333,6 +335,12 @@ export function buildRenderedPostShareImageUrl(
   query.set("scale", String(options.scale || 2));
   if (options.format) {
     query.set("format", options.format);
+  }
+  if (options.authorSignature) {
+    query.set("author_signature", "1");
+  }
+  if (options.authorSignaturePosition) {
+    query.set("author_signature_position", options.authorSignaturePosition);
   }
 
   return buildApiUrl(`/api/feed-images/share/post/${encodeURIComponent(postId)}?${query.toString()}`);

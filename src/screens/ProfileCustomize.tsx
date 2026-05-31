@@ -1,5 +1,6 @@
 import React from "react";
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Image } from "expo-image";
 import { router, useLocalSearchParams, usePathname } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -10,8 +11,14 @@ import { AppLoading } from "@/components/state/AppLoading";
 import { buildAuthRoute } from "@/lib/authRedirect";
 import { useToast } from "@/feedback/ToastProvider";
 import { refreshMyCosmetics, useMyCosmetics } from "@/features/cosmetics/useMyCosmetics";
+import { type MeResponse } from "@/features/me/accountCenter";
+import { apiGet } from "@/lib/api";
 import { normalizeApiError } from "@/lib/errors";
 import { updateProfileCosmetics } from "@/services/cosmeticsService";
+import {
+  normalizeMeProfilePhoto,
+  type ProfilePhoto,
+} from "@/services/profilePhotoService";
 import { tokens } from "@/theme/tokens";
 import {
   COSMETIC_STICKER_SLOTS,
@@ -192,7 +199,22 @@ export default function ProfileCustomizeScreen() {
   );
   const [dirty, setDirty] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
+  const [profilePhoto, setProfilePhoto] = React.useState<ProfilePhoto | null>(null);
   const hydratedRef = React.useRef(false);
+
+  React.useEffect(() => {
+    let mounted = true;
+    apiGet<MeResponse>("/api/me")
+      .then((response) => {
+        if (mounted) setProfilePhoto(normalizeMeProfilePhoto(response));
+      })
+      .catch(() => {
+        if (mounted) setProfilePhoto(null);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   React.useEffect(() => {
     if (!loaded || loading || hydratedRef.current) return;
@@ -412,7 +434,28 @@ export default function ProfileCustomizeScreen() {
           showcaseBadges={selectedShowcaseBadges}
           stickers={selection.header_stickers}
           stickerInventory={inventory.stickers}
+          profilePhoto={profilePhoto}
         />
+
+        <Pressable
+          onPress={() => router.push("/account-center/profile")}
+          style={({ pressed }) => [
+            styles.profilePhotoShortcut,
+            pressed && styles.choiceChipPressed,
+          ]}
+          testID="profile-photo-settings-link"
+        >
+          <View style={styles.profilePhotoShortcutIcon}>
+            <Ionicons name="camera-outline" size={18} color={tokens.colors.green900} />
+          </View>
+          <View style={styles.profilePhotoShortcutCopy}>
+            <Text style={styles.profilePhotoShortcutTitle}>프로필 사진 변경</Text>
+            <Text style={styles.profilePhotoShortcutText}>
+              사진 선택과 삭제는 공개 프로필 편집에서 할 수 있어요.
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={tokens.colors.textMuted} />
+        </Pressable>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>프로필 분위기</Text>
@@ -598,12 +641,14 @@ function ProfilePreview({
   showcaseBadges,
   stickers,
   stickerInventory,
+  profilePhoto,
 }: {
   background: CosmeticItem | null;
   primaryBadge: CosmeticItem | null;
   showcaseBadges: CosmeticItem[];
   stickers: ProfileCosmeticsState["header_stickers"];
   stickerInventory: CosmeticItem[];
+  profilePhoto: ProfilePhoto | null;
 }) {
   const tone = backgroundTone(background?.key);
   const stickerByKey = React.useMemo(
@@ -615,6 +660,7 @@ function ProfilePreview({
   );
   const previewBadges = showcaseBadges.slice(0, 3);
   const remainingBadgeCount = Math.max(0, showcaseBadges.length - previewBadges.length);
+  const profilePhotoUrl = profilePhoto?.thumbnail_url || profilePhoto?.url || null;
 
   return (
     <View
@@ -658,7 +704,15 @@ function ProfilePreview({
             { borderColor: tone.borderColor, backgroundColor: "rgba(255,255,255,0.72)" },
           ]}
         >
-          <Text style={styles.previewAvatarText}>글</Text>
+          {profilePhotoUrl ? (
+            <Image
+              source={{ uri: profilePhotoUrl }}
+              style={styles.previewAvatarImage}
+              contentFit="cover"
+            />
+          ) : (
+            <Text style={styles.previewAvatarText}>글</Text>
+          )}
         </View>
 
         <View
@@ -1012,6 +1066,41 @@ const styles = StyleSheet.create({
     color: tokens.colors.textMuted,
     lineHeight: 18,
   },
+  profilePhotoShortcut: {
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: tokens.colors.borderStrong,
+    backgroundColor: tokens.colors.surfaceStrong,
+    padding: tokens.space.md,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: tokens.space.sm as any,
+  },
+  profilePhotoShortcutIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: tokens.colors.green050,
+  },
+  profilePhotoShortcutCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  profilePhotoShortcutTitle: {
+    ...NON_SELECTABLE_TEXT,
+    color: tokens.colors.text,
+    fontSize: tokens.font.body,
+    fontWeight: "900",
+  },
+  profilePhotoShortcutText: {
+    ...NON_SELECTABLE_TEXT,
+    color: tokens.colors.textMuted,
+    fontSize: tokens.font.small,
+    lineHeight: 18,
+  },
   previewCard: {
     ...NON_SELECTABLE_TEXT,
     minHeight: 224,
@@ -1069,6 +1158,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
+    overflow: "hidden",
+  },
+  previewAvatarImage: {
+    width: "100%",
+    height: "100%",
   },
   previewAvatarText: {
     ...NON_SELECTABLE_TEXT,

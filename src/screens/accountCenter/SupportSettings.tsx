@@ -113,6 +113,19 @@ export default function AccountCenterSupportSettingsScreen() {
               </View>
               <Ionicons name="chevron-forward" size={18} color={tokens.colors.textMuted} />
             </Pressable>
+
+            <Pressable onPress={() => router.push("/guide" as never)} style={styles.secondaryAction}>
+              <View style={[styles.actionIconWrap, styles.secondaryActionIconWrap]}>
+                <Ionicons name="compass-outline" size={20} color={tokens.colors.text} />
+              </View>
+              <View style={styles.actionCopy}>
+                <Text style={styles.secondaryActionTitle}>앱 가이드 보기</Text>
+                <Text style={styles.secondaryActionDescription}>
+                  읽기, 저장, 공유, 글쓰기 흐름을 빠르게 확인해요.
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={tokens.colors.textMuted} />
+            </Pressable>
           </View>
         </View>
 

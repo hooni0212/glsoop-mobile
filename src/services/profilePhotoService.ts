@@ -1,126 +1,133 @@
-import { apiDelete, apiFormData, apiGet } from "@/lib/api";
-import { toAbsoluteProfilePhotoUrl } from "@/lib/profilePhoto";
+import { apiDelete, apiFormData, apiGet, buildApiUrl } from "@/lib/api";
 
 export type ProfilePhoto = {
   url: string;
-  thumbnailUrl: string;
-  updatedAt: string | null;
+  thumbnail_url?: string | null;
+  updated_at?: string | null;
 };
 
-export type ProfilePhotoStatus = {
-  profilePhoto: ProfilePhoto | null;
-  canUpload: boolean;
-  entitlementKey: string;
-  maxBytes: number;
-  allowedContentTypes: string[];
-};
-
-type RawProfilePhoto = {
-  url?: unknown;
-  thumbnail_url?: unknown;
-  thumbnailUrl?: unknown;
-  updated_at?: unknown;
-  updatedAt?: unknown;
-};
-
-type ProfilePhotoStatusResponse = {
+export type ProfilePhotoStatusResponse = {
   ok?: boolean;
   message?: string;
-  profile_photo?: RawProfilePhoto | null;
-  profilePhoto?: RawProfilePhoto | null;
+  profile_photo?: ProfilePhoto | null;
   can_upload?: boolean;
-  canUpload?: boolean;
   entitlement_key?: string;
-  entitlementKey?: string;
   max_bytes?: number;
-  maxBytes?: number;
-  allowed_content_types?: unknown;
-  allowedContentTypes?: unknown;
+  allowed_content_types?: string[];
 };
 
-type UploadProfilePhotoResponse = {
+export type ProfilePhotoUploadResponse = {
   ok?: boolean;
   message?: string;
-  profile_photo?: RawProfilePhoto | null;
-  profilePhoto?: RawProfilePhoto | null;
+  profile_photo?: ProfilePhoto | null;
 };
 
-function toStringList(value: unknown) {
-  return Array.isArray(value)
-    ? value.map((item) => String(item || "").trim()).filter(Boolean)
-    : [];
-}
-
-export function normalizeProfilePhoto(value: unknown): ProfilePhoto | null {
-  if (!value || typeof value !== "object") return null;
-  const row = value as RawProfilePhoto;
-  const url = toAbsoluteProfilePhotoUrl(row.url);
-  if (!url) return null;
-  const thumbnailUrl = toAbsoluteProfilePhotoUrl(row.thumbnail_url, row.thumbnailUrl) || url;
-  const updatedAt =
-    typeof row.updated_at === "string"
-      ? row.updated_at
-      : typeof row.updatedAt === "string"
-        ? row.updatedAt
-        : null;
-
-  return {
-    url,
-    thumbnailUrl,
-    updatedAt,
-  };
-}
-
-export async function getProfilePhotoStatus(): Promise<ProfilePhotoStatus> {
-  const response = await apiGet<ProfilePhotoStatusResponse>("/api/me/profile-photo");
-  if (response?.ok === false) {
-    throw new Error(response.message || "프로필 사진 정보를 불러오지 못했어요.");
-  }
-
-  return {
-    profilePhoto: normalizeProfilePhoto(response.profile_photo ?? response.profilePhoto),
-    canUpload: Boolean(response.can_upload ?? response.canUpload),
-    entitlementKey: String(response.entitlement_key ?? response.entitlementKey ?? "premium:glsoop"),
-    maxBytes: Number(response.max_bytes ?? response.maxBytes ?? 5 * 1024 * 1024),
-    allowedContentTypes: toStringList(
-      response.allowed_content_types ?? response.allowedContentTypes
-    ),
-  };
-}
-
-export async function uploadProfilePhoto({
-  uri,
-  fileName,
-  mimeType,
-}: {
+export type ProfilePhotoUploadAsset = {
   uri: string;
   fileName?: string | null;
   mimeType?: string | null;
-}) {
+};
+
+function pickFirstString(...values: unknown[]) {
+  for (const value of values) {
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+  return "";
+}
+
+export function toProfilePhotoDisplayUrl(value: unknown) {
+  const raw = pickFirstString(value);
+  if (!raw) return null;
+  if (/^https?:\/\//i.test(raw) || raw.startsWith("data:") || raw.startsWith("file:")) {
+    return raw;
+  }
+  if (raw.startsWith("/")) return buildApiUrl(raw);
+  return buildApiUrl(`/${raw}`);
+}
+
+export function normalizeProfilePhoto(value: unknown): ProfilePhoto | null {
+  const row = value && typeof value === "object" ? (value as any) : null;
+  const url = toProfilePhotoDisplayUrl(
+    row?.url ?? row?.profile_photo_url ?? row?.public_url
+  );
+  if (!url) return null;
+
+  return {
+    url,
+    thumbnail_url: toProfilePhotoDisplayUrl(
+      row?.thumbnail_url ?? row?.profile_photo_thumbnail_url
+    ),
+    updated_at: pickFirstString(
+      row?.updated_at,
+      row?.profile_photo_updated_at
+    ) || null,
+  };
+}
+
+export function normalizeMeProfilePhoto(value: unknown): ProfilePhoto | null {
+  const row = value && typeof value === "object" ? (value as any) : null;
+  if (!row) return null;
+  return normalizeProfilePhoto({
+    profile_photo_url: row.profile_photo_url,
+    profile_photo_thumbnail_url: row.profile_photo_thumbnail_url,
+    profile_photo_updated_at: row.profile_photo_updated_at,
+  });
+}
+
+function inferMimeType(uri: string, explicit?: string | null) {
+  const normalized = pickFirstString(explicit).toLowerCase();
+  if (normalized) return normalized;
+  const path = uri.split("?")[0]?.toLowerCase() || "";
+  if (path.endsWith(".png")) return "image/png";
+  if (path.endsWith(".webp")) return "image/webp";
+  return "image/jpeg";
+}
+
+function inferFileName(uri: string, explicit?: string | null, mimeType?: string) {
+  const normalized = pickFirstString(explicit);
+  if (normalized) return normalized;
+
+  const fromUri = decodeURIComponent(uri.split("?")[0]?.split("/").pop() || "");
+  if (fromUri && /\.[a-z0-9]+$/i.test(fromUri)) return fromUri;
+
+  const ext = mimeType === "image/png" ? "png" : mimeType === "image/webp" ? "webp" : "jpg";
+  return `profile-photo.${ext}`;
+}
+
+export async function getProfilePhotoStatus() {
+  const response = await apiGet<ProfilePhotoStatusResponse>("/api/me/profile-photo");
+  return {
+    ...response,
+    profile_photo: normalizeProfilePhoto(response.profile_photo),
+  };
+}
+
+export async function uploadProfilePhoto(asset: ProfilePhotoUploadAsset) {
+  const mimeType = inferMimeType(asset.uri, asset.mimeType);
+  const fileName = inferFileName(asset.uri, asset.fileName, mimeType);
   const formData = new FormData();
+
   formData.append("photo", {
-    uri,
-    name: fileName || "profile-photo.jpg",
-    type: mimeType || "image/jpeg",
+    uri: asset.uri,
+    name: fileName,
+    type: mimeType,
   } as any);
 
-  const response = await apiFormData<UploadProfilePhotoResponse>(
+  const response = await apiFormData<ProfilePhotoUploadResponse>(
     "/api/me/profile-photo",
-    formData,
-    { method: "POST", timeoutMs: 45000 }
+    formData
   );
 
-  if (response?.ok === false) {
-    throw new Error(response.message || "프로필 사진 업로드에 실패했어요.");
-  }
-
-  return normalizeProfilePhoto(response.profile_photo ?? response.profilePhoto);
+  return {
+    ...response,
+    profile_photo: normalizeProfilePhoto(response.profile_photo),
+  };
 }
 
 export async function deleteProfilePhoto() {
-  const response = await apiDelete<UploadProfilePhotoResponse>("/api/me/profile-photo");
-  if (response?.ok === false) {
-    throw new Error(response.message || "프로필 사진 삭제에 실패했어요.");
-  }
-  return null;
+  const response = await apiDelete<ProfilePhotoUploadResponse>("/api/me/profile-photo");
+  return {
+    ...response,
+    profile_photo: normalizeProfilePhoto(response.profile_photo),
+  };
 }

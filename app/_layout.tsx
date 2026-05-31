@@ -109,10 +109,24 @@ function RootLayoutContent() {
                 />
 
                 <Stack.Screen name="search" options={{ headerShown: false }} />
+                <Stack.Screen
+                  name="guide"
+                  options={{
+                    headerShown: false,
+                    animation: "slide_from_right",
+                  }}
+                />
                 <Stack.Screen name="notifications" options={{ headerShown: false }} />
                 <Stack.Screen name="profile-customize" options={{ headerShown: false }} />
                 <Stack.Screen
                   name="me/followings"
+                  options={{
+                    headerShown: false,
+                    animation: "slide_from_right",
+                  }}
+                />
+                <Stack.Screen
+                  name="me/followers"
                   options={{
                     headerShown: false,
                     animation: "slide_from_right",

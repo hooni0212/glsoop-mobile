@@ -35,6 +35,7 @@ import {
   PhotoSavePolicy,
   recordPhotoSaveRewardedGrant,
 } from "@/services/photoSaveService";
+import { hasActiveEntitlement, listMyEntitlements } from "@/services/entitlementService";
 import { buildAuthRoute } from "@/lib/authRedirect";
 import { formatKstDateKorean } from "@/lib/dateTime";
 import { ApiError } from "@/lib/errors";
@@ -120,30 +121,29 @@ function buildPostPermalink(postId: string) {
   return `${releaseConfig.siteUrl}/html/post.html?postId=${encodedPostId}`;
 }
 
-function buildShareText({
-  title,
-  permalink,
-}: {
-  title: string;
-  permalink: string;
-}) {
-  return `${title}\n${permalink}`;
-}
-
 function createShareFileName(postId: string) {
   const safePostId = postId.replace(/[^a-zA-Z0-9_-]/g, "-") || "card";
   return `glsoop_post_${safePostId}_${Date.now()}.png`;
 }
 
-async function downloadPostShareImage(postId: string, imageUrl: string) {
+async function downloadPostShareImage(
+  postId: string,
+  imageUrl: string,
+  bearerToken?: string | null
+) {
   const cacheDirectory = FileSystem.cacheDirectory;
   if (!cacheDirectory) {
     throw new Error("공유 이미지를 임시 저장할 공간을 찾지 못했어요.");
   }
 
+  const downloadOptions = bearerToken
+    ? { headers: { Authorization: `Bearer ${bearerToken}` } }
+    : undefined;
+
   const downloaded = await FileSystem.downloadAsync(
     imageUrl,
-    `${cacheDirectory}${createShareFileName(postId)}`
+    `${cacheDirectory}${createShareFileName(postId)}`,
+    downloadOptions
   );
 
   if (downloaded.status < 200 || downloaded.status >= 300) {
@@ -224,6 +224,12 @@ function getShareFailureMessage(mode: ShareMode, error: unknown) {
   return "공유에 실패했어요. 잠시 후 다시 시도해주세요.";
 }
 
+function getShareProgressMessage(mode: ShareMode) {
+  if (mode === "imageSave") return "이미지를 사진 앱에 저장하고 있어요.";
+  if (mode === "imageShare") return "이미지를 준비하고 있어요.";
+  return "공유 화면을 여는 중이에요.";
+}
+
 type ShareMode = "imageShare" | "imageSave" | "link";
 const PHOTO_SAVE_AD_CANCELLED = "PHOTO_SAVE_AD_CANCELLED";
 
@@ -300,6 +306,8 @@ export default function PostDetail() {
   const [bookmarkPending, setBookmarkPending] = useState<Record<string, boolean>>({});
   const [shareSubmitting, setShareSubmitting] = useState<ShareMode | null>(null);
   const [photoSavePermissionDeniedOnce, setPhotoSavePermissionDeniedOnce] = useState(false);
+  const [canUseAuthorSignature, setCanUseAuthorSignature] = useState(false);
+  const [authorSignatureEnabled, setAuthorSignatureEnabled] = useState(true);
   const [canManagePost, setCanManagePost] = useState(false);
   const [manageBusy, setManageBusy] = useState(false);
   const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
@@ -413,6 +421,38 @@ export default function PostDetail() {
       task.cancel();
     };
   }, [post?.id]);
+
+  React.useEffect(() => {
+    let cancelled = false;
+
+    if (!token) {
+      setCanUseAuthorSignature(false);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    const task = InteractionManager.runAfterInteractions(() => {
+      void (async () => {
+        try {
+          const entitlements = await listMyEntitlements();
+          if (!cancelled) {
+            setCanUseAuthorSignature(hasActiveEntitlement(entitlements));
+          }
+        } catch (entitlementError) {
+          if (__DEV__) {
+            logger.warn("[share] failed to load entitlements", entitlementError);
+          }
+          if (!cancelled) setCanUseAuthorSignature(false);
+        }
+      })();
+    });
+
+    return () => {
+      cancelled = true;
+      task.cancel();
+    };
+  }, [token]);
 
   const handleAuthError = React.useCallback(async () => {
     await signOut();
@@ -872,10 +912,7 @@ export default function PostDetail() {
     const shareContent = content.trim();
     const permalink = buildPostPermalink(post.id);
     const isImageMode = mode === "imageShare" || mode === "imageSave";
-    const shareMessage = buildShareText({
-      title: shareTitle,
-      permalink,
-    });
+    const shareMessage = permalink;
     const requestId = createShareRequestId(post.id);
     const shouldCloseShareModal = shareModalVisible;
     const platform = Platform.OS === "web" ? "web" : "mobile";
@@ -921,11 +958,25 @@ export default function PostDetail() {
         const shareTemplate = normalizePostBackgroundTemplateId(
           post.renderImages?.template ?? postLayout.presetId
         );
+        const includeAuthorSignature = canUseAuthorSignature && authorSignatureEnabled;
         const imageUrl = buildRenderedPostShareImageUrl(post.id, {
           format: "png",
           template: shareTemplate,
+          authorSignature: includeAuthorSignature,
+          authorSignaturePosition: "bottomLeft",
         });
-        const imageUri = await downloadPostShareImage(post.id, imageUrl);
+        const imageUri = await downloadPostShareImage(
+          post.id,
+          imageUrl,
+          includeAuthorSignature ? token : null
+        );
+        const imageMeta = {
+          ...baseMeta,
+          image_format: "png",
+          image_template: shareTemplate,
+          image_url: imageUrl,
+          author_signature: includeAuthorSignature,
+        };
 
         if (mode === "imageSave") {
           const permission = await requestMediaLibrarySavePermission();
@@ -960,10 +1011,7 @@ export default function PostDetail() {
                 ]
               );
               logShareEventSafely("failed", {
-                ...baseMeta,
-                image_format: "png",
-                image_template: shareTemplate,
-                image_url: imageUrl,
+                ...imageMeta,
                 action: "photo_permission_settings_prompt",
                 permission_source: permission.source,
               });
@@ -972,10 +1020,7 @@ export default function PostDetail() {
 
             await shareImageFile({ imageUri, shareTitle });
             logShareEventSafely("shared", {
-              ...baseMeta,
-              image_format: "png",
-              image_template: shareTemplate,
-              image_url: imageUrl,
+              ...imageMeta,
               action: "photo_permission_share_fallback",
               permission_source: permission.source,
             });
@@ -997,10 +1042,7 @@ export default function PostDetail() {
           await MediaLibrary.saveToLibraryAsync(imageUri);
           setPhotoSavePermissionDeniedOnce(false);
           logShareEventSafely("shared", {
-            ...baseMeta,
-            image_format: "png",
-            image_template: shareTemplate,
-            image_url: imageUrl,
+            ...imageMeta,
             action: "saved_to_library",
             photo_save_access_type: photoSaveAccess.accessType,
             photo_save_free_remaining: photoSaveAccess.policy?.free_remaining ?? null,
@@ -1010,12 +1052,7 @@ export default function PostDetail() {
         }
 
         await shareImageFile({ imageUri, shareTitle });
-        logShareEventSafely("shared", {
-          ...baseMeta,
-          image_format: "png",
-          image_template: shareTemplate,
-          image_url: imageUrl,
-        });
+        logShareEventSafely("shared", imageMeta);
         showToast("이미지 공유가 완료되었어요.", { tone: "success" });
         return;
       }
@@ -1196,6 +1233,11 @@ export default function PostDetail() {
   const refreshDetail = React.useCallback(async () => {
     await refetch();
   }, [refetch]);
+
+  const showBlockingShareProgress = Boolean(shareSubmitting && !shareModalVisible);
+  const blockingShareProgressMessage = shareSubmitting
+    ? getShareProgressMessage(shareSubmitting)
+    : "";
 
   return (
     <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
@@ -1683,6 +1725,21 @@ export default function PostDetail() {
         </View>
       </Modal>
 
+      <Modal
+        visible={showBlockingShareProgress}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+      >
+        <View style={styles.shareBlockingOverlay}>
+          <View style={styles.shareBlockingCard}>
+            <ActivityIndicator size="large" color={tokens.colors.green700} />
+            <Text style={styles.shareBlockingTitle}>처리 중이에요</Text>
+            <Text style={styles.shareBlockingText}>{blockingShareProgressMessage}</Text>
+          </View>
+        </View>
+      </Modal>
+
       <Modal visible={shareModalVisible} transparent animationType="fade">
         <View style={styles.bookmarkModalOverlay}>
           <View style={styles.bookmarkModalCard}>
@@ -1694,11 +1751,35 @@ export default function PostDetail() {
               <View style={styles.shareModalProgressRow}>
                 <ActivityIndicator size="small" color={tokens.colors.green700} />
                 <Text style={styles.shareModalProgressText}>
-                  {shareSubmitting === "imageShare"
-                    ? "이미지를 준비하고 있어요."
-                    : "공유 화면을 여는 중이에요."}
+                  {getShareProgressMessage(shareSubmitting)}
                 </Text>
               </View>
+            ) : null}
+
+            {canUseAuthorSignature && Platform.OS !== "web" ? (
+              <Pressable
+                onPress={() => setAuthorSignatureEnabled((current) => !current)}
+                disabled={Boolean(shareSubmitting)}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: authorSignatureEnabled }}
+                style={[
+                  styles.shareSignatureToggle,
+                  shareSubmitting && styles.bookmarkModalListItemDisabled,
+                ]}
+                testID="post-share-author-signature-toggle"
+              >
+                <View style={styles.shareSignatureTextWrap}>
+                  <Text style={styles.shareSignatureTitle}>작가 이름 표시</Text>
+                  <Text style={styles.shareSignatureHint} numberOfLines={1}>
+                    {authorName}
+                  </Text>
+                </View>
+                <Ionicons
+                  name={authorSignatureEnabled ? "checkmark-circle" : "ellipse-outline"}
+                  size={22}
+                  color={authorSignatureEnabled ? tokens.colors.green700 : tokens.colors.textMuted}
+                />
+              </Pressable>
             ) : null}
 
             <View style={styles.bookmarkModalList}>

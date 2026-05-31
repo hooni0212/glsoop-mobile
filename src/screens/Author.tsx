@@ -9,10 +9,10 @@ import {
   Text,
   View,
 } from "react-native";
+import { Image } from "expo-image";
 import { router, useLocalSearchParams, usePathname } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
-import { Image } from "expo-image";
 
 import { FeedCard } from "@/components/FeedCard";
 import { SafetyReasonModal } from "@/components/safety/SafetyReasonModal";
@@ -33,6 +33,7 @@ import { formatKstDateKorean } from "@/lib/dateTime";
 import { openExternalUrl } from "@/lib/externalLinks";
 import { normalizePublicDisplayName } from "@/lib/publicDisplayName";
 import { togglePostLike } from "@/services/likeService";
+import { toProfilePhotoDisplayUrl } from "@/services/profilePhotoService";
 import {
   blockUserById,
   pickSafetyReasons,
@@ -211,6 +212,12 @@ export default function Author({
   const joinedAtLabel = joinedAtValue ? `${formatKstDateKorean(joinedAtValue)} 가입` : "";
   const showProfileCustomize = forceOwnProfile || isOwnProfile(viewer, user);
   const showFollowButton = Boolean(userId && !showProfileCustomize);
+  const profilePhotoUrl = toProfilePhotoDisplayUrl(
+    user?.profile_photo_thumbnail_url ??
+      user?.profilePhotoThumbnailUrl ??
+      user?.profile_photo_url ??
+      user?.profilePhotoUrl
+  );
   const profileCosmetics = useMemo(
     () =>
       normalizeProfileCosmeticsExpanded(
@@ -493,12 +500,6 @@ export default function Author({
       const headerStickers = profileCosmetics.header_stickers;
       const hasTopLeftSticker = headerStickers.some(({ slot }) => slot === "tl");
       const avatarInitial = name.trim().slice(0, 1) || "글";
-      const profilePhoto =
-        user?.profile_photo_thumbnail_url ||
-        user?.profilePhotoThumbnailUrl ||
-        user?.profile_photo_url ||
-        user?.profilePhotoUrl ||
-        "";
 
       return (
         <View>
@@ -564,12 +565,11 @@ export default function Author({
                   },
                 ]}
               >
-                {profilePhoto ? (
+                {profilePhotoUrl ? (
                   <Image
-                    source={{ uri: profilePhoto }}
+                    source={{ uri: profilePhotoUrl }}
                     style={authorScreenStyles.avatarImage}
                     contentFit="cover"
-                    transition={120}
                   />
                 ) : (
                   <Text style={authorScreenStyles.avatarText}>{avatarInitial}</Text>
@@ -628,7 +628,24 @@ export default function Author({
                 <Ionicons name="heart" size={13} color={tokens.colors.textMuted} />
                 <Text style={authorScreenStyles.statText}>{totalLikes}</Text>
               </View>
-              <Text style={authorScreenStyles.statText}>팔로워 {followerCount}</Text>
+              {showProfileCustomize ? (
+                <Pressable
+                  onPress={() => router.push("/me/followers" as never)}
+                  style={authorScreenStyles.statLink}
+                  testID="author-own-followers-toggle"
+                  accessibilityRole="button"
+                  accessibilityLabel={`팔로워 ${followerCount}명 목록 보기`}
+                >
+                  <Text style={authorScreenStyles.statLinkText}>팔로워 {followerCount}</Text>
+                  <Ionicons
+                    name="chevron-forward"
+                    size={13}
+                    color={tokens.colors.textFaint}
+                  />
+                </Pressable>
+              ) : (
+                <Text style={authorScreenStyles.statText}>팔로워 {followerCount}</Text>
+              )}
               {showProfileCustomize ? (
                 <Pressable
                   onPress={() => router.push("/me/followings")}
@@ -834,6 +851,7 @@ export default function Author({
       openGuidelines,
       openSupport,
       postCount,
+      profilePhotoUrl,
       profileCosmetics,
       promptBlockAuthor,
       promptReportAuthor,
@@ -842,10 +860,6 @@ export default function Author({
       overflowOpen,
       sort,
       totalLikes,
-      user?.profilePhotoThumbnailUrl,
-      user?.profilePhotoUrl,
-      user?.profile_photo_thumbnail_url,
-      user?.profile_photo_url,
       visibleItems,
     ]
   );

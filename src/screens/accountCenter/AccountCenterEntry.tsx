@@ -26,6 +26,12 @@ const MENU_ITEMS = [
     icon: "ban-outline" as const,
   },
   {
+    title: "앱 가이드",
+    description: "읽기, 저장, 공유, 글쓰기 기능을 빠르게 살펴봐요.",
+    route: "/guide" as const,
+    icon: "compass-outline" as const,
+  },
+  {
     title: "도움말 및 지원",
     description: "지원 메일, 지원 페이지, 정책 문서를 한 곳에서 확인해요.",
     route: "/account-center/support" as const,
