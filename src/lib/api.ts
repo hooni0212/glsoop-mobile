@@ -291,3 +291,90 @@ export function apiPatch<T>(path: string, body?: unknown): Promise<T> {
 export function apiDelete<T>(path: string): Promise<T> {
   return apiRequest<T>(path, { method: "DELETE" });
 }
+
+export async function apiFormData<T>(
+  path: string,
+  formData: FormData,
+  options: { method?: "POST" | "PUT" | "PATCH"; timeoutMs?: number } = {}
+): Promise<T> {
+  const url = joinUrl(path);
+  const { controller, clear } = withTimeout(options.timeoutMs ?? 30000);
+
+  try {
+    const token = await getAuthToken();
+    const bearerToken = token && token !== COOKIE_SESSION_TOKEN ? token : null;
+
+    const headers: Record<string, string> = {
+      Accept: "application/json",
+    };
+
+    if (bearerToken) headers["Authorization"] = `Bearer ${bearerToken}`;
+
+    apiLog("[api] form request", {
+      method: options.method ?? "POST",
+      url,
+      hasToken: Boolean(bearerToken),
+    });
+
+    const res = await fetch(url, {
+      method: options.method ?? "POST",
+      headers,
+      body: formData,
+      signal: controller.signal,
+      ...(Platform.OS === "web" ? { credentials: "include" } : null),
+    } as any);
+
+    const text = await res.text();
+    const parsed = safeJsonParse(text);
+
+    if (!parsed) {
+      throw new ApiError(`Non-JSON response (HTTP ${res.status}): ${text.slice(0, 160)}`, {
+        status: res.status,
+      });
+    }
+
+    apiLog("[api] form response", {
+      method: options.method ?? "POST",
+      url,
+      status: res.status,
+    });
+
+    if (!res.ok) {
+      if (parsed?.success === false) {
+        throw new ApiError(
+          parsed?.error?.message || parsed?.error?.code || `HTTP ${res.status}`,
+          {
+            status: res.status,
+            code: parsed?.error?.code,
+            payload: parsed,
+          }
+        );
+      }
+
+      throw new ApiError(
+        parsed?.message || parsed?.error?.message || `HTTP ${res.status}`,
+        {
+          status: res.status,
+          code: parsed?.code || parsed?.error?.code,
+          payload: parsed,
+        }
+      );
+    }
+
+    if (parsed?.success === false) {
+      throw new ApiError(parsed?.error?.message || parsed?.error?.code, {
+        code: parsed?.error?.code,
+      });
+    }
+    if (parsed?.success === true && "data" in parsed) {
+      return (parsed as ApiOk<T>).data;
+    }
+
+    return parsed as T;
+  } catch (e: any) {
+    if (e?.name === "AbortError") throw new ApiError("Request timeout", { code: "timeout" });
+    throw e;
+  } finally {
+    clear();
+  }
+}

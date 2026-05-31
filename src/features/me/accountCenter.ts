@@ -8,6 +8,11 @@ export type MeResponse = {
   email: string;
   bio?: string | null;
   about?: string | null;
+  profile_photo_url?: string | null;
+  profile_photo_thumbnail_url?: string | null;
+  profile_photo_updated_at?: string | null;
+  profile_photo_upload_allowed?: boolean;
+  profile_photo_entitlement_key?: string | null;
   is_admin?: boolean;
   is_verified?: boolean;
   remember_login_enabled?: boolean;

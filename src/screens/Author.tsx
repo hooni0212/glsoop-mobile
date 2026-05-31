@@ -9,6 +9,7 @@ import {
   Text,
   View,
 } from "react-native";
+import { Image } from "expo-image";
 import { router, useLocalSearchParams, usePathname } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
@@ -32,6 +33,7 @@ import { formatKstDateKorean } from "@/lib/dateTime";
 import { openExternalUrl } from "@/lib/externalLinks";
 import { normalizePublicDisplayName } from "@/lib/publicDisplayName";
 import { togglePostLike } from "@/services/likeService";
+import { toProfilePhotoDisplayUrl } from "@/services/profilePhotoService";
 import {
   blockUserById,
   pickSafetyReasons,
@@ -210,6 +212,12 @@ export default function Author({
   const joinedAtLabel = joinedAtValue ? `${formatKstDateKorean(joinedAtValue)} 가입` : "";
   const showProfileCustomize = forceOwnProfile || isOwnProfile(viewer, user);
   const showFollowButton = Boolean(userId && !showProfileCustomize);
+  const profilePhotoUrl = toProfilePhotoDisplayUrl(
+    user?.profile_photo_thumbnail_url ??
+      user?.profilePhotoThumbnailUrl ??
+      user?.profile_photo_url ??
+      user?.profilePhotoUrl
+  );
   const profileCosmetics = useMemo(
     () =>
       normalizeProfileCosmeticsExpanded(
@@ -557,7 +565,15 @@ export default function Author({
                   },
                 ]}
               >
-                <Text style={authorScreenStyles.avatarText}>{avatarInitial}</Text>
+                {profilePhotoUrl ? (
+                  <Image
+                    source={{ uri: profilePhotoUrl }}
+                    style={authorScreenStyles.avatarImage}
+                    contentFit="cover"
+                  />
+                ) : (
+                  <Text style={authorScreenStyles.avatarText}>{avatarInitial}</Text>
+                )}
               </View>
               <View style={authorScreenStyles.identityBlock}>
                 <Text style={authorScreenStyles.profileKicker}>작가의 글숲</Text>
@@ -835,6 +851,7 @@ export default function Author({
       openGuidelines,
       openSupport,
       postCount,
+      profilePhotoUrl,
       profileCosmetics,
       promptBlockAuthor,
       promptReportAuthor,

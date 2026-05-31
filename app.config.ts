@@ -3,7 +3,7 @@ import type { ExpoConfig } from "expo/config";
 const baseConfig = require("./app.json").expo as ExpoConfig;
 
 // iOS buildNumber / Android versionCode를 한 곳에서 같이 관리합니다.
-const MOBILE_BUILD_NUMBER = 39;
+const MOBILE_BUILD_NUMBER = 41;
 
 export default (): ExpoConfig => ({
   ...baseConfig,
@@ -24,6 +24,12 @@ export default (): ExpoConfig => ({
         savePhotosPermission: "글숲에서 만든 글 이미지를 사진 앱에 저장하기 위해 사진 추가 권한이 필요합니다.",
         isAccessMediaLocationEnabled: false,
         granularPermissions: [],
+      },
+    ],
+    [
+      "expo-image-picker",
+      {
+        photosPermission: "프로필 사진으로 사용할 이미지를 선택하기 위해 사진 접근 권한이 필요합니다.",
       },
     ],
   ],
