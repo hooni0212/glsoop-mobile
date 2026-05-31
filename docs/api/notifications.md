@@ -97,7 +97,7 @@ DELETE /api/push-tokens?token=...
   "token": "ExponentPushToken[...]",
   "platform": "ios",
   "device_id": "device-...",
-  "app_version": "1.0.6"
+  "app_version": "1.0.7"
 }
 ```
 
