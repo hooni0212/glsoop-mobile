@@ -3,6 +3,7 @@ import {
   fetchProducts,
   finishTransaction,
   getAvailablePurchases,
+  getStorefront,
   initConnection,
   purchaseErrorListener,
   purchaseUpdatedListener,
@@ -13,6 +14,7 @@ import {
 } from "expo-iap";
 
 import { apiGet, apiPost } from "@/lib/api";
+import { logger } from "@/lib/logger";
 import { PREMIUM_ENTITLEMENT_KEY } from "@/services/entitlementService";
 
 export const PREMIUM_IOS_SKUS = [
@@ -156,6 +158,20 @@ function productPrice(product: ProductOrSubscription | null) {
   return text((product as any).displayPrice) || null;
 }
 
+function productSku(product: ProductOrSubscription | null) {
+  if (!product) return "";
+  return text(product.id) || text((product as any).productId);
+}
+
+function productLogSummary(product: ProductOrSubscription) {
+  return {
+    id: productSku(product),
+    type: text((product as any).type),
+    platform: text((product as any).platform),
+    displayPrice: productPrice(product),
+  };
+}
+
 export function isPremiumIosSupported() {
   return Platform.OS === "ios";
 }
@@ -182,6 +198,56 @@ export async function getPremiumCatalogPlans(): Promise<PremiumCatalogPlan[]> {
   return (plans as PremiumCatalogPlan[]).sort(comparePlans);
 }
 
+async function fetchStorefrontForLog() {
+  try {
+    return await getStorefront();
+  } catch (error) {
+    logger.warn("[premium-store] failed to read storefront", { error });
+    return "";
+  }
+}
+
+async function fetchPremiumStoreProducts(skus: string[]) {
+  const fetchByType = async (type: "subs" | "all") => {
+    try {
+      const fetchedProducts = await fetchProducts({ skus, type });
+      return Array.isArray(fetchedProducts)
+        ? (fetchedProducts as ProductOrSubscription[])
+        : [];
+    } catch (error) {
+      logger.warn("[premium-store] fetchProducts failed", { type, skus, error });
+      return [];
+    }
+  };
+
+  const storefront = await fetchStorefrontForLog();
+  const subscriptionProducts = await fetchByType("subs");
+  if (subscriptionProducts.length > 0) {
+    logger.warn("[premium-store] subscription products loaded", {
+      storefront,
+      skus,
+      products: subscriptionProducts.map(productLogSummary),
+    });
+    return subscriptionProducts;
+  }
+
+  const allProducts = await fetchByType("all");
+  if (allProducts.length > 0) {
+    logger.warn("[premium-store] fallback product fetch loaded products", {
+      storefront,
+      skus,
+      products: allProducts.map(productLogSummary),
+    });
+    return allProducts;
+  }
+
+  logger.warn("[premium-store] App Store returned no premium products", {
+    storefront,
+    skus,
+  });
+  return [];
+}
+
 export async function getPremiumPlans(): Promise<PremiumPlan[]> {
   const catalogPlans = await getPremiumCatalogPlans();
   if (!isPremiumIosSupported() || catalogPlans.length === 0) {
@@ -198,19 +264,16 @@ export async function getPremiumPlans(): Promise<PremiumPlan[]> {
   let storeProducts: ProductOrSubscription[] = [];
   try {
     await ensurePremiumStoreConnection();
-    const fetchedProducts = await fetchProducts({
-      skus: catalogPlans.map((plan) => plan.storeSku),
-      type: "subs",
-    });
-    storeProducts = Array.isArray(fetchedProducts)
-      ? (fetchedProducts as ProductOrSubscription[])
-      : [];
-  } catch {
+    storeProducts = await fetchPremiumStoreProducts(
+      catalogPlans.map((plan) => plan.storeSku)
+    );
+  } catch (error) {
+    logger.warn("[premium-store] failed to connect to App Store", { error });
     storeProducts = [];
   }
   const bySku = new Map(
     storeProducts.map((product) => [
-      text(product.id),
+      productSku(product),
       product as ProductOrSubscription,
     ])
   );
