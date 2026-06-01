@@ -4,55 +4,67 @@ import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { isPremiumIapEnabled } from "@/lib/premiumFeatureFlags";
 import { tokens } from "@/theme/tokens";
 
-const MENU_ITEMS = [
+type MenuItem = {
+  title: string;
+  description: string;
+  route: string;
+  icon: React.ComponentProps<typeof Ionicons>["name"];
+};
+
+const BASE_MENU_ITEMS: MenuItem[] = [
   {
     title: "프로필 및 공개 정보",
     description: "닉네임, 소개를 수정하고 프로필 꾸미기로 이동해요.",
-    route: "/account-center/profile" as const,
-    icon: "person-circle-outline" as const,
+    route: "/account-center/profile",
+    icon: "person-circle-outline",
   },
   {
     title: "보안 및 로그인",
     description: "로그인 유지, 활성 세션, 전체 로그아웃을 관리해요.",
-    route: "/account-center/security" as const,
-    icon: "shield-checkmark-outline" as const,
-  },
-  {
-    title: "프리미엄",
-    description: "앱내 구입으로 광고 제거와 프로필 사진 혜택을 관리해요.",
-    route: "/premium" as const,
-    icon: "sparkles-outline" as const,
+    route: "/account-center/security",
+    icon: "shield-checkmark-outline",
   },
   {
     title: "차단한 사용자",
     description: "내 화면에서 숨긴 사용자를 확인하고 차단을 해제해요.",
-    route: "/account-center/blocked-users" as const,
-    icon: "ban-outline" as const,
+    route: "/account-center/blocked-users",
+    icon: "ban-outline",
   },
   {
     title: "앱 가이드",
     description: "읽기, 저장, 공유, 글쓰기 기능을 빠르게 살펴봐요.",
-    route: "/guide" as const,
-    icon: "compass-outline" as const,
+    route: "/guide",
+    icon: "compass-outline",
   },
   {
     title: "도움말 및 지원",
     description: "지원 메일, 지원 페이지, 정책 문서를 한 곳에서 확인해요.",
-    route: "/account-center/support" as const,
-    icon: "help-circle-outline" as const,
+    route: "/account-center/support",
+    icon: "help-circle-outline",
   },
   {
     title: "계정 관리",
     description: "계정 비활성화와 회원 탈퇴를 진행해요.",
-    route: "/account-center/account-closure" as const,
-    icon: "warning-outline" as const,
+    route: "/account-center/account-closure",
+    icon: "warning-outline",
   },
-] as const;
+];
+
+const PREMIUM_MENU_ITEM: MenuItem = {
+  title: "프리미엄",
+  description: "앱내 구입으로 광고 제거와 프로필 사진 혜택을 관리해요.",
+  route: "/premium",
+  icon: "sparkles-outline",
+};
 
 export default function AccountCenterEntryScreen() {
   const insets = useSafeAreaInsets();
+  const menuItems = isPremiumIapEnabled()
+    ? [...BASE_MENU_ITEMS.slice(0, 2), PREMIUM_MENU_ITEM, ...BASE_MENU_ITEMS.slice(2)]
+    : BASE_MENU_ITEMS;
 
   return (
     <View style={styles.safe}>
@@ -86,7 +98,7 @@ export default function AccountCenterEntryScreen() {
             </View>
 
             <View style={styles.menuList}>
-              {MENU_ITEMS.map((item) => (
+              {menuItems.map((item) => (
                 <Pressable
                   key={item.route}
                   onPress={() => router.push(item.route as never)}

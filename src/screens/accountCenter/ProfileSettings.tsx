@@ -13,6 +13,7 @@ import { AppLoading } from "@/components/state/AppLoading";
 import { buildAuthRoute } from "@/lib/authRedirect";
 import { apiGet, apiPut } from "@/lib/api";
 import { normalizeApiError } from "@/lib/errors";
+import { isPremiumIapEnabled } from "@/lib/premiumFeatureFlags";
 import { type MeResponse, type UpdateMeResponse } from "@/features/me/accountCenter";
 import {
   deleteProfilePhoto,
@@ -21,6 +22,8 @@ import {
   type ProfilePhoto,
 } from "@/services/profilePhotoService";
 import { tokens } from "@/theme/tokens";
+
+const premiumIapEnabled = isPremiumIapEnabled();
 
 export default function AccountCenterProfileSettingsScreen() {
   const pathname = usePathname();
@@ -63,6 +66,10 @@ export default function AccountCenterProfileSettingsScreen() {
   }, [loadMe]);
 
   function openPremium() {
+    if (!premiumIapEnabled) {
+      showToast("프로필 사진 업로드는 준비 중이에요.", { tone: "error" });
+      return;
+    }
     router.push("/premium" as never);
   }
 
@@ -255,7 +262,7 @@ export default function AccountCenterProfileSettingsScreen() {
                 JPG, PNG, WebP 이미지를 정사각형으로 맞춰 저장해요.
               </Text>
             </View>
-            {photoUploadAllowed ? (
+            {photoUploadAllowed && premiumIapEnabled ? (
               <View style={styles.premiumPill}>
                 <Ionicons name="sparkles" size={13} color={tokens.colors.green700} />
                 <Text style={styles.premiumPillText}>프리미엄</Text>
@@ -281,7 +288,9 @@ export default function AccountCenterProfileSettingsScreen() {
             <View style={styles.photoActionColumn}>
               {!photoUploadAllowed ? (
                 <Text style={styles.photoHint}>
-                  프리미엄 계정에서 프로필 사진을 사용할 수 있어요.
+                  {premiumIapEnabled
+                    ? "프리미엄 계정에서 프로필 사진을 사용할 수 있어요."
+                    : "프로필 사진 업로드는 준비 중이에요."}
                 </Text>
               ) : null}
               <View style={styles.photoButtonRow}>
@@ -300,7 +309,7 @@ export default function AccountCenterProfileSettingsScreen() {
                       {photoBusy ? "처리 중..." : profilePhoto ? "사진 변경" : "사진 선택"}
                     </Text>
                   </Pressable>
-                ) : (
+                ) : premiumIapEnabled ? (
                   <Pressable
                     onPress={openPremium}
                     style={({ pressed }) => [
@@ -310,6 +319,14 @@ export default function AccountCenterProfileSettingsScreen() {
                   >
                     <Ionicons name="sparkles-outline" size={17} color="#fff" />
                     <Text style={styles.photoPrimaryBtnText}>프리미엄 보기</Text>
+                  </Pressable>
+                ) : (
+                  <Pressable
+                    disabled
+                    style={[styles.photoPrimaryBtn, styles.disabledBtn]}
+                  >
+                    <Ionicons name="time-outline" size={17} color="#fff" />
+                    <Text style={styles.photoPrimaryBtnText}>준비 중</Text>
                   </Pressable>
                 )}
 
