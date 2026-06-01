@@ -4,6 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
+import { requestAppOnboardingTourReplay } from "@/onboarding/appOnboardingTourStorage";
 import { tokens } from "@/theme/tokens";
 
 type GuideIconName = React.ComponentProps<typeof Ionicons>["name"];
@@ -98,6 +99,11 @@ const QUICK_ACTIONS = [
 ] as const;
 
 export default function AppGuideScreen() {
+  const startInteractiveGuide = React.useCallback(async () => {
+    await requestAppOnboardingTourReplay();
+    router.replace("/(tabs)" as never);
+  }, []);
+
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.topBar}>
@@ -136,6 +142,28 @@ export default function AppGuideScreen() {
             </Pressable>
           ))}
         </View>
+
+        <Pressable
+          onPress={() => void startInteractiveGuide()}
+          style={({ pressed }) => [
+            styles.interactiveGuide,
+            pressed && styles.interactiveGuidePressed,
+          ]}
+          accessibilityRole="button"
+          accessibilityLabel="첫 화면 튜토리얼 다시 보기"
+          testID="app-guide-start-tour-btn"
+        >
+          <View style={styles.interactiveGuideIcon}>
+            <Ionicons name="navigate-outline" size={20} color={tokens.colors.green900} />
+          </View>
+          <View style={styles.interactiveGuideCopy}>
+            <Text style={styles.interactiveGuideTitle}>첫 화면 튜토리얼 다시 보기</Text>
+            <Text style={styles.interactiveGuideBody}>
+              홈 화면 위에 설명을 띄워 검색, 피드, 글쓰기 버튼을 순서대로 안내해요.
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={tokens.colors.textMuted} />
+        </Pressable>
 
         {GUIDE_SECTIONS.map((section) => (
           <View key={section.title} style={styles.section}>
@@ -251,6 +279,46 @@ const styles = StyleSheet.create({
     fontSize: tokens.font.small,
     fontWeight: "900",
     color: tokens.colors.green900,
+  },
+  interactiveGuide: {
+    minHeight: 86,
+    borderRadius: tokens.radius.xl,
+    borderWidth: 1,
+    borderColor: tokens.colors.green100,
+    backgroundColor: tokens.colors.green050,
+    padding: tokens.space.md,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: tokens.space.md as any,
+  },
+  interactiveGuidePressed: {
+    opacity: 0.88,
+  },
+  interactiveGuideIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: tokens.colors.surfaceStrong,
+    borderWidth: 1,
+    borderColor: tokens.colors.green100,
+  },
+  interactiveGuideCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 4,
+  },
+  interactiveGuideTitle: {
+    fontSize: 15,
+    fontWeight: "900",
+    color: tokens.colors.text,
+  },
+  interactiveGuideBody: {
+    fontSize: tokens.font.small,
+    fontWeight: "700",
+    color: tokens.colors.textMuted,
+    lineHeight: 19,
   },
   section: {
     gap: tokens.space.md as any,

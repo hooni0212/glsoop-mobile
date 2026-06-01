@@ -62,6 +62,10 @@ export default function AccountCenterProfileSettingsScreen() {
     void loadMe();
   }, [loadMe]);
 
+  function openPremium() {
+    router.push("/premium" as never);
+  }
+
   async function onSave() {
     const trimmedNickname = nickname.trim();
     if (!trimmedNickname) {
@@ -97,7 +101,7 @@ export default function AccountCenterProfileSettingsScreen() {
 
   async function onPickProfilePhoto() {
     if (!photoUploadAllowed) {
-      showToast("프로필 사진 업로드는 프리미엄에서 사용할 수 있어요.", { tone: "error" });
+      openPremium();
       return;
     }
 
@@ -281,20 +285,33 @@ export default function AccountCenterProfileSettingsScreen() {
                 </Text>
               ) : null}
               <View style={styles.photoButtonRow}>
-                <Pressable
-                  onPress={() => void onPickProfilePhoto()}
-                  disabled={photoBusy || !photoUploadAllowed}
-                  style={({ pressed }) => [
-                    styles.photoPrimaryBtn,
-                    (photoBusy || !photoUploadAllowed) && styles.disabledBtn,
-                    pressed && !photoBusy && photoUploadAllowed && styles.photoBtnPressed,
-                  ]}
-                >
-                  <Ionicons name="camera-outline" size={17} color="#fff" />
-                  <Text style={styles.photoPrimaryBtnText}>
-                    {photoBusy ? "처리 중..." : profilePhoto ? "사진 변경" : "사진 선택"}
-                  </Text>
-                </Pressable>
+                {photoUploadAllowed ? (
+                  <Pressable
+                    onPress={() => void onPickProfilePhoto()}
+                    disabled={photoBusy}
+                    style={({ pressed }) => [
+                      styles.photoPrimaryBtn,
+                      photoBusy && styles.disabledBtn,
+                      pressed && !photoBusy && styles.photoBtnPressed,
+                    ]}
+                  >
+                    <Ionicons name="camera-outline" size={17} color="#fff" />
+                    <Text style={styles.photoPrimaryBtnText}>
+                      {photoBusy ? "처리 중..." : profilePhoto ? "사진 변경" : "사진 선택"}
+                    </Text>
+                  </Pressable>
+                ) : (
+                  <Pressable
+                    onPress={openPremium}
+                    style={({ pressed }) => [
+                      styles.photoPrimaryBtn,
+                      pressed && styles.photoBtnPressed,
+                    ]}
+                  >
+                    <Ionicons name="sparkles-outline" size={17} color="#fff" />
+                    <Text style={styles.photoPrimaryBtnText}>프리미엄 보기</Text>
+                  </Pressable>
+                )}
 
                 {profilePhoto ? (
                   <Pressable

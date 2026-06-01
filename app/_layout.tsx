@@ -10,6 +10,7 @@ import { ToastProvider, useToast } from "@/feedback/ToastProvider";
 import { PREVIEW_FONT_ASSETS } from "@/lib/previewFonts";
 import { usePushNotifications } from "@/lib/pushNotifications";
 import { BottomDockProvider } from "@/navigation/bottomDock";
+import { AppOnboardingTour } from "@/onboarding/AppOnboardingTour";
 import { Stack } from "expo-router";
 import { StyleSheet, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -110,6 +111,14 @@ function RootLayoutContent() {
 
                 <Stack.Screen name="search" options={{ headerShown: false }} />
                 <Stack.Screen
+                  name="premium"
+                  options={{
+                    headerShown: false,
+                    presentation: "modal",
+                    animation: "slide_from_bottom",
+                  }}
+                />
+                <Stack.Screen
                   name="guide"
                   options={{
                     headerShown: false,
@@ -135,6 +144,7 @@ function RootLayoutContent() {
                 <Stack.Screen name="ui-kit" options={{ headerShown: false }} />
               </Stack>
               <PostLoginPreferencesPrompt />
+              <AppOnboardingTour />
             </>
           )}
         </ToastProvider>

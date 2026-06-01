@@ -20,6 +20,12 @@ const MENU_ITEMS = [
     icon: "shield-checkmark-outline" as const,
   },
   {
+    title: "프리미엄",
+    description: "앱내 구입으로 광고 제거와 프로필 사진 혜택을 관리해요.",
+    route: "/premium" as const,
+    icon: "sparkles-outline" as const,
+  },
+  {
     title: "차단한 사용자",
     description: "내 화면에서 숨긴 사용자를 확인하고 차단을 해제해요.",
     route: "/account-center/blocked-users" as const,
