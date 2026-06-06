@@ -30,6 +30,8 @@ import { blockUserById, pickSafetyReasons, reportPost } from "@/services/safetyS
 import { logShareEvent } from "@/services/shareService";
 import {
   consumePhotoSave,
+  PhotoSaveAccessMethod,
+  PhotoSavePlatform,
   getPhotoSavePlatform,
   getPhotoSavePolicy,
   PhotoSavePolicy,
@@ -232,6 +234,13 @@ function getShareProgressMessage(mode: ShareMode) {
 
 type ShareMode = "imageShare" | "imageSave" | "link";
 const PHOTO_SAVE_AD_CANCELLED = "PHOTO_SAVE_AD_CANCELLED";
+
+type PreparedPhotoSaveAccess = {
+  method: PhotoSaveAccessMethod;
+  platform: PhotoSavePlatform | null;
+  policy: PhotoSavePolicy | null;
+  rewardedGrantId: number | null;
+};
 
 function createPhotoSaveAdCancelledError() {
   const error = new Error("사진 저장 광고 시청을 취소했어요.");
@@ -837,18 +846,16 @@ export default function PostDetail() {
     }
   };
 
-  const ensurePhotoSaveAccess = async ({
+  const preparePhotoSaveAccess = async ({
     currentPostId,
-    requestId,
     meta,
   }: {
     currentPostId: string;
-    requestId: string;
     meta: Record<string, unknown>;
-  }) => {
+  }): Promise<PreparedPhotoSaveAccess> => {
     const platform = getPhotoSavePlatform();
     if (!platform) {
-      return { accessType: "free", policy: null };
+      return { method: "free", platform: null, policy: null, rewardedGrantId: null };
     }
 
     if (!token) {
@@ -859,14 +866,7 @@ export default function PostDetail() {
     const policy = await getPhotoSavePolicy(platform);
     if (policy.can_save_without_ad) {
       const method = policy.is_premium ? "premium" : "free";
-      const consumed = await consumePhotoSave({
-        postId: currentPostId,
-        platform,
-        method,
-        requestId,
-        meta,
-      });
-      return { accessType: consumed.event.access_type, policy: consumed.policy };
+      return { method, platform, policy, rewardedGrantId: null };
     }
 
     if (!policy.requires_ad || !policy.rewarded_ad_unit_id) {
@@ -887,21 +887,14 @@ export default function PostDetail() {
       rewardAmount: reward.amount,
       meta: {
         ...meta,
+        photo_save_phase: "reward_earned",
         requested_ad_unit_id: reward.requestedAdUnitId,
         shown_ad_unit_id: reward.adUnitId,
         used_test_ad_unit: reward.usedTestAdUnit,
       },
     });
-    const consumed = await consumePhotoSave({
-      postId: currentPostId,
-      platform,
-      method: "rewarded_ad",
-      rewardedGrantId: grant.id,
-      requestId,
-      meta,
-    });
 
-    return { accessType: consumed.event.access_type, policy: consumed.policy };
+    return { method: "rewarded_ad", platform, policy, rewardedGrantId: grant.id };
   };
 
   const sharePost = async (mode: ShareMode) => {
@@ -1028,9 +1021,8 @@ export default function PostDetail() {
             return;
           }
 
-          const photoSaveAccess = await ensurePhotoSaveAccess({
+          const photoSaveAccess = await preparePhotoSaveAccess({
             currentPostId: post.id,
-            requestId,
             meta: {
               ...baseMeta,
               image_format: "png",
@@ -1041,11 +1033,48 @@ export default function PostDetail() {
 
           await MediaLibrary.saveToLibraryAsync(imageUri);
           setPhotoSavePermissionDeniedOnce(false);
+
+          let photoSavePolicy = photoSaveAccess.policy;
+          if (photoSaveAccess.platform) {
+            try {
+              const consumed = await consumePhotoSave({
+                postId: post.id,
+                platform: photoSaveAccess.platform,
+                method: photoSaveAccess.method,
+                rewardedGrantId: photoSaveAccess.rewardedGrantId,
+                requestId,
+                meta: {
+                  ...baseMeta,
+                  image_format: "png",
+                  image_template: shareTemplate,
+                  image_url: imageUrl,
+                  photo_save_phase: "media_library_saved",
+                },
+              });
+              photoSavePolicy = consumed.policy;
+            } catch (consumeError) {
+              logShareEventSafely("shared", {
+                ...imageMeta,
+                action: "saved_to_library_consume_failed",
+                photo_save_access_type: photoSaveAccess.method,
+                photo_save_free_remaining: photoSavePolicy?.free_remaining ?? null,
+                error: consumeError instanceof Error ? consumeError.message : "unknown",
+              });
+              if (__DEV__) {
+                logger.warn("[share] photo save consume failed after library save", consumeError);
+              }
+              showToast("이미지를 사진 앱에 저장했어요. 저장 기록 동기화는 잠시 후 다시 확인해주세요.", {
+                tone: "success",
+              });
+              return;
+            }
+          }
+
           logShareEventSafely("shared", {
             ...imageMeta,
             action: "saved_to_library",
-            photo_save_access_type: photoSaveAccess.accessType,
-            photo_save_free_remaining: photoSaveAccess.policy?.free_remaining ?? null,
+            photo_save_access_type: photoSaveAccess.method,
+            photo_save_free_remaining: photoSavePolicy?.free_remaining ?? null,
           });
           showToast("이미지를 사진 앱에 저장했어요.", { tone: "success" });
           return;
