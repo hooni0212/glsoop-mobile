@@ -20,7 +20,10 @@ import {
 } from "@/lib/localFeedPreview";
 import type { PostFontKey } from "@/lib/postContent";
 import type { WriteLayoutModel } from "@/lib/postLayout";
-import { getPreviewFontFamily } from "@/lib/previewFonts";
+import {
+  getPreviewFontFamily,
+  getPreviewSignatureFontFamily,
+} from "@/lib/previewFonts";
 import {
   getWritePostTypeLabel,
   type WriteEditorInsight,
@@ -60,7 +63,8 @@ function PreviewTextBlock({
   scale: number;
   fontFamily?: string;
 }) {
-  const resolvedFontFamily = block.id === "footer" ? getPreviewFontFamily("serif") : fontFamily;
+  const resolvedFontFamily =
+    block.id === "footer" ? getPreviewSignatureFontFamily() : fontFamily;
   const textTop = resolveBlockTextTop(block);
   const lineHeight = renderScaledNumber(block.lineHeightPx, scale);
   const fontSize = renderScaledNumber(block.fontSizePx, scale);
@@ -70,7 +74,6 @@ function PreviewTextBlock({
     fontFamily: resolvedFontFamily,
     fontSize,
     lineHeight,
-    fontWeight: block.fontWeight,
     textAlign: block.textAlign,
     letterSpacing,
     includeFontPadding: false,
@@ -163,7 +166,7 @@ function LocalPreviewPageCanvas({
 
   return (
     <View
-      testID={thumbnail ? undefined : `write-local-preview-page-${page.pageNumber}`}
+      testID={thumbnail ? undefined : `write-preview-page-${page.pageNumber}`}
       onLayout={onCanvasLayout}
       style={[
         styles.localCanvas,
@@ -291,7 +294,8 @@ export function WritePreviewCard({
             <FlatList
               ref={listRef}
               data={pages}
-              keyExtractor={(item, index) => `${item.id}-${index}`}
+              keyExtractor={(item) => `preview-page-${item.pageNumber}`}
+              extraData={fontKey}
               horizontal
               pagingEnabled
               showsHorizontalScrollIndicator={false}
@@ -332,7 +336,7 @@ export function WritePreviewCard({
               const active = index === currentPage;
               return (
                 <Pressable
-                  key={`${item.id}-thumb-${index}`}
+                  key={`preview-page-thumb-${item.pageNumber}`}
                   onPress={() => onPressPageThumbnail(index)}
                   style={[styles.thumbnailButton, active && styles.thumbnailButtonActive]}
                   accessibilityRole="button"

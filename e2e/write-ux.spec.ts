@@ -264,13 +264,14 @@ test.describe("Write 임시저장 UX", () => {
     const submitBtn = page.getByTestId("write-submit-btn");
     await submitBtn.click();
     await expect(page.getByText("미리보기", { exact: true })).toBeVisible();
-    await expect(page.getByTestId("write-local-preview-page-1")).toBeVisible();
+    await expect(page.getByTestId("write-preview-page-1")).toBeVisible();
     expect(previewSessionCalls).toBe(0);
 
+    await page.getByTestId("write-font-hand").click();
     await submitBtn.click();
     await expect(page.getByText("완료되었어요")).toBeVisible();
     expect(previewSessionCalls).toBe(0);
-    expect(capture.payload?.content).toBe("<!--FONT:serif-->로컬 미리보기 본문");
+    expect(capture.payload?.content).toBe("<!--FONT:hand-->로컬 미리보기 본문");
     expect(capture.payload?.content_pages).toEqual(["로컬 미리보기 본문"]);
     expect(capture.payload?.layout_json?.text_box).toBeTruthy();
   });

@@ -1,13 +1,14 @@
 import React from "react";
 import * as SplashScreen from "expo-splash-screen";
-import { useFonts } from "expo-font";
+import { getLoadedFonts, useFonts } from "expo-font";
 import { AuthGate } from "@/auth/AuthGate";
 import { AuthProvider, useAuth } from "@/auth/AuthContext";
 import { PostLoginPreferencesPrompt } from "@/auth/PostLoginPreferencesPrompt";
 import { AppBootScreen } from "@/components/state/AppBootScreen";
 import { refreshNotificationUnreadCount } from "@/features/notifications/notificationStore";
 import { ToastProvider, useToast } from "@/feedback/ToastProvider";
-import { PREVIEW_FONT_ASSETS } from "@/lib/previewFonts";
+import { logger } from "@/lib/logger";
+import { PREVIEW_FONT_ASSETS, PREVIEW_FONT_FAMILY } from "@/lib/previewFonts";
 import { usePushNotifications } from "@/lib/pushNotifications";
 import { BottomDockProvider } from "@/navigation/bottomDock";
 import { AppOnboardingTour } from "@/onboarding/AppOnboardingTour";
@@ -38,6 +39,21 @@ function RootLayoutContent() {
   const [layoutReady, setLayoutReady] = React.useState(false);
   const splashHiddenRef = React.useRef(false);
   const bootReady = ready && (fontsLoaded || Boolean(fontLoadError));
+
+  React.useEffect(() => {
+    if (!fontLoadError) return;
+    logger.warn("[preview-fonts] failed to load local preview fonts", { error: fontLoadError });
+  }, [fontLoadError]);
+
+  React.useEffect(() => {
+    if (!fontsLoaded) return;
+    const expectedFonts = new Set(Object.keys(PREVIEW_FONT_ASSETS));
+    const selectedFonts = new Set(Object.values(PREVIEW_FONT_FAMILY));
+    const loadedFonts = getLoadedFonts().filter(
+      (font) => expectedFonts.has(font) || selectedFonts.has(font)
+    );
+    logger.debug("[preview-fonts] loaded local preview fonts", { fonts: loadedFonts });
+  }, [fontsLoaded]);
 
   React.useEffect(() => {
     if (!bootReady || !layoutReady || splashHiddenRef.current) return;

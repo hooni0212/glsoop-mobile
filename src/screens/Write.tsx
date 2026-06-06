@@ -118,7 +118,8 @@ export default function Write() {
   const [draftId, setDraftId] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState<PostType | null>(null);
   const [hashtagsInput, setHashtagsInput] = useState("");
-  const [fontKey, setFontKey] = useState<PostFontKey>("serif");
+  const [fontKey, setFontKeyState] = useState<PostFontKey>("serif");
+  const fontKeyRef = useRef<PostFontKey>("serif");
   const [visibility, setVisibility] = useState<PostVisibility>("public");
   const [commentPolicy, setCommentPolicy] = useState<PostCommentPolicy>("logged_in");
   const [editPostId, setEditPostId] = useState<string | null>(null);
@@ -143,6 +144,10 @@ export default function Write() {
   } | null>(null);
 
   const lastInitializedEntryKeyRef = useRef<string | null>(null);
+  const setFontKey = useCallback((nextFontKey: PostFontKey) => {
+    fontKeyRef.current = nextFontKey;
+    setFontKeyState(nextFontKey);
+  }, []);
   const isEditMode = Boolean(editPostId);
   const body = useMemo(() => flattenWritePages(pageDrafts), [pageDrafts]);
   const submissionContentPages = useMemo(
@@ -267,17 +272,18 @@ export default function Write() {
     setCreatedPostId(null);
     setSubmitError(null);
     setLastQuestCompletion(null);
-  }, []);
+  }, [setFontKey]);
 
   const saveDraftExplicit = useCallback(async () => {
     const trimmedTitle = title.trim();
     const trimmedBody = body.trim();
+    const draftFontKey = fontKeyRef.current;
     const draftCategory =
       selectedType ?? (trimmedTitle || trimmedBody ? editorInsight.detectedType : undefined);
     const hasDraftableChanges =
       Boolean(trimmedTitle || trimmedBody || selectedType || hashtagChips.length > 0) ||
       Boolean(questContext) ||
-      fontKey !== "serif" ||
+      draftFontKey !== "serif" ||
       visibility !== "public" ||
       commentPolicy !== "logged_in" ||
       hasLayoutChanges;
@@ -292,6 +298,7 @@ export default function Write() {
       bodyLen: trimmedBody.length,
       category: draftCategory,
       hashtagCount: hashtagChips.length,
+      fontKey: draftFontKey,
     });
 
     try {
@@ -302,7 +309,7 @@ export default function Write() {
         pages: pageDrafts,
         category: draftCategory,
         hashtags: hashtagChips,
-        fontKey,
+        fontKey: draftFontKey,
         layoutJson: buildLayoutPayload(layout),
         visibility,
         commentPolicy,
@@ -318,7 +325,7 @@ export default function Write() {
       showToast("임시저장에 실패했어요. 잠시 후 다시 시도해주세요.", { tone: "error" });
       return false;
     }
-  }, [title, body, pageDrafts, draftId, editPostId, selectedType, editorInsight.detectedType, hashtagChips, fontKey, layout, visibility, commentPolicy, questContext, hasLayoutChanges, showToast]);
+  }, [title, body, pageDrafts, draftId, editPostId, selectedType, editorInsight.detectedType, hashtagChips, layout, visibility, commentPolicy, questContext, hasLayoutChanges, showToast]);
 
   const { confirm: leaveConfirm, requestLeave, allowNextLeave } = useConfirmBeforeLeave({
     hasChanges,
@@ -522,9 +529,11 @@ export default function Write() {
 
     const trimmedTitle = title.trim();
     const trimmedBody = body.trim();
+    const submitFontKey = fontKeyRef.current;
     logger.debug("[write] submit payload", {
       type: resolvedType,
       category: resolvedType,
+      fontKey: submitFontKey,
       titleLen: trimmedTitle.length,
       contentLen: trimmedBody.length,
     });
@@ -543,7 +552,7 @@ export default function Write() {
           contentPages: submissionContentPages,
           hashtags: hashtagChips,
           layoutJson: buildLayoutPayload(submissionLayout),
-          fontKey,
+          fontKey: submitFontKey,
           visibility,
           commentPolicy,
         });
@@ -559,7 +568,7 @@ export default function Write() {
           contentFormat: "plain",
           hashtags: hashtagChips,
           layoutJson: buildLayoutPayload(submissionLayout),
-          fontKey,
+          fontKey: submitFontKey,
           visibility,
           commentPolicy,
           questContext: questContext
@@ -593,7 +602,6 @@ export default function Write() {
     body,
     submissionContentPages,
     hasOverLimitPage,
-    fontKey,
     visibility,
     commentPolicy,
     questContext,
@@ -755,6 +763,7 @@ export default function Write() {
     routeDraftId,
     routeNewDraft,
     routePostId,
+    setFontKey,
     writeEntryKey,
   ]);
 
