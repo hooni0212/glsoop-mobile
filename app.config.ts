@@ -3,7 +3,7 @@ import type { ExpoConfig } from "expo/config";
 const baseConfig = require("./app.json").expo as ExpoConfig;
 
 // iOS buildNumber / Android versionCode를 한 곳에서 같이 관리합니다.
-const MOBILE_BUILD_NUMBER = 45;
+const MOBILE_BUILD_NUMBER = 46;
 const ADMOB_TEST_ANDROID_APP_ID = "ca-app-pub-3940256099942544~3347511713";
 const ADMOB_TEST_IOS_APP_ID = "ca-app-pub-3940256099942544~1458002511";
 
@@ -79,11 +79,6 @@ export default (): ExpoConfig => ({
   ],
   ios: {
     ...baseConfig.ios,
-    infoPlist: {
-      ...(baseConfig.ios?.infoPlist ?? {}),
-      NSUserTrackingUsageDescription:
-        "맞춤형 광고와 광고 성과 측정을 위해 앱 활동 사용 권한을 요청할 수 있습니다.",
-    },
     buildNumber: String(MOBILE_BUILD_NUMBER),
   },
   android: {

@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process";
 
 const EXPECTED = {
   bundleIdentifier: "com.glsoop.app",
-  version: "1.0.0",
+  version: "1.0.7",
   supportsTablet: true,
   requireFullScreen: true,
   env: {
@@ -33,6 +33,7 @@ const version = config?.version;
 const buildNumber = config?.ios?.buildNumber;
 const supportsTablet = config?.ios?.supportsTablet;
 const requireFullScreen = config?.ios?.requireFullScreen;
+const infoPlist = config?.ios?.infoPlist ?? {};
 
 if (bundleIdentifier !== EXPECTED.bundleIdentifier) {
   fail(`ios.bundleIdentifier mismatch: expected ${EXPECTED.bundleIdentifier}, received ${bundleIdentifier ?? "(missing)"}`);
@@ -58,12 +59,17 @@ if (requireFullScreen !== EXPECTED.requireFullScreen) {
   );
 }
 
+if (Object.prototype.hasOwnProperty.call(infoPlist, "NSUserTrackingUsageDescription")) {
+  fail("ios.infoPlist.NSUserTrackingUsageDescription must be removed unless ATT tracking is intentionally enabled.");
+}
+
 console.log("Verified Expo public config:");
 console.log(`- ios.bundleIdentifier=${bundleIdentifier}`);
 console.log(`- version=${version}`);
 console.log(`- ios.buildNumber=${buildNumber}`);
 console.log(`- ios.supportsTablet=${String(supportsTablet)}`);
 console.log(`- ios.requireFullScreen=${String(requireFullScreen)}`);
+console.log("- ios.infoPlist.NSUserTrackingUsageDescription=(absent)");
 
 if (!checkEnv) {
   process.exit(0);
