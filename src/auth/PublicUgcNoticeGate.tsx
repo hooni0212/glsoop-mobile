@@ -19,14 +19,15 @@ import { tokens } from "@/theme/tokens";
 
 import {
   acknowledgePublicUgcNotice,
+  buildPublicUgcNoticeVersionKey,
   getAcknowledgedPublicUgcNoticeVersion,
+  PUBLIC_UGC_NOTICE_FALLBACK_VERSION,
 } from "./publicUgcNoticeStorage";
 
 type Props = {
   active: boolean;
 };
 
-const NOTICE_FALLBACK_VERSION = "public-ugc-notice.v1";
 const SUPPORT_EMAIL = getSupportEmail();
 const SUPPORT_URL = getSupportUrl();
 
@@ -36,25 +37,14 @@ const DOCUMENT_ITEMS = [
   { key: "guidelines", label: "커뮤니티 가이드라인" },
 ] as const;
 
-function buildPublicUgcNoticeVersionKey(config: RuntimeLegalConfig | null) {
-  const versions = config?.versions;
-  const versionParts = [versions?.terms, versions?.privacy, versions?.guidelines].filter(
-    (value): value is string => typeof value === "string" && value.trim().length > 0
-  );
-
-  if (versionParts.length === 0) {
-    return NOTICE_FALLBACK_VERSION;
-  }
-
-  return `public-ugc-notice:${versionParts.join("|")}`;
-}
-
 export function PublicUgcNoticeGate({ active }: Props) {
   const { showToast } = useToast();
   const [loading, setLoading] = React.useState(false);
   const [ready, setReady] = React.useState(false);
   const [runtimeConfig, setRuntimeConfig] = React.useState<RuntimeLegalConfig | null>(null);
-  const [currentVersionKey, setCurrentVersionKey] = React.useState<string>(NOTICE_FALLBACK_VERSION);
+  const [currentVersionKey, setCurrentVersionKey] = React.useState<string>(
+    PUBLIC_UGC_NOTICE_FALLBACK_VERSION
+  );
   const [acknowledgedVersionKey, setAcknowledgedVersionKey] = React.useState<string | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
   const [legalAcknowledged, setLegalAcknowledged] = React.useState(false);

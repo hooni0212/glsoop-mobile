@@ -12,10 +12,16 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {
+  buildPublicUgcNoticeVersionKey,
+  getAcknowledgedPublicUgcNoticeVersion,
+  subscribePublicUgcNoticeAcknowledgement,
+} from "@/auth/publicUgcNoticeStorage";
+import {
   consumeAppOnboardingTourReplayRequest,
   hasCompletedAppOnboardingTour,
   markAppOnboardingTourCompleted,
 } from "@/onboarding/appOnboardingTourStorage";
+import { fetchRuntimeLegalConfig } from "@/services/runtimeConfigService";
 import { tokens } from "@/theme/tokens";
 
 type HighlightShape = "pill" | "circle" | "rounded";
@@ -130,8 +136,15 @@ export function AppOnboardingTour() {
   const { width, height } = useWindowDimensions();
   const [visible, setVisible] = React.useState(false);
   const [stepIndex, setStepIndex] = React.useState(0);
+  const [noticeAcknowledgementTick, setNoticeAcknowledgementTick] = React.useState(0);
   const onHome = isHomeRoute(pathname, segments as string[]);
   const step = TOUR_STEPS[stepIndex] ?? TOUR_STEPS[0];
+
+  React.useEffect(() => {
+    return subscribePublicUgcNoticeAcknowledgement(() => {
+      setNoticeAcknowledgementTick((current) => current + 1);
+    });
+  }, []);
 
   React.useEffect(() => {
     if (!onHome) {
@@ -142,6 +155,18 @@ export function AppOnboardingTour() {
     let cancelled = false;
     const timer = setTimeout(() => {
       void (async () => {
+        const [acknowledgedNoticeVersion, runtimeLegalConfig] = await Promise.all([
+          getAcknowledgedPublicUgcNoticeVersion(),
+          fetchRuntimeLegalConfig().catch(() => null),
+        ]);
+        if (cancelled) return;
+
+        const currentNoticeVersion = buildPublicUgcNoticeVersionKey(runtimeLegalConfig);
+        if (acknowledgedNoticeVersion !== currentNoticeVersion) {
+          setVisible(false);
+          return;
+        }
+
         const [completed, replayRequested] = await Promise.all([
           hasCompletedAppOnboardingTour(),
           consumeAppOnboardingTourReplayRequest(),
@@ -159,7 +184,7 @@ export function AppOnboardingTour() {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [onHome]);
+  }, [noticeAcknowledgementTick, onHome]);
 
   const finish = React.useCallback(async () => {
     setVisible(false);
@@ -209,7 +234,7 @@ export function AppOnboardingTour() {
 
   return (
     <Modal visible transparent animationType="fade" statusBarTranslucent>
-      <View style={styles.root} pointerEvents="auto">
+      <View style={styles.root} pointerEvents="auto" testID="app-onboarding-tour">
         <View style={styles.scrim} />
         <View
           pointerEvents="none"

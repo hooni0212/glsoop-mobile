@@ -66,14 +66,6 @@ export default function AuthWelcome() {
               <Text style={styles.secondaryText}>회원가입</Text>
             </Pressable>
           </View>
-          <Pressable
-            onPress={() => router.push("/guide" as never)}
-            style={({ pressed }) => [styles.guideBtn, pressed && styles.guideBtnPressed]}
-            testID="auth-welcome-guide-btn"
-          >
-            <Ionicons name="compass-outline" size={17} color={tokens.colors.green700} />
-            <Text style={styles.guideText}>앱 가이드 보기</Text>
-          </Pressable>
           <Text style={styles.actionHint}>로그인하면 저장, 팔로잉, 성장 기록이 이어져요.</Text>
         </View>
       </ScrollView>
@@ -190,23 +182,6 @@ const styles = StyleSheet.create({
   },
   secondaryBtnPressed: { opacity: 0.92 },
   secondaryText: { color: tokens.colors.text, fontSize: 15, fontWeight: "800" },
-  guideBtn: {
-    minHeight: 42,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 7,
-    borderRadius: tokens.radius.pill,
-    backgroundColor: tokens.colors.green050,
-    borderWidth: 1,
-    borderColor: tokens.colors.green100,
-  },
-  guideBtnPressed: { opacity: 0.9 },
-  guideText: {
-    color: tokens.colors.green900,
-    fontSize: tokens.font.small,
-    fontWeight: "900",
-  },
   actionHint: {
     textAlign: "center",
     fontSize: tokens.font.small,
