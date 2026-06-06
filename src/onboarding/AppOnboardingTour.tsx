@@ -79,12 +79,12 @@ const TOUR_STEPS: TourStep[] = [
     body: "좋아요, 저장, 더보기 메뉴로 좋은 글을 남기고 안전 기능도 사용할 수 있어요.",
     targetLabel: "글 카드 액션",
     highlightShape: "rounded",
-    placement: "middle",
-    target: ({ width, height }) => ({
+    placement: "bottom",
+    target: ({ width, height, bottom }) => ({
       left: Math.max(18, (width - Math.min(width - 40, 353)) / 2),
-      top: Math.max(176, height * 0.36),
+      top: Math.max(176, height - bottom - 142),
       width: Math.min(width - 40, 353),
-      height: 122,
+      height: 58,
     }),
   },
   {
@@ -220,7 +220,7 @@ export function AppOnboardingTour() {
   );
   const cardTop =
     step.placement === "bottom"
-      ? clamp(target.top - 196, insets.top + 18, Math.max(insets.top + 18, height - 244))
+      ? clamp(target.top - 260, insets.top + 18, Math.max(insets.top + 18, height - 244))
       : step.placement === "middle"
         ? clamp(target.top + target.height + 22, insets.top + 18, height - 250)
         : clamp(target.top + target.height + 22, insets.top + 18, height - 250);
