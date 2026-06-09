@@ -110,6 +110,18 @@ function normalizeFromApiCode(
     };
   }
 
+  if (normalizedCode === "SUBSCRIPTION_OWNED_BY_OTHER_ACCOUNT") {
+    return {
+      kind: "unknown",
+      title: "이미 다른 계정에 연결된 구독이에요",
+      description:
+        message ||
+        "이 Apple 구독은 연결된 글숲 계정으로 로그인해야 복원할 수 있어요.",
+      canRetry: false,
+      status,
+    };
+  }
+
   return null;
 }
 

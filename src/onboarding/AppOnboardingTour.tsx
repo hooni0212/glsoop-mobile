@@ -12,10 +12,16 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {
+  buildPublicUgcNoticeVersionKey,
+  getAcknowledgedPublicUgcNoticeVersion,
+  subscribePublicUgcNoticeAcknowledgement,
+} from "@/auth/publicUgcNoticeStorage";
+import {
   consumeAppOnboardingTourReplayRequest,
   hasCompletedAppOnboardingTour,
   markAppOnboardingTourCompleted,
 } from "@/onboarding/appOnboardingTourStorage";
+import { fetchRuntimeLegalConfig } from "@/services/runtimeConfigService";
 import { tokens } from "@/theme/tokens";
 
 type HighlightShape = "pill" | "circle" | "rounded";
@@ -73,12 +79,12 @@ const TOUR_STEPS: TourStep[] = [
     body: "좋아요, 저장, 더보기 메뉴로 좋은 글을 남기고 안전 기능도 사용할 수 있어요.",
     targetLabel: "글 카드 액션",
     highlightShape: "rounded",
-    placement: "middle",
-    target: ({ width, height }) => ({
+    placement: "bottom",
+    target: ({ width, height, bottom }) => ({
       left: Math.max(18, (width - Math.min(width - 40, 353)) / 2),
-      top: Math.max(176, height * 0.36),
+      top: Math.max(176, height - bottom - 142),
       width: Math.min(width - 40, 353),
-      height: 122,
+      height: 58,
     }),
   },
   {
@@ -130,8 +136,15 @@ export function AppOnboardingTour() {
   const { width, height } = useWindowDimensions();
   const [visible, setVisible] = React.useState(false);
   const [stepIndex, setStepIndex] = React.useState(0);
+  const [noticeAcknowledgementTick, setNoticeAcknowledgementTick] = React.useState(0);
   const onHome = isHomeRoute(pathname, segments as string[]);
   const step = TOUR_STEPS[stepIndex] ?? TOUR_STEPS[0];
+
+  React.useEffect(() => {
+    return subscribePublicUgcNoticeAcknowledgement(() => {
+      setNoticeAcknowledgementTick((current) => current + 1);
+    });
+  }, []);
 
   React.useEffect(() => {
     if (!onHome) {
@@ -142,6 +155,18 @@ export function AppOnboardingTour() {
     let cancelled = false;
     const timer = setTimeout(() => {
       void (async () => {
+        const [acknowledgedNoticeVersion, runtimeLegalConfig] = await Promise.all([
+          getAcknowledgedPublicUgcNoticeVersion(),
+          fetchRuntimeLegalConfig().catch(() => null),
+        ]);
+        if (cancelled) return;
+
+        const currentNoticeVersion = buildPublicUgcNoticeVersionKey(runtimeLegalConfig);
+        if (acknowledgedNoticeVersion !== currentNoticeVersion) {
+          setVisible(false);
+          return;
+        }
+
         const [completed, replayRequested] = await Promise.all([
           hasCompletedAppOnboardingTour(),
           consumeAppOnboardingTourReplayRequest(),
@@ -159,7 +184,7 @@ export function AppOnboardingTour() {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [onHome]);
+  }, [noticeAcknowledgementTick, onHome]);
 
   const finish = React.useCallback(async () => {
     setVisible(false);
@@ -195,7 +220,7 @@ export function AppOnboardingTour() {
   );
   const cardTop =
     step.placement === "bottom"
-      ? clamp(target.top - 196, insets.top + 18, Math.max(insets.top + 18, height - 244))
+      ? clamp(target.top - 260, insets.top + 18, Math.max(insets.top + 18, height - 244))
       : step.placement === "middle"
         ? clamp(target.top + target.height + 22, insets.top + 18, height - 250)
         : clamp(target.top + target.height + 22, insets.top + 18, height - 250);
@@ -209,7 +234,7 @@ export function AppOnboardingTour() {
 
   return (
     <Modal visible transparent animationType="fade" statusBarTranslucent>
-      <View style={styles.root} pointerEvents="auto">
+      <View style={styles.root} pointerEvents="auto" testID="app-onboarding-tour">
         <View style={styles.scrim} />
         <View
           pointerEvents="none"
