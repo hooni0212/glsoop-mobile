@@ -8,9 +8,11 @@ import { useAuth } from "@/auth/AuthContext";
 import { AppEmpty } from "@/components/state/AppEmpty";
 import { AppError } from "@/components/state/AppError";
 import { AppLoading } from "@/components/state/AppLoading";
+import { getLegalDocumentUrl } from "@/config/release";
 import { useToast } from "@/feedback/ToastProvider";
 import { buildAuthRoute } from "@/lib/authRedirect";
 import { normalizeApiError, type AppErrorModel } from "@/lib/errors";
+import { openExternalUrl } from "@/lib/externalLinks";
 import {
   hasActiveEntitlement,
   listMyEntitlements,
@@ -18,6 +20,7 @@ import {
 import {
   getPremiumPlans,
   isPremiumIosSupported,
+  openPremiumSubscriptionManagement,
   requestPremiumPurchase,
   restorePremiumPurchases,
   subscribeToPremiumPurchases,
@@ -54,6 +57,7 @@ export default function PremiumPaywallScreen() {
   const [error, setError] = React.useState<AppErrorModel | null>(null);
   const [busySku, setBusySku] = React.useState<string | null>(null);
   const [restoreBusy, setRestoreBusy] = React.useState(false);
+  const [manageBusy, setManageBusy] = React.useState(false);
   const [processingPurchase, setProcessingPurchase] = React.useState(false);
 
   const loadEntitlementState = React.useCallback(async () => {
@@ -171,12 +175,29 @@ export default function PremiumPaywallScreen() {
 
     setRestoreBusy(true);
     try {
-      const results = await restorePremiumPurchases();
+      const restoreSummary = await restorePremiumPurchases();
       const active = await loadEntitlementState();
-      if (active || results.some((result) => result.entitlementActive)) {
+      const hasVerifiedPremium = restoreSummary.verified.some(
+        (result) => result.entitlementActive
+      );
+      const hasOwnershipConflict = restoreSummary.failures.some(
+        (failure) => failure.ownershipConflict
+      );
+
+      if (active || hasVerifiedPremium) {
         showToast("구매 내역을 복원했어요.", { tone: "success" });
-      } else if (results.length > 0) {
+      } else if (hasOwnershipConflict) {
+        showToast(
+          "이 Apple 구독은 다른 글숲 계정에 연결되어 있어요. 연결된 계정으로 로그인해 주세요.",
+          { tone: "error" }
+        );
+      } else if (restoreSummary.verified.length > 0) {
         showToast("복원된 구매의 검증이 접수됐어요.", { tone: "success" });
+      } else if (restoreSummary.totalPremiumPurchases > 0) {
+        showToast(
+          restoreSummary.failures[0]?.message || "구매 내역을 복원하지 못했어요.",
+          { tone: "error" }
+        );
       } else {
         showToast("복원할 프리미엄 구매 내역이 없어요.", { tone: "error" });
       }
@@ -192,6 +213,20 @@ export default function PremiumPaywallScreen() {
     }
   }
 
+  async function onManageSubscriptions() {
+    if (manageBusy || processingPurchase) return;
+    setManageBusy(true);
+    try {
+      await openPremiumSubscriptionManagement();
+      await loadEntitlementState();
+    } catch (e) {
+      const normalized = normalizeApiError(e);
+      showToast(normalized.description || normalized.title, { tone: "error" });
+    } finally {
+      setManageBusy(false);
+    }
+  }
+
   if (!isPremiumIosSupported()) {
     return (
       <SafeAreaView style={styles.safe}>
@@ -199,7 +234,7 @@ export default function PremiumPaywallScreen() {
         <View style={styles.center}>
           <AppEmpty
             title="iOS 결제부터 준비 중이에요"
-            description="프리미엄 결제는 iPhone 앱내 구입으로 먼저 연결하고, Android 결제는 추후 반영할 예정이에요."
+            description="프리미엄 결제는 iOS 앱내 구입으로 먼저 연결하고, Android 결제는 추후 반영할 예정이에요."
           />
         </View>
       </SafeAreaView>
@@ -308,8 +343,54 @@ export default function PremiumPaywallScreen() {
             {restoreBusy ? "복원 중..." : "구매 복원"}
           </Text>
         </Pressable>
+
+        <View style={styles.subscriptionNotice}>
+          <Text style={styles.subscriptionNoticeText}>
+            구독은 Apple ID로 결제되며 현재 기간 종료 24시간 전까지 해지하지 않으면 자동
+            갱신돼요. 결제 후 구독 관리는 App Store 계정 설정에서 할 수 있어요.
+          </Text>
+          <View style={styles.legalLinks}>
+            <LegalLink
+              label="이용약관"
+              onPress={() => void openExternalUrl(getLegalDocumentUrl("terms"))}
+            />
+            <LegalLink
+              label="개인정보 처리방침"
+              onPress={() => void openExternalUrl(getLegalDocumentUrl("privacy"))}
+            />
+            <LegalLink
+              label={manageBusy ? "관리 여는 중..." : "구독 관리"}
+              onPress={() => void onManageSubscriptions()}
+              disabled={manageBusy || processingPurchase}
+            />
+          </View>
+        </View>
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+function LegalLink({
+  label,
+  disabled,
+  onPress,
+}: {
+  label: string;
+  disabled?: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      style={({ pressed }) => [
+        styles.legalLink,
+        disabled && styles.disabledBtn,
+        pressed && !disabled && styles.pressed,
+      ]}
+    >
+      <Text style={styles.legalLinkText}>{label}</Text>
+    </Pressable>
   );
 }
 
@@ -584,6 +665,34 @@ const styles = StyleSheet.create({
   },
   restoreBtnText: {
     fontSize: 14,
+    fontWeight: "900",
+    color: tokens.colors.text,
+  },
+  subscriptionNotice: {
+    gap: tokens.space.sm as any,
+  },
+  subscriptionNoticeText: {
+    fontSize: 12,
+    lineHeight: 18,
+    color: tokens.colors.textMuted,
+  },
+  legalLinks: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  legalLink: {
+    minHeight: 36,
+    borderRadius: tokens.radius.lg,
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+    backgroundColor: tokens.colors.surface,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 12,
+  },
+  legalLinkText: {
+    fontSize: 12,
     fontWeight: "900",
     color: tokens.colors.text,
   },

@@ -9,6 +9,7 @@ const EXPECTED = {
     EXPO_PUBLIC_API_BASE_URL: "https://glsoop.com",
     EXPO_PUBLIC_API_DEBUG: "false",
     EXPO_PUBLIC_GROWTH_TELEMETRY: "false",
+    EXPO_PUBLIC_PREMIUM_IAP_ENABLED: "true",
   },
 };
 

@@ -9,11 +9,13 @@ import {
   purchaseUpdatedListener,
   requestPurchase,
   restorePurchases,
+  showManageSubscriptionsIOS,
   type ProductOrSubscription,
   type Purchase,
 } from "expo-iap";
 
 import { apiGet, apiPost } from "@/lib/api";
+import { ApiError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { PREMIUM_ENTITLEMENT_KEY } from "@/services/entitlementService";
 
@@ -61,6 +63,11 @@ type VerifyPurchaseResponse = {
   }[];
 };
 
+type AppAccountTokenResponse = {
+  ok?: boolean;
+  app_account_token?: unknown;
+};
+
 export type PremiumCatalogPlan = {
   storeSku: string;
   title: string;
@@ -81,6 +88,20 @@ export type PremiumPurchaseResult = {
   purchaseStatus: string | null;
   entitlementActive: boolean;
   transactionFinished: boolean;
+};
+
+export type PremiumRestoreFailure = {
+  storeSku: string;
+  transactionId: string | null;
+  message: string;
+  code: string | null;
+  ownershipConflict: boolean;
+};
+
+export type PremiumRestoreSummary = {
+  verified: PremiumPurchaseResult[];
+  failures: PremiumRestoreFailure[];
+  totalPremiumPurchases: number;
 };
 
 let connectionPromise: Promise<boolean> | null = null;
@@ -314,6 +335,22 @@ function purchaseTransactionId(purchase: Purchase) {
   return text((purchase as any).transactionId) || text(purchase.id);
 }
 
+function purchaseOriginalTransactionId(purchase: Purchase) {
+  return (
+    text((purchase as any).originalTransactionId) ||
+    text((purchase as any).originalTransactionIdentifierIOS) ||
+    text((purchase as any).originalTransactionID)
+  );
+}
+
+function purchaseAppAccountToken(purchase: Purchase) {
+  return text((purchase as any).appAccountToken);
+}
+
+function purchaseEnvironment(purchase: Purchase) {
+  return text((purchase as any).environmentIOS) || text((purchase as any).environment);
+}
+
 function purchaseReceiptData(purchase: Purchase) {
   const token = text(purchase.purchaseToken);
   if (token) return token;
@@ -325,9 +362,13 @@ function purchaseReceiptData(purchase: Purchase) {
       id: purchase.id,
       transactionDate: purchase.transactionDate,
       purchaseState: purchase.purchaseState,
+      originalTransactionId: purchaseOriginalTransactionId(purchase),
       originalTransactionIdentifierIOS: (purchase as any).originalTransactionIdentifierIOS,
+      appAccountToken: purchaseAppAccountToken(purchase),
       expirationDateIOS: (purchase as any).expirationDateIOS,
       environmentIOS: (purchase as any).environmentIOS,
+      environment: purchaseEnvironment(purchase),
+      webOrderLineItemId: (purchase as any).webOrderLineItemId,
     });
   } catch {
     return null;
@@ -352,19 +393,29 @@ function verifyResponseHasPremium(response: VerifyPurchaseResponse) {
   );
 }
 
+async function getPremiumAppAccountToken() {
+  const response = await apiGet<AppAccountTokenResponse>("/api/iap/account-token");
+  const appAccountToken = text(response.app_account_token);
+  if (!appAccountToken) {
+    throw new Error("앱 계정 토큰을 확인하지 못했어요.");
+  }
+  return appAccountToken;
+}
+
 export async function requestPremiumPurchase(storeSku: string) {
   if (!isPremiumIosSupported()) {
-    throw new Error("iOS 앱내 구입은 iPhone 앱에서만 사용할 수 있어요.");
+    throw new Error("iOS 앱내 구입은 iOS 앱에서만 사용할 수 있어요.");
   }
   if (!PREMIUM_IOS_SKU_SET.has(storeSku)) {
     throw new Error("지원하지 않는 프리미엄 상품이에요.");
   }
 
   await ensurePremiumStoreConnection();
+  const appAccountToken = await getPremiumAppAccountToken();
   await requestPurchase({
     type: "subs",
     request: {
-      apple: { sku: storeSku },
+      apple: { sku: storeSku, appAccountToken },
     },
   });
 }
@@ -374,6 +425,9 @@ export async function verifyPremiumPurchase(
 ): Promise<PremiumPurchaseResult> {
   const storeSku = purchaseSku(purchase);
   const transactionId = purchaseTransactionId(purchase);
+  const originalTransactionId = purchaseOriginalTransactionId(purchase);
+  const appAccountToken = purchaseAppAccountToken(purchase);
+  const environment = purchaseEnvironment(purchase);
 
   if (!PREMIUM_IOS_SKU_SET.has(storeSku)) {
     throw new Error("프리미엄 상품 결제 정보가 아니에요.");
@@ -386,6 +440,9 @@ export async function verifyPremiumPurchase(
     platform: "apple",
     store_sku: storeSku,
     transaction_id: transactionId,
+    original_transaction_id: originalTransactionId || null,
+    app_account_token: appAccountToken || null,
+    environment: environment || null,
     receipt_data: purchaseReceiptData(purchase),
     client_meta: {
       source: "glsoop-mobile",
@@ -393,8 +450,10 @@ export async function verifyPremiumPurchase(
       purchase_state: purchase.purchaseState,
       transaction_date: purchase.transactionDate,
       store: purchase.store,
-      original_transaction_id: text((purchase as any).originalTransactionIdentifierIOS) || null,
-      environment: text((purchase as any).environmentIOS) || null,
+      original_transaction_id: originalTransactionId || null,
+      app_account_token: appAccountToken || null,
+      environment: environment || null,
+      web_order_line_item_id: text((purchase as any).webOrderLineItemId) || null,
     },
   });
 
@@ -418,9 +477,24 @@ export async function verifyPremiumPurchase(
   };
 }
 
-export async function restorePremiumPurchases() {
+function restoreFailureFromError(purchase: Purchase, error: unknown): PremiumRestoreFailure {
+  const code = error instanceof ApiError ? text(error.code) || null : null;
+  const message =
+    error instanceof Error && error.message
+      ? error.message
+      : "구매 내역 검증에 실패했어요.";
+  return {
+    storeSku: purchaseSku(purchase),
+    transactionId: purchaseTransactionId(purchase) || null,
+    message,
+    code,
+    ownershipConflict: code === "SUBSCRIPTION_OWNED_BY_OTHER_ACCOUNT",
+  };
+}
+
+export async function restorePremiumPurchases(): Promise<PremiumRestoreSummary> {
   if (!isPremiumIosSupported()) {
-    throw new Error("iOS 앱내 구입 복원은 iPhone 앱에서만 사용할 수 있어요.");
+    throw new Error("iOS 앱내 구입 복원은 iOS 앱에서만 사용할 수 있어요.");
   }
 
   await ensurePremiumStoreConnection();
@@ -428,12 +502,41 @@ export async function restorePremiumPurchases() {
   const purchases = await getAvailablePurchases();
   const premiumPurchases = purchases.filter(isPremiumPurchase);
   const results: PremiumPurchaseResult[] = [];
+  const failures: PremiumRestoreFailure[] = [];
 
   for (const purchase of premiumPurchases) {
-    results.push(await verifyPremiumPurchase(purchase));
+    try {
+      results.push(await verifyPremiumPurchase(purchase));
+    } catch (error) {
+      failures.push(restoreFailureFromError(purchase, error));
+      logger.warn("[premium-store] restore verification failed", {
+        storeSku: purchaseSku(purchase),
+        transactionId: purchaseTransactionId(purchase),
+        error,
+      });
+    }
   }
 
-  return results;
+  return {
+    verified: results,
+    failures,
+    totalPremiumPurchases: premiumPurchases.length,
+  };
+}
+
+export async function openPremiumSubscriptionManagement() {
+  if (!isPremiumIosSupported()) {
+    throw new Error("iOS 구독 관리는 iOS 앱에서만 사용할 수 있어요.");
+  }
+
+  await ensurePremiumStoreConnection();
+  const changedPurchases = await showManageSubscriptionsIOS();
+  const premiumPurchases = Array.isArray(changedPurchases)
+    ? changedPurchases.filter(isPremiumPurchase)
+    : [];
+  for (const purchase of premiumPurchases) {
+    await verifyPremiumPurchase(purchase);
+  }
 }
 
 export function subscribeToPremiumPurchases({
