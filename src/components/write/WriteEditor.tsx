@@ -13,6 +13,12 @@ type Props = {
   title: string;
   pageDrafts: WritePageDraft[];
   selectedType: PostType | null;
+  promptContext?: {
+    sourceLabel?: string;
+    dayLabel?: string;
+    promptTitle?: string;
+    promptBody?: string;
+  } | null;
   insight: WriteEditorInsight;
   onChangeTitle: (value: string) => void;
   onChangePageBody: (pageId: string, value: string) => void;
@@ -43,6 +49,7 @@ export function WriteEditor({
   title,
   pageDrafts,
   selectedType,
+  promptContext,
   insight,
   onChangeTitle,
   onChangePageBody,
@@ -53,6 +60,9 @@ export function WriteEditor({
 }: Props) {
   const activeType = selectedType ?? insight.detectedType;
   const canAddPage = pageDrafts.length < WRITE_PAGE_MAX_COUNT;
+  const promptEyebrow = [promptContext?.sourceLabel ?? "오늘의 글감", promptContext?.dayLabel]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
     <View style={styles.editorWrap}>
@@ -76,6 +86,18 @@ export function WriteEditor({
           );
         })}
       </View>
+
+      {promptContext ? (
+        <View style={styles.questPromptCard} testID="write-quest-prompt-card">
+          <Text style={styles.questPromptEyebrow}>{promptEyebrow}</Text>
+          <Text style={styles.questPromptTitle}>
+            {promptContext.promptTitle ?? "주제 글쓰기"}
+          </Text>
+          {promptContext.promptBody ? (
+            <Text style={styles.questPromptBody}>{promptContext.promptBody}</Text>
+          ) : null}
+        </View>
+      ) : null}
 
       <View style={[styles.card, styles.writeTitleCard]}>
         <Text style={styles.label}>제목</Text>

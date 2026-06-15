@@ -72,6 +72,16 @@ const PREVIEW_PANEL_ITEMS: { key: PreviewPanelKey; label: string }[] = [
   { key: "layout", label: "배치" },
 ];
 
+type WritePromptContext = {
+  promptKey: string;
+  promptTitle?: string;
+  promptBody?: string;
+  defaultCategory?: PostType;
+  suggestedHashtags: string[];
+  sourceLabel?: string;
+  dayLabel?: string;
+};
+
 function getParamString(value: unknown): string | null {
   const raw = Array.isArray(value) ? value[0] : value;
   if (typeof raw !== "string") return null;
@@ -102,6 +112,17 @@ function parsePromptTags(value: unknown): string[] {
     .slice(0, 12);
 }
 
+function buildPromptContextFromQuest(input: WriteDraftQuestContext): WritePromptContext {
+  return {
+    promptKey: input.promptKey,
+    promptTitle: input.promptTitle,
+    promptBody: input.promptBody,
+    defaultCategory: input.defaultCategory,
+    suggestedHashtags: input.suggestedHashtags ?? [],
+    sourceLabel: "퀘스트 주제",
+  };
+}
+
 export default function Write() {
   const styles = useMemo(() => createWriteStyles(), []);
   const params = useLocalSearchParams();
@@ -124,6 +145,7 @@ export default function Write() {
   const [commentPolicy, setCommentPolicy] = useState<PostCommentPolicy>("logged_in");
   const [editPostId, setEditPostId] = useState<string | null>(null);
   const [questContext, setQuestContext] = useState<WriteDraftQuestContext | null>(null);
+  const [promptContext, setPromptContext] = useState<WritePromptContext | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewPanel, setPreviewPanel] = useState<PreviewPanelKey>("settings");
   const [layout, setLayout] = useState<WriteLayoutModel>(DEFAULT_WRITE_LAYOUT);
@@ -193,6 +215,23 @@ export default function Write() {
       suggestedHashtags: parsePromptTags(rawParams.promptTags),
     };
   }, [params]);
+  const campaignPromptFromParams = useMemo<WritePromptContext | null>(() => {
+    const rawParams = (params ?? {}) as Record<string, unknown>;
+    const promptKey = getParamString(rawParams.campaignPromptKey);
+    if (!promptKey) return null;
+
+    const promptDay = getParamString(rawParams.promptDay);
+
+    return {
+      promptKey,
+      promptTitle: getParamString(rawParams.promptTitle) ?? undefined,
+      promptBody: getParamString(rawParams.promptBody) ?? undefined,
+      defaultCategory: normalizePromptCategory(rawParams.promptCategory),
+      suggestedHashtags: parsePromptTags(rawParams.promptTags),
+      sourceLabel: getParamString(rawParams.promptSource) ?? "오늘의 글감",
+      dayLabel: promptDay ? `${promptDay}일차` : undefined,
+    };
+  }, [params]);
   const routePostId = useMemo(
     () => getParamString(((params ?? {}) as Record<string, unknown>).postId),
     [params]
@@ -212,8 +251,11 @@ export default function Write() {
     if (promptQuestFromParams) {
       return `quest:${promptQuestFromParams.stateId}:${promptQuestFromParams.promptKey}`;
     }
+    if (campaignPromptFromParams) {
+      return `campaign:${campaignPromptFromParams.promptKey}`;
+    }
     return "create";
-  }, [promptQuestFromParams, routeDraftId, routeNewDraft, routePostId]);
+  }, [campaignPromptFromParams, promptQuestFromParams, routeDraftId, routeNewDraft, routePostId]);
 
   const hasChanges =
     title.trim().length > 0 ||
@@ -260,6 +302,7 @@ export default function Write() {
     setCommentPolicy("logged_in");
     setEditPostId(null);
     setQuestContext(null);
+    setPromptContext(null);
     setPreviewOpen(false);
     setPreviewPanel("settings");
     setLayout(DEFAULT_WRITE_LAYOUT);
@@ -671,6 +714,7 @@ export default function Write() {
           setVisibility(editable.visibility ?? "public");
           setCommentPolicy(editable.commentPolicy ?? "logged_in");
           setQuestContext(null);
+          setPromptContext(null);
           setLayout(parseLayoutJson(editable.layoutJson));
           setActiveBoxId("text_box");
         } catch (err) {
@@ -697,7 +741,11 @@ export default function Write() {
           setFontKey(d.fontKey ?? "serif");
           setVisibility(d.visibility ?? "public");
           setCommentPolicy(d.commentPolicy ?? "logged_in");
-          setQuestContext(d.questContext ?? null);
+          const restoredQuestContext = d.questContext ?? null;
+          setQuestContext(restoredQuestContext);
+          setPromptContext(
+            restoredQuestContext ? buildPromptContextFromQuest(restoredQuestContext) : null
+          );
           if (draftHashtags.length === 0 && d.questContext?.suggestedHashtags?.length) {
             setHashtagsInput(d.questContext.suggestedHashtags.join(", "));
           }
@@ -714,9 +762,24 @@ export default function Write() {
           promptKey: promptQuestFromParams.promptKey,
         });
         setQuestContext(promptQuestFromParams);
+        setPromptContext(buildPromptContextFromQuest(promptQuestFromParams));
         setSelectedType(promptQuestFromParams.defaultCategory ?? "essay");
         if (promptQuestFromParams.suggestedHashtags?.length) {
           setHashtagsInput(promptQuestFromParams.suggestedHashtags.join(", "));
+        }
+        return;
+      }
+
+      if (campaignPromptFromParams) {
+        if (cancelled) return;
+        logger.debug("[write] campaign prompt restored", {
+          promptKey: campaignPromptFromParams.promptKey,
+        });
+        setQuestContext(null);
+        setPromptContext(campaignPromptFromParams);
+        setSelectedType(campaignPromptFromParams.defaultCategory ?? "essay");
+        if (campaignPromptFromParams.suggestedHashtags.length > 0) {
+          setHashtagsInput(campaignPromptFromParams.suggestedHashtags.join(", "));
         }
         return;
       }
@@ -758,6 +821,7 @@ export default function Write() {
     closeDraftPrompt,
     openDraftPrompt,
     isFocused,
+    campaignPromptFromParams,
     promptQuestFromParams,
     resetWriteState,
     routeDraftId,
@@ -826,17 +890,6 @@ export default function Write() {
                   error={submitError}
                   onRetry={submitError.canRetry ? onPressSubmit : undefined}
                 />
-              </View>
-            ) : null}
-            {questContext ? (
-              <View style={styles.questPromptCard} testID="write-quest-prompt-card">
-                <Text style={styles.questPromptEyebrow}>퀘스트 주제</Text>
-                <Text style={styles.questPromptTitle}>
-                  {questContext.promptTitle ?? "주제 글쓰기"}
-                </Text>
-                {questContext.promptBody ? (
-                  <Text style={styles.questPromptBody}>{questContext.promptBody}</Text>
-                ) : null}
               </View>
             ) : null}
             {previewOpen ? (
@@ -936,6 +989,7 @@ export default function Write() {
                 title={title}
                 pageDrafts={pageDrafts}
                 selectedType={selectedType}
+                promptContext={promptContext}
                 insight={editorInsight}
                 onChangeTitle={setTitle}
                 onChangePageBody={updatePageBody}
