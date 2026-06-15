@@ -33,6 +33,7 @@ export default defineConfig({
     env: {
       ...process.env,
       EXPO_WEB_PORT: String(webPort),
+      EXPO_PUBLIC_E2E: "true",
     },
   },
 });

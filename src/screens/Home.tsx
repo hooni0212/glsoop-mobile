@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from "react";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { Modal, Pressable, ScrollView, Text, useWindowDimensions, View } from "react-native";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { CategoryChips } from "@/components/home/CategoryChips";
 import { FeedSection } from "@/components/home/FeedSection";
@@ -7,7 +8,7 @@ import { SafetyActionSheet } from "@/components/safety/SafetyActionSheet";
 import { SafetyReasonModal } from "@/components/safety/SafetyReasonModal";
 import { HomeHeader } from "@/components/home/HomeHeader";
 import { blurActiveElementBeforeRouteChange } from "@/lib/webFocus";
-import { homeScreenStyles } from "@/screens/Home.styles";
+import { homeScreenStyles, writingCampaignNoticeStyles } from "@/screens/Home.styles";
 import { useFeed } from "@/features/feed/useFeed";
 import { getBookmark, setBookmark } from "@/features/bookmarks/bookmarkStore";
 import { getLike, setLike } from "@/features/likes/likeStore";
@@ -29,6 +30,19 @@ import { filterBlockedPosts, useBlockedUserIds } from "@/features/safety/blocked
 import { type Post } from "@/types/post";
 import { blockUserById, pickSafetyReasons, reportPost } from "@/services/safetyService";
 import {
+  buildDailyWritingPromptWritePath,
+  getDailyWritingCampaignStatus,
+} from "@/features/writingCampaign/dailyWritingCampaign";
+import {
+  dismissWritingCampaignNoticeForToday,
+  isWritingCampaignNoticeDismissed,
+} from "@/features/writingCampaign/writingCampaignNoticeStorage";
+import {
+  buildPublicUgcNoticeVersionKey,
+  getAcknowledgedPublicUgcNoticeVersion,
+} from "@/auth/publicUgcNoticeStorage";
+import { hasCompletedAppOnboardingTour } from "@/onboarding/appOnboardingTourStorage";
+import {
   addPostToBookmarkList,
   createBookmarkList,
   listBookmarkItems,
@@ -39,21 +53,45 @@ import {
 
 const CATEGORIES = ["추천", "팔로잉", "최신"] as const;
 type Category = (typeof CATEGORIES)[number];
+const WRITING_CAMPAIGN_NOTICE_DISABLED =
+  typeof process !== "undefined" && process?.env?.EXPO_PUBLIC_E2E === "true";
+
+function isHomePath(pathname: string) {
+  return pathname === "/" || pathname === "/(tabs)" || pathname === "/(tabs)/";
+}
 
 export default function Home() {
   const pathname = usePathname();
+  const { height } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const [active, setActive] = useState<Category>("추천");
   const { showToast } = useToast();
-  const { token, signOut } = useAuth();
+  const { token, signInSerial, signOut } = useAuth();
   const unreadNotificationCount = useNotificationUnreadCount();
-  const { config: runtimeLegalConfig } = useRuntimeLegalConfig();
+  const { config: runtimeLegalConfig, loading: runtimeLegalConfigLoading } =
+    useRuntimeLegalConfig();
   const blockedUserIds = useBlockedUserIds();
   const [selectedSafetyPost, setSelectedSafetyPost] = useState<Post | null>(null);
   const [safetyMenuVisible, setSafetyMenuVisible] = useState(false);
   const [reportReasonVisible, setReportReasonVisible] = useState(false);
   const [blockConfirmVisible, setBlockConfirmVisible] = useState(false);
+  const [writingCampaignNoticeVisible, setWritingCampaignNoticeVisible] = useState(false);
   const [reportSubmitting, setReportSubmitting] = useState(false);
   const [blockSubmitting, setBlockSubmitting] = useState(false);
+  const writingCampaignStatus = useMemo(() => getDailyWritingCampaignStatus(), []);
+  const writingCampaignNoticeBlocked =
+    safetyMenuVisible ||
+    reportReasonVisible ||
+    blockConfirmVisible ||
+    signInSerial > 0 ||
+    !isHomePath(pathname);
+  const writingCampaignNoticeSheetStyle = useMemo(
+    () => ({
+      maxHeight: Math.max(280, height - insets.top - 12),
+      paddingBottom: Math.max(12, insets.bottom + 12),
+    }),
+    [height, insets.bottom, insets.top]
+  );
 
   const query = useMemo(() => {
     if (active === "최신") return { limit: 10, sort: "latest" as const };
@@ -91,6 +129,53 @@ export default function Home() {
       clearNotificationUnreadCount();
     });
   }, [token]);
+
+  React.useEffect(() => {
+    if (
+      WRITING_CAMPAIGN_NOTICE_DISABLED ||
+      runtimeLegalConfigLoading ||
+      writingCampaignNoticeBlocked
+    ) {
+      setWritingCampaignNoticeVisible(false);
+      return;
+    }
+
+    let mounted = true;
+    const timer = setTimeout(() => {
+      void (async () => {
+        const [
+          dismissed,
+          acknowledgedPublicUgcNoticeVersion,
+          completedOnboardingTour,
+        ] = await Promise.all([
+          isWritingCampaignNoticeDismissed(writingCampaignStatus.localDateKey),
+          getAcknowledgedPublicUgcNoticeVersion(),
+          hasCompletedAppOnboardingTour(),
+        ]);
+        if (!mounted) return;
+
+        const currentPublicUgcNoticeVersion =
+          buildPublicUgcNoticeVersionKey(runtimeLegalConfig);
+        const canShowAfterRequiredNotices =
+          acknowledgedPublicUgcNoticeVersion === currentPublicUgcNoticeVersion &&
+          completedOnboardingTour;
+
+        setWritingCampaignNoticeVisible(!dismissed && canShowAfterRequiredNotices);
+      })().catch(() => {
+        if (mounted) setWritingCampaignNoticeVisible(false);
+      });
+    }, 900);
+
+    return () => {
+      mounted = false;
+      clearTimeout(timer);
+    };
+  }, [
+    runtimeLegalConfig,
+    runtimeLegalConfigLoading,
+    writingCampaignNoticeBlocked,
+    writingCampaignStatus.localDateKey,
+  ]);
 
   const setPending = (postId: string, pending: boolean) => {
     setLikePending((prev) => ({ ...prev, [postId]: pending }));
@@ -141,6 +226,22 @@ export default function Home() {
 
     router.push("/notifications");
   }, [promptAuthForAction, token]);
+
+  const closeWritingCampaignNotice = React.useCallback(() => {
+    setWritingCampaignNoticeVisible(false);
+  }, []);
+
+  const dismissWritingCampaignNoticeToday = React.useCallback(() => {
+    setWritingCampaignNoticeVisible(false);
+    void dismissWritingCampaignNoticeForToday(writingCampaignStatus.localDateKey);
+  }, [writingCampaignStatus.localDateKey]);
+
+  const startDailyWritingPrompt = React.useCallback(() => {
+    haptics.selection();
+    setWritingCampaignNoticeVisible(false);
+    void dismissWritingCampaignNoticeForToday(writingCampaignStatus.localDateKey);
+    router.push(buildDailyWritingPromptWritePath(writingCampaignStatus) as never);
+  }, [writingCampaignStatus]);
 
   const handleLike = async (postId: string) => {
     if (!token) {
@@ -446,6 +547,117 @@ export default function Home() {
           },
         ]}
       />
+
+      {writingCampaignNoticeVisible ? (
+        <Modal
+          visible
+          transparent
+          animationType="fade"
+          statusBarTranslucent
+          onRequestClose={closeWritingCampaignNotice}
+        >
+          <View style={writingCampaignNoticeStyles.overlay}>
+            <Pressable
+              style={writingCampaignNoticeStyles.backdrop}
+              onPress={closeWritingCampaignNotice}
+              accessibilityRole="button"
+              accessibilityLabel="글쓰기 프로젝트 안내 닫기"
+            />
+            <View
+              style={[
+                writingCampaignNoticeStyles.sheet,
+                writingCampaignNoticeSheetStyle,
+              ]}
+              testID="home-writing-campaign-notice"
+            >
+              <View style={writingCampaignNoticeStyles.handle} />
+              <ScrollView
+                style={writingCampaignNoticeStyles.scroll}
+                contentContainerStyle={writingCampaignNoticeStyles.scrollContent}
+                bounces={false}
+                showsVerticalScrollIndicator={false}
+              >
+                <View>
+                  <Text style={writingCampaignNoticeStyles.eyebrow}>
+                    {writingCampaignStatus.prompt.day}일차 오늘의 글감
+                  </Text>
+                  <Text style={writingCampaignNoticeStyles.title}>
+                    {writingCampaignStatus.title}
+                  </Text>
+                  <Text style={writingCampaignNoticeStyles.description}>
+                    글을 처음 시작할 때 가장 어려운 주제 고르기를 오늘은 글숲이 먼저 열어둘게요.
+                  </Text>
+                </View>
+
+                <View style={writingCampaignNoticeStyles.promptBox}>
+                  <Text style={writingCampaignNoticeStyles.promptMeta}>
+                    오늘의 글감
+                  </Text>
+                  <Text style={writingCampaignNoticeStyles.promptTitle}>
+                    {writingCampaignStatus.prompt.title}
+                  </Text>
+                  <Text style={writingCampaignNoticeStyles.promptBody}>
+                    {writingCampaignStatus.prompt.body}
+                  </Text>
+                </View>
+              </ScrollView>
+
+              <View style={writingCampaignNoticeStyles.actionRow}>
+                <View style={writingCampaignNoticeStyles.secondaryActionRow}>
+                  <Pressable
+                    onPress={closeWritingCampaignNotice}
+                    style={({ pressed }) => [
+                      writingCampaignNoticeStyles.actionButton,
+                      writingCampaignNoticeStyles.actionButtonSecondary,
+                      pressed && writingCampaignNoticeStyles.actionButtonPressed,
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityLabel="글쓰기 프로젝트 안내 닫기"
+                    testID="home-writing-campaign-close"
+                  >
+                    <Text style={writingCampaignNoticeStyles.actionText}>닫기</Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={dismissWritingCampaignNoticeToday}
+                    style={({ pressed }) => [
+                      writingCampaignNoticeStyles.actionButton,
+                      writingCampaignNoticeStyles.actionButtonSecondary,
+                      pressed && writingCampaignNoticeStyles.actionButtonPressed,
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityLabel="오늘 하루 글쓰기 프로젝트 안내 보지 않기"
+                    testID="home-writing-campaign-dismiss-today"
+                  >
+                    <Text style={writingCampaignNoticeStyles.actionText}>
+                      오늘 하루 보지 않기
+                    </Text>
+                  </Pressable>
+                </View>
+                <Pressable
+                  onPress={startDailyWritingPrompt}
+                  style={({ pressed }) => [
+                    writingCampaignNoticeStyles.actionButton,
+                    writingCampaignNoticeStyles.actionButtonPrimary,
+                    pressed && writingCampaignNoticeStyles.actionButtonPressed,
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel="오늘의 글감으로 글쓰기"
+                  testID="home-writing-campaign-start"
+                >
+                  <Text
+                    style={[
+                      writingCampaignNoticeStyles.actionText,
+                      writingCampaignNoticeStyles.actionTextPrimary,
+                    ]}
+                  >
+                    이 주제로 쓰기
+                  </Text>
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      ) : null}
 
       <SafetyActionSheet
         visible={blockConfirmVisible}
