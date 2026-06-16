@@ -148,7 +148,10 @@ export default function Home() {
           acknowledgedPublicUgcNoticeVersion,
           completedOnboardingTour,
         ] = await Promise.all([
-          isWritingCampaignNoticeDismissed(writingCampaignStatus.localDateKey),
+          isWritingCampaignNoticeDismissed(
+            writingCampaignStatus.localDateKey,
+            writingCampaignStatus.campaignKey
+          ),
           getAcknowledgedPublicUgcNoticeVersion(),
           hasCompletedAppOnboardingTour(),
         ]);
@@ -174,6 +177,7 @@ export default function Home() {
     runtimeLegalConfig,
     runtimeLegalConfigLoading,
     writingCampaignNoticeBlocked,
+    writingCampaignStatus.campaignKey,
     writingCampaignStatus.localDateKey,
   ]);
 
@@ -233,13 +237,19 @@ export default function Home() {
 
   const dismissWritingCampaignNoticeToday = React.useCallback(() => {
     setWritingCampaignNoticeVisible(false);
-    void dismissWritingCampaignNoticeForToday(writingCampaignStatus.localDateKey);
-  }, [writingCampaignStatus.localDateKey]);
+    void dismissWritingCampaignNoticeForToday(
+      writingCampaignStatus.localDateKey,
+      writingCampaignStatus.campaignKey
+    );
+  }, [writingCampaignStatus.campaignKey, writingCampaignStatus.localDateKey]);
 
   const startDailyWritingPrompt = React.useCallback(() => {
     haptics.selection();
     setWritingCampaignNoticeVisible(false);
-    void dismissWritingCampaignNoticeForToday(writingCampaignStatus.localDateKey);
+    void dismissWritingCampaignNoticeForToday(
+      writingCampaignStatus.localDateKey,
+      writingCampaignStatus.campaignKey
+    );
     router.push(buildDailyWritingPromptWritePath(writingCampaignStatus) as never);
   }, [writingCampaignStatus]);
 
@@ -579,7 +589,7 @@ export default function Home() {
               >
                 <View>
                   <Text style={writingCampaignNoticeStyles.eyebrow}>
-                    {writingCampaignStatus.prompt.day}일차 오늘의 글감
+                    {writingCampaignStatus.prompt.day}일차 {writingCampaignStatus.promptLabel}
                   </Text>
                   <Text style={writingCampaignNoticeStyles.title}>
                     {writingCampaignStatus.title}
@@ -591,7 +601,7 @@ export default function Home() {
 
                 <View style={writingCampaignNoticeStyles.promptBox}>
                   <Text style={writingCampaignNoticeStyles.promptMeta}>
-                    오늘의 글감
+                    {writingCampaignStatus.promptLabel}
                   </Text>
                   <Text style={writingCampaignNoticeStyles.promptTitle}>
                     {writingCampaignStatus.prompt.title}

@@ -23,6 +23,10 @@ import {
   getDailyWritingCampaignStatus,
   type DailyWritingCampaignStatus,
 } from "@/features/writingCampaign/dailyWritingCampaign";
+import {
+  fetchWritingEventPosts,
+  type WritingEventPost,
+} from "@/features/writingCampaign/writingEventPosts";
 import { formatKstDateDot, toTimestampMs } from "@/lib/dateTime";
 import { tokens } from "@/theme/tokens";
 
@@ -50,10 +54,33 @@ export default function GrowthRecordsScreen() {
   const router = useRouter();
   const { summary, achievements, loading, error, refetch } = useGrowthData();
   const [refreshing, setRefreshing] = useState(false);
+  const [writingEventPosts, setWritingEventPosts] = useState<WritingEventPost[]>([]);
+  const [writingEventPostsLoading, setWritingEventPostsLoading] = useState(false);
+  const [writingEventPostsError, setWritingEventPostsError] = useState<string | null>(null);
   const dailyWritingCampaign = useMemo(() => getDailyWritingCampaignStatus(), []);
   const dailyWritingProgressSteps = useMemo(
     () => getDailyWritingCampaignFocusSteps(dailyWritingCampaign),
     [dailyWritingCampaign]
+  );
+
+  const loadWritingEventPosts = useCallback(
+    async (silent = false) => {
+      if (!silent) setWritingEventPostsLoading(true);
+      setWritingEventPostsError(null);
+      try {
+        const posts = await fetchWritingEventPosts(dailyWritingCampaign.campaignKey);
+        setWritingEventPosts(posts);
+      } catch (postsError) {
+        setWritingEventPostsError(
+          postsError instanceof Error
+            ? postsError.message
+            : "프로젝트 글 목록을 불러오지 못했어요."
+        );
+      } finally {
+        if (!silent) setWritingEventPostsLoading(false);
+      }
+    },
+    [dailyWritingCampaign.campaignKey]
   );
 
   const completedAchievements = useMemo(
@@ -65,13 +92,17 @@ export default function GrowthRecordsScreen() {
     trackGrowthTelemetry("growth_screen_viewed", { screen: "records" });
   }, []);
 
+  useEffect(() => {
+    void loadWritingEventPosts();
+  }, [loadWritingEventPosts]);
+
   const onRefresh = useCallback(async () => {
     if (refreshing || loading) return;
     const startedAt = Date.now();
     trackGrowthTelemetry("growth_refresh_started", { screen: "records" });
     setRefreshing(true);
     try {
-      await refetch();
+      await Promise.all([refetch(), loadWritingEventPosts(true)]);
       trackGrowthTelemetry("growth_refresh_succeeded", {
         screen: "records",
         durationMs: Date.now() - startedAt,
@@ -85,7 +116,7 @@ export default function GrowthRecordsScreen() {
     } finally {
       setRefreshing(false);
     }
-  }, [refreshing, loading, refetch]);
+  }, [refreshing, loading, refetch, loadWritingEventPosts]);
 
   const openDailyWritingPrompt = useCallback(() => {
     trackGrowthTelemetry("growth_action_clicked", {
@@ -93,6 +124,13 @@ export default function GrowthRecordsScreen() {
     });
     router.push(buildDailyWritingPromptWritePath(dailyWritingCampaign) as never);
   }, [dailyWritingCampaign, router]);
+
+  const openWritingEventPost = useCallback(
+    (postId: string) => {
+      router.push(`/posts/${postId}` as never);
+    },
+    [router]
+  );
 
   if (error?.kind === "auth") {
     return (
@@ -204,10 +242,112 @@ export default function GrowthRecordsScreen() {
                 </View>
               </View>
             ) : null}
+
+            <WritingEventPostsCarousel
+              posts={writingEventPosts}
+              loading={writingEventPostsLoading}
+              error={writingEventPostsError}
+              promptLabel={dailyWritingCampaign.promptLabel}
+              onPressWrite={openDailyWritingPrompt}
+              onPressPost={openWritingEventPost}
+            />
           </>
         ) : null}
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+function WritingEventPostsCarousel({
+  posts,
+  loading,
+  error,
+  promptLabel,
+  onPressWrite,
+  onPressPost,
+}: {
+  posts: WritingEventPost[];
+  loading: boolean;
+  error: string | null;
+  promptLabel: string;
+  onPressWrite: () => void;
+  onPressPost: (postId: string) => void;
+}) {
+  return (
+    <View style={styles.writingEventPostsSection} testID="growth-records-writing-event-posts">
+      <View style={styles.writingEventPostsHeader}>
+        <View style={styles.writingEventPostsHeading}>
+          <Text style={styles.sectionTitle}>이번 프로젝트에 남긴 글</Text>
+          <Text style={styles.writingEventPostsSubtitle}>
+            {promptLabel}으로 쌓은 글을 옆으로 넘겨 확인해요.
+          </Text>
+        </View>
+        <Text style={styles.writingEventPostsCount}>{posts.length}개</Text>
+      </View>
+
+      {loading ? (
+        <View style={styles.writingEventPostsStateBox}>
+          <Text style={styles.writingEventPostsStateText}>프로젝트 글을 불러오는 중...</Text>
+        </View>
+      ) : error ? (
+        <View style={styles.writingEventPostsStateBox}>
+          <Text style={styles.writingEventPostsStateText}>{error}</Text>
+        </View>
+      ) : posts.length > 0 ? (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.writingEventPostsList}
+        >
+          {posts.map((post) => {
+            const dateLabel = formatKstDateDot(post.createdAt);
+            return (
+              <Pressable
+                key={post.id}
+                onPress={() => onPressPost(post.id)}
+                style={({ pressed }) => [
+                  styles.writingEventPostCard,
+                  pressed && styles.pressed,
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel={`${post.title} 글 보기`}
+                testID={`growth-records-writing-event-post-${post.id}`}
+              >
+                <Text style={styles.writingEventPostMeta}>
+                  {post.promptDay ? `${post.promptDay}일차` : promptLabel}
+                  {post.promptTitle ? ` · ${post.promptTitle}` : ""}
+                </Text>
+                <Text style={styles.writingEventPostTitle} numberOfLines={2}>
+                  {post.title}
+                </Text>
+                <Text style={styles.writingEventPostExcerpt} numberOfLines={3}>
+                  {post.excerpt || post.promptBody || "남긴 글을 열어 내용을 확인해보세요."}
+                </Text>
+                <Text style={styles.writingEventPostDate}>
+                  {dateLabel || "작성일 확인 중"}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      ) : (
+        <View style={styles.writingEventPostsEmpty}>
+          <Text style={styles.writingEventPostsEmptyTitle}>아직 프로젝트에 남긴 글이 없어요</Text>
+          <Text style={styles.writingEventPostsEmptyText}>
+            {promptLabel}으로 첫 글을 남기면 여기에서 다시 볼 수 있어요.
+          </Text>
+          <Pressable
+            onPress={onPressWrite}
+            style={({ pressed }) => [styles.writingEventPostsEmptyButton, pressed && styles.pressed]}
+            accessibilityRole="button"
+            accessibilityLabel={`${promptLabel}으로 글쓰기`}
+            testID="growth-records-writing-event-empty-write-btn"
+          >
+            <Text style={styles.writingEventPostsEmptyButtonText}>오늘 주제로 쓰기</Text>
+          </Pressable>
+        </View>
+      )}
+    </View>
   );
 }
 
@@ -224,10 +364,10 @@ function DailyWritingCampaignProgressCard({
     <View style={styles.writingCampaignProgressCard} testID="growth-records-writing-campaign-progress">
       <View style={styles.writingCampaignProgressHeader}>
         <View style={styles.writingCampaignProgressHeading}>
-          <Text style={styles.recordHeroLabel}>한달 글쓰기 프로젝트</Text>
+          <Text style={styles.recordHeroLabel}>{status.title}</Text>
           <Text style={styles.writingCampaignProgressTitle}>{status.currentDay}일차 진행 중</Text>
           <Text style={styles.writingCampaignProgressText}>
-            {status.completedDays}개 글감을 지나 오늘의 글감을 쓰는 단계예요.
+            {status.completedDays}개 글감을 지나 {status.promptLabel}을 쓰는 단계예요.
           </Text>
         </View>
         <View style={styles.writingCampaignProgressBadge}>
@@ -253,7 +393,7 @@ function DailyWritingCampaignProgressCard({
       />
 
       <View style={styles.writingCampaignTodayBox}>
-        <Text style={styles.writingCampaignTodayMeta}>오늘의 글감 · {status.prompt.day}일차</Text>
+        <Text style={styles.writingCampaignTodayMeta}>{status.promptLabel} · {status.prompt.day}일차</Text>
         <Text style={styles.writingCampaignTodayTitle}>{status.prompt.title}</Text>
         <Text style={styles.writingCampaignTodayBody}>{status.prompt.body}</Text>
       </View>
@@ -266,7 +406,7 @@ function DailyWritingCampaignProgressCard({
           onPress={onPressWrite}
           style={({ pressed }) => [styles.writingCampaignWriteButton, pressed && styles.pressed]}
           accessibilityRole="button"
-          accessibilityLabel="오늘의 글감으로 글쓰기"
+          accessibilityLabel={`${status.promptLabel}으로 글쓰기`}
           testID="growth-records-writing-campaign-write-btn"
         >
           <Text style={styles.writingCampaignWriteButtonText}>이 주제로 쓰기</Text>
@@ -542,6 +682,132 @@ const styles = StyleSheet.create({
     fontSize: tokens.font.body,
     fontWeight: "900",
     color: tokens.colors.green900,
+  },
+  writingEventPostsSection: {
+    borderRadius: tokens.radius.xl,
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+    backgroundColor: tokens.colors.surfaceStrong,
+    paddingVertical: tokens.space.lg,
+    gap: tokens.space.md as any,
+  },
+  writingEventPostsHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: tokens.space.md as any,
+    paddingHorizontal: tokens.space.lg,
+  },
+  writingEventPostsHeading: {
+    flex: 1,
+    gap: 4,
+  },
+  writingEventPostsSubtitle: {
+    fontSize: tokens.font.small,
+    lineHeight: 18,
+    fontWeight: "700",
+    color: tokens.colors.textMuted,
+  },
+  writingEventPostsCount: {
+    minWidth: 42,
+    minHeight: 30,
+    borderRadius: tokens.radius.pill,
+    backgroundColor: tokens.colors.green050,
+    borderWidth: 1,
+    borderColor: tokens.colors.green100,
+    textAlign: "center",
+    textAlignVertical: "center",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    fontSize: tokens.font.small,
+    fontWeight: "900",
+    color: tokens.colors.green700,
+  },
+  writingEventPostsList: {
+    paddingHorizontal: tokens.space.lg,
+    gap: tokens.space.sm as any,
+  },
+  writingEventPostCard: {
+    width: 220,
+    minHeight: 164,
+    borderRadius: tokens.radius.lg,
+    borderWidth: 1,
+    borderColor: tokens.colors.green100,
+    backgroundColor: tokens.colors.green050,
+    padding: tokens.space.md,
+    gap: 7,
+  },
+  writingEventPostMeta: {
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: "900",
+    color: tokens.colors.green700,
+  },
+  writingEventPostTitle: {
+    fontSize: tokens.font.body,
+    lineHeight: 21,
+    fontWeight: "900",
+    color: tokens.colors.text,
+  },
+  writingEventPostExcerpt: {
+    flex: 1,
+    fontSize: tokens.font.small,
+    lineHeight: 18,
+    fontWeight: "700",
+    color: tokens.colors.textMuted,
+  },
+  writingEventPostDate: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: tokens.colors.textMuted,
+  },
+  writingEventPostsStateBox: {
+    marginHorizontal: tokens.space.lg,
+    borderRadius: tokens.radius.lg,
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+    backgroundColor: tokens.colors.bg,
+    padding: tokens.space.md,
+  },
+  writingEventPostsStateText: {
+    fontSize: tokens.font.small,
+    lineHeight: 18,
+    fontWeight: "700",
+    color: tokens.colors.textMuted,
+  },
+  writingEventPostsEmpty: {
+    marginHorizontal: tokens.space.lg,
+    borderRadius: tokens.radius.lg,
+    borderWidth: 1,
+    borderColor: tokens.colors.green100,
+    backgroundColor: tokens.colors.green050,
+    padding: tokens.space.md,
+    gap: tokens.space.sm as any,
+  },
+  writingEventPostsEmptyTitle: {
+    fontSize: tokens.font.body,
+    fontWeight: "900",
+    color: tokens.colors.text,
+  },
+  writingEventPostsEmptyText: {
+    fontSize: tokens.font.small,
+    lineHeight: 18,
+    fontWeight: "700",
+    color: tokens.colors.textMuted,
+  },
+  writingEventPostsEmptyButton: {
+    alignSelf: "flex-start",
+    minHeight: 36,
+    borderRadius: tokens.radius.pill,
+    backgroundColor: tokens.colors.green700,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: tokens.space.md,
+  },
+  writingEventPostsEmptyButtonText: {
+    fontSize: tokens.font.small,
+    fontWeight: "900",
+    color: tokens.colors.textInverse,
   },
   sectionCard: {
     borderRadius: tokens.radius.xl,

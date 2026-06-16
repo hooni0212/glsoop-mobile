@@ -1,6 +1,6 @@
 import type { PostType } from "@/types/post";
 
-export type DailyWritingPrompt = {
+export type WritingEventPrompt = {
   key: string;
   day: number;
   title: string;
@@ -9,22 +9,37 @@ export type DailyWritingPrompt = {
   suggestedHashtags: string[];
 };
 
-export type DailyWritingCampaignStatus = {
+export type WritingEventDefinition = {
+  key: string;
+  title: string;
+  subtitle: string;
+  totalDays: number;
+  startLocalDate: string;
+  prompts: WritingEventPrompt[];
+  promptLabel: string;
+};
+
+export type WritingEventStatus = {
   campaignKey: string;
   title: string;
   subtitle: string;
   totalDays: number;
   currentDay: number;
   completedDays: number;
-  prompt: DailyWritingPrompt;
+  prompt: WritingEventPrompt;
   progressPercent: number;
   remainingDays: number;
   localDateKey: string;
+  promptLabel: string;
 };
 
-export type DailyWritingCampaignProgressStep = DailyWritingPrompt & {
+export type WritingEventProgressStep = WritingEventPrompt & {
   state: "completed" | "current" | "upcoming";
 };
+
+export type DailyWritingPrompt = WritingEventPrompt;
+export type DailyWritingCampaignStatus = WritingEventStatus;
+export type DailyWritingCampaignProgressStep = WritingEventProgressStep;
 
 export const DAILY_WRITING_CAMPAIGN_KEY = "glsoop-monthly-writing-project-prototype";
 export const DAILY_WRITING_CAMPAIGN_TITLE = "글숲 한달 글쓰기 프로젝트";
@@ -276,6 +291,18 @@ export const DAILY_WRITING_PROMPTS: DailyWritingPrompt[] = [
   },
 ];
 
+export const WRITING_EVENT_DEFINITIONS: WritingEventDefinition[] = [
+  {
+    key: DAILY_WRITING_CAMPAIGN_KEY,
+    title: DAILY_WRITING_CAMPAIGN_TITLE,
+    subtitle: DAILY_WRITING_CAMPAIGN_SUBTITLE,
+    totalDays: DAILY_WRITING_CAMPAIGN_TOTAL_DAYS,
+    startLocalDate: CAMPAIGN_START_LOCAL_DATE,
+    prompts: DAILY_WRITING_PROMPTS,
+    promptLabel: "오늘의 글감",
+  },
+];
+
 function toLocalDateKey(date: Date) {
   const year = date.getFullYear();
   const month = `${date.getMonth() + 1}`.padStart(2, "0");
@@ -288,41 +315,66 @@ function parseLocalDateKey(value: string) {
   return new Date(year, month - 1, day);
 }
 
-function getCampaignDay(now: Date) {
-  const start = parseLocalDateKey(CAMPAIGN_START_LOCAL_DATE);
+const WRITING_EVENT_BY_KEY = new Map(
+  WRITING_EVENT_DEFINITIONS.map((event) => [event.key, event])
+);
+
+export function getWritingEventDefinition(eventKey = DAILY_WRITING_CAMPAIGN_KEY) {
+  return WRITING_EVENT_BY_KEY.get(eventKey) ?? null;
+}
+
+export function getDefaultWritingEventDefinition() {
+  return getWritingEventDefinition(DAILY_WRITING_CAMPAIGN_KEY);
+}
+
+function getEventDayIndex(event: WritingEventDefinition, now: Date) {
+  const start = parseLocalDateKey(event.startLocalDate);
   const current = parseLocalDateKey(toLocalDateKey(now));
   const diffMs = current.getTime() - start.getTime();
   const diffDays = Math.floor(diffMs / 86_400_000);
-  return ((diffDays % DAILY_WRITING_CAMPAIGN_TOTAL_DAYS) + DAILY_WRITING_CAMPAIGN_TOTAL_DAYS) %
-    DAILY_WRITING_CAMPAIGN_TOTAL_DAYS;
+  const totalDays = Math.max(1, event.totalDays || event.prompts.length);
+  return ((diffDays % totalDays) + totalDays) % totalDays;
 }
 
-export function getDailyWritingCampaignStatus(now = new Date()): DailyWritingCampaignStatus {
-  const promptIndex = getCampaignDay(now);
-  const prompt = DAILY_WRITING_PROMPTS[promptIndex] ?? DAILY_WRITING_PROMPTS[0];
+export function getWritingEventStatus(
+  eventKey = DAILY_WRITING_CAMPAIGN_KEY,
+  now = new Date()
+): WritingEventStatus {
+  const event = getWritingEventDefinition(eventKey) ?? WRITING_EVENT_DEFINITIONS[0];
+  const promptIndex = getEventDayIndex(event, now);
+  const prompt = event.prompts[promptIndex] ?? event.prompts[0];
   const currentDay = prompt.day;
   const completedDays = Math.max(0, currentDay - 1);
-  const progressPercent = Math.round((prompt.day / DAILY_WRITING_CAMPAIGN_TOTAL_DAYS) * 100);
+  const totalDays = Math.max(1, event.totalDays || event.prompts.length);
+  const progressPercent = Math.round((prompt.day / totalDays) * 100);
 
   return {
-    campaignKey: DAILY_WRITING_CAMPAIGN_KEY,
-    title: DAILY_WRITING_CAMPAIGN_TITLE,
-    subtitle: DAILY_WRITING_CAMPAIGN_SUBTITLE,
-    totalDays: DAILY_WRITING_CAMPAIGN_TOTAL_DAYS,
+    campaignKey: event.key,
+    title: event.title,
+    subtitle: event.subtitle,
+    totalDays,
     currentDay,
     completedDays,
     prompt,
     progressPercent,
-    remainingDays: Math.max(0, DAILY_WRITING_CAMPAIGN_TOTAL_DAYS - prompt.day),
+    remainingDays: Math.max(0, totalDays - prompt.day),
     localDateKey: toLocalDateKey(now),
+    promptLabel: event.promptLabel,
   };
 }
 
-export function getDailyWritingCampaignProgressSteps(
-  status = getDailyWritingCampaignStatus()
-): DailyWritingCampaignProgressStep[] {
-  return DAILY_WRITING_PROMPTS.map((prompt) => {
-    let state: DailyWritingCampaignProgressStep["state"] = "upcoming";
+export function getDefaultWritingEventStatus(now = new Date()) {
+  return getWritingEventStatus(DAILY_WRITING_CAMPAIGN_KEY, now);
+}
+
+export function getWritingEventProgressSteps(
+  status = getDefaultWritingEventStatus()
+): WritingEventProgressStep[] {
+  const event = getWritingEventDefinition(status.campaignKey);
+  if (!event) return [];
+
+  return event.prompts.map((prompt) => {
+    let state: WritingEventProgressStep["state"] = "upcoming";
     if (prompt.day < status.currentDay) {
       state = "completed";
     } else if (prompt.day === status.currentDay) {
@@ -336,10 +388,10 @@ export function getDailyWritingCampaignProgressSteps(
   });
 }
 
-export function getDailyWritingCampaignFocusSteps(
-  status = getDailyWritingCampaignStatus(),
-  steps = getDailyWritingCampaignProgressSteps(status)
-): DailyWritingCampaignProgressStep[] {
+export function getWritingEventFocusSteps(
+  status = getDefaultWritingEventStatus(),
+  steps = getWritingEventProgressSteps(status)
+): WritingEventProgressStep[] {
   if (steps.length <= 3) return steps;
 
   const currentIndex = Math.max(
@@ -352,8 +404,9 @@ export function getDailyWritingCampaignFocusSteps(
   return steps.slice(startIndex, startIndex + 3);
 }
 
-export function buildDailyWritingPromptWritePath(status = getDailyWritingCampaignStatus()) {
+export function buildWritingEventPromptWritePath(status = getDefaultWritingEventStatus()) {
   const params = new URLSearchParams({
+    campaignKey: status.campaignKey,
     campaignPromptKey: status.prompt.key,
     promptTitle: status.prompt.title,
     promptBody: status.prompt.body,
@@ -364,4 +417,25 @@ export function buildDailyWritingPromptWritePath(status = getDailyWritingCampaig
   });
 
   return `/write?${params.toString()}`;
+}
+
+export function getDailyWritingCampaignStatus(now = new Date()): DailyWritingCampaignStatus {
+  return getDefaultWritingEventStatus(now);
+}
+
+export function getDailyWritingCampaignProgressSteps(
+  status = getDailyWritingCampaignStatus()
+): DailyWritingCampaignProgressStep[] {
+  return getWritingEventProgressSteps(status);
+}
+
+export function getDailyWritingCampaignFocusSteps(
+  status = getDailyWritingCampaignStatus(),
+  steps = getDailyWritingCampaignProgressSteps(status)
+): DailyWritingCampaignProgressStep[] {
+  return getWritingEventFocusSteps(status, steps);
+}
+
+export function buildDailyWritingPromptWritePath(status = getDailyWritingCampaignStatus()) {
+  return buildWritingEventPromptWritePath(status);
 }

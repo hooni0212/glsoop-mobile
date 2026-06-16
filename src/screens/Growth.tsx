@@ -453,7 +453,7 @@ function WritingCampaignProjectCard({
 
       <View style={styles.writingPromptPreview}>
         <Text style={styles.writingPromptMeta}>
-          오늘의 글감 · {status.prompt.day}일차
+          {status.promptLabel} · {status.prompt.day}일차
         </Text>
         <Text style={styles.writingPromptTitle}>{status.prompt.title}</Text>
         <Text style={styles.writingPromptBody}>{status.prompt.body}</Text>

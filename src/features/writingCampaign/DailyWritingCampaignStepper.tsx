@@ -29,7 +29,7 @@ export function DailyWritingCampaignStepper({
   if (steps.length === 0) return null;
 
   return (
-    <View style={[styles.container, style]} accessibilityLabel="글숲 한달 글쓰기 프로젝트 진행 단계">
+    <View style={[styles.container, style]} accessibilityLabel="글쓰기 이벤트 진행 단계">
       {title ? <Text style={styles.title}>{title}</Text> : null}
       <View style={styles.rail}>
         {steps.map((step, index) => {

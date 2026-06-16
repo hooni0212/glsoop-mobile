@@ -4,15 +4,21 @@ import { DAILY_WRITING_CAMPAIGN_KEY } from "@/features/writingCampaign/dailyWrit
 
 const NOTICE_DISMISS_PREFIX = "glsoop:writing-campaign-notice-dismissed";
 
-function buildDismissKey(localDateKey: string) {
-  return `${NOTICE_DISMISS_PREFIX}:${DAILY_WRITING_CAMPAIGN_KEY}:${localDateKey}`;
+function buildDismissKey(localDateKey: string, eventKey = DAILY_WRITING_CAMPAIGN_KEY) {
+  return `${NOTICE_DISMISS_PREFIX}:${eventKey}:${localDateKey}`;
 }
 
-export async function isWritingCampaignNoticeDismissed(localDateKey: string) {
-  const raw = await AsyncStorage.getItem(buildDismissKey(localDateKey));
+export async function isWritingCampaignNoticeDismissed(
+  localDateKey: string,
+  eventKey = DAILY_WRITING_CAMPAIGN_KEY
+) {
+  const raw = await AsyncStorage.getItem(buildDismissKey(localDateKey, eventKey));
   return raw === "1";
 }
 
-export async function dismissWritingCampaignNoticeForToday(localDateKey: string) {
-  await AsyncStorage.setItem(buildDismissKey(localDateKey), "1");
+export async function dismissWritingCampaignNoticeForToday(
+  localDateKey: string,
+  eventKey = DAILY_WRITING_CAMPAIGN_KEY
+) {
+  await AsyncStorage.setItem(buildDismissKey(localDateKey, eventKey), "1");
 }

@@ -73,7 +73,9 @@ const PREVIEW_PANEL_ITEMS: { key: PreviewPanelKey; label: string }[] = [
 ];
 
 type WritePromptContext = {
+  eventKey?: string;
   promptKey: string;
+  promptDay?: number;
   promptTitle?: string;
   promptBody?: string;
   defaultCategory?: PostType;
@@ -221,9 +223,15 @@ export default function Write() {
     if (!promptKey) return null;
 
     const promptDay = getParamString(rawParams.promptDay);
+    const promptDayNumber = promptDay ? Number(promptDay) : undefined;
 
     return {
+      eventKey: getParamString(rawParams.campaignKey) ?? undefined,
       promptKey,
+      promptDay:
+        typeof promptDayNumber === "number" && Number.isFinite(promptDayNumber)
+          ? promptDayNumber
+          : undefined,
       promptTitle: getParamString(rawParams.promptTitle) ?? undefined,
       promptBody: getParamString(rawParams.promptBody) ?? undefined,
       defaultCategory: normalizePromptCategory(rawParams.promptCategory),
@@ -617,6 +625,15 @@ export default function Write() {
           questContext: questContext
             ? { stateId: questContext.stateId, promptKey: questContext.promptKey }
             : undefined,
+          writingEventContext:
+            promptContext?.eventKey && promptContext.promptKey
+              ? {
+                  eventKey: promptContext.eventKey,
+                  eventTitle: promptContext.sourceLabel,
+                  promptKey: promptContext.promptKey,
+                  promptDay: promptContext.promptDay,
+                }
+              : undefined,
         });
 
         if (draftId) {
@@ -648,6 +665,10 @@ export default function Write() {
     visibility,
     commentPolicy,
     questContext,
+    promptContext?.eventKey,
+    promptContext?.promptDay,
+    promptContext?.promptKey,
+    promptContext?.sourceLabel,
     previewOpen,
     hasLayoutChanges,
     dismissKeyboard,
