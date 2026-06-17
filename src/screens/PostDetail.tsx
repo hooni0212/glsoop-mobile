@@ -123,15 +123,17 @@ function buildPostPermalink(postId: string) {
   return `${releaseConfig.siteUrl}/html/post.html?postId=${encodedPostId}`;
 }
 
-function createShareFileName(postId: string) {
+function createShareFileName(postId: string, pageNumber = 1) {
   const safePostId = postId.replace(/[^a-zA-Z0-9_-]/g, "-") || "card";
-  return `glsoop_post_${safePostId}_${Date.now()}.png`;
+  const pageSuffix = pageNumber > 1 ? `_p${pageNumber}` : "";
+  return `glsoop_post_${safePostId}${pageSuffix}_${Date.now()}.png`;
 }
 
 async function downloadPostShareImage(
   postId: string,
   imageUrl: string,
-  bearerToken?: string | null
+  bearerToken?: string | null,
+  pageNumber = 1
 ) {
   const cacheDirectory = FileSystem.cacheDirectory;
   if (!cacheDirectory) {
@@ -144,7 +146,7 @@ async function downloadPostShareImage(
 
   const downloaded = await FileSystem.downloadAsync(
     imageUrl,
-    `${cacheDirectory}${createShareFileName(postId)}`,
+    `${cacheDirectory}${createShareFileName(postId, pageNumber)}`,
     downloadOptions
   );
 
@@ -153,6 +155,34 @@ async function downloadPostShareImage(
   }
 
   return downloaded.uri;
+}
+
+function getPostShareImagePageCount(post: Post) {
+  const renderImages = resolvePostRenderImages(post);
+  const pageCount = Math.max(1, renderImages?.pageCount || renderImages?.images.length || 1);
+  const pageCap = Math.max(1, renderImages?.pageCap || pageCount);
+  return Math.min(pageCount, pageCap);
+}
+
+function buildPostShareImageUrls({
+  post,
+  template,
+  includeAuthorSignature,
+}: {
+  post: Post;
+  template: ReturnType<typeof normalizePostBackgroundTemplateId>;
+  includeAuthorSignature: boolean;
+}) {
+  const pageCount = getPostShareImagePageCount(post);
+  return Array.from({ length: pageCount }, (_item, index) =>
+    buildRenderedPostShareImageUrl(post.id, {
+      format: "png",
+      template,
+      page: index + 1,
+      authorSignature: includeAuthorSignature,
+      authorSignaturePosition: "bottomLeft",
+    })
+  );
 }
 
 type MediaLibrarySavePermissionResult =
@@ -952,22 +982,24 @@ export default function PostDetail() {
           post.renderImages?.template ?? postLayout.presetId
         );
         const includeAuthorSignature = canUseAuthorSignature && authorSignatureEnabled;
-        const imageUrl = buildRenderedPostShareImageUrl(post.id, {
+        const imageUrls = buildPostShareImageUrls({
+          post,
+          template: shareTemplate,
+          includeAuthorSignature,
+        });
+        const imageUrl = imageUrls[0] ?? buildRenderedPostShareImageUrl(post.id, {
           format: "png",
           template: shareTemplate,
           authorSignature: includeAuthorSignature,
           authorSignaturePosition: "bottomLeft",
         });
-        const imageUri = await downloadPostShareImage(
-          post.id,
-          imageUrl,
-          includeAuthorSignature ? token : null
-        );
         const imageMeta = {
           ...baseMeta,
           image_format: "png",
           image_template: shareTemplate,
           image_url: imageUrl,
+          image_urls: imageUrls,
+          image_count: imageUrls.length,
           author_signature: includeAuthorSignature,
         };
 
@@ -1011,6 +1043,12 @@ export default function PostDetail() {
               return;
             }
 
+            const imageUri = await downloadPostShareImage(
+              post.id,
+              imageUrl,
+              includeAuthorSignature ? token : null,
+              1
+            );
             await shareImageFile({ imageUri, shareTitle });
             logShareEventSafely("shared", {
               ...imageMeta,
@@ -1024,14 +1062,25 @@ export default function PostDetail() {
           const photoSaveAccess = await preparePhotoSaveAccess({
             currentPostId: post.id,
             meta: {
-              ...baseMeta,
-              image_format: "png",
-              image_template: shareTemplate,
-              image_url: imageUrl,
+              ...imageMeta,
             },
           });
 
-          await MediaLibrary.saveToLibraryAsync(imageUri);
+          const imageUris: string[] = [];
+          for (const [index, nextImageUrl] of imageUrls.entries()) {
+            imageUris.push(
+              await downloadPostShareImage(
+                post.id,
+                nextImageUrl,
+                includeAuthorSignature ? token : null,
+                index + 1
+              )
+            );
+          }
+
+          for (const imageUri of imageUris) {
+            await MediaLibrary.saveToLibraryAsync(imageUri);
+          }
           setPhotoSavePermissionDeniedOnce(false);
 
           let photoSavePolicy = photoSaveAccess.policy;
@@ -1044,10 +1093,7 @@ export default function PostDetail() {
                 rewardedGrantId: photoSaveAccess.rewardedGrantId,
                 requestId,
                 meta: {
-                  ...baseMeta,
-                  image_format: "png",
-                  image_template: shareTemplate,
-                  image_url: imageUrl,
+                  ...imageMeta,
                   photo_save_phase: "media_library_saved",
                 },
               });
@@ -1076,10 +1122,21 @@ export default function PostDetail() {
             photo_save_access_type: photoSaveAccess.method,
             photo_save_free_remaining: photoSavePolicy?.free_remaining ?? null,
           });
-          showToast("이미지를 사진 앱에 저장했어요.", { tone: "success" });
+          showToast(
+            imageUris.length > 1
+              ? `${imageUris.length}장의 이미지를 사진 앱에 저장했어요.`
+              : "이미지를 사진 앱에 저장했어요.",
+            { tone: "success" }
+          );
           return;
         }
 
+        const imageUri = await downloadPostShareImage(
+          post.id,
+          imageUrl,
+          includeAuthorSignature ? token : null,
+          1
+        );
         await shareImageFile({ imageUri, shareTitle });
         logShareEventSafely("shared", imageMeta);
         showToast("이미지 공유가 완료되었어요.", { tone: "success" });

@@ -23,6 +23,12 @@ export type CreatePostInput = {
     stateId: number;
     promptKey: string;
   };
+  writingEventContext?: {
+    eventKey: string;
+    eventTitle?: string;
+    promptKey: string;
+    promptDay?: number;
+  };
 };
 
 type CreatePostResponse = {
@@ -87,6 +93,14 @@ export async function createPost(input: CreatePostInput): Promise<{
     payload.quest_context = {
       state_id: input.questContext.stateId,
       prompt_key: input.questContext.promptKey,
+    };
+  }
+  if (input.writingEventContext) {
+    payload.writing_event_context = {
+      event_key: input.writingEventContext.eventKey,
+      event_title: input.writingEventContext.eventTitle,
+      prompt_key: input.writingEventContext.promptKey,
+      prompt_day: input.writingEventContext.promptDay,
     };
   }
 

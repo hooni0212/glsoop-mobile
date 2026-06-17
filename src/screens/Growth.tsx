@@ -21,6 +21,13 @@ import {
   type GrowthSummary,
   useGrowthData,
 } from "@/features/growth/useGrowthData";
+import { DailyWritingCampaignStepper } from "@/features/writingCampaign/DailyWritingCampaignStepper";
+import {
+  buildDailyWritingPromptWritePath,
+  getDailyWritingCampaignFocusSteps,
+  getDailyWritingCampaignStatus,
+  type DailyWritingCampaignStatus,
+} from "@/features/writingCampaign/dailyWritingCampaign";
 import { toTimestampMs } from "@/lib/dateTime";
 import { tokens } from "@/theme/tokens";
 
@@ -122,6 +129,15 @@ export default function GrowthScreen() {
     [achievements]
   );
   const campaignPreview = useMemo(() => selectCampaignPreview(campaigns), [campaigns]);
+  const dailyWritingCampaign = useMemo(() => getDailyWritingCampaignStatus(), []);
+  const dailyWritingCampaignSteps = useMemo(
+    () => getDailyWritingCampaignFocusSteps(dailyWritingCampaign),
+    [dailyWritingCampaign]
+  );
+  const openDailyWritingPrompt = useCallback(() => {
+    trackGrowthTelemetry("growth_action_clicked", { action: "open_daily_writing_prompt" });
+    router.push(buildDailyWritingPromptWritePath(dailyWritingCampaign) as never);
+  }, [dailyWritingCampaign, router]);
 
   useEffect(() => {
     trackGrowthTelemetry("growth_screen_viewed", { screen: "home" });
@@ -187,6 +203,12 @@ export default function GrowthScreen() {
         <Text style={styles.screenTitle}>성장</Text>
 
         <ForestCard summary={summary} loading={loading} error={error} />
+
+        <WritingCampaignProjectCard
+          status={dailyWritingCampaign}
+          steps={dailyWritingCampaignSteps}
+          onPress={openDailyWritingPrompt}
+        />
 
         <Pressable
           onPress={() => {
@@ -376,6 +398,77 @@ function ReflectionCard({ summary }: { summary: GrowthSummary | null }) {
         </View>
       </View>
     </View>
+  );
+}
+
+function WritingCampaignProjectCard({
+  status,
+  steps,
+  onPress,
+}: {
+  status: DailyWritingCampaignStatus;
+  steps: ReturnType<typeof getDailyWritingCampaignFocusSteps>;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [styles.writingCampaignCard, pressed && styles.pressed]}
+      testID="growth-writing-campaign-card"
+      accessibilityRole="button"
+      accessibilityLabel={`${status.title} 오늘 주제로 글쓰기`}
+    >
+      <View style={styles.writingCampaignHeader}>
+        <View style={styles.writingCampaignHeading}>
+          <Text style={styles.sectionLabel}>진행 중인 캠페인</Text>
+          <Text style={styles.writingCampaignTitle}>{status.title}</Text>
+        </View>
+        <View style={styles.writingCampaignBadge}>
+          <Text style={styles.writingCampaignBadgeText}>
+            {status.prompt.day}/{status.totalDays}
+          </Text>
+        </View>
+      </View>
+
+      <View style={styles.progressBlock}>
+        <View style={styles.progressHeader}>
+          <Text style={styles.progressSmallText}>프로젝트 진행률</Text>
+          <Text style={styles.progressSmallText}>{status.progressPercent}%</Text>
+        </View>
+        <View style={styles.progressTrackSoft}>
+          <View
+            style={[
+              styles.progressBarSoft,
+              status.progressPercent > 0 && styles.progressBarSoftMinimum,
+              { width: `${status.progressPercent}%` },
+            ]}
+          />
+        </View>
+      </View>
+
+      <DailyWritingCampaignStepper
+        steps={steps}
+        title={`오늘 ${status.prompt.day}일차 진행 중`}
+      />
+
+      <View style={styles.writingPromptPreview}>
+        <Text style={styles.writingPromptMeta}>
+          {status.promptLabel} · {status.prompt.day}일차
+        </Text>
+        <Text style={styles.writingPromptTitle}>{status.prompt.title}</Text>
+        <Text style={styles.writingPromptBody}>{status.prompt.body}</Text>
+      </View>
+
+      <View style={styles.writingCampaignFooter}>
+        <Text style={styles.writingCampaignHint}>
+          남은 주제 {status.remainingDays}개
+        </Text>
+        <View style={styles.writingCampaignCta}>
+          <Text style={styles.writingCampaignCtaText}>이 주제로 쓰기</Text>
+          <Ionicons name="chevron-forward" size={15} color={tokens.colors.textInverse} />
+        </View>
+      </View>
+    </Pressable>
   );
 }
 
@@ -598,6 +691,103 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: tokens.colors.green700,
   },
+  writingCampaignCard: {
+    borderRadius: tokens.radius.xl,
+    borderWidth: 1,
+    borderColor: tokens.colors.green100,
+    backgroundColor: tokens.colors.green050,
+    padding: tokens.space.lg,
+    gap: tokens.space.md as any,
+    shadowColor: tokens.shadow.color,
+    shadowOpacity: 0.04,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 7 },
+    elevation: 1,
+  },
+  writingCampaignHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: tokens.space.sm as any,
+  },
+  writingCampaignHeading: {
+    flex: 1,
+    gap: 4,
+  },
+  writingCampaignTitle: {
+    fontSize: 18,
+    lineHeight: 24,
+    fontWeight: "900",
+    color: tokens.colors.green900,
+    letterSpacing: 0,
+  },
+  writingCampaignBadge: {
+    minHeight: 32,
+    borderRadius: tokens.radius.pill,
+    backgroundColor: tokens.colors.surface,
+    borderWidth: 1,
+    borderColor: tokens.colors.green100,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 12,
+  },
+  writingCampaignBadgeText: {
+    fontSize: tokens.font.small,
+    fontWeight: "900",
+    color: tokens.colors.green700,
+  },
+  writingPromptPreview: {
+    borderRadius: tokens.radius.lg,
+    borderWidth: 1,
+    borderColor: tokens.colors.green100,
+    backgroundColor: tokens.colors.surface,
+    padding: tokens.space.md,
+    gap: 5,
+  },
+  writingPromptMeta: {
+    fontSize: 12,
+    fontWeight: "900",
+    color: tokens.colors.green700,
+  },
+  writingPromptTitle: {
+    fontSize: tokens.font.body,
+    lineHeight: 21,
+    fontWeight: "900",
+    color: tokens.colors.text,
+  },
+  writingPromptBody: {
+    fontSize: tokens.font.small,
+    lineHeight: 18,
+    fontWeight: "700",
+    color: tokens.colors.textMuted,
+  },
+  writingCampaignFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: tokens.space.sm as any,
+  },
+  writingCampaignHint: {
+    flex: 1,
+    fontSize: tokens.font.small,
+    fontWeight: "800",
+    color: tokens.colors.textMuted,
+  },
+  writingCampaignCta: {
+    minHeight: 38,
+    borderRadius: tokens.radius.pill,
+    backgroundColor: tokens.colors.green700,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: tokens.space.md,
+    gap: 4,
+  },
+  writingCampaignCtaText: {
+    fontSize: tokens.font.small,
+    fontWeight: "900",
+    color: tokens.colors.textInverse,
+  },
   progressSmallText: {
     fontSize: tokens.font.small,
     fontWeight: "800",
@@ -613,6 +803,9 @@ const styles = StyleSheet.create({
     height: "100%",
     borderRadius: tokens.radius.pill,
     backgroundColor: tokens.colors.green600,
+  },
+  progressBarSoftMinimum: {
+    minWidth: 22,
   },
   eventCard: {
     minHeight: 72,

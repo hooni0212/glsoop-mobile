@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process";
 
 const EXPECTED = {
   bundleIdentifier: "com.glsoop.app",
-  version: "1.0.7",
+  version: "1.0.8",
   supportsTablet: true,
   requireFullScreen: true,
   env: {

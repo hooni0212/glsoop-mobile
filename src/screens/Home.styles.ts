@@ -18,6 +18,140 @@ export const homeScreenStyles = StyleSheet.create({
   },
 });
 
+export const writingCampaignNoticeStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    justifyContent: "flex-end",
+    backgroundColor: tokens.colors.overlaySoft,
+  },
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  sheet: {
+    width: "100%",
+    maxWidth: 393,
+    alignSelf: "center",
+    borderTopLeftRadius: tokens.radius.xl,
+    borderTopRightRadius: tokens.radius.xl,
+    backgroundColor: tokens.colors.surface,
+    paddingHorizontal: 18,
+    paddingTop: 10,
+    paddingBottom: 12,
+    gap: tokens.space.sm,
+    borderWidth: 1,
+    borderBottomWidth: 0,
+    borderColor: tokens.colors.border,
+    overflow: "hidden",
+  },
+  scroll: {
+    flexGrow: 0,
+  },
+  scrollContent: {
+    gap: tokens.space.md,
+    paddingBottom: 2,
+  },
+  handle: {
+    width: 42,
+    height: 4,
+    borderRadius: tokens.radius.pill,
+    alignSelf: "center",
+    backgroundColor: tokens.colors.borderStrong,
+    marginBottom: 2,
+  },
+  eyebrow: {
+    fontSize: 12,
+    fontWeight: "900",
+    color: tokens.colors.green700,
+    letterSpacing: 0,
+  },
+  title: {
+    marginTop: 4,
+    fontSize: 20,
+    lineHeight: 27,
+    fontWeight: "900",
+    color: tokens.colors.text,
+    letterSpacing: 0,
+  },
+  description: {
+    marginTop: 8,
+    fontSize: tokens.font.body,
+    lineHeight: 20,
+    fontWeight: "700",
+    color: tokens.colors.textMuted,
+    letterSpacing: 0,
+  },
+  promptBox: {
+    borderRadius: tokens.radius.lg,
+    backgroundColor: tokens.colors.green050,
+    borderWidth: 1,
+    borderColor: tokens.colors.green100,
+    padding: tokens.space.md,
+    gap: 6,
+  },
+  promptMeta: {
+    fontSize: 12,
+    fontWeight: "900",
+    color: tokens.colors.green700,
+    letterSpacing: 0,
+  },
+  promptTitle: {
+    fontSize: 16,
+    lineHeight: 22,
+    fontWeight: "900",
+    color: tokens.colors.text,
+    letterSpacing: 0,
+  },
+  promptBody: {
+    fontSize: tokens.font.small,
+    lineHeight: 18,
+    fontWeight: "700",
+    color: tokens.colors.textMuted,
+    letterSpacing: 0,
+  },
+  actionRow: {
+    gap: 8,
+  },
+  secondaryActionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  actionButton: {
+    flex: 1,
+    minHeight: 44,
+    borderRadius: tokens.radius.pill,
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+    backgroundColor: tokens.colors.surfaceStrong,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 8,
+  },
+  actionButtonSecondary: {
+    minHeight: 42,
+  },
+  actionButtonPressed: {
+    opacity: 0.76,
+  },
+  actionButtonPrimary: {
+    width: "100%",
+    minHeight: 46,
+    borderColor: tokens.colors.green700,
+    backgroundColor: tokens.colors.green700,
+  },
+  actionText: {
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: "900",
+    color: tokens.colors.textMuted,
+    textAlign: "center",
+    letterSpacing: 0,
+  },
+  actionTextPrimary: {
+    color: tokens.colors.textInverse,
+  },
+});
+
 export const homeHeaderStyles = StyleSheet.create({
   header: {
     width: "100%",
