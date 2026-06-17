@@ -322,6 +322,7 @@ type RenderedPostShareImageOptions = {
   format?: RenderedPostImageFormat;
   template?: PostBackgroundTemplateId;
   scale?: 1 | 2;
+  page?: number;
   authorSignature?: boolean;
   authorSignaturePosition?: "bottomLeft" | "bottomRight";
 };
@@ -333,6 +334,9 @@ export function buildRenderedPostShareImageUrl(
   const query = new URLSearchParams();
   query.set("template", normalizePostBackgroundTemplateId(options.template));
   query.set("scale", String(options.scale || 2));
+  if (options.page && options.page > 1) {
+    query.set("page", String(Math.max(1, Math.floor(options.page))));
+  }
   if (options.format) {
     query.set("format", options.format);
   }
