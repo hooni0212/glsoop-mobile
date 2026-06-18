@@ -878,7 +878,8 @@ export default function Write() {
     <SafeAreaView style={styles.safe}>
       <KeyboardAvoidingView
         style={styles.flex}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={0}
       >
         <WriteTopBar
           title={previewOpen ? "미리보기" : isEditMode ? "글 수정" : "글쓰기"}
