@@ -289,7 +289,9 @@ export default function AccountCenterProfileSettingsScreen() {
               {!photoUploadAllowed ? (
                 <Text style={styles.photoHint}>
                   {premiumIapEnabled
-                    ? "프리미엄 계정에서 프로필 사진을 사용할 수 있어요."
+                    ? profilePhoto
+                      ? "기존 사진은 유지돼요. 사진을 변경하려면 프리미엄이 필요해요."
+                      : "프리미엄 계정에서 프로필 사진을 업로드할 수 있어요."
                     : "프로필 사진 업로드는 준비 중이에요."}
                 </Text>
               ) : null}

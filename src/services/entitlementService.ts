@@ -56,9 +56,24 @@ export async function listMyEntitlements(): Promise<UserEntitlement[]> {
 
 export function hasActiveEntitlement(
   entitlements: UserEntitlement[],
-  entitlementKey = PREMIUM_ENTITLEMENT_KEY
+  entitlementKey = PREMIUM_ENTITLEMENT_KEY,
+  nowMs = Date.now()
 ) {
-  return entitlements.some(
-    (item) => item.entitlementKey === entitlementKey && item.status === "active"
-  );
+  return entitlements.some((item) => {
+    if (item.entitlementKey !== entitlementKey || item.status !== "active") {
+      return false;
+    }
+
+    if (item.startsAt) {
+      const startsAtMs = Date.parse(item.startsAt);
+      if (!Number.isFinite(startsAtMs) || startsAtMs > nowMs) return false;
+    }
+
+    if (item.endsAt) {
+      const endsAtMs = Date.parse(item.endsAt);
+      if (!Number.isFinite(endsAtMs) || endsAtMs <= nowMs) return false;
+    }
+
+    return true;
+  });
 }
