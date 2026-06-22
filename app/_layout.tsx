@@ -3,6 +3,7 @@ import * as SplashScreen from "expo-splash-screen";
 import { getLoadedFonts, useFonts } from "expo-font";
 import { AuthGate } from "@/auth/AuthGate";
 import { AuthProvider, useAuth } from "@/auth/AuthContext";
+import { NativeAnalyticsBridge } from "@/analytics/NativeAnalyticsBridge";
 import { PostLoginPreferencesPrompt } from "@/auth/PostLoginPreferencesPrompt";
 import { AppBootScreen } from "@/components/state/AppBootScreen";
 import { refreshNotificationUnreadCount } from "@/features/notifications/notificationStore";
@@ -69,6 +70,7 @@ function RootLayoutContent() {
       <BottomDockProvider>
         <ToastProvider>
           <NotificationBridge navigationReady={bootReady} />
+          <NativeAnalyticsBridge navigationReady={bootReady} />
           {!bootReady ? (
             <AppBootScreen />
           ) : (
