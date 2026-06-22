@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process";
 
 const EXPECTED = {
   packageName: "com.glsoop.app",
-  version: "1.0.0",
+  version: "1.0.8",
   env: {
     EXPO_PUBLIC_API_BASE_URL: "https://glsoop.com",
     EXPO_PUBLIC_API_DEBUG: "false",
