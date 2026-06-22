@@ -2,6 +2,7 @@ import Constants from "expo-constants";
 import { Platform } from "react-native";
 
 import { COOKIE_SESSION_TOKEN, getAuthToken } from "@/lib/authToken";
+import { getGlsoopClientHeaders } from "@/lib/clientContext";
 import { ApiError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
@@ -238,6 +239,7 @@ async function apiRequest<T>(path: string, options: RequestOptions): Promise<T> 
 
     const headers: Record<string, string> = {
       Accept: "application/json",
+      ...getGlsoopClientHeaders(),
     };
 
     // JSON 바디가 있을 때만 Content-Type
@@ -304,6 +306,7 @@ export async function apiFormData<T>(
     const bearerToken = token && token !== COOKIE_SESSION_TOKEN ? token : null;
     const headers: Record<string, string> = {
       Accept: "application/json",
+      ...getGlsoopClientHeaders(),
     };
     if (bearerToken) headers["Authorization"] = `Bearer ${bearerToken}`;
 
