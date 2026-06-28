@@ -50,6 +50,7 @@ import {
   listPostBookmarkLists,
   removePostFromBookmarkList,
 } from "@/services/bookmarkService";
+import { updateTodayPromptWidgetSnapshot } from "@/services/widgetSnapshotService";
 
 const CATEGORIES = ["추천", "팔로잉", "최신"] as const;
 type Category = (typeof CATEGORIES)[number];
@@ -119,6 +120,10 @@ export default function Home() {
     if (active === "추천") return "오늘의 추천";
     return `${active} 피드`;
   }, [active]);
+  React.useEffect(() => {
+    void updateTodayPromptWidgetSnapshot(writingCampaignStatus);
+  }, [writingCampaignStatus]);
+
   React.useEffect(() => {
     if (!token) {
       clearNotificationUnreadCount();
