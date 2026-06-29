@@ -16,6 +16,8 @@ const DEFAULT_TODAY_PROMPT_KIND = "glsoop.widget.todayPrompt.v1";
 const DEFAULT_SENTENCE_FRAME_KIND = "glsoop.widget.sentenceFrame.v1";
 const DEFAULT_TODAY_PROMPT_KEY = "glsoop.widget.todayPrompt.v1";
 const DEFAULT_SENTENCE_FRAME_KEY = "glsoop.widget.sentenceFrame.v1";
+const PODFILE_RESOURCE_BUNDLE_SIGNING_MARKER =
+  "# glsoop: disable CocoaPods resource bundle signing for EAS Xcode builds";
 
 function quote(value) {
   return `"${value}"`;
@@ -149,6 +151,32 @@ function writeNativeFiles(iosRoot, projectRoot, options) {
     path.join(widgetRoot, `${options.widgetTargetName}.entitlements`),
     createWidgetEntitlementsPlist(options)
   );
+}
+
+function patchPodfileForResourceBundleSigning(iosRoot) {
+  const podfilePath = path.join(iosRoot, "Podfile");
+  if (!fs.existsSync(podfilePath)) return;
+
+  const source = fs.readFileSync(podfilePath, "utf8");
+  if (source.includes(PODFILE_RESOURCE_BUNDLE_SIGNING_MARKER)) return;
+
+  const patch = `
+
+    ${PODFILE_RESOURCE_BUNDLE_SIGNING_MARKER}
+    installer.pods_project.targets.each do |target|
+      next unless target.respond_to?(:product_type) && target.product_type == "com.apple.product-type.bundle"
+
+      target.build_configurations.each do |config|
+        config.build_settings["CODE_SIGNING_ALLOWED"] = "NO"
+      end
+    end
+`;
+
+  const nextSource = source.replace(/\n  end\nend\s*$/, `${patch}\n  end\nend\n`);
+  if (nextSource === source) {
+    throw new Error("Failed to patch iOS Podfile for resource bundle signing.");
+  }
+  fs.writeFileSync(podfilePath, nextSource, "utf8");
 }
 
 function updateTargetBuildSettings(project, targetUuid, config, options) {
@@ -678,6 +706,7 @@ function withGlsoopWidgets(config, options = {}) {
         nextConfig.modRequest.projectRoot,
         resolvedOptions
       );
+      patchPodfileForResourceBundleSigning(nextConfig.modRequest.platformProjectRoot);
       return nextConfig;
     },
   ]);

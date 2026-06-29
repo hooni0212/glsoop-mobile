@@ -6,6 +6,9 @@ const baseConfig = require("./app.json").expo as ExpoConfig;
 const MOBILE_BUILD_NUMBER = 53;
 const ADMOB_TEST_ANDROID_APP_ID = "ca-app-pub-3940256099942544~3347511713";
 const ADMOB_TEST_IOS_APP_ID = "ca-app-pub-3940256099942544~1458002511";
+const WIDGET_APP_GROUP_IDENTIFIER = "group.com.glsoop.app";
+const WIDGET_BUNDLE_IDENTIFIER = "com.glsoop.app.widgets";
+const WIDGET_TARGET_NAME = "GlsoopWidgets";
 
 function readEnv(name: string) {
   const value = process.env[name];
@@ -79,9 +82,9 @@ export default (): ExpoConfig => ({
     [
       "./plugins/withGlsoopWidgets",
       {
-        appGroupIdentifier: "group.com.glsoop.app",
-        widgetBundleIdentifier: "com.glsoop.app.widgets",
-        widgetTargetName: "GlsoopWidgets",
+        appGroupIdentifier: WIDGET_APP_GROUP_IDENTIFIER,
+        widgetBundleIdentifier: WIDGET_BUNDLE_IDENTIFIER,
+        widgetTargetName: WIDGET_TARGET_NAME,
       },
     ],
   ],
@@ -97,6 +100,27 @@ export default (): ExpoConfig => ({
   extra: {
     ...baseConfig.extra,
     mobileBuildNumber: MOBILE_BUILD_NUMBER,
+    eas: {
+      ...(baseConfig.extra?.eas ?? {}),
+      build: {
+        ...(baseConfig.extra?.eas?.build ?? {}),
+        experimental: {
+          ...(baseConfig.extra?.eas?.build?.experimental ?? {}),
+          ios: {
+            ...(baseConfig.extra?.eas?.build?.experimental?.ios ?? {}),
+            appExtensions: [
+              {
+                targetName: WIDGET_TARGET_NAME,
+                bundleIdentifier: WIDGET_BUNDLE_IDENTIFIER,
+                entitlements: {
+                  "com.apple.security.application-groups": [WIDGET_APP_GROUP_IDENTIFIER],
+                },
+              },
+            ],
+          },
+        },
+      },
+    },
     adMob: {
       androidAppId: androidAdMobAppId,
       iosAppId: iosAdMobAppId,
