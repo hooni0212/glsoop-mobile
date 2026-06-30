@@ -1,7 +1,9 @@
 import { NativeModules, Platform } from "react-native";
 
 import type { DailyWritingCampaignStatus } from "@/features/writingCampaign/dailyWritingCampaign";
+import { buildRenderedPostShareImageUrl } from "@/lib/feedImage";
 import { logger } from "@/lib/logger";
+import { normalizePostBackgroundTemplateId } from "@/lib/postBackgroundTemplates";
 import type { Post } from "@/types/post";
 
 export const WIDGET_APP_GROUP_IDENTIFIER = "group.com.glsoop.app";
@@ -27,6 +29,7 @@ export type SentenceFrameWidgetSnapshot = {
   title: string;
   excerpt: string;
   authorName: string;
+  imageUrl: string;
   deepLink: string;
 };
 
@@ -154,6 +157,8 @@ function pickSentenceFrameExcerpt(post: SentenceFrameSourcePost) {
 export function buildSentenceFrameWidgetSnapshot(
   post: SentenceFrameSourcePost
 ): SentenceFrameWidgetSnapshot {
+  const template = normalizePostBackgroundTemplateId(post.renderImages?.template);
+
   return {
     version: 1,
     updatedAt: new Date().toISOString(),
@@ -162,6 +167,11 @@ export function buildSentenceFrameWidgetSnapshot(
     title: truncate(normalizeText(post.title) || "문장 액자", 48),
     excerpt: pickSentenceFrameExcerpt(post),
     authorName: truncate(normalizeText(post.author?.name) || "글숲", 28),
+    imageUrl: buildRenderedPostShareImageUrl(String(post.id), {
+      format: "png",
+      scale: 2,
+      template,
+    }),
     deepLink: buildDeepLink(`/posts/${encodeURIComponent(String(post.id))}`),
   };
 }

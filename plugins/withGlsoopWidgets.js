@@ -355,6 +355,7 @@ class GlsoopWidgetSnapshots: NSObject {
 
 function createWidgetBundleSwift(options) {
   return `import SwiftUI
+import UIKit
 import WidgetKit
 
 private enum GlsoopWidgetConstants {
@@ -382,6 +383,7 @@ private struct SentenceFramePayload: Decodable {
   let title: String?
   let excerpt: String?
   let authorName: String?
+  let imageUrl: String?
   let deepLink: String?
 }
 
@@ -407,6 +409,38 @@ private struct TodayPromptEntry: TimelineEntry {
 private struct SentenceFrameEntry: TimelineEntry {
   let date: Date
   let payload: SentenceFramePayload?
+  let imageData: Data?
+}
+
+private enum RemoteImageLoader {
+  static func loadImageData(from imageUrl: String?, completion: @escaping (Data?) -> Void) {
+    guard
+      let rawUrl = imageUrl?.trimmingCharacters(in: .whitespacesAndNewlines),
+      !rawUrl.isEmpty,
+      let url = URL(string: rawUrl)
+    else {
+      completion(nil)
+      return
+    }
+
+    var request = URLRequest(url: url)
+    request.cachePolicy = .returnCacheDataElseLoad
+    request.timeoutInterval = 8
+
+    URLSession.shared.dataTask(with: request) { data, response, _ in
+      guard
+        let httpResponse = response as? HTTPURLResponse,
+        (200..<300).contains(httpResponse.statusCode),
+        let data,
+        !data.isEmpty
+      else {
+        completion(nil)
+        return
+      }
+
+      completion(data)
+    }.resume()
+  }
 }
 
 private struct TodayPromptProvider: TimelineProvider {
@@ -452,22 +486,42 @@ private struct SentenceFrameProvider: TimelineProvider {
         title: "문장 액자",
         excerpt: "좋아한 문장 하나를 조용히 홈 화면에 담아두세요.",
         authorName: "글숲",
+        imageUrl: nil,
         deepLink: "glsoop://"
-      )
+      ),
+      imageData: nil
     )
   }
 
   func getSnapshot(in context: Context, completion: @escaping (SentenceFrameEntry) -> Void) {
-    completion(SentenceFrameEntry(date: Date(), payload: readPayload()))
+    if context.isPreview {
+      completion(placeholder(in: context))
+      return
+    }
+
+    loadEntry(completion: completion)
   }
 
   func getTimeline(in context: Context, completion: @escaping (Timeline<SentenceFrameEntry>) -> Void) {
-    let entry = SentenceFrameEntry(date: Date(), payload: readPayload())
-    completion(Timeline(entries: [entry], policy: .after(Date().addingTimeInterval(30 * 60))))
+    loadEntry { entry in
+      completion(Timeline(entries: [entry], policy: .after(Date().addingTimeInterval(30 * 60))))
+    }
   }
 
   private func readPayload() -> SentenceFramePayload? {
     SnapshotReader.decode(SentenceFramePayload.self, key: GlsoopWidgetConstants.sentenceFrameKey)
+  }
+
+  private func loadEntry(completion: @escaping (SentenceFrameEntry) -> Void) {
+    let payload = readPayload()
+    guard payload?.premiumStatus == "active" else {
+      completion(SentenceFrameEntry(date: Date(), payload: payload, imageData: nil))
+      return
+    }
+
+    RemoteImageLoader.loadImageData(from: payload?.imageUrl) { imageData in
+      completion(SentenceFrameEntry(date: Date(), payload: payload, imageData: imageData))
+    }
   }
 }
 
@@ -559,49 +613,65 @@ private struct TodayPromptView: View {
 }
 
 private struct SentenceFrameView: View {
-  @Environment(\\.widgetFamily) private var family
   let entry: SentenceFrameEntry
 
   var body: some View {
     let payload = entry.payload
     let activePayload = payload?.premiumStatus == "active" ? payload : nil
 
-    WidgetShell {
-      VStack(alignment: .leading, spacing: family == .systemSmall ? 6 : 8) {
-        HStack {
-          Text("문장 액자")
-            .font(.caption2)
-            .fontWeight(.bold)
-            .foregroundColor(Color(red: 0.28, green: 0.42, blue: 0.32))
-          Spacer(minLength: 4)
-          BrandLabel()
+    ZStack {
+      Color(red: 0.99, green: 0.98, blue: 0.94)
+
+      if
+        activePayload != nil,
+        let imageData = entry.imageData,
+        let image = UIImage(data: imageData)
+      {
+        GeometryReader { proxy in
+          Image(uiImage: image)
+            .resizable()
+            .scaledToFit()
+            .frame(width: proxy.size.width, height: proxy.size.height)
+            .clipped()
         }
+        .padding(8)
+      } else {
+        VStack(alignment: .leading, spacing: 12) {
+          HStack {
+            Text("문장 액자")
+              .font(.caption)
+              .fontWeight(.bold)
+              .foregroundColor(Color(red: 0.28, green: 0.42, blue: 0.32))
+            Spacer(minLength: 4)
+            BrandLabel()
+          }
 
-        Spacer(minLength: 2)
+          Spacer(minLength: 8)
 
-        Text(activePayload?.excerpt ?? "문장 액자는 프리미엄에서 사용할 수 있어요")
-          .font(family == .systemSmall ? .headline : .title3)
-          .fontWeight(.semibold)
-          .foregroundColor(Color(red: 0.12, green: 0.16, blue: 0.14))
-          .lineLimit(family == .systemSmall ? 5 : 4)
-          .minimumScaleFactor(0.74)
+          Text(activePayload == nil ? "문장 액자는 프리미엄에서 사용할 수 있어요" : "앱에서 선택한 글 사진을 불러오고 있어요")
+            .font(.title3)
+            .fontWeight(.semibold)
+            .foregroundColor(Color(red: 0.12, green: 0.16, blue: 0.14))
+            .lineLimit(4)
+            .minimumScaleFactor(0.74)
 
-        if family != .systemSmall {
-          Text(activePayload?.title ?? "좋아한 글에서 직접 고른 문장만 보여줘요.")
+          Text(activePayload?.title ?? "좋아한 글에서 직접 고른 글만 보여줘요.")
             .font(.caption)
             .foregroundColor(Color(red: 0.38, green: 0.43, blue: 0.39))
+            .lineLimit(2)
+
+          Spacer(minLength: 8)
+
+          Text(activePayload?.authorName.map { "by \\($0)" } ?? "앱에서 선택하기")
+            .font(.caption2)
+            .fontWeight(.semibold)
+            .foregroundColor(Color(red: 0.30, green: 0.50, blue: 0.37))
             .lineLimit(1)
         }
-
-        Spacer(minLength: 2)
-
-        Text(activePayload?.authorName.map { "by \\($0)" } ?? "앱에서 선택하기")
-          .font(.caption2)
-          .fontWeight(.semibold)
-          .foregroundColor(Color(red: 0.30, green: 0.50, blue: 0.37))
-          .lineLimit(1)
+        .padding(18)
       }
     }
+    .glsoopPaperBackground()
     .widgetURL(URL(string: activePayload?.deepLink ?? "glsoop://premium"))
   }
 }
@@ -623,8 +693,8 @@ struct SentenceFrameWidget: Widget {
       SentenceFrameView(entry: entry)
     }
     .configurationDisplayName("문장 액자")
-    .description("프리미엄에서 선택한 문장을 홈 화면에 조용히 담아요.")
-    .supportedFamilies([.systemSmall, .systemMedium])
+    .description("프리미엄에서 선택한 글 사진을 큰 정사각형 위젯에 담아요.")
+    .supportedFamilies([.systemLarge])
   }
 }
 
