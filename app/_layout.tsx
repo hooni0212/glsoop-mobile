@@ -13,6 +13,7 @@ import { PREVIEW_FONT_ASSETS, PREVIEW_FONT_FAMILY } from "@/lib/previewFonts";
 import { usePushNotifications } from "@/lib/pushNotifications";
 import { BottomDockProvider } from "@/navigation/bottomDock";
 import { AppOnboardingTour } from "@/onboarding/AppOnboardingTour";
+import { GuidedHelpProvider } from "@/onboarding/GuidedHelpProvider";
 import { Stack } from "expo-router";
 import { StyleSheet, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -74,7 +75,7 @@ function RootLayoutContent() {
           {!bootReady ? (
             <AppBootScreen />
           ) : (
-            <>
+            <GuidedHelpProvider>
               <AuthGate />
               <Stack screenOptions={{ headerShown: false }}>
                 {/* (auth): 로그인 전 랜딩/로그인/회원가입 */}
@@ -163,7 +164,7 @@ function RootLayoutContent() {
               </Stack>
               <PostLoginPreferencesPrompt />
               <AppOnboardingTour />
-            </>
+            </GuidedHelpProvider>
           )}
         </ToastProvider>
       </BottomDockProvider>
