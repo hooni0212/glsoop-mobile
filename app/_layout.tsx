@@ -144,6 +144,13 @@ function RootLayoutContent() {
                     animation: "slide_from_right",
                   }}
                 />
+                <Stack.Screen
+                  name="guide-detail"
+                  options={{
+                    headerShown: false,
+                    animation: "slide_from_right",
+                  }}
+                />
                 <Stack.Screen name="notifications" options={{ headerShown: false }} />
                 <Stack.Screen name="profile-customize" options={{ headerShown: false }} />
                 <Stack.Screen

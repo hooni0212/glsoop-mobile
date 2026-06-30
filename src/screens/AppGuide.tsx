@@ -9,6 +9,7 @@ import {
   GUIDED_HELP_BUTTON_DICTIONARY,
   GUIDED_HELP_PAGE_ORDER,
   GUIDED_HELP_PAGES,
+  GUIDED_HELP_REPLAYABLE_PAGE_KEYS,
   type GuidedHelpPageKey,
 } from "@/onboarding/guidedHelpContent";
 import {
@@ -108,22 +109,6 @@ const QUICK_ACTIONS = [
   },
 ] as const;
 
-const REPLAYABLE_PAGE_KEYS = new Set<GuidedHelpPageKey>([
-  "home",
-  "search",
-  "write",
-  "writeDrafts",
-  "bookmarks",
-  "growth",
-  "growthRecords",
-  "growthAchievements",
-  "growthQuests",
-  "me",
-  "notifications",
-  "accountCenter",
-  "premium",
-]);
-
 export default function AppGuideScreen() {
   const startInteractiveGuide = React.useCallback(async () => {
     await requestAppOnboardingTourReplay();
@@ -140,6 +125,10 @@ export default function AppGuideScreen() {
     const page = GUIDED_HELP_PAGES[pageKey];
     await requestGuidedHelpButtonsReplay(pageKey);
     router.push(page.route as never);
+  }, []);
+
+  const openPageDetail = React.useCallback((pageKey: GuidedHelpPageKey) => {
+    router.push(`/guide-detail?page=${pageKey}` as never);
   }, []);
 
   return (
@@ -213,7 +202,7 @@ export default function AppGuideScreen() {
           <View style={styles.pageGuideList}>
             {GUIDED_HELP_PAGE_ORDER.map((pageKey) => {
               const page = GUIDED_HELP_PAGES[pageKey];
-              const replayable = REPLAYABLE_PAGE_KEYS.has(pageKey);
+              const replayable = GUIDED_HELP_REPLAYABLE_PAGE_KEYS.has(pageKey);
 
               return (
                 <View key={page.key} style={styles.pageGuideCard}>
@@ -234,6 +223,17 @@ export default function AppGuideScreen() {
                       </View>
                     ))}
                   </View>
+
+                  <Pressable
+                    onPress={() => openPageDetail(page.key)}
+                    style={({ pressed }) => [styles.pageDetailButton, pressed && styles.pressed]}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${page.title} 상세 가이드 보기`}
+                  >
+                    <Ionicons name="book-outline" size={16} color={tokens.colors.green900} />
+                    <Text style={styles.pageDetailButtonText}>자세히 보기</Text>
+                    <Ionicons name="chevron-forward" size={16} color={tokens.colors.green900} />
+                  </Pressable>
 
                   <View style={styles.pageGuideButtons}>
                     <Pressable
@@ -531,6 +531,23 @@ const styles = StyleSheet.create({
   },
   miniChipText: {
     fontSize: 11,
+    fontWeight: "900",
+    color: tokens.colors.green900,
+  },
+  pageDetailButton: {
+    minHeight: 44,
+    borderRadius: tokens.radius.pill,
+    borderWidth: 1,
+    borderColor: tokens.colors.green100,
+    backgroundColor: tokens.colors.green050,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingHorizontal: tokens.space.sm,
+  },
+  pageDetailButtonText: {
+    fontSize: 12,
     fontWeight: "900",
     color: tokens.colors.green900,
   },

@@ -13,6 +13,7 @@ export function isProtectedRoute(pathname: string, segments: string[]) {
   if (first === "write-drafts") return true;
   if (first === "account-center") return true;
   if (first === "guide") return true;
+  if (first === "guide-detail") return true;
   if (first === "profile-customize") return true;
   if (first === "notifications") return true;
 
@@ -21,6 +22,7 @@ export function isProtectedRoute(pathname: string, segments: string[]) {
     pathname.startsWith("/write") ||
     pathname.startsWith("/account-center") ||
     pathname.startsWith("/guide") ||
+    pathname.startsWith("/guide-detail") ||
     pathname.startsWith("/profile-customize") ||
     pathname.startsWith("/notifications")
   );
