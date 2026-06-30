@@ -54,7 +54,7 @@ const nativeWidgetSnapshots = NativeModules.GlsoopWidgetSnapshots as
 
 function canUseNativeWidgetSnapshots() {
   return (
-    Platform.OS === "ios" &&
+    (Platform.OS === "ios" || Platform.OS === "android") &&
     typeof nativeWidgetSnapshots?.updateSnapshot === "function" &&
     typeof nativeWidgetSnapshots?.removeSnapshot === "function"
   );

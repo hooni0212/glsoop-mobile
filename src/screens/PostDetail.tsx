@@ -1242,7 +1242,7 @@ export default function PostDetail() {
         if (result.ok) {
           showToast("문장 액자 위젯에 담았어요.", { tone: "success" });
         } else if (result.reason === "unavailable") {
-          showToast("iOS 정식 빌드에서 문장 액자 위젯을 사용할 수 있어요.", {
+          showToast("정식 앱 빌드에서 문장 액자 위젯을 사용할 수 있어요.", {
             tone: "error",
           });
         } else {

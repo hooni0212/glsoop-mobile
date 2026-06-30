@@ -49,7 +49,7 @@ const BENEFITS = [
   {
     icon: "albums-outline",
     title: "문장 액자 위젯",
-    body: "직접 고른 문장을 iOS 홈 화면 위젯에 조용히 담아둘 수 있어요.",
+    body: "직접 고른 글 사진을 홈 화면 위젯에 조용히 담아둘 수 있어요.",
   },
 ] as const;
 

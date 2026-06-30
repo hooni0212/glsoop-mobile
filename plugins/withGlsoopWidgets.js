@@ -4,6 +4,7 @@ const path = require("path");
 const {
   IOSConfig,
   createRunOncePlugin,
+  withAndroidManifest,
   withDangerousMod,
   withEntitlementsPlist,
   withXcodeProject,
@@ -18,6 +19,17 @@ const DEFAULT_TODAY_PROMPT_KEY = "glsoop.widget.todayPrompt.v1";
 const DEFAULT_SENTENCE_FRAME_KEY = "glsoop.widget.sentenceFrame.v1";
 const PODFILE_RESOURCE_BUNDLE_SIGNING_MARKER =
   "# glsoop: disable CocoaPods resource bundle signing for EAS Xcode builds";
+const ANDROID_PACKAGE_REGISTRATION = "add(GlsoopWidgetSnapshotsPackage())";
+const ANDROID_WIDGET_RECEIVERS = [
+  {
+    name: ".GlsoopTodayPromptWidgetProvider",
+    resource: "@xml/glsoop_today_prompt_widget_info",
+  },
+  {
+    name: ".GlsoopSentenceFrameWidgetProvider",
+    resource: "@xml/glsoop_sentence_frame_widget_info",
+  },
+];
 
 function quote(value) {
   return `"${value}"`;
@@ -42,9 +54,11 @@ function unique(values) {
 function normalizeOptions(config, options = {}) {
   const bundleIdentifier = config.ios?.bundleIdentifier ?? "com.glsoop.app";
   const widgetTargetName = options.widgetTargetName ?? DEFAULT_WIDGET_TARGET_NAME;
+  const androidPackageName = options.androidPackageName ?? config.android?.package ?? "com.glsoop.app";
 
   return {
     appGroupIdentifier: options.appGroupIdentifier ?? DEFAULT_APP_GROUP_IDENTIFIER,
+    androidPackageName,
     widgetTargetName,
     widgetBundleIdentifier:
       options.widgetBundleIdentifier ?? `${bundleIdentifier}.widgets`,
@@ -177,6 +191,130 @@ function patchPodfileForResourceBundleSigning(iosRoot) {
     throw new Error("Failed to patch iOS Podfile for resource bundle signing.");
   }
   fs.writeFileSync(podfilePath, nextSource, "utf8");
+}
+
+function getAndroidPackagePath(androidPackageName) {
+  return androidPackageName.split(".").join(path.sep);
+}
+
+function writeAndroidFiles(androidRoot, options) {
+  const packageDir = path.join(
+    androidRoot,
+    "app",
+    "src",
+    "main",
+    "java",
+    getAndroidPackagePath(options.androidPackageName)
+  );
+  const resRoot = path.join(androidRoot, "app", "src", "main", "res");
+
+  writeFileIfChanged(
+    path.join(packageDir, "GlsoopAndroidWidgets.kt"),
+    createAndroidWidgetsKotlin(options)
+  );
+  writeFileIfChanged(
+    path.join(resRoot, "layout", "glsoop_widget_today_prompt.xml"),
+    createTodayPromptWidgetLayoutXml()
+  );
+  writeFileIfChanged(
+    path.join(resRoot, "layout", "glsoop_widget_sentence_frame.xml"),
+    createSentenceFrameWidgetLayoutXml()
+  );
+  writeFileIfChanged(
+    path.join(resRoot, "xml", "glsoop_today_prompt_widget_info.xml"),
+    createTodayPromptWidgetInfoXml()
+  );
+  writeFileIfChanged(
+    path.join(resRoot, "xml", "glsoop_sentence_frame_widget_info.xml"),
+    createSentenceFrameWidgetInfoXml()
+  );
+  writeFileIfChanged(
+    path.join(resRoot, "drawable", "glsoop_widget_background.xml"),
+    createAndroidWidgetBackgroundXml()
+  );
+  patchAndroidMainApplication(androidRoot, options);
+}
+
+function patchAndroidMainApplication(androidRoot, options) {
+  const packageDir = path.join(
+    androidRoot,
+    "app",
+    "src",
+    "main",
+    "java",
+    getAndroidPackagePath(options.androidPackageName)
+  );
+  const mainApplicationPath = path.join(packageDir, "MainApplication.kt");
+  if (!fs.existsSync(mainApplicationPath)) return;
+
+  const source = fs.readFileSync(mainApplicationPath, "utf8");
+  if (source.includes(ANDROID_PACKAGE_REGISTRATION)) return;
+
+  const commentNeedle =
+    "              // Packages that cannot be autolinked yet can be added manually here, for example:\n" +
+    "              // add(MyReactNativePackage())";
+  if (source.includes(commentNeedle)) {
+    fs.writeFileSync(
+      mainApplicationPath,
+      source.replace(commentNeedle, `${commentNeedle}\n              ${ANDROID_PACKAGE_REGISTRATION}`),
+      "utf8"
+    );
+    return;
+  }
+
+  const applyNeedle = "PackageList(this).packages.apply {";
+  if (!source.includes(applyNeedle)) {
+    throw new Error("Failed to patch Android MainApplication for Glsoop widgets.");
+  }
+
+  fs.writeFileSync(
+    mainApplicationPath,
+    source.replace(applyNeedle, `${applyNeedle}\n              ${ANDROID_PACKAGE_REGISTRATION}`),
+    "utf8"
+  );
+}
+
+function ensureAndroidWidgetReceivers(androidManifest) {
+  const application = androidManifest.manifest?.application?.[0];
+  if (!application) {
+    throw new Error("Failed to locate Android application manifest.");
+  }
+
+  application.receiver = application.receiver ?? [];
+  for (const receiver of ANDROID_WIDGET_RECEIVERS) {
+    const existing = application.receiver.find((item) => item?.$?.["android:name"] === receiver.name);
+    const next = {
+      $: {
+        "android:name": receiver.name,
+        "android:exported": "true",
+      },
+      "intent-filter": [
+        {
+          action: [
+            {
+              $: {
+                "android:name": "android.appwidget.action.APPWIDGET_UPDATE",
+              },
+            },
+          ],
+        },
+      ],
+      "meta-data": [
+        {
+          $: {
+            "android:name": "android.appwidget.provider",
+            "android:resource": receiver.resource,
+          },
+        },
+      ],
+    };
+
+    if (existing) {
+      Object.assign(existing, next);
+    } else {
+      application.receiver.push(next);
+    }
+  }
 }
 
 function updateTargetBuildSettings(project, targetUuid, config, options) {
@@ -705,6 +843,548 @@ struct GlsoopWidgetsBundle: WidgetBundle {
     SentenceFrameWidget()
   }
 }
+	`;
+}
+
+function createAndroidWidgetsKotlin(options) {
+  return `package ${options.androidPackageName}
+
+import android.app.PendingIntent
+import android.appwidget.AppWidgetManager
+import android.appwidget.AppWidgetProvider
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.net.Uri
+import android.os.Build
+import android.util.Log
+import android.view.View
+import android.widget.RemoteViews
+import com.facebook.react.ReactPackage
+import com.facebook.react.bridge.NativeModule
+import com.facebook.react.bridge.Promise
+import com.facebook.react.bridge.ReactApplicationContext
+import com.facebook.react.bridge.ReactContextBaseJavaModule
+import com.facebook.react.bridge.ReactMethod
+import com.facebook.react.uimanager.ViewManager
+import java.net.HttpURLConnection
+import java.net.URL
+import java.util.concurrent.Executors
+import org.json.JSONObject
+
+private const val WIDGET_PREFS_NAME = "glsoop_widget_snapshots"
+private const val TODAY_PROMPT_KEY = "${options.todayPromptSnapshotKey}"
+private const val SENTENCE_FRAME_KEY = "${options.sentenceFrameSnapshotKey}"
+private const val MAX_WIDGET_IMAGE_EDGE_PX = 768
+private const val TAG = "GlsoopWidgets"
+
+class GlsoopWidgetSnapshotsModule(
+  private val reactContext: ReactApplicationContext
+) : ReactContextBaseJavaModule(reactContext) {
+  override fun getName(): String = "GlsoopWidgetSnapshots"
+
+  @ReactMethod
+  fun updateSnapshot(key: String, payload: String, promise: Promise) {
+    try {
+      if (!GlsoopWidgetStore.isAllowedKey(key)) {
+        promise.reject("E_WIDGET_KEY", "Unsupported widget snapshot key.")
+        return
+      }
+
+      GlsoopWidgetStore.write(reactContext, key, payload)
+      GlsoopWidgetUpdater.updateAll(reactContext)
+      promise.resolve(null)
+    } catch (error: Throwable) {
+      promise.reject("E_WIDGET_UPDATE", "Failed to update widget snapshot.", error)
+    }
+  }
+
+  @ReactMethod
+  fun removeSnapshot(key: String, promise: Promise) {
+    try {
+      if (!GlsoopWidgetStore.isAllowedKey(key)) {
+        promise.reject("E_WIDGET_KEY", "Unsupported widget snapshot key.")
+        return
+      }
+
+      GlsoopWidgetStore.remove(reactContext, key)
+      GlsoopWidgetUpdater.updateAll(reactContext)
+      promise.resolve(null)
+    } catch (error: Throwable) {
+      promise.reject("E_WIDGET_REMOVE", "Failed to remove widget snapshot.", error)
+    }
+  }
+}
+
+class GlsoopWidgetSnapshotsPackage : ReactPackage {
+  override fun createNativeModules(reactContext: ReactApplicationContext): List<NativeModule> =
+    listOf(GlsoopWidgetSnapshotsModule(reactContext))
+
+  override fun createViewManagers(reactContext: ReactApplicationContext): List<ViewManager<*, *>> =
+    emptyList()
+}
+
+class GlsoopTodayPromptWidgetProvider : AppWidgetProvider() {
+  override fun onUpdate(
+    context: Context,
+    appWidgetManager: AppWidgetManager,
+    appWidgetIds: IntArray
+  ) {
+    GlsoopWidgetUpdater.updateTodayPrompt(context, appWidgetManager, appWidgetIds)
+  }
+}
+
+class GlsoopSentenceFrameWidgetProvider : AppWidgetProvider() {
+  override fun onUpdate(
+    context: Context,
+    appWidgetManager: AppWidgetManager,
+    appWidgetIds: IntArray
+  ) {
+    GlsoopWidgetUpdater.updateSentenceFrame(context, appWidgetManager, appWidgetIds)
+  }
+}
+
+private object GlsoopWidgetStore {
+  fun isAllowedKey(key: String): Boolean = key == TODAY_PROMPT_KEY || key == SENTENCE_FRAME_KEY
+
+  fun write(context: Context, key: String, payload: String) {
+    context.applicationContext
+      .getSharedPreferences(WIDGET_PREFS_NAME, Context.MODE_PRIVATE)
+      .edit()
+      .putString(key, payload)
+      .apply()
+  }
+
+  fun remove(context: Context, key: String) {
+    context.applicationContext
+      .getSharedPreferences(WIDGET_PREFS_NAME, Context.MODE_PRIVATE)
+      .edit()
+      .remove(key)
+      .apply()
+  }
+
+  fun readJson(context: Context, key: String): JSONObject? {
+    val raw = context.applicationContext
+      .getSharedPreferences(WIDGET_PREFS_NAME, Context.MODE_PRIVATE)
+      .getString(key, null)
+      ?.trim()
+      ?: return null
+
+    if (raw.isEmpty()) return null
+    return try {
+      JSONObject(raw)
+    } catch (error: Throwable) {
+      Log.w(TAG, "Failed to parse widget snapshot for " + key, error)
+      null
+    }
+  }
+}
+
+private object GlsoopWidgetUpdater {
+  private val imageExecutor = Executors.newSingleThreadExecutor()
+
+  fun updateAll(context: Context) {
+    val appContext = context.applicationContext
+    val manager = AppWidgetManager.getInstance(appContext)
+
+    updateTodayPrompt(
+      appContext,
+      manager,
+      manager.getAppWidgetIds(ComponentName(appContext, GlsoopTodayPromptWidgetProvider::class.java))
+    )
+    updateSentenceFrame(
+      appContext,
+      manager,
+      manager.getAppWidgetIds(ComponentName(appContext, GlsoopSentenceFrameWidgetProvider::class.java))
+    )
+  }
+
+  fun updateTodayPrompt(
+    context: Context,
+    appWidgetManager: AppWidgetManager,
+    appWidgetIds: IntArray
+  ) {
+    val snapshot = GlsoopWidgetStore.readJson(context, TODAY_PROMPT_KEY)
+    for (appWidgetId in appWidgetIds) {
+      val views = RemoteViews(context.packageName, R.layout.glsoop_widget_today_prompt)
+      val day = snapshot?.optInt("day")?.takeIf { it > 0 }
+      val title = snapshot?.optString("title")?.takeIf { it.isNotBlank() }
+        ?: "앱에서 오늘의 글감을 확인해 주세요"
+      val body = snapshot?.optString("body")?.takeIf { it.isNotBlank() }
+        ?: "글숲에서 조용히 한 문장을 시작해보세요."
+      val deepLink = snapshot?.optString("deepLink")?.takeIf { it.isNotBlank() }
+        ?: "glsoop://write"
+
+      views.setTextViewText(R.id.glsoop_today_prompt_label, day?.let { it.toString() + "일차" } ?: "오늘")
+      views.setTextViewText(R.id.glsoop_today_prompt_title, title)
+      views.setTextViewText(R.id.glsoop_today_prompt_body, body)
+      views.setOnClickPendingIntent(
+        R.id.glsoop_today_prompt_root,
+        buildDeepLinkIntent(context, deepLink, appWidgetId)
+      )
+      appWidgetManager.updateAppWidget(appWidgetId, views)
+    }
+  }
+
+  fun updateSentenceFrame(
+    context: Context,
+    appWidgetManager: AppWidgetManager,
+    appWidgetIds: IntArray
+  ) {
+    val snapshot = GlsoopWidgetStore.readJson(context, SENTENCE_FRAME_KEY)
+    for (appWidgetId in appWidgetIds) {
+      updateSentenceFrameFallback(context, appWidgetManager, appWidgetId, snapshot)
+
+      val active = snapshot?.optString("premiumStatus") == "active"
+      val imageUrl = snapshot?.optString("imageUrl")?.takeIf { it.isNotBlank() }
+      if (!active || imageUrl == null) continue
+
+      imageExecutor.execute {
+        val bitmap = downloadBitmap(imageUrl)
+        if (bitmap == null) {
+          updateSentenceFrameFallback(context, appWidgetManager, appWidgetId, snapshot)
+          return@execute
+        }
+
+        val views = RemoteViews(context.packageName, R.layout.glsoop_widget_sentence_frame)
+        val deepLink = snapshot.optString("deepLink").takeIf { it.isNotBlank() }
+          ?: "glsoop://posts/" + snapshot.optString("postId")
+        views.setViewVisibility(R.id.glsoop_sentence_frame_image, View.VISIBLE)
+        views.setViewVisibility(R.id.glsoop_sentence_frame_fallback, View.GONE)
+        views.setImageViewBitmap(R.id.glsoop_sentence_frame_image, bitmap)
+        views.setOnClickPendingIntent(
+          R.id.glsoop_sentence_frame_root,
+          buildDeepLinkIntent(context, deepLink, appWidgetId + 10000)
+        )
+        appWidgetManager.updateAppWidget(appWidgetId, views)
+      }
+    }
+  }
+
+  private fun updateSentenceFrameFallback(
+    context: Context,
+    appWidgetManager: AppWidgetManager,
+    appWidgetId: Int,
+    snapshot: JSONObject?
+  ) {
+    val active = snapshot?.optString("premiumStatus") == "active"
+    val title = snapshot?.optString("title")?.takeIf { it.isNotBlank() }
+      ?: "좋아한 글에서 직접 고른 글만 보여줘요."
+    val author = snapshot?.optString("authorName")?.takeIf { it.isNotBlank() }
+      ?: "앱에서 선택하기"
+    val message = if (active) {
+      "앱에서 선택한 글 사진을 불러오고 있어요"
+    } else {
+      "문장 액자는 프리미엄에서 사용할 수 있어요"
+    }
+    val deepLink = if (active) {
+      snapshot?.optString("deepLink")?.takeIf { it.isNotBlank() } ?: "glsoop://"
+    } else {
+      "glsoop://premium"
+    }
+
+    val views = RemoteViews(context.packageName, R.layout.glsoop_widget_sentence_frame)
+    views.setViewVisibility(R.id.glsoop_sentence_frame_image, View.GONE)
+    views.setViewVisibility(R.id.glsoop_sentence_frame_fallback, View.VISIBLE)
+    views.setTextViewText(R.id.glsoop_sentence_frame_message, message)
+    views.setTextViewText(R.id.glsoop_sentence_frame_title, title)
+    views.setTextViewText(R.id.glsoop_sentence_frame_author, author)
+    views.setOnClickPendingIntent(
+      R.id.glsoop_sentence_frame_root,
+      buildDeepLinkIntent(context, deepLink, appWidgetId + 10000)
+    )
+    appWidgetManager.updateAppWidget(appWidgetId, views)
+  }
+
+  private fun buildDeepLinkIntent(context: Context, deepLink: String, requestCode: Int): PendingIntent {
+    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(deepLink)).apply {
+      addCategory(Intent.CATEGORY_BROWSABLE)
+      setPackage(context.packageName)
+      flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+    }
+    val flags = PendingIntent.FLAG_UPDATE_CURRENT or if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+      PendingIntent.FLAG_IMMUTABLE
+    } else {
+      0
+    }
+    return PendingIntent.getActivity(context, requestCode, intent, flags)
+  }
+
+  private fun downloadBitmap(imageUrl: String): android.graphics.Bitmap? {
+    return try {
+      val connection = (URL(imageUrl).openConnection() as HttpURLConnection).apply {
+        connectTimeout = 8000
+        readTimeout = 8000
+        instanceFollowRedirects = true
+      }
+      connection.inputStream.use { stream ->
+        decodeWidgetBitmap(stream.readBytes())
+      }
+    } catch (error: Throwable) {
+      Log.w(TAG, "Failed to download sentence frame image", error)
+      null
+    }
+  }
+
+  private fun decodeWidgetBitmap(bytes: ByteArray): Bitmap? {
+    if (bytes.isEmpty()) return null
+
+    val bounds = BitmapFactory.Options().apply {
+      inJustDecodeBounds = true
+    }
+    BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+
+    var sampleSize = 1
+    while (
+      bounds.outWidth / sampleSize > MAX_WIDGET_IMAGE_EDGE_PX ||
+      bounds.outHeight / sampleSize > MAX_WIDGET_IMAGE_EDGE_PX
+    ) {
+      sampleSize *= 2
+    }
+
+    val decoded = BitmapFactory.decodeByteArray(
+      bytes,
+      0,
+      bytes.size,
+      BitmapFactory.Options().apply {
+        inSampleSize = sampleSize
+      }
+    ) ?: return null
+
+    val longestEdge = maxOf(decoded.width, decoded.height)
+    if (longestEdge <= MAX_WIDGET_IMAGE_EDGE_PX) return decoded
+
+    val scale = MAX_WIDGET_IMAGE_EDGE_PX.toFloat() / longestEdge.toFloat()
+    val targetWidth = maxOf(1, (decoded.width * scale).toInt())
+    val targetHeight = maxOf(1, (decoded.height * scale).toInt())
+    val scaled = Bitmap.createScaledBitmap(decoded, targetWidth, targetHeight, true)
+    if (scaled != decoded) decoded.recycle()
+    return scaled
+  }
+}
+`;
+}
+
+function createTodayPromptWidgetLayoutXml() {
+  return `<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+  android:id="@+id/glsoop_today_prompt_root"
+  android:layout_width="match_parent"
+  android:layout_height="match_parent"
+  android:background="@drawable/glsoop_widget_background"
+  android:orientation="vertical"
+  android:padding="16dp">
+
+  <LinearLayout
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="center_vertical"
+    android:orientation="horizontal">
+
+    <TextView
+      android:id="@+id/glsoop_today_prompt_label"
+      android:layout_width="0dp"
+      android:layout_height="wrap_content"
+      android:layout_weight="1"
+      android:fontFamily="sans"
+      android:text="오늘"
+      android:textColor="#476B52"
+      android:textSize="12sp"
+      android:textStyle="bold" />
+
+    <TextView
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:fontFamily="sans"
+      android:text="글숲"
+      android:textColor="#476B52"
+      android:textSize="12sp"
+      android:textStyle="bold" />
+  </LinearLayout>
+
+  <Space
+    android:layout_width="match_parent"
+    android:layout_height="0dp"
+    android:layout_weight="1" />
+
+  <TextView
+    android:id="@+id/glsoop_today_prompt_title"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:ellipsize="end"
+    android:fontFamily="sans"
+    android:maxLines="3"
+    android:text="앱에서 오늘의 글감을 확인해 주세요"
+    android:textColor="#1F2924"
+    android:textSize="18sp"
+    android:textStyle="bold" />
+
+  <TextView
+    android:id="@+id/glsoop_today_prompt_body"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="8dp"
+    android:ellipsize="end"
+    android:fontFamily="sans"
+    android:maxLines="2"
+    android:text="글숲에서 조용히 한 문장을 시작해보세요."
+    android:textColor="#606D63"
+    android:textSize="13sp" />
+
+  <TextView
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="14dp"
+    android:fontFamily="sans"
+    android:text="이 주제로 쓰기"
+    android:textColor="#4D805E"
+    android:textSize="12sp"
+    android:textStyle="bold" />
+</LinearLayout>
+`;
+}
+
+function createSentenceFrameWidgetLayoutXml() {
+  return `<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+  android:id="@+id/glsoop_sentence_frame_root"
+  android:layout_width="match_parent"
+  android:layout_height="match_parent"
+  android:background="@drawable/glsoop_widget_background"
+  android:padding="8dp">
+
+  <ImageView
+    android:id="@+id/glsoop_sentence_frame_image"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:adjustViewBounds="true"
+    android:contentDescription="문장 액자 글 사진"
+    android:scaleType="fitCenter"
+    android:visibility="gone" />
+
+  <LinearLayout
+    android:id="@+id/glsoop_sentence_frame_fallback"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="10dp"
+    android:visibility="visible">
+
+    <LinearLayout
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:gravity="center_vertical"
+      android:orientation="horizontal">
+
+      <TextView
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:fontFamily="sans"
+        android:text="문장 액자"
+        android:textColor="#476B52"
+        android:textSize="12sp"
+        android:textStyle="bold" />
+
+      <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:fontFamily="sans"
+        android:text="글숲"
+        android:textColor="#476B52"
+        android:textSize="12sp"
+        android:textStyle="bold" />
+    </LinearLayout>
+
+    <Space
+      android:layout_width="match_parent"
+      android:layout_height="0dp"
+      android:layout_weight="1" />
+
+    <TextView
+      android:id="@+id/glsoop_sentence_frame_message"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:ellipsize="end"
+      android:fontFamily="sans"
+      android:maxLines="4"
+      android:text="문장 액자는 프리미엄에서 사용할 수 있어요"
+      android:textColor="#1F2924"
+      android:textSize="18sp"
+      android:textStyle="bold" />
+
+    <TextView
+      android:id="@+id/glsoop_sentence_frame_title"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:layout_marginTop="10dp"
+      android:ellipsize="end"
+      android:fontFamily="sans"
+      android:maxLines="2"
+      android:text="좋아한 글에서 직접 고른 글만 보여줘요."
+      android:textColor="#606D63"
+      android:textSize="13sp" />
+
+    <Space
+      android:layout_width="match_parent"
+      android:layout_height="0dp"
+      android:layout_weight="1" />
+
+    <TextView
+      android:id="@+id/glsoop_sentence_frame_author"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:fontFamily="sans"
+      android:text="앱에서 선택하기"
+      android:textColor="#4D805E"
+      android:textSize="12sp"
+      android:textStyle="bold" />
+  </LinearLayout>
+</FrameLayout>
+`;
+}
+
+function createTodayPromptWidgetInfoXml() {
+  return `<?xml version="1.0" encoding="utf-8"?>
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+  android:description="@string/app_name"
+  android:initialLayout="@layout/glsoop_widget_today_prompt"
+  android:minWidth="180dp"
+  android:minHeight="110dp"
+  android:previewLayout="@layout/glsoop_widget_today_prompt"
+  android:resizeMode="horizontal|vertical"
+  android:targetCellWidth="3"
+  android:targetCellHeight="2"
+  android:updatePeriodMillis="1800000"
+  android:widgetCategory="home_screen" />
+`;
+}
+
+function createSentenceFrameWidgetInfoXml() {
+  return `<?xml version="1.0" encoding="utf-8"?>
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+  android:description="@string/app_name"
+  android:initialLayout="@layout/glsoop_widget_sentence_frame"
+  android:minWidth="250dp"
+  android:minHeight="250dp"
+  android:previewLayout="@layout/glsoop_widget_sentence_frame"
+  android:resizeMode="horizontal|vertical"
+  android:targetCellWidth="4"
+  android:targetCellHeight="4"
+  android:updatePeriodMillis="1800000"
+  android:widgetCategory="home_screen" />
+`;
+}
+
+function createAndroidWidgetBackgroundXml() {
+  return `<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+  android:shape="rectangle">
+  <solid android:color="#fffdf8" />
+  <corners android:radius="20dp" />
+</shape>
 `;
 }
 
@@ -777,6 +1457,19 @@ function withGlsoopWidgets(config, options = {}) {
         resolvedOptions
       );
       patchPodfileForResourceBundleSigning(nextConfig.modRequest.platformProjectRoot);
+      return nextConfig;
+    },
+  ]);
+
+  config = withAndroidManifest(config, (nextConfig) => {
+    ensureAndroidWidgetReceivers(nextConfig.modResults);
+    return nextConfig;
+  });
+
+  config = withDangerousMod(config, [
+    "android",
+    (nextConfig) => {
+      writeAndroidFiles(nextConfig.modRequest.platformProjectRoot, resolvedOptions);
       return nextConfig;
     },
   ]);
