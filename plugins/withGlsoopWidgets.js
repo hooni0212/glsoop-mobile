@@ -768,11 +768,10 @@ private struct SentenceFrameView: View {
         GeometryReader { proxy in
           Image(uiImage: image)
             .resizable()
-            .scaledToFit()
+            .scaledToFill()
             .frame(width: proxy.size.width, height: proxy.size.height)
             .clipped()
         }
-        .padding(8)
       } else {
         VStack(alignment: .leading, spacing: 12) {
           HStack {
@@ -793,7 +792,7 @@ private struct SentenceFrameView: View {
             .lineLimit(4)
             .minimumScaleFactor(0.74)
 
-          Text(activePayload?.title ?? "좋아한 글에서 직접 고른 글만 보여줘요.")
+          Text(activePayload?.title ?? "북마크에서 직접 고른 글만 보여줘요.")
             .font(.caption)
             .foregroundColor(Color(red: 0.38, green: 0.43, blue: 0.39))
             .lineLimit(2)
@@ -831,7 +830,7 @@ struct SentenceFrameWidget: Widget {
       SentenceFrameView(entry: entry)
     }
     .configurationDisplayName("문장 액자")
-    .description("프리미엄에서 선택한 글 사진을 큰 정사각형 위젯에 담아요.")
+    .description("북마크에서 선택한 글 사진을 큰 정사각형 위젯에 담아요.")
     .supportedFamilies([.systemLarge])
   }
 }
@@ -1071,7 +1070,7 @@ private object GlsoopWidgetUpdater {
   ) {
     val active = snapshot?.optString("premiumStatus") == "active"
     val title = snapshot?.optString("title")?.takeIf { it.isNotBlank() }
-      ?: "좋아한 글에서 직접 고른 글만 보여줘요."
+      ?: "북마크에서 직접 고른 글만 보여줘요."
     val author = snapshot?.optString("authorName")?.takeIf { it.isNotBlank() }
       ?: "앱에서 선택하기"
     val message = if (active) {
@@ -1323,7 +1322,7 @@ function createSentenceFrameWidgetLayoutXml() {
       android:ellipsize="end"
       android:fontFamily="sans"
       android:maxLines="2"
-      android:text="좋아한 글에서 직접 고른 글만 보여줘요."
+      android:text="북마크에서 직접 고른 글만 보여줘요."
       android:textColor="#606D63"
       android:textSize="13sp" />
 

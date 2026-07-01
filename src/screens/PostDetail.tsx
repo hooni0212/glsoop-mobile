@@ -427,7 +427,13 @@ export default function PostDetail() {
   }, [comments]);
   const commentCount = comments.filter((comment) => comment.status === "active").length;
 
-  const onPressBack = () => router.back();
+  const onPressBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+      return;
+    }
+    router.replace("/(tabs)" as never);
+  };
   const showNotFound = error?.kind === "not_found";
 
   const promptAuthForAction = React.useCallback(
@@ -1220,9 +1226,9 @@ export default function PostDetail() {
       promptAuthForAction("문장 액자는 로그인 후 사용할 수 있어요.");
       return;
     }
-    if (!isLiked) {
+    if (!isBookmarked) {
       setSafetyMenuVisible(false);
-      showToast("하트 누른 글만 문장 액자에 담을 수 있어요.", { tone: "error" });
+      showToast("북마크에 저장한 글만 문장 액자에 담을 수 있어요.", { tone: "error" });
       return;
     }
 

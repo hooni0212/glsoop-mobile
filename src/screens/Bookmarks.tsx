@@ -21,6 +21,7 @@ import { AppLoading } from "@/components/state/AppLoading";
 import { buildAuthRoute } from "@/lib/authRedirect";
 import { useToast } from "@/feedback/ToastProvider";
 import { getLike, setLike, useLikeSnapshot } from "@/features/likes/likeStore";
+import { hasActiveEntitlement, listMyEntitlements } from "@/services/entitlementService";
 import { ApiError, normalizeApiError, type AppErrorModel } from "@/lib/errors";
 import {
   BookmarkList,
@@ -32,6 +33,7 @@ import {
   removePostFromBookmarkList,
 } from "@/services/bookmarkService";
 import { togglePostLike } from "@/services/likeService";
+import { saveSentenceFrameWidgetSnapshot } from "@/services/widgetSnapshotService";
 import { softPanelShadowStyle } from "@/theme/shadows";
 import { tokens } from "@/theme/tokens";
 import type { Post } from "@/types/post";
@@ -75,6 +77,7 @@ export default function BookmarksScreen() {
   const [editFolderDesc, setEditFolderDesc] = useState("");
   const [renamingListId, setRenamingListId] = useState<string | null>(null);
   const [likePending, setLikePending] = useState<Record<string, boolean>>({});
+  const [sentenceFramePending, setSentenceFramePending] = useState<Record<string, boolean>>({});
 
   const selectedList = useMemo(
     () => lists.find((l) => l.id === selectedListId) ?? null,
@@ -375,6 +378,47 @@ export default function BookmarksScreen() {
     [folderItems.items, likePending, handleAuthError, showToast]
   );
 
+  const onPressSentenceFrame = useCallback(
+    async (post: Post) => {
+      if (sentenceFramePending[post.id]) return;
+
+      setSentenceFramePending((prev) => ({ ...prev, [post.id]: true }));
+      try {
+        const entitlements = await listMyEntitlements();
+        if (!hasActiveEntitlement(entitlements)) {
+          showToast("문장 액자는 글숲 프리미엄에서 사용할 수 있어요.", { tone: "error" });
+          router.push("/premium" as never);
+          return;
+        }
+
+        const result = await saveSentenceFrameWidgetSnapshot(post);
+        if (result.ok) {
+          showToast("문장 액자 위젯에 담았어요.", { tone: "success" });
+        } else if (result.reason === "unavailable") {
+          showToast("정식 앱 빌드에서 문장 액자 위젯을 사용할 수 있어요.", {
+            tone: "error",
+          });
+        } else {
+          showToast("문장 액자 저장에 실패했어요. 잠시 후 다시 시도해주세요.", {
+            tone: "error",
+          });
+        }
+      } catch (err) {
+        if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
+          await handleAuthError();
+          return;
+        }
+        const normalized = normalizeApiError(err);
+        showToast(normalized.description || normalized.title || "문장 액자 저장에 실패했어요.", {
+          tone: "error",
+        });
+      } finally {
+        setSentenceFramePending((prev) => ({ ...prev, [post.id]: false }));
+      }
+    },
+    [handleAuthError, sentenceFramePending, showToast]
+  );
+
   const renderListsScreen = () => {
     if (loadingLists) {
       return (
@@ -563,8 +607,10 @@ export default function BookmarksScreen() {
             <BookmarkFeedItem
               item={item}
               likeDisabled={Boolean(likePending[item.id])}
+              sentenceFramePending={Boolean(sentenceFramePending[item.id])}
               onLikePress={onPressLike}
               onBookmarkPress={onPressRemoveFromList}
+              onSentenceFramePress={onPressSentenceFrame}
             />
           </View>
         ))}
@@ -676,13 +722,17 @@ export default function BookmarksScreen() {
 function BookmarkFeedItem({
   item,
   likeDisabled,
+  sentenceFramePending,
   onLikePress,
   onBookmarkPress,
+  onSentenceFramePress,
 }: {
   item: Post;
   likeDisabled: boolean;
+  sentenceFramePending: boolean;
   onLikePress: (postId: string) => void;
   onBookmarkPress: (postId: string) => void;
+  onSentenceFramePress: (post: Post) => void;
 }) {
   const fallbackLiked = Boolean(item.viewer?.isLiked);
   const fallbackCount = item.stats?.likeCount ?? 0;
@@ -690,16 +740,35 @@ function BookmarkFeedItem({
   const snapshot = { ...item, stats: { ...item.stats, likeCount } };
 
   return (
-    <FeedCard
-      post={snapshot}
-      liked={liked}
-      bookmarked
-      likeDisabled={likeDisabled}
-      onPress={() => router.push(`/posts/${item.id}`)}
-      onLikePress={() => onLikePress(item.id)}
-      onBookmarkPress={() => onBookmarkPress(item.id)}
-      likeTestID={`bookmark-like-btn-${item.id}`}
-    />
+    <View style={styles.bookmarkItemCard}>
+      <FeedCard
+        post={snapshot}
+        liked={liked}
+        bookmarked
+        likeDisabled={likeDisabled}
+        onPress={() => router.push(`/posts/${item.id}`)}
+        onLikePress={() => onLikePress(item.id)}
+        onBookmarkPress={() => onBookmarkPress(item.id)}
+        likeTestID={`bookmark-like-btn-${item.id}`}
+      />
+      <Pressable
+        onPress={() => onSentenceFramePress(item)}
+        disabled={sentenceFramePending}
+        style={({ pressed }) => [
+          styles.sentenceFrameBtn,
+          sentenceFramePending && styles.createBtnDisabled,
+          pressed && !sentenceFramePending && styles.controlPressed,
+        ]}
+        accessibilityRole="button"
+        accessibilityLabel={`${item.title || "저장한 글"} 문장 액자에 담기`}
+        testID={`bookmark-sentence-frame-btn-${item.id}`}
+      >
+        <Ionicons name="albums-outline" size={16} color={tokens.colors.green700} />
+        <Text style={styles.sentenceFrameBtnText}>
+          {sentenceFramePending ? "문장 액자에 담는 중..." : "문장 액자에 담기"}
+        </Text>
+      </Pressable>
+    </View>
   );
 }
 
@@ -950,6 +1019,27 @@ const styles = StyleSheet.create({
     gap: tokens.space.md,
   },
   itemWrap: { width: "100%" },
+  bookmarkItemCard: {
+    gap: tokens.space.sm,
+  },
+  sentenceFrameBtn: {
+    minHeight: 44,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    borderWidth: 1,
+    borderColor: tokens.colors.green100,
+    borderRadius: tokens.radius.pill,
+    backgroundColor: tokens.colors.green050,
+    paddingHorizontal: tokens.space.md,
+    paddingVertical: 10,
+  },
+  sentenceFrameBtnText: {
+    fontSize: 13,
+    fontWeight: "900",
+    color: tokens.colors.green700,
+  },
   moreBtn: {
     minHeight: 44,
     alignItems: "center",
