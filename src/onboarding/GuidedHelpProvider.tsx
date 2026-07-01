@@ -52,6 +52,14 @@ type GuidedHighlightTarget = {
   target: (args: HighlightTargetArgs) => HighlightFrame;
 };
 type GuidedHighlightStep = GuidedHighlightTarget & GuidedHelpButton;
+type GuidedTargetId = `${GuidedHelpPageKey}:${string}`;
+type GuidedTargetFrames = Partial<Record<GuidedTargetId, HighlightFrame>>;
+type GuidedHelpTargetRegistry = {
+  registerTarget: (pageKey: GuidedHelpPageKey, buttonKey: string, frame: HighlightFrame) => void;
+  unregisterTarget: (pageKey: GuidedHelpPageKey, buttonKey: string) => void;
+};
+
+const GuidedHelpTargetContext = React.createContext<GuidedHelpTargetRegistry | null>(null);
 
 const CONTENT_MAX_WIDTH = 393;
 
@@ -69,6 +77,60 @@ function contentLeft(width: number) {
 
 function targetRect(left: number, top: number, width: number, height: number): HighlightFrame {
   return { left, top, width, height };
+}
+
+function targetId(pageKey: GuidedHelpPageKey, buttonKey: string): GuidedTargetId {
+  return `${pageKey}:${buttonKey}`;
+}
+
+function framesAreEqual(a: HighlightFrame | undefined, b: HighlightFrame) {
+  if (!a) return false;
+  return (
+    Math.abs(a.left - b.left) < 1 &&
+    Math.abs(a.top - b.top) < 1 &&
+    Math.abs(a.width - b.width) < 1 &&
+    Math.abs(a.height - b.height) < 1
+  );
+}
+
+function expandFrame(frame: HighlightFrame, padding: number): HighlightFrame {
+  return {
+    left: frame.left - padding,
+    top: frame.top - padding,
+    width: frame.width + padding * 2,
+    height: frame.height + padding * 2,
+  };
+}
+
+export function useGuidedHelpTarget(pageKey: GuidedHelpPageKey, buttonKey: string) {
+  const registry = React.useContext(GuidedHelpTargetContext);
+  const ref = React.useRef<View | null>(null);
+
+  const measure = React.useCallback(() => {
+    if (!registry) return;
+    requestAnimationFrame(() => {
+      ref.current?.measureInWindow((left, top, width, height) => {
+        if (width <= 0 || height <= 0) return;
+        registry.registerTarget(pageKey, buttonKey, { left, top, width, height });
+      });
+    });
+  }, [buttonKey, pageKey, registry]);
+
+  React.useEffect(() => {
+    measure();
+    return () => {
+      registry?.unregisterTarget(pageKey, buttonKey);
+    };
+  }, [buttonKey, measure, pageKey, registry]);
+
+  return React.useMemo(
+    () => ({
+      ref,
+      collapsable: false,
+      onLayout: measure,
+    }),
+    [measure]
+  );
 }
 
 const GUIDED_BUTTON_HIGHLIGHTS: Partial<Record<GuidedHelpPageKey, GuidedHighlightTarget[]>> = {
@@ -308,9 +370,36 @@ export function GuidedHelpProvider({ children }: { children: React.ReactNode }) 
   const segments = useSegments();
   const [introPageKey, setIntroPageKey] = React.useState<GuidedHelpPageKey | null>(null);
   const [buttonPageKey, setButtonPageKey] = React.useState<GuidedHelpPageKey | null>(null);
+  const [targetFrames, setTargetFrames] = React.useState<GuidedTargetFrames>({});
   const currentPageKey = React.useMemo(
     () => resolveGuidedHelpPageKey(pathname, segments as string[]),
     [pathname, segments]
+  );
+
+  const registerTarget = React.useCallback(
+    (pageKey: GuidedHelpPageKey, buttonKey: string, frame: HighlightFrame) => {
+      const id = targetId(pageKey, buttonKey);
+      setTargetFrames((current) => {
+        if (framesAreEqual(current[id], frame)) return current;
+        return { ...current, [id]: frame };
+      });
+    },
+    []
+  );
+
+  const unregisterTarget = React.useCallback((pageKey: GuidedHelpPageKey, buttonKey: string) => {
+    const id = targetId(pageKey, buttonKey);
+    setTargetFrames((current) => {
+      if (!current[id]) return current;
+      const next = { ...current };
+      delete next[id];
+      return next;
+    });
+  }, []);
+
+  const targetRegistry = React.useMemo(
+    () => ({ registerTarget, unregisterTarget }),
+    [registerTarget, unregisterTarget]
   );
 
   React.useEffect(() => {
@@ -340,7 +429,7 @@ export function GuidedHelpProvider({ children }: { children: React.ReactNode }) 
           return;
         }
 
-        if (page.autoShow === false) return;
+        if (page.autoShow !== true) return;
 
         const seen = await hasSeenGuidedHelpPage(currentPageKey);
         if (!cancelled && !seen) {
@@ -380,17 +469,19 @@ export function GuidedHelpProvider({ children }: { children: React.ReactNode }) 
   }, [introPageKey]);
 
   return (
-    <>
+    <GuidedHelpTargetContext.Provider value={targetRegistry}>
       {children}
       <PageIntroSheet
         page={introPage}
         visible={Boolean(introPage)}
-        onClose={() => void closeIntro()}
+        onClose={() => setIntroPageKey(null)}
+        onDontShowAgain={() => void closeIntro()}
         onOpenButtons={() => void openButtonHelpFromIntro()}
       />
       <ButtonHighlightTour
         page={buttonPage}
         steps={buttonHighlightSteps}
+        targetFrames={targetFrames}
         visible={Boolean(buttonPage && buttonHighlightSteps.length > 0)}
         onClose={() => setButtonPageKey(null)}
       />
@@ -399,7 +490,7 @@ export function GuidedHelpProvider({ children }: { children: React.ReactNode }) 
         visible={Boolean(buttonPage && buttonHighlightSteps.length === 0)}
         onClose={() => setButtonPageKey(null)}
       />
-    </>
+    </GuidedHelpTargetContext.Provider>
   );
 }
 
@@ -407,11 +498,13 @@ function PageIntroSheet({
   page,
   visible,
   onClose,
+  onDontShowAgain,
   onOpenButtons,
 }: {
   page: GuidedHelpPage | null;
   visible: boolean;
   onClose: () => void;
+  onDontShowAgain: () => void;
   onOpenButtons: () => void;
 }) {
   const insets = useSafeAreaInsets();
@@ -476,11 +569,19 @@ function PageIntroSheet({
             </Pressable>
             <Pressable
               onPress={onClose}
+              style={({ pressed }) => [styles.ghostButton, pressed && styles.pressed]}
+              accessibilityRole="button"
+              accessibilityLabel="안내 닫기"
+            >
+              <Text style={styles.ghostButtonText}>닫기</Text>
+            </Pressable>
+            <Pressable
+              onPress={onDontShowAgain}
               style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}
               accessibilityRole="button"
-              accessibilityLabel="안내 확인"
+              accessibilityLabel="안내 다시 보지 않기"
             >
-              <Text style={styles.primaryButtonText}>알겠어요</Text>
+              <Text style={styles.primaryButtonText}>다시 보지 않기</Text>
             </Pressable>
           </View>
         </View>
@@ -492,11 +593,13 @@ function PageIntroSheet({
 function ButtonHighlightTour({
   page,
   steps,
+  targetFrames,
   visible,
   onClose,
 }: {
   page: GuidedHelpPage | null;
   steps: GuidedHighlightStep[];
+  targetFrames: GuidedTargetFrames;
   visible: boolean;
   onClose: () => void;
 }) {
@@ -519,12 +622,15 @@ function ButtonHighlightTour({
 
   const safeStepIndex = Math.min(stepIndex, steps.length - 1);
   const step = steps[safeStepIndex] ?? steps[0];
-  const rawTarget = step.target({
-    width,
-    height,
-    top: insets.top,
-    bottom: insets.bottom,
-  });
+  const measuredTarget = targetFrames[targetId(page.key, step.buttonKey)];
+  const rawTarget = measuredTarget
+    ? expandFrame(measuredTarget, step.highlightShape === "circle" ? 6 : 8)
+    : step.target({
+        width,
+        height,
+        top: insets.top,
+        bottom: insets.bottom,
+      });
   const targetWidth = clamp(rawTarget.width, 40, Math.max(40, width - 24));
   const targetHeight = clamp(rawTarget.height, 32, Math.max(32, height - insets.top - insets.bottom - 24));
   const target = {
@@ -1043,6 +1149,7 @@ const styles = StyleSheet.create({
   },
   footerActions: {
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: tokens.space.sm as any,
   },
   secondaryButton: {
@@ -1062,6 +1169,21 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "900",
     color: tokens.colors.green900,
+  },
+  ghostButton: {
+    minHeight: 48,
+    borderRadius: tokens.radius.pill,
+    borderWidth: 1,
+    borderColor: tokens.colors.borderStrong,
+    backgroundColor: tokens.colors.surface,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: tokens.space.lg,
+  },
+  ghostButtonText: {
+    fontSize: 14,
+    fontWeight: "900",
+    color: tokens.colors.textMuted,
   },
   primaryButton: {
     minHeight: 48,

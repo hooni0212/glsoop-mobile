@@ -61,6 +61,7 @@ import type { WriteDraftQuestContext } from "@/services/draftStorage";
 import { createPost, getEditablePost, updatePost } from "@/services/postService";
 import type { PostCommentPolicy, PostType, PostVisibility } from "@/types/post";
 import { ConfirmState, useConfirmBeforeLeave } from "@/hooks/useConfirmBeforeLeave";
+import { useGuidedHelpTarget } from "@/onboarding/GuidedHelpProvider";
 
 import { createWriteStyles } from "./Write.styles";
 
@@ -127,6 +128,8 @@ function buildPromptContextFromQuest(input: WriteDraftQuestContext): WritePrompt
 
 export default function Write() {
   const styles = useMemo(() => createWriteStyles(), []);
+  const backgroundTarget = useGuidedHelpTarget("write", "background");
+  const layoutTarget = useGuidedHelpTarget("write", "layout");
   const params = useLocalSearchParams();
   const navigation = useNavigation();
   const isFocused = useIsFocused();
@@ -931,9 +934,16 @@ export default function Write() {
                   <View style={styles.previewPanelTabs}>
                     {PREVIEW_PANEL_ITEMS.map((item) => {
                       const active = previewPanel === item.key;
+                      const guidedTarget =
+                        item.key === "background"
+                          ? backgroundTarget
+                          : item.key === "layout"
+                            ? layoutTarget
+                            : {};
                       return (
                         <Pressable
                           key={item.key}
+                          {...guidedTarget}
                           onPress={() => setPreviewPanel(item.key)}
                           style={[
                             styles.previewPanelTab,

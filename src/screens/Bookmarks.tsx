@@ -34,6 +34,7 @@ import {
 } from "@/services/bookmarkService";
 import { togglePostLike } from "@/services/likeService";
 import { saveSentenceFrameWidgetSnapshot } from "@/services/widgetSnapshotService";
+import { useGuidedHelpTarget } from "@/onboarding/GuidedHelpProvider";
 import { softPanelShadowStyle } from "@/theme/shadows";
 import { tokens } from "@/theme/tokens";
 import type { Post } from "@/types/post";
@@ -78,6 +79,10 @@ export default function BookmarksScreen() {
   const [renamingListId, setRenamingListId] = useState<string | null>(null);
   const [likePending, setLikePending] = useState<Record<string, boolean>>({});
   const [sentenceFramePending, setSentenceFramePending] = useState<Record<string, boolean>>({});
+  const createTarget = useGuidedHelpTarget("bookmarks", "create");
+  const folderTarget = useGuidedHelpTarget("bookmarks", "folder");
+  const renameTarget = useGuidedHelpTarget("bookmarks", "rename");
+  const deleteTarget = useGuidedHelpTarget("bookmarks", "delete");
 
   const selectedList = useMemo(
     () => lists.find((l) => l.id === selectedListId) ?? null,
@@ -447,7 +452,7 @@ export default function BookmarksScreen() {
     }
     return (
       <ScrollView contentContainerStyle={styles.listScroll} keyboardShouldPersistTaps="handled">
-        {lists.map((list) => (
+        {lists.map((list, index) => (
           <View key={list.id} style={styles.folderCard}>
             {editingListId === list.id ? (
               <View style={styles.editBox}>
@@ -498,6 +503,7 @@ export default function BookmarksScreen() {
             ) : (
               <>
                 <Pressable
+                  {...(index === 0 ? folderTarget : {})}
                   onPress={() => {
                     setSelectedListId(list.id);
                     setMode("items");
@@ -533,6 +539,7 @@ export default function BookmarksScreen() {
 
                 <View style={styles.folderActions}>
                   <Pressable
+                    {...(index === 0 ? renameTarget : {})}
                     onPress={() => onStartEditFolder(list)}
                     hitSlop={10}
                     style={({ pressed }) => [styles.folderEditBtn, pressed && styles.controlPressed]}
@@ -543,6 +550,7 @@ export default function BookmarksScreen() {
                     <Text style={styles.folderEditText}>수정</Text>
                   </Pressable>
                   <Pressable
+                    {...(index === 0 ? deleteTarget : {})}
                     onPress={() => void onPressDeleteFolder(list.id)}
                     hitSlop={10}
                     disabled={deletingListId === list.id}
@@ -641,6 +649,7 @@ export default function BookmarksScreen() {
               </Text>
             </View>
             <Pressable
+              {...createTarget}
               onPress={() => setShowCreate((prev) => !prev)}
               style={({ pressed }) => [styles.headerBtn, pressed && styles.controlPressed]}
               accessibilityRole="button"
