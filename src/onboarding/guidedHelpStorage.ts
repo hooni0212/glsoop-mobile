@@ -4,6 +4,7 @@ import type { GuidedHelpPageKey } from "@/onboarding/guidedHelpContent";
 
 const GUIDED_HELP_VERSION = "guided-help.v1";
 const PAGE_SEEN_PREFIX = "glsoop.guidedHelp.pageSeen.v1.";
+const DISMISSED_KEY = "glsoop.guidedHelp.dismissed.v1";
 const REQUEST_PAGE_KEY = "glsoop.guidedHelp.requestPage.v1";
 const REQUEST_BUTTONS_KEY = "glsoop.guidedHelp.requestButtons.v1";
 
@@ -40,6 +41,19 @@ export async function markGuidedHelpPageSeen(pageKey: GuidedHelpPageKey) {
     completedAt: new Date().toISOString(),
   };
   await AsyncStorage.setItem(pageSeenKey(pageKey), JSON.stringify(payload));
+}
+
+export async function hasDismissedGuidedHelp() {
+  const parsed = parsePayload(await AsyncStorage.getItem(DISMISSED_KEY));
+  return parsed?.version === GUIDED_HELP_VERSION && typeof parsed.completedAt === "string";
+}
+
+export async function markGuidedHelpDismissed() {
+  const payload: GuidedHelpPayload = {
+    version: GUIDED_HELP_VERSION,
+    completedAt: new Date().toISOString(),
+  };
+  await AsyncStorage.setItem(DISMISSED_KEY, JSON.stringify(payload));
 }
 
 export async function requestGuidedHelpPageReplay(pageKey: GuidedHelpPageKey) {

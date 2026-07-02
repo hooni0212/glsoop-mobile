@@ -451,27 +451,25 @@ export const GUIDED_HELP_PAGES: Record<GuidedHelpPageKey, GuidedHelpPage> = {
     iconName: "settings-outline",
     summary:
       "내 계정과 앱 사용 환경을 관리하는 곳이에요. 프로필, 보안, 차단, 도움말을 여기서 찾을 수 있습니다.",
-    visibleContent: ["프로필 및 공개 정보", "보안 및 로그인", "차단한 사용자", "앱 가이드", "도움말", "계정 관리"],
+    visibleContent: ["프로필 및 공개 정보", "보안 및 로그인", "차단한 사용자", "도움말", "계정 관리"],
     firstVisit: [
       "계정과 앱 사용 관련 설정이 메뉴 형태로 모여 있어요.",
       "프로필 정보, 보안, 차단 목록, 도움말을 각각 별도 화면에서 관리합니다.",
-      "앱 사용법이 헷갈릴 때 앱 가이드를 다시 열 수 있어요.",
+      "계정 삭제처럼 민감한 기능은 계정 관리에서 따로 확인 절차를 거칩니다.",
     ],
     userFlow: [
       "프로필 및 공개 정보에서 내 표시 정보를 확인합니다.",
       "보안 및 로그인에서 계정 상태를 점검합니다.",
-      "앱 가이드에서 화면별 사용법과 버튼 설명을 다시 봅니다.",
       "문제가 있으면 도움말 및 지원으로 이동합니다.",
     ],
     buttons: [
       { key: "profile", label: "프로필 및 공개 정보", iconName: "person-circle-outline", role: "공개 이름, 소개, 프로필 사진 등을 관리합니다." },
       { key: "security", label: "보안 및 로그인", iconName: "lock-closed-outline", role: "비밀번호와 로그인 상태를 관리합니다." },
       { key: "blocked", label: "차단한 사용자", iconName: "ban-outline", role: "차단 목록을 보고 해제합니다." },
-      { key: "guide", label: "앱 가이드", iconName: "compass-outline", role: "앱 사용법을 다시 봅니다." },
       { key: "support", label: "도움말 및 지원", iconName: "help-circle-outline", role: "문의와 정책 문서를 엽니다." },
       { key: "premium", label: "프리미엄", iconName: "sparkles-outline", role: "프리미엄 혜택과 구독 상태를 봅니다.", requirement: "androidLimited" },
     ],
-    nextActions: ["앱 가이드 다시 보기", "프로필 정보 관리", "차단 목록 확인"],
+    nextActions: ["프로필 정보 관리", "보안 및 로그인 확인", "차단 목록 확인"],
     tips: [
       "계정 관리처럼 민감한 메뉴는 신중하게 확인한 뒤 진행합니다.",
       "Android 신규 프리미엄 결제는 아직 제공하지 않습니다.",

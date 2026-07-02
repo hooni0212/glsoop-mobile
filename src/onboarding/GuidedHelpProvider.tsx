@@ -23,8 +23,8 @@ import {
 import {
   consumeGuidedHelpButtonsReplayRequest,
   consumeGuidedHelpPageReplayRequest,
-  hasSeenGuidedHelpPage,
-  markGuidedHelpPageSeen,
+  hasDismissedGuidedHelp,
+  markGuidedHelpDismissed,
 } from "@/onboarding/guidedHelpStorage";
 import { tokens } from "@/theme/tokens";
 
@@ -371,6 +371,7 @@ export function GuidedHelpProvider({ children }: { children: React.ReactNode }) 
   const [introPageKey, setIntroPageKey] = React.useState<GuidedHelpPageKey | null>(null);
   const [buttonPageKey, setButtonPageKey] = React.useState<GuidedHelpPageKey | null>(null);
   const [targetFrames, setTargetFrames] = React.useState<GuidedTargetFrames>({});
+  const sessionClosedIntroPagesRef = React.useRef(new Set<GuidedHelpPageKey>());
   const currentPageKey = React.useMemo(
     () => resolveGuidedHelpPageKey(pathname, segments as string[]),
     [pathname, segments]
@@ -429,10 +430,11 @@ export function GuidedHelpProvider({ children }: { children: React.ReactNode }) 
           return;
         }
 
-        if (page.autoShow !== true) return;
+        if (page.autoShow === false) return;
+        if (sessionClosedIntroPagesRef.current.has(currentPageKey)) return;
 
-        const seen = await hasSeenGuidedHelpPage(currentPageKey);
-        if (!cancelled && !seen) {
+        const dismissed = await hasDismissedGuidedHelp();
+        if (!cancelled && !dismissed) {
           setIntroPageKey(currentPageKey);
         }
       })();
@@ -451,19 +453,29 @@ export function GuidedHelpProvider({ children }: { children: React.ReactNode }) 
     [buttonPage]
   );
 
-  const closeIntro = React.useCallback(async () => {
+  const closeIntroForSession = React.useCallback(() => {
     const pageKey = introPageKey;
     setIntroPageKey(null);
     if (pageKey) {
-      await markGuidedHelpPageSeen(pageKey);
+      sessionClosedIntroPagesRef.current.add(pageKey);
     }
   }, [introPageKey]);
 
-  const openButtonHelpFromIntro = React.useCallback(async () => {
+  const dontShowGuidedHelpAgain = React.useCallback(async () => {
+    const pageKey = introPageKey;
+    setIntroPageKey(null);
+    setButtonPageKey(null);
+    if (pageKey) {
+      sessionClosedIntroPagesRef.current.add(pageKey);
+    }
+    await markGuidedHelpDismissed();
+  }, [introPageKey]);
+
+  const openButtonHelpFromIntro = React.useCallback(() => {
     const pageKey = introPageKey;
     setIntroPageKey(null);
     if (pageKey) {
-      await markGuidedHelpPageSeen(pageKey);
+      sessionClosedIntroPagesRef.current.add(pageKey);
       setButtonPageKey(pageKey);
     }
   }, [introPageKey]);
@@ -474,9 +486,9 @@ export function GuidedHelpProvider({ children }: { children: React.ReactNode }) 
       <PageIntroSheet
         page={introPage}
         visible={Boolean(introPage)}
-        onClose={() => setIntroPageKey(null)}
-        onDontShowAgain={() => void closeIntro()}
-        onOpenButtons={() => void openButtonHelpFromIntro()}
+        onClose={closeIntroForSession}
+        onDontShowAgain={() => void dontShowGuidedHelpAgain()}
+        onOpenButtons={openButtonHelpFromIntro}
       />
       <ButtonHighlightTour
         page={buttonPage}
