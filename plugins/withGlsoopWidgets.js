@@ -705,6 +705,47 @@ private struct BrandLabel: View {
   }
 }
 
+private struct WidgetImageBackground: ViewModifier {
+  let image: UIImage
+
+  func body(content: Content) -> some View {
+    if #available(iOSApplicationExtension 17.0, *) {
+      content.containerBackground(for: .widget) {
+        Image(uiImage: image)
+          .resizable()
+          .scaledToFill()
+      }
+    } else {
+      content.background {
+        Image(uiImage: image)
+          .resizable()
+          .scaledToFill()
+      }
+    }
+  }
+}
+
+private extension View {
+  func glsoopWidgetImageBackground(_ image: UIImage) -> some View {
+    modifier(WidgetImageBackground(image: image))
+  }
+}
+
+private struct FullBleedWidgetImage: View {
+  let image: UIImage
+
+  var body: some View {
+    GeometryReader { proxy in
+      Image(uiImage: image)
+        .resizable()
+        .scaledToFill()
+        .frame(width: proxy.size.width, height: proxy.size.height)
+        .clipped()
+    }
+    .glsoopWidgetImageBackground(image)
+  }
+}
+
 private struct TodayPromptView: View {
   @Environment(\\.widgetFamily) private var family
   let entry: TodayPromptEntry
@@ -757,58 +798,54 @@ private struct SentenceFrameView: View {
     let payload = entry.payload
     let activePayload = payload?.premiumStatus == "active" ? payload : nil
 
-    ZStack {
-      Color(red: 0.99, green: 0.98, blue: 0.94)
-
+    Group {
       if
         activePayload != nil,
         let imageData = entry.imageData,
         let image = UIImage(data: imageData)
       {
-        GeometryReader { proxy in
-          Image(uiImage: image)
-            .resizable()
-            .scaledToFill()
-            .frame(width: proxy.size.width, height: proxy.size.height)
-            .clipped()
-        }
+        FullBleedWidgetImage(image: image)
       } else {
-        VStack(alignment: .leading, spacing: 12) {
-          HStack {
-            Text("문장 액자")
+        ZStack {
+          Color(red: 0.99, green: 0.98, blue: 0.94)
+
+          VStack(alignment: .leading, spacing: 12) {
+            HStack {
+              Text("문장 액자")
+                .font(.caption)
+                .fontWeight(.bold)
+                .foregroundColor(Color(red: 0.28, green: 0.42, blue: 0.32))
+              Spacer(minLength: 4)
+              BrandLabel()
+            }
+
+            Spacer(minLength: 8)
+
+            Text(activePayload == nil ? "문장 액자는 프리미엄에서 사용할 수 있어요" : "앱에서 선택한 글 사진을 불러오고 있어요")
+              .font(.title3)
+              .fontWeight(.semibold)
+              .foregroundColor(Color(red: 0.12, green: 0.16, blue: 0.14))
+              .lineLimit(4)
+              .minimumScaleFactor(0.74)
+
+            Text(activePayload?.title ?? "북마크에서 직접 고른 글만 보여줘요.")
               .font(.caption)
-              .fontWeight(.bold)
-              .foregroundColor(Color(red: 0.28, green: 0.42, blue: 0.32))
-            Spacer(minLength: 4)
-            BrandLabel()
+              .foregroundColor(Color(red: 0.38, green: 0.43, blue: 0.39))
+              .lineLimit(2)
+
+            Spacer(minLength: 8)
+
+            Text(activePayload?.authorName.map { "by \\($0)" } ?? "앱에서 선택하기")
+              .font(.caption2)
+              .fontWeight(.semibold)
+              .foregroundColor(Color(red: 0.30, green: 0.50, blue: 0.37))
+              .lineLimit(1)
           }
-
-          Spacer(minLength: 8)
-
-          Text(activePayload == nil ? "문장 액자는 프리미엄에서 사용할 수 있어요" : "앱에서 선택한 글 사진을 불러오고 있어요")
-            .font(.title3)
-            .fontWeight(.semibold)
-            .foregroundColor(Color(red: 0.12, green: 0.16, blue: 0.14))
-            .lineLimit(4)
-            .minimumScaleFactor(0.74)
-
-          Text(activePayload?.title ?? "북마크에서 직접 고른 글만 보여줘요.")
-            .font(.caption)
-            .foregroundColor(Color(red: 0.38, green: 0.43, blue: 0.39))
-            .lineLimit(2)
-
-          Spacer(minLength: 8)
-
-          Text(activePayload?.authorName.map { "by \\($0)" } ?? "앱에서 선택하기")
-            .font(.caption2)
-            .fontWeight(.semibold)
-            .foregroundColor(Color(red: 0.30, green: 0.50, blue: 0.37))
-            .lineLimit(1)
+          .padding(18)
         }
-        .padding(18)
+        .glsoopPaperBackground()
       }
     }
-    .glsoopPaperBackground()
     .widgetURL(URL(string: activePayload?.deepLink ?? "glsoop://premium"))
   }
 }
@@ -1251,8 +1288,8 @@ function createSentenceFrameWidgetLayoutXml() {
   android:id="@+id/glsoop_sentence_frame_root"
   android:layout_width="match_parent"
   android:layout_height="match_parent"
-  android:background="@drawable/glsoop_widget_background"
-  android:padding="8dp">
+  android:background="@android:color/transparent"
+  android:padding="0dp">
 
   <ImageView
     android:id="@+id/glsoop_sentence_frame_image"
@@ -1260,13 +1297,14 @@ function createSentenceFrameWidgetLayoutXml() {
     android:layout_height="match_parent"
     android:adjustViewBounds="true"
     android:contentDescription="문장 액자 글 사진"
-    android:scaleType="fitCenter"
+    android:scaleType="centerCrop"
     android:visibility="gone" />
 
   <LinearLayout
     android:id="@+id/glsoop_sentence_frame_fallback"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@drawable/glsoop_widget_background"
     android:orientation="vertical"
     android:padding="10dp"
     android:visibility="visible">
