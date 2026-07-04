@@ -2,6 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 const AUTH_TOKEN_KEY = "glsoop_auth_token_v1";
 const PUBLIC_UGC_NOTICE_STORAGE_KEY = "glsoop.public_ugc_notice_ack";
+const GUIDED_HELP_DISMISSED_KEY = "glsoop.guidedHelp.dismissed.v1";
 
 const HOME_POSTS = [
   {
@@ -82,10 +83,11 @@ async function setAuthToken(page: Page, token: string) {
     key: AUTH_TOKEN_KEY,
     value: token,
     noticeKey: PUBLIC_UGC_NOTICE_STORAGE_KEY,
+    guidedHelpDismissedKey: GUIDED_HELP_DISMISSED_KEY,
   };
 
   await page.addInitScript(
-    ({ key, value, noticeKey }) => {
+    ({ key, value, noticeKey, guidedHelpDismissedKey }) => {
       localStorage.setItem(key, value);
       localStorage.setItem(
         noticeKey,
@@ -94,19 +96,33 @@ async function setAuthToken(page: Page, token: string) {
           acknowledgedAt: "2026-04-20T00:00:00.000Z",
         })
       );
+      localStorage.setItem(
+        guidedHelpDismissedKey,
+        JSON.stringify({
+          version: "guided-help.v1",
+          completedAt: "2026-07-03T00:00:00.000Z",
+        })
+      );
     },
     storagePayload
   );
   await page.goto("/");
   await page.waitForLoadState("domcontentloaded");
   await page.evaluate(
-    ({ key, value, noticeKey }) => {
+    ({ key, value, noticeKey, guidedHelpDismissedKey }) => {
       localStorage.setItem(key, value);
       localStorage.setItem(
         noticeKey,
         JSON.stringify({
           versionKey: "public-ugc-notice.v1",
           acknowledgedAt: "2026-04-20T00:00:00.000Z",
+        })
+      );
+      localStorage.setItem(
+        guidedHelpDismissedKey,
+        JSON.stringify({
+          version: "guided-help.v1",
+          completedAt: "2026-07-03T00:00:00.000Z",
         })
       );
     },
@@ -440,10 +456,12 @@ test.describe("글 상세 화면", () => {
     await page.addInitScript(() => {
       Object.defineProperty(window.navigator, "share", {
         configurable: true,
-        value: async () =>
-          new Promise((resolve) => {
+        value: async (payload: unknown) => {
+          (window as any).__postSharePayload = payload;
+          return new Promise((resolve) => {
             window.setTimeout(() => resolve({ action: "sharedAction" }), 150);
-          }),
+          });
+        },
       });
     });
     await setupApiRoutes(page, { shareEventRequests });
@@ -454,6 +472,13 @@ test.describe("글 상세 화면", () => {
     await chooseShareLinkMode(page);
     await expect(page.getByText("공유 화면을 여는 중이에요.")).toBeVisible();
     await expect(page.getByText("공유가 완료되었어요.")).toBeVisible();
+    const sharePayload = await page.evaluate(() => (window as any).__postSharePayload);
+    const sharedText = String(sharePayload?.message || sharePayload?.text || "");
+    const sharedUrl = String(sharePayload?.url || "");
+    const combinedSharePayload = `${sharedText}\n${sharedUrl}`;
+    expect(combinedSharePayload).toContain("postId=101");
+    expect(combinedSharePayload).not.toContain(DETAIL_POST.title);
+    expect(combinedSharePayload).not.toContain(DETAIL_POST.content);
     await expect.poll(() => shareEventRequests.length).toBe(1);
     await expect.poll(() => shareEventRequests[0]?.result).toBe("shared");
     await expect.poll(() => shareEventRequests[0]?.surface).toBe("post_detail");

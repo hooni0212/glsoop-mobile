@@ -5,6 +5,7 @@ const AUTH_TOKEN_KEY = "glsoop_auth_token_v1";
 const TEST_USER_ID = 1;
 const DRAFTS_KEY = `glsoop:write:drafts:v2:user:${TEST_USER_ID}`;
 const PUBLIC_UGC_NOTICE_STORAGE_KEY = "glsoop.public_ugc_notice_ack";
+const GUIDED_HELP_DISMISSED_KEY = "glsoop.guidedHelp.dismissed.v1";
 type CapturedPostPayload = Record<string, unknown> & {
   layout_json?: Record<string, any>;
 };
@@ -19,9 +20,10 @@ async function setAuthToken(page: Page, token: string) {
     key: AUTH_TOKEN_KEY,
     value: token,
     noticeKey: PUBLIC_UGC_NOTICE_STORAGE_KEY,
+    guidedHelpDismissedKey: GUIDED_HELP_DISMISSED_KEY,
   };
   await page.addInitScript(
-    ({ key, value, noticeKey }) => {
+    ({ key, value, noticeKey, guidedHelpDismissedKey }) => {
       localStorage.setItem(key, value);
       localStorage.setItem(
         noticeKey,
@@ -30,19 +32,33 @@ async function setAuthToken(page: Page, token: string) {
           acknowledgedAt: "2026-04-20T00:00:00.000Z",
         })
       );
+      localStorage.setItem(
+        guidedHelpDismissedKey,
+        JSON.stringify({
+          version: "guided-help.v1",
+          completedAt: "2026-07-03T00:00:00.000Z",
+        })
+      );
     },
     storagePayload
   );
   await page.goto("/");
   await page.waitForLoadState("domcontentloaded");
   await page.evaluate(
-    ({ key, value, noticeKey }) => {
+    ({ key, value, noticeKey, guidedHelpDismissedKey }) => {
       localStorage.setItem(key, value);
       localStorage.setItem(
         noticeKey,
         JSON.stringify({
           versionKey: "public-ugc-notice.v1",
           acknowledgedAt: "2026-04-20T00:00:00.000Z",
+        })
+      );
+      localStorage.setItem(
+        guidedHelpDismissedKey,
+        JSON.stringify({
+          version: "guided-help.v1",
+          completedAt: "2026-07-03T00:00:00.000Z",
         })
       );
     },

@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { Modal, Pressable, ScrollView, Text, useWindowDimensions, View } from "react-native";
+import { Modal, Platform, Pressable, ScrollView, Text, useWindowDimensions, View } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { CategoryChips } from "@/components/home/CategoryChips";
@@ -80,18 +80,30 @@ export default function Home() {
   const [reportSubmitting, setReportSubmitting] = useState(false);
   const [blockSubmitting, setBlockSubmitting] = useState(false);
   const writingCampaignStatus = useMemo(() => getDailyWritingCampaignStatus(), []);
+  const useWritingCampaignDialog = Platform.OS === "android";
   const writingCampaignNoticeBlocked =
     safetyMenuVisible ||
     reportReasonVisible ||
     blockConfirmVisible ||
     signInSerial > 0 ||
     !isHomePath(pathname);
-  const writingCampaignNoticeSheetStyle = useMemo(
-    () => ({
-      maxHeight: Math.max(280, height - insets.top - 12),
-      paddingBottom: Math.max(12, insets.bottom + 12),
-    }),
-    [height, insets.bottom, insets.top]
+  const writingCampaignNoticeContainerStyle = useMemo(
+    () => {
+      if (useWritingCampaignDialog) {
+        return {
+          maxHeight: Math.min(
+            520,
+            Math.max(280, height - insets.top - insets.bottom - 96)
+          ),
+        };
+      }
+
+      return {
+        maxHeight: Math.max(280, height - insets.top - insets.bottom - 12),
+        paddingBottom: Math.max(12, insets.bottom + 12),
+      };
+    },
+    [height, insets.bottom, insets.top, useWritingCampaignDialog]
   );
 
   const query = useMemo(() => {
@@ -571,7 +583,12 @@ export default function Home() {
           statusBarTranslucent
           onRequestClose={closeWritingCampaignNotice}
         >
-          <View style={writingCampaignNoticeStyles.overlay}>
+          <View
+            style={[
+              writingCampaignNoticeStyles.overlay,
+              useWritingCampaignDialog && writingCampaignNoticeStyles.overlayDialog,
+            ]}
+          >
             <Pressable
               style={writingCampaignNoticeStyles.backdrop}
               onPress={closeWritingCampaignNotice}
@@ -580,12 +597,16 @@ export default function Home() {
             />
             <View
               style={[
-                writingCampaignNoticeStyles.sheet,
-                writingCampaignNoticeSheetStyle,
+                useWritingCampaignDialog
+                  ? writingCampaignNoticeStyles.dialog
+                  : writingCampaignNoticeStyles.sheet,
+                writingCampaignNoticeContainerStyle,
               ]}
               testID="home-writing-campaign-notice"
             >
-              <View style={writingCampaignNoticeStyles.handle} />
+              {useWritingCampaignDialog ? null : (
+                <View style={writingCampaignNoticeStyles.handle} />
+              )}
               <ScrollView
                 style={writingCampaignNoticeStyles.scroll}
                 contentContainerStyle={writingCampaignNoticeStyles.scrollContent}
