@@ -1,5 +1,8 @@
 import { expect, test, type Page, type Route } from "@playwright/test";
 
+const AUTH_TOKEN_KEY = "glsoop_auth_token_v1";
+const APP_ONBOARDING_REPLAY_KEY = "glsoop.appOnboardingTour.replay.v1";
+
 function isApiRequest(route: Route, suffix: string) {
   return route.request().url().includes(suffix);
 }
@@ -42,7 +45,7 @@ async function mockHomeApis(page: Page) {
 }
 
 test.describe("앱 첫 화면 튜토리얼", () => {
-  test("공개 약관 확인 전에는 뜨지 않고 확인 후 홈에서 표시한다", async ({ page }) => {
+  test("비로그인 공개 홈에서는 뜨지 않고 수동 리플레이 요청 시 홈에서 표시한다", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await mockHomeApis(page);
 
@@ -57,7 +60,22 @@ test.describe("앱 첫 화면 튜토리얼", () => {
     await page.getByTestId("public-ugc-notice-check-safety").click();
     await page.getByTestId("public-ugc-notice-continue").click();
     await expect(noticeGate).toBeHidden();
+    await expect(page.getByTestId("app-onboarding-tour")).toHaveCount(0);
 
+    await page.evaluate(
+      ({ authTokenKey, replayKey }) => {
+        localStorage.setItem(authTokenKey, "mock-token-app-onboarding-replay");
+        localStorage.setItem(
+          replayKey,
+          JSON.stringify({
+            version: "app-onboarding-tour.v1",
+            requestedAt: "2026-07-03T00:00:00.000Z",
+          })
+        );
+      },
+      { authTokenKey: AUTH_TOKEN_KEY, replayKey: APP_ONBOARDING_REPLAY_KEY }
+    );
+    await page.reload();
     await expect(page.getByTestId("app-onboarding-tour")).toBeVisible();
   });
 

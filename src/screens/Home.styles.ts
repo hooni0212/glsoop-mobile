@@ -24,6 +24,11 @@ export const writingCampaignNoticeStyles = StyleSheet.create({
     justifyContent: "flex-end",
     backgroundColor: tokens.colors.overlaySoft,
   },
+  overlayDialog: {
+    justifyContent: "center",
+    paddingHorizontal: 18,
+    paddingVertical: 32,
+  },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
   },
@@ -43,8 +48,29 @@ export const writingCampaignNoticeStyles = StyleSheet.create({
     borderColor: tokens.colors.border,
     overflow: "hidden",
   },
+  dialog: {
+    width: "100%",
+    maxWidth: 360,
+    alignSelf: "center",
+    borderRadius: tokens.radius.xl,
+    backgroundColor: tokens.colors.surface,
+    paddingHorizontal: 18,
+    paddingTop: 18,
+    paddingBottom: 18,
+    gap: tokens.space.sm,
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOpacity: 0.14,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 12,
+  },
   scroll: {
     flexGrow: 0,
+    flexShrink: 1,
+    minHeight: 0,
   },
   scrollContent: {
     gap: tokens.space.md,
@@ -110,6 +136,7 @@ export const writingCampaignNoticeStyles = StyleSheet.create({
   },
   actionRow: {
     gap: 8,
+    flexShrink: 0,
   },
   secondaryActionRow: {
     flexDirection: "row",

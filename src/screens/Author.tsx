@@ -44,6 +44,7 @@ import { toggleFollowUser } from "@/services/userService";
 import { ApiError } from "@/lib/errors";
 import { useRuntimeLegalConfig } from "@/hooks/useRuntimeLegalConfig";
 import { useBottomDock } from "@/navigation/bottomDock";
+import { useGuidedHelpTarget } from "@/onboarding/GuidedHelpProvider";
 import {
   normalizeProfileCosmeticsExpanded,
   type CosmeticStickerSlot,
@@ -197,6 +198,11 @@ export default function Author({
   const [overflowOpen, setOverflowOpen] = useState(false);
   const [reportReasonVisible, setReportReasonVisible] = useState(false);
   const [reportSubmitting, setReportSubmitting] = useState(false);
+  const followersTarget = useGuidedHelpTarget("me", "followers");
+  const followingsTarget = useGuidedHelpTarget("me", "followings");
+  const customizeTarget = useGuidedHelpTarget("me", "customize");
+  const settingsTarget = useGuidedHelpTarget("me", "settings");
+  const postTarget = useGuidedHelpTarget("me", "post");
 
   const name = normalizePublicDisplayName(user?.display_name, user?.nickname);
   const bio = user?.bio || "소개가 아직 없어요.";
@@ -630,6 +636,7 @@ export default function Author({
               </View>
               {showProfileCustomize ? (
                 <Pressable
+                  {...followersTarget}
                   onPress={() => router.push("/me/followers" as never)}
                   style={authorScreenStyles.statLink}
                   testID="author-own-followers-toggle"
@@ -648,6 +655,7 @@ export default function Author({
               )}
               {showProfileCustomize ? (
                 <Pressable
+                  {...followingsTarget}
                   onPress={() => router.push("/me/followings")}
                   style={authorScreenStyles.statLink}
                   testID="author-own-followings-toggle"
@@ -672,6 +680,7 @@ export default function Author({
               <View style={authorScreenStyles.primaryActionRow}>
                 {visibleItems.length > 0 ? (
                   <Pressable
+                    {...postTarget}
                     onPress={() => router.push(`/posts/${visibleItems[0].id}`)}
                     style={authorScreenStyles.latestPostBtn}
                   >
@@ -680,6 +689,7 @@ export default function Author({
                 ) : null}
                 {showProfileCustomize ? (
                   <Pressable
+                    {...customizeTarget}
                     onPress={() => router.push("/profile-customize")}
                     style={authorScreenStyles.profileCustomizeBtn}
                     testID="author-profile-customize-btn"
@@ -691,6 +701,7 @@ export default function Author({
                 ) : null}
                 {showProfileCustomize ? (
                   <Pressable
+                    {...settingsTarget}
                     onPress={() => router.push("/account-center")}
                     style={authorScreenStyles.settingsBtn}
                     testID="author-account-center-btn"
@@ -840,8 +851,11 @@ export default function Author({
       bio,
       bioExpanded,
       collapsedAbout,
+      customizeTarget,
       followingCount,
+      followingsTarget,
       followerCount,
+      followersTarget,
       followBusy,
       handleFollowToggle,
       handleShareAuthor,
@@ -851,12 +865,14 @@ export default function Author({
       openGuidelines,
       openSupport,
       postCount,
+      postTarget,
       profilePhotoUrl,
       profileCosmetics,
       promptBlockAuthor,
       promptReportAuthor,
       showProfileCustomize,
       showFollowButton,
+      settingsTarget,
       overflowOpen,
       sort,
       totalLikes,

@@ -8,6 +8,7 @@ import { clearBlockedUserIds } from "@/features/safety/blockedUsersStore";
 import { apiPost } from "@/lib/api";
 import { clearAuthToken, getAuthToken, setAuthToken } from "@/lib/authToken";
 import { unregisterStoredPushTokenAsync } from "@/lib/pushNotifications";
+import { clearSentenceFrameWidgetSnapshot } from "@/services/widgetSnapshotService";
 
 type AuthState = {
   /** persisted auth storage 로드 완료 여부 */
@@ -48,6 +49,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     clearBlockedUserIds();
     clearNotificationUnreadCount();
     resetMyCosmeticsSnapshot();
+    void clearSentenceFrameWidgetSnapshot();
     await setAuthToken(nextToken);
     setToken(nextToken);
     setSignInSerial((current) => current + 1);
@@ -72,6 +74,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     clearBlockedUserIds();
     clearNotificationUnreadCount();
     resetMyCosmeticsSnapshot();
+    void clearSentenceFrameWidgetSnapshot();
   }, []);
 
   const value = React.useMemo<AuthState>(

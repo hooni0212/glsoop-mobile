@@ -3,6 +3,7 @@ import { usePathname, useSegments } from "expo-router";
 import React from "react";
 import {
   Modal,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -11,6 +12,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { useAuth } from "@/auth/AuthContext";
 import {
   buildPublicUgcNoticeVersionKey,
   getAcknowledgedPublicUgcNoticeVersion,
@@ -134,10 +136,13 @@ export function AppOnboardingTour() {
   const segments = useSegments();
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
+  const { token, signInSerial } = useAuth();
   const [visible, setVisible] = React.useState(false);
   const [stepIndex, setStepIndex] = React.useState(0);
   const [noticeAcknowledgementTick, setNoticeAcknowledgementTick] = React.useState(0);
   const onHome = isHomeRoute(pathname, segments as string[]);
+  const canAutoShowAfterLogin =
+    Platform.OS !== "web" && Boolean(token) && signInSerial > 0;
   const step = TOUR_STEPS[stepIndex] ?? TOUR_STEPS[0];
 
   React.useEffect(() => {
@@ -147,7 +152,7 @@ export function AppOnboardingTour() {
   }, []);
 
   React.useEffect(() => {
-    if (!onHome) {
+    if (!onHome || !token) {
       setVisible(false);
       return;
     }
@@ -173,7 +178,7 @@ export function AppOnboardingTour() {
         ]);
         if (cancelled) return;
 
-        if (replayRequested || !completed) {
+        if (replayRequested || (canAutoShowAfterLogin && !completed)) {
           setStepIndex(0);
           setVisible(true);
         }
@@ -184,12 +189,17 @@ export function AppOnboardingTour() {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [noticeAcknowledgementTick, onHome]);
+  }, [canAutoShowAfterLogin, noticeAcknowledgementTick, onHome, signInSerial, token]);
 
   const finish = React.useCallback(async () => {
     setVisible(false);
     setStepIndex(0);
     await markAppOnboardingTourCompleted();
+  }, []);
+
+  const dismissForNow = React.useCallback(() => {
+    setVisible(false);
+    setStepIndex(0);
   }, []);
 
   const goNext = React.useCallback(() => {
@@ -204,7 +214,7 @@ export function AppOnboardingTour() {
     setStepIndex((current) => Math.max(0, current - 1));
   }, []);
 
-  if (!visible || !onHome) return null;
+  if (!visible || !onHome || !token) return null;
 
   const target = step.target({
     width,
@@ -285,12 +295,12 @@ export function AppOnboardingTour() {
 
           <View style={styles.actions}>
             <Pressable
-              onPress={() => void finish()}
+              onPress={dismissForNow}
               style={({ pressed }) => [styles.skipBtn, pressed && styles.btnPressed]}
               accessibilityRole="button"
-              accessibilityLabel="튜토리얼 건너뛰기"
+              accessibilityLabel="튜토리얼 닫기"
             >
-              <Text style={styles.skipText}>건너뛰기</Text>
+              <Text style={styles.skipText}>닫기</Text>
             </Pressable>
             <View style={styles.actionGroup}>
               {stepIndex > 0 ? (
@@ -304,12 +314,20 @@ export function AppOnboardingTour() {
                 </Pressable>
               ) : null}
               <Pressable
+                onPress={() => void finish()}
+                style={({ pressed }) => [styles.dontShowBtn, pressed && styles.btnPressed]}
+                accessibilityRole="button"
+                accessibilityLabel="튜토리얼 다시 보지 않기"
+              >
+                <Text style={styles.dontShowText}>다시 보지 않기</Text>
+              </Pressable>
+              <Pressable
                 onPress={goNext}
                 style={({ pressed }) => [styles.nextBtn, pressed && styles.btnPressed]}
                 accessibilityRole="button"
                 accessibilityLabel={isLast ? "튜토리얼 완료" : "다음 설명 보기"}
               >
-                <Text style={styles.nextText}>{isLast ? "시작하기" : "다음"}</Text>
+                <Text style={styles.nextText}>{isLast ? "완료" : "다음"}</Text>
                 <Ionicons
                   name={isLast ? "checkmark" : "chevron-forward"}
                   size={17}
@@ -443,6 +461,7 @@ const styles = StyleSheet.create({
   actionGroup: {
     flexDirection: "row",
     alignItems: "center",
+    flexShrink: 1,
     gap: tokens.space.sm as any,
   },
   skipBtn: {
@@ -464,6 +483,21 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: tokens.colors.borderStrong,
     backgroundColor: tokens.colors.surface,
+  },
+  dontShowBtn: {
+    minHeight: 42,
+    borderRadius: 21,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: tokens.colors.borderStrong,
+    backgroundColor: tokens.colors.surface,
+    paddingHorizontal: 12,
+  },
+  dontShowText: {
+    color: tokens.colors.textMuted,
+    fontSize: 12,
+    fontWeight: "900",
   },
   nextBtn: {
     minHeight: 42,

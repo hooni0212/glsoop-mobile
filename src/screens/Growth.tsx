@@ -29,6 +29,7 @@ import {
   type DailyWritingCampaignStatus,
 } from "@/features/writingCampaign/dailyWritingCampaign";
 import { toTimestampMs } from "@/lib/dateTime";
+import { useGuidedHelpTarget } from "@/onboarding/GuidedHelpProvider";
 import { tokens } from "@/theme/tokens";
 
 type AchievementHighlight = {
@@ -134,6 +135,7 @@ export default function GrowthScreen() {
     () => getDailyWritingCampaignFocusSteps(dailyWritingCampaign),
     [dailyWritingCampaign]
   );
+  const recordsTarget = useGuidedHelpTarget("growth", "records");
   const openDailyWritingPrompt = useCallback(() => {
     trackGrowthTelemetry("growth_action_clicked", { action: "open_daily_writing_prompt" });
     router.push(buildDailyWritingPromptWritePath(dailyWritingCampaign) as never);
@@ -211,6 +213,7 @@ export default function GrowthScreen() {
         />
 
         <Pressable
+          {...recordsTarget}
           onPress={() => {
             trackGrowthTelemetry("growth_action_clicked", { action: "open_records" });
             router.push("/growth/records" as never);
@@ -228,6 +231,7 @@ export default function GrowthScreen() {
           <ActionButton
             title="업적"
             icon="trophy-outline"
+            guidedHelpButtonKey="achievements"
             onPress={() => {
               trackGrowthTelemetry("growth_action_clicked", { action: "open_achievements" });
               router.push("/growth/achievements");
@@ -237,6 +241,7 @@ export default function GrowthScreen() {
           <ActionButton
             title="퀘스트"
             icon="trail-sign-outline"
+            guidedHelpButtonKey="quests"
             onPress={() => {
               trackGrowthTelemetry("growth_action_clicked", { action: "open_quests" });
               router.push("/growth/quests");
@@ -329,16 +334,21 @@ function ForestCard({
 function ActionButton({
   title,
   icon,
+  guidedHelpButtonKey,
   onPress,
   testID,
 }: {
   title: string;
   icon: React.ComponentProps<typeof Ionicons>["name"];
+  guidedHelpButtonKey: string;
   onPress: () => void;
   testID: string;
 }) {
+  const guidedTarget = useGuidedHelpTarget("growth", guidedHelpButtonKey);
+
   return (
     <Pressable
+      {...guidedTarget}
       onPress={onPress}
       style={({ pressed }) => [styles.actionButton, pressed && styles.pressed]}
       accessibilityRole="button"
@@ -410,6 +420,8 @@ function WritingCampaignProjectCard({
   steps: ReturnType<typeof getDailyWritingCampaignFocusSteps>;
   onPress: () => void;
 }) {
+  const writePromptTarget = useGuidedHelpTarget("growth", "write-prompt");
+
   return (
     <Pressable
       onPress={onPress}
@@ -463,7 +475,7 @@ function WritingCampaignProjectCard({
         <Text style={styles.writingCampaignHint}>
           남은 주제 {status.remainingDays}개
         </Text>
-        <View style={styles.writingCampaignCta}>
+        <View {...writePromptTarget} style={styles.writingCampaignCta}>
           <Text style={styles.writingCampaignCtaText}>이 주제로 쓰기</Text>
           <Ionicons name="chevron-forward" size={15} color={tokens.colors.textInverse} />
         </View>

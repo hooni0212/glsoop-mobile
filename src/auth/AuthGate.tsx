@@ -12,6 +12,10 @@ import { isProtectedRoute, isPublicUgcRoute } from "@/lib/routeAccess";
 
 import { PublicUgcNoticeGate } from "./PublicUgcNoticeGate";
 
+function shouldLoginReturnHome(path: string) {
+  return path.split("?")[0]?.startsWith("/account-center") === true;
+}
+
 /**
  * 전역 인증 게이트
  * - 일부 공개 화면(Home/Search/Post/Author)은 비로그인 접근 허용
@@ -78,7 +82,9 @@ export function AuthGate() {
 
     if (!token) {
       if (needsAuth && !inAuthGroup) {
-        router.replace(buildAuthRoute("/(auth)/login", pathname));
+        router.replace(
+          buildAuthRoute("/(auth)/login", shouldLoginReturnHome(pathname) ? undefined : pathname)
+        );
       }
       return;
     }
@@ -103,7 +109,12 @@ export function AuthGate() {
           await signOut();
           setValidatedKey(null);
           if (latestRoute.needsAuth || latestRoute.inAuthGroup) {
-            router.replace(buildAuthRoute("/(auth)/login", latestRoute.pathname));
+            router.replace(
+              buildAuthRoute(
+                "/(auth)/login",
+                shouldLoginReturnHome(latestRoute.pathname) ? undefined : latestRoute.pathname
+              )
+            );
           }
           return;
         }
@@ -144,7 +155,14 @@ export function AuthGate() {
 
   // 토큰이 없고 auth 그룹 밖이면 즉시 리다이렉트(깜빡임 최소화)
   if (!token && needsAuth && !inAuthGroup) {
-    return <Redirect href={buildAuthRoute("/(auth)/login", pathname)} />;
+    return (
+      <Redirect
+        href={buildAuthRoute(
+          "/(auth)/login",
+          shouldLoginReturnHome(pathname) ? undefined : pathname
+        )}
+      />
+    );
   }
 
   return <PublicUgcNoticeGate active={!inAuthGroup && isPublicUgc} />;

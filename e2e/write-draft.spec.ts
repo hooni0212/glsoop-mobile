@@ -5,6 +5,7 @@ const AUTH_TOKEN_KEY = "glsoop_auth_token_v1";
 const COOKIE_SESSION_TOKEN = "__glsoop_cookie_session__";
 const TEST_USER_ID = 1;
 const DRAFTS_KEY = `glsoop:write:drafts:v2:user:${TEST_USER_ID}`;
+const GUIDED_HELP_DISMISSED_KEY = "glsoop.guidedHelp.dismissed.v1";
 type CapturedPostPayload = Record<string, any> & {
   layout_json?: Record<string, any>;
 };
@@ -25,13 +26,39 @@ function toAuthNamespace(token: string) {
 }
 
 async function setAuthToken(page: Page, token: string) {
+  const storagePayload = {
+    key: AUTH_TOKEN_KEY,
+    value: token,
+    guidedHelpDismissedKey: GUIDED_HELP_DISMISSED_KEY,
+  };
+
+  await page.addInitScript(
+    ({ key, value, guidedHelpDismissedKey }) => {
+      localStorage.setItem(key, value);
+      localStorage.setItem(
+        guidedHelpDismissedKey,
+        JSON.stringify({
+          version: "guided-help.v1",
+          completedAt: "2026-07-03T00:00:00.000Z",
+        })
+      );
+    },
+    storagePayload
+  );
   await page.goto("/");
   await page.waitForLoadState("domcontentloaded");
   await page.evaluate(
-    ({ key, value }) => {
+    ({ key, value, guidedHelpDismissedKey }) => {
       localStorage.setItem(key, value);
+      localStorage.setItem(
+        guidedHelpDismissedKey,
+        JSON.stringify({
+          version: "guided-help.v1",
+          completedAt: "2026-07-03T00:00:00.000Z",
+        })
+      );
     },
-    { key: AUTH_TOKEN_KEY, value: token }
+    storagePayload
   );
 }
 

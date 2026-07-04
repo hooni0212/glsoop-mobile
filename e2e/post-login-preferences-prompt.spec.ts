@@ -3,6 +3,7 @@ import { expect, test, type Page, type Route } from "@playwright/test";
 const AUTH_TOKEN_KEY = "glsoop_auth_token_v1";
 const COOKIE_SESSION_TOKEN = "__glsoop_cookie_session__";
 const PUBLIC_UGC_NOTICE_STORAGE_KEY = "glsoop.public_ugc_notice_ack";
+const APP_ONBOARDING_COMPLETED_KEY = "glsoop.appOnboardingTour.completed.v1";
 const PROMPT_STORAGE_KEY = "glsoop.postLoginPreferencesPrompt.v1.42";
 const PROMPT_PENDING_STORAGE_KEY = "glsoop.postLoginPreferencesPrompt.pending.v1.42";
 
@@ -12,7 +13,7 @@ function isApiRequest(route: Route, suffix: string) {
 
 async function seedPublicNoticeAck(page: Page) {
   await page.addInitScript(
-    ({ noticeKey }) => {
+    ({ noticeKey, appOnboardingCompletedKey }) => {
       localStorage.setItem(
         noticeKey,
         JSON.stringify({
@@ -20,8 +21,18 @@ async function seedPublicNoticeAck(page: Page) {
           acknowledgedAt: "2026-05-14T00:00:00.000Z",
         })
       );
+      localStorage.setItem(
+        appOnboardingCompletedKey,
+        JSON.stringify({
+          version: "app-onboarding-tour.v1",
+          completedAt: "2026-07-03T00:00:00.000Z",
+        })
+      );
     },
-    { noticeKey: PUBLIC_UGC_NOTICE_STORAGE_KEY }
+    {
+      noticeKey: PUBLIC_UGC_NOTICE_STORAGE_KEY,
+      appOnboardingCompletedKey: APP_ONBOARDING_COMPLETED_KEY,
+    }
   );
 }
 
@@ -40,7 +51,7 @@ async function login(page: Page) {
   );
 }
 
-async function mockPostLoginPreferenceApis(page: Page, logs: Array<Record<string, unknown>>) {
+async function mockPostLoginPreferenceApis(page: Page, logs: Record<string, unknown>[]) {
   let rememberLoginEnabled = false;
   let marketingPushOptIn = false;
 
@@ -120,7 +131,7 @@ async function mockPostLoginPreferenceApis(page: Page, logs: Array<Record<string
 
 test.describe("로그인 직후 초기 설정 안내", () => {
   test("로그인 유지와 마케팅 푸시 선택을 저장하고 완료 상태를 기록한다", async ({ page }) => {
-    const logs: Array<Record<string, unknown>> = [];
+    const logs: Record<string, unknown>[] = [];
 
     await seedPublicNoticeAck(page);
     await page.setViewportSize({ width: 390, height: 844 });
@@ -153,7 +164,7 @@ test.describe("로그인 직후 초기 설정 안내", () => {
   });
 
   test("나중에 닫으면 재진입과 다음 로그인 때 다시 표시한다", async ({ page }) => {
-    const logs: Array<Record<string, unknown>> = [];
+    const logs: Record<string, unknown>[] = [];
 
     await seedPublicNoticeAck(page);
     await page.setViewportSize({ width: 390, height: 844 });
@@ -185,7 +196,7 @@ test.describe("로그인 직후 초기 설정 안내", () => {
   });
 
   test("이미 완료한 사용자는 다음 로그인에서 다시 표시하지 않는다", async ({ page }) => {
-    const logs: Array<Record<string, unknown>> = [];
+    const logs: Record<string, unknown>[] = [];
 
     await seedPublicNoticeAck(page);
     await page.addInitScript(

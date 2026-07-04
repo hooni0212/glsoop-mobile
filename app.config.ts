@@ -3,9 +3,12 @@ import type { ExpoConfig } from "expo/config";
 const baseConfig = require("./app.json").expo as ExpoConfig;
 
 // iOS buildNumber / Android versionCode를 한 곳에서 같이 관리합니다.
-const MOBILE_BUILD_NUMBER = 52;
+const MOBILE_BUILD_NUMBER = 57;
 const ADMOB_TEST_ANDROID_APP_ID = "ca-app-pub-3940256099942544~3347511713";
 const ADMOB_TEST_IOS_APP_ID = "ca-app-pub-3940256099942544~1458002511";
+const WIDGET_APP_GROUP_IDENTIFIER = "group.com.glsoop.app";
+const WIDGET_BUNDLE_IDENTIFIER = "com.glsoop.app.widgets";
+const WIDGET_TARGET_NAME = "GlsoopWidgets";
 
 function readEnv(name: string) {
   const value = process.env[name];
@@ -76,6 +79,14 @@ export default (): ExpoConfig => ({
         iosAppId: iosAdMobAppId,
       },
     ],
+    [
+      "./plugins/withGlsoopWidgets",
+      {
+        appGroupIdentifier: WIDGET_APP_GROUP_IDENTIFIER,
+        widgetBundleIdentifier: WIDGET_BUNDLE_IDENTIFIER,
+        widgetTargetName: WIDGET_TARGET_NAME,
+      },
+    ],
   ],
   ios: {
     ...baseConfig.ios,
@@ -89,6 +100,27 @@ export default (): ExpoConfig => ({
   extra: {
     ...baseConfig.extra,
     mobileBuildNumber: MOBILE_BUILD_NUMBER,
+    eas: {
+      ...(baseConfig.extra?.eas ?? {}),
+      build: {
+        ...(baseConfig.extra?.eas?.build ?? {}),
+        experimental: {
+          ...(baseConfig.extra?.eas?.build?.experimental ?? {}),
+          ios: {
+            ...(baseConfig.extra?.eas?.build?.experimental?.ios ?? {}),
+            appExtensions: [
+              {
+                targetName: WIDGET_TARGET_NAME,
+                bundleIdentifier: WIDGET_BUNDLE_IDENTIFIER,
+                entitlements: {
+                  "com.apple.security.application-groups": [WIDGET_APP_GROUP_IDENTIFIER],
+                },
+              },
+            ],
+          },
+        },
+      },
+    },
     adMob: {
       androidAppId: androidAdMobAppId,
       iosAppId: iosAdMobAppId,

@@ -1,5 +1,13 @@
-function normalizeKnownSegments(segments: string[]) {
+function normalizeKnownSegments(segments: string[], search = "") {
   const [resource, id] = segments;
+  if (resource === "write") {
+    return `/write${search}`;
+  }
+
+  if (resource === "premium") {
+    return `/premium${search}`;
+  }
+
   if ((resource === "users" || resource === "user" || resource === "authors") && id) {
     return `/users/${encodeURIComponent(id)}`;
   }
@@ -61,7 +69,7 @@ function normalizeKnownDeepLink(url: URL) {
     .filter(Boolean);
   const segments = host ? [host, ...pathSegments] : pathSegments;
 
-  return normalizeKnownSegments(segments);
+  return normalizeKnownSegments(segments, url.search);
 }
 
 export function redirectSystemPath({ path }: { path: string | null; initial: boolean }) {
