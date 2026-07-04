@@ -15,6 +15,7 @@ import {
   describePushRegistrationResult,
   registerForPushNotificationsAsync,
 } from "@/lib/pushNotifications";
+import { hasCompletedAppOnboardingTour } from "@/onboarding/appOnboardingTourStorage";
 import {
   getMarketingPushConsent,
   updateMarketingPushConsent,
@@ -134,10 +135,19 @@ export function PostLoginPreferencesPrompt() {
         if (cancelled) return;
 
         const userId = String(me.id);
-        const completed = await hasCompletedPrompt(userId);
+        const [completed, onboardingCompleted] = await Promise.all([
+          hasCompletedPrompt(userId),
+          hasCompletedAppOnboardingTour(),
+        ]);
         if (cancelled) return;
 
         if (completed) {
+          handledSerialRef.current = signInSerial;
+          return;
+        }
+
+        if (!onboardingCompleted) {
+          await markPromptPending(userId);
           handledSerialRef.current = signInSerial;
           return;
         }
@@ -182,13 +192,19 @@ export function PostLoginPreferencesPrompt() {
         if (cancelled) return;
 
         const userId = String(me.id);
-        const [completed, pending] = await Promise.all([
+        const [completed, pending, onboardingCompleted] = await Promise.all([
           hasCompletedPrompt(userId),
           hasPendingPrompt(userId),
+          hasCompletedAppOnboardingTour(),
         ]);
         if (cancelled) return;
 
         if (completed || !pending) {
+          handledReentryTokenRef.current = token;
+          return;
+        }
+
+        if (!onboardingCompleted) {
           handledReentryTokenRef.current = token;
           return;
         }

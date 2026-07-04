@@ -27,6 +27,7 @@ import {
   verifyPremiumPurchase,
   type PremiumPlan,
 } from "@/services/premiumStoreService";
+import { clearSentenceFrameWidgetSnapshot } from "@/services/widgetSnapshotService";
 import { tokens } from "@/theme/tokens";
 
 const BENEFITS = [
@@ -44,6 +45,11 @@ const BENEFITS = [
     icon: "create-outline",
     title: "작가 서명 이미지",
     body: "공유용 글 이미지에 내 공개 이름을 함께 담을 수 있어요.",
+  },
+  {
+    icon: "albums-outline",
+    title: "문장 액자 위젯",
+    body: "직접 고른 글 사진을 홈 화면 위젯에 조용히 담아둘 수 있어요.",
   },
 ] as const;
 
@@ -63,11 +69,15 @@ export default function PremiumPaywallScreen() {
   const loadEntitlementState = React.useCallback(async () => {
     if (!token) {
       setIsPremium(false);
+      void clearSentenceFrameWidgetSnapshot();
       return false;
     }
     const entitlements = await listMyEntitlements();
     const active = hasActiveEntitlement(entitlements);
     setIsPremium(active);
+    if (!active) {
+      void clearSentenceFrameWidgetSnapshot();
+    }
     return active;
   }, [token]);
 

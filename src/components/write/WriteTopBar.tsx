@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { Pressable, Text, View } from "react-native";
 import { tokens } from "@/theme/tokens";
+import { useGuidedHelpTarget } from "@/onboarding/GuidedHelpProvider";
 
 type Props = {
   title: string;
@@ -28,9 +29,14 @@ export function WriteTopBar({
   previewOpen,
   styles,
 }: Props) {
+  const closeTarget = useGuidedHelpTarget("write", "close");
+  const draftTarget = useGuidedHelpTarget("write", "draft");
+  const submitTarget = useGuidedHelpTarget("write", previewOpen ? "publish" : "preview");
+
   return (
     <View style={styles.topBar}>
       <Pressable
+        {...closeTarget}
         onPress={onPressClose}
         hitSlop={12}
         style={styles.iconBtn}
@@ -50,6 +56,7 @@ export function WriteTopBar({
       <View style={styles.topBarActions}>
         {!previewOpen && !!onPressSaveDraft && (
           <Pressable
+            {...draftTarget}
             onPress={onPressSaveDraft}
             hitSlop={12}
             style={styles.secondaryTopBtn}
@@ -75,6 +82,7 @@ export function WriteTopBar({
         )}
 
         <Pressable
+          {...submitTarget}
           onPress={onPressSubmit}
           disabled={!canSubmit}
           hitSlop={12}

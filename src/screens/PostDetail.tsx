@@ -84,6 +84,7 @@ import {
   listPostBookmarkLists,
   removePostFromBookmarkList,
 } from "@/services/bookmarkService";
+import { saveSentenceFrameWidgetSnapshot } from "@/services/widgetSnapshotService";
 
 function mergeRecentAndAllLists(recentLists: BookmarkList[], allLists: BookmarkList[]) {
   if (recentLists.length === 0) return allLists;
@@ -349,6 +350,7 @@ export default function PostDetail() {
   const [authorSignatureEnabled, setAuthorSignatureEnabled] = useState(true);
   const [canManagePost, setCanManagePost] = useState(false);
   const [manageBusy, setManageBusy] = useState(false);
+  const [sentenceFramePending, setSentenceFramePending] = useState(false);
   const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
   const [comments, setComments] = useState<PostComment[]>([]);
   const [commentsLoading, setCommentsLoading] = useState(false);
@@ -425,7 +427,13 @@ export default function PostDetail() {
   }, [comments]);
   const commentCount = comments.filter((comment) => comment.status === "active").length;
 
-  const onPressBack = () => router.back();
+  const onPressBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+      return;
+    }
+    router.replace("/(tabs)" as never);
+  };
   const showNotFound = error?.kind === "not_found";
 
   const promptAuthForAction = React.useCallback(
@@ -1211,6 +1219,58 @@ export default function PostDetail() {
     setShareModalVisible(true);
   };
 
+  const onPressSentenceFrame = () => {
+    if (!post || sentenceFramePending) return;
+    if (!token) {
+      setSafetyMenuVisible(false);
+      promptAuthForAction("문장 액자는 로그인 후 사용할 수 있어요.");
+      return;
+    }
+    if (!isBookmarked) {
+      setSafetyMenuVisible(false);
+      showToast("북마크에 저장한 글만 문장 액자에 담을 수 있어요.", { tone: "error" });
+      return;
+    }
+
+    void (async () => {
+      setSentenceFramePending(true);
+      try {
+        const entitlements = await listMyEntitlements();
+        if (!hasActiveEntitlement(entitlements)) {
+          setSafetyMenuVisible(false);
+          showToast("문장 액자는 글숲 프리미엄에서 사용할 수 있어요.", { tone: "error" });
+          router.push("/premium" as never);
+          return;
+        }
+
+        const result = await saveSentenceFrameWidgetSnapshot(post);
+        setSafetyMenuVisible(false);
+        if (result.ok) {
+          showToast("문장 액자 위젯에 담았어요.", { tone: "success" });
+        } else if (result.reason === "unavailable") {
+          showToast("정식 앱 빌드에서 문장 액자 위젯을 사용할 수 있어요.", {
+            tone: "error",
+          });
+        } else {
+          showToast("문장 액자 저장에 실패했어요. 잠시 후 다시 시도해주세요.", {
+            tone: "error",
+          });
+        }
+      } catch (err) {
+        if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
+          setSafetyMenuVisible(false);
+          await handleAuthError();
+          return;
+        }
+        showToast("문장 액자 저장에 실패했어요. 잠시 후 다시 시도해주세요.", {
+          tone: "error",
+        });
+      } finally {
+        setSentenceFramePending(false);
+      }
+    })();
+  };
+
   const onPressEdit = () => {
     if (!post?.id) return;
     router.push({ pathname: "/write", params: { postId: post.id } });
@@ -1965,6 +2025,20 @@ export default function PostDetail() {
                 style={styles.modalActionBtn}
               >
                 <Text style={styles.modalActionText}>공유하기</Text>
+              </Pressable>
+
+              <Pressable
+                onPress={onPressSentenceFrame}
+                disabled={sentenceFramePending}
+                style={[
+                  styles.modalActionBtn,
+                  sentenceFramePending ? { opacity: 0.55 } : null,
+                ]}
+                testID="post-sentence-frame-widget-btn"
+              >
+                <Text style={styles.modalActionText}>
+                  {sentenceFramePending ? "담는 중..." : "문장 액자에 담기"}
+                </Text>
               </Pressable>
 
               {!canManagePost ? (

@@ -7,6 +7,7 @@ import {
   analyzeWritePage,
   type WritePageDraft,
 } from "@/lib/writePages";
+import { useGuidedHelpTarget } from "@/onboarding/GuidedHelpProvider";
 import type { PostType } from "@/types/post";
 
 type Props = {
@@ -60,6 +61,7 @@ export function WriteEditor({
 }: Props) {
   const activeType = selectedType ?? insight.detectedType;
   const canAddPage = pageDrafts.length < WRITE_PAGE_MAX_COUNT;
+  const addPageTarget = useGuidedHelpTarget("write", "page");
   const promptEyebrow = [promptContext?.sourceLabel ?? "오늘의 글감", promptContext?.dayLabel]
     .filter(Boolean)
     .join(" · ");
@@ -181,6 +183,7 @@ export function WriteEditor({
         })}
 
         <Pressable
+          {...addPageTarget}
           onPress={onAddPage}
           disabled={!canAddPage}
           style={[styles.addPageButton, !canAddPage && styles.addPageButtonDisabled]}

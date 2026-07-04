@@ -5,6 +5,17 @@ import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
 import { requestAppOnboardingTourReplay } from "@/onboarding/appOnboardingTourStorage";
+import {
+  GUIDED_HELP_BUTTON_DICTIONARY,
+  GUIDED_HELP_PAGE_ORDER,
+  GUIDED_HELP_PAGES,
+  GUIDED_HELP_REPLAYABLE_PAGE_KEYS,
+  type GuidedHelpPageKey,
+} from "@/onboarding/guidedHelpContent";
+import {
+  requestGuidedHelpButtonsReplay,
+  requestGuidedHelpPageReplay,
+} from "@/onboarding/guidedHelpStorage";
 import { tokens } from "@/theme/tokens";
 
 type GuideIconName = React.ComponentProps<typeof Ionicons>["name"];
@@ -104,6 +115,22 @@ export default function AppGuideScreen() {
     router.replace("/(tabs)" as never);
   }, []);
 
+  const replayPageGuide = React.useCallback(async (pageKey: GuidedHelpPageKey) => {
+    const page = GUIDED_HELP_PAGES[pageKey];
+    await requestGuidedHelpPageReplay(pageKey);
+    router.push(page.route as never);
+  }, []);
+
+  const replayButtonGuide = React.useCallback(async (pageKey: GuidedHelpPageKey) => {
+    const page = GUIDED_HELP_PAGES[pageKey];
+    await requestGuidedHelpButtonsReplay(pageKey);
+    router.push(page.route as never);
+  }, []);
+
+  const openPageDetail = React.useCallback((pageKey: GuidedHelpPageKey) => {
+    router.push(`/guide-detail?page=${pageKey}` as never);
+  }, []);
+
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.topBar}>
@@ -165,6 +192,108 @@ export default function AppGuideScreen() {
           <Ionicons name="chevron-forward" size={18} color={tokens.colors.textMuted} />
         </Pressable>
 
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>페이지별 안내</Text>
+            <Text style={styles.sectionDescription}>
+              각 화면에서 무엇을 볼 수 있고, 어떤 버튼을 먼저 눌러보면 좋은지 확인해요.
+            </Text>
+          </View>
+          <View style={styles.pageGuideList}>
+            {GUIDED_HELP_PAGE_ORDER.map((pageKey) => {
+              const page = GUIDED_HELP_PAGES[pageKey];
+              const replayable = GUIDED_HELP_REPLAYABLE_PAGE_KEYS.has(pageKey);
+
+              return (
+                <View key={page.key} style={styles.pageGuideCard}>
+                  <View style={styles.pageGuideHeader}>
+                    <View style={styles.itemIconWrap}>
+                      <Ionicons name={page.iconName} size={20} color={tokens.colors.green700} />
+                    </View>
+                    <View style={styles.itemCopy}>
+                      <Text style={styles.itemTitle}>{page.title}</Text>
+                      <Text style={styles.itemBody}>{page.summary}</Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.miniChipWrap}>
+                    {page.visibleContent.slice(0, 4).map((item) => (
+                      <View key={item} style={styles.miniChip}>
+                        <Text style={styles.miniChipText}>{item}</Text>
+                      </View>
+                    ))}
+                  </View>
+
+                  <Pressable
+                    onPress={() => openPageDetail(page.key)}
+                    style={({ pressed }) => [styles.pageDetailButton, pressed && styles.pressed]}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${page.title} 상세 가이드 보기`}
+                  >
+                    <Ionicons name="book-outline" size={16} color={tokens.colors.green900} />
+                    <Text style={styles.pageDetailButtonText}>자세히 보기</Text>
+                    <Ionicons name="chevron-forward" size={16} color={tokens.colors.green900} />
+                  </Pressable>
+
+                  <View style={styles.pageGuideButtons}>
+                    <Pressable
+                      disabled={!replayable}
+                      onPress={() => void replayPageGuide(page.key)}
+                      style={({ pressed }) => [
+                        styles.pageGuideButton,
+                        !replayable && styles.pageGuideButtonDisabled,
+                        pressed && replayable && styles.pressed,
+                      ]}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${page.title} 안내 다시 보기`}
+                    >
+                      <Ionicons
+                        name="navigate-outline"
+                        size={16}
+                        color={replayable ? tokens.colors.green900 : tokens.colors.textFaint}
+                      />
+                      <Text
+                        style={[
+                          styles.pageGuideButtonText,
+                          !replayable && styles.pageGuideButtonTextDisabled,
+                        ]}
+                      >
+                        안내 보기
+                      </Text>
+                    </Pressable>
+
+                    <Pressable
+                      disabled={!replayable}
+                      onPress={() => void replayButtonGuide(page.key)}
+                      style={({ pressed }) => [
+                        styles.pageGuideButton,
+                        !replayable && styles.pageGuideButtonDisabled,
+                        pressed && replayable && styles.pressed,
+                      ]}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${page.title} 버튼 설명 보기`}
+                    >
+                      <Ionicons
+                        name="help-circle-outline"
+                        size={16}
+                        color={replayable ? tokens.colors.green900 : tokens.colors.textFaint}
+                      />
+                      <Text
+                        style={[
+                          styles.pageGuideButtonText,
+                          !replayable && styles.pageGuideButtonTextDisabled,
+                        ]}
+                      >
+                        버튼 보기
+                      </Text>
+                    </Pressable>
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+        </View>
+
         {GUIDE_SECTIONS.map((section) => (
           <View key={section.title} style={styles.section}>
             <View style={styles.sectionHeader}>
@@ -186,6 +315,32 @@ export default function AppGuideScreen() {
             </View>
           </View>
         ))}
+
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>버튼 사전</Text>
+            <Text style={styles.sectionDescription}>
+              글숲에서 자주 보이는 아이콘과 버튼의 역할을 한 번에 확인해요.
+            </Text>
+          </View>
+          <View style={styles.itemList}>
+            {GUIDED_HELP_BUTTON_DICTIONARY.map((item) => (
+              <View key={item.key} style={styles.guideItem}>
+                <View style={styles.itemIconWrap}>
+                  <Ionicons
+                    name={item.iconName ?? "ellipse-outline"}
+                    size={20}
+                    color={tokens.colors.green700}
+                  />
+                </View>
+                <View style={styles.itemCopy}>
+                  <Text style={styles.itemTitle}>{item.label}</Text>
+                  <Text style={styles.itemBody}>{item.role}</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -294,6 +449,9 @@ const styles = StyleSheet.create({
   interactiveGuidePressed: {
     opacity: 0.88,
   },
+  pressed: {
+    opacity: 0.86,
+  },
   interactiveGuideIcon: {
     width: 42,
     height: 42,
@@ -339,6 +497,88 @@ const styles = StyleSheet.create({
   },
   itemList: {
     gap: tokens.space.sm as any,
+  },
+  pageGuideList: {
+    gap: tokens.space.md as any,
+  },
+  pageGuideCard: {
+    gap: tokens.space.md as any,
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+    borderRadius: tokens.radius.lg,
+    backgroundColor: tokens.colors.surface,
+    padding: tokens.space.md,
+  },
+  pageGuideHeader: {
+    minHeight: 72,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: tokens.space.md as any,
+  },
+  miniChipWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 7,
+  },
+  miniChip: {
+    minHeight: 30,
+    justifyContent: "center",
+    borderRadius: tokens.radius.pill,
+    borderWidth: 1,
+    borderColor: tokens.colors.green100,
+    backgroundColor: tokens.colors.green050,
+    paddingHorizontal: 10,
+  },
+  miniChipText: {
+    fontSize: 11,
+    fontWeight: "900",
+    color: tokens.colors.green900,
+  },
+  pageDetailButton: {
+    minHeight: 44,
+    borderRadius: tokens.radius.pill,
+    borderWidth: 1,
+    borderColor: tokens.colors.green100,
+    backgroundColor: tokens.colors.green050,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingHorizontal: tokens.space.sm,
+  },
+  pageDetailButtonText: {
+    fontSize: 12,
+    fontWeight: "900",
+    color: tokens.colors.green900,
+  },
+  pageGuideButtons: {
+    flexDirection: "row",
+    gap: tokens.space.sm as any,
+  },
+  pageGuideButton: {
+    minHeight: 42,
+    flex: 1,
+    borderRadius: tokens.radius.pill,
+    borderWidth: 1,
+    borderColor: tokens.colors.green100,
+    backgroundColor: tokens.colors.green050,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingHorizontal: tokens.space.sm,
+  },
+  pageGuideButtonDisabled: {
+    borderColor: tokens.colors.border,
+    backgroundColor: tokens.colors.surfaceStrong,
+  },
+  pageGuideButtonText: {
+    fontSize: 12,
+    fontWeight: "900",
+    color: tokens.colors.green900,
+  },
+  pageGuideButtonTextDisabled: {
+    color: tokens.colors.textFaint,
   },
   guideItem: {
     minHeight: 84,

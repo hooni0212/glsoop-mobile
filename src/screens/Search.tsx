@@ -31,6 +31,7 @@ import { ApiError } from "@/lib/errors";
 import { buildAuthRoute } from "@/lib/authRedirect";
 import { useAuth } from "@/auth/AuthContext";
 import { useToast } from "@/feedback/ToastProvider";
+import { useGuidedHelpTarget } from "@/onboarding/GuidedHelpProvider";
 import { softPanelShadowStyle } from "@/theme/shadows";
 import {
   filterBlockedAuthors,
@@ -62,6 +63,8 @@ export default function SearchScreen() {
   const [blockConfirmVisible, setBlockConfirmVisible] = useState(false);
   const [reportSubmitting, setReportSubmitting] = useState(false);
   const [blockSubmitting, setBlockSubmitting] = useState(false);
+  const queryTarget = useGuidedHelpTarget("search", "query");
+  const recentTarget = useGuidedHelpTarget("search", "recent");
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -331,7 +334,7 @@ export default function SearchScreen() {
           <Ionicons name="arrow-back" size={22} color={tokens.colors.text} />
         </Pressable>
 
-        <View style={styles.searchInputWrap}>
+        <View {...queryTarget} style={styles.searchInputWrap}>
           <Ionicons name="search-outline" size={18} color={tokens.colors.textMuted} />
           <TextInput
             value={query}
@@ -367,6 +370,7 @@ export default function SearchScreen() {
         <SearchTabButton
           label={`글 ${posts.length}`}
           active={activeTab === "posts"}
+          guidedHelpButtonKey="posts"
           onPress={() => {
             setManualTabSelection(true);
             setActiveTab("posts");
@@ -376,6 +380,7 @@ export default function SearchScreen() {
         <SearchTabButton
           label={`작가 ${authors.length}`}
           active={activeTab === "authors"}
+          guidedHelpButtonKey="authors"
           onPress={() => {
             setManualTabSelection(true);
             setActiveTab("authors");
@@ -386,7 +391,7 @@ export default function SearchScreen() {
 
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         {showRecent ? (
-          <View style={styles.recentSection}>
+          <View {...recentTarget} style={styles.recentSection}>
             <View style={styles.recentHeader}>
               <Text style={styles.recentTitle}>최근 검색어</Text>
               <Pressable onPress={handleClearRecent} hitSlop={10} testID="search-clear-history-btn">
@@ -625,16 +630,21 @@ export default function SearchScreen() {
 function SearchTabButton({
   label,
   active,
+  guidedHelpButtonKey,
   onPress,
   testID,
 }: {
   label: string;
   active: boolean;
+  guidedHelpButtonKey: "posts" | "authors";
   onPress: () => void;
   testID: string;
 }) {
+  const guidedTarget = useGuidedHelpTarget("search", guidedHelpButtonKey);
+
   return (
     <Pressable
+      {...guidedTarget}
       onPress={onPress}
       style={({ pressed }) => [
         styles.tabButton,

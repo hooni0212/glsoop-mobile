@@ -1,7 +1,7 @@
 import React from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { router, usePathname } from "expo-router";
+import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
 import { useAuth } from "@/auth/AuthContext";
@@ -9,8 +9,7 @@ import { useToast } from "@/feedback/ToastProvider";
 import { AppEmpty } from "@/components/state/AppEmpty";
 import { AppError } from "@/components/state/AppError";
 import { AppLoading } from "@/components/state/AppLoading";
-import { buildAuthRoute } from "@/lib/authRedirect";
-import { apiGet, apiPost, apiPut } from "@/lib/api";
+import { apiDelete, apiGet, apiPost, apiPut } from "@/lib/api";
 import { normalizeApiError } from "@/lib/errors";
 import {
   describePushRegistrationResult,
@@ -32,8 +31,18 @@ import {
 } from "@/services/marketingPushService";
 import { tokens } from "@/theme/tokens";
 
+function replaceWithRootLogin() {
+  try {
+    if (router.canDismiss()) {
+      router.dismissAll();
+    }
+  } catch {
+    // dismissAll can be unavailable in preview/navigation edge cases.
+  }
+  router.replace("/(auth)/login");
+}
+
 export default function AccountCenterSecuritySettingsScreen() {
-  const pathname = usePathname();
   const { signOut } = useAuth();
   const { showToast } = useToast();
   const [me, setMe] = React.useState<MeResponse | null>(null);
@@ -46,6 +55,7 @@ export default function AccountCenterSecuritySettingsScreen() {
     React.useState<MarketingPushConsent | null>(null);
   const [savingMarketingPush, setSavingMarketingPush] = React.useState(false);
   const [logoutAllBusy, setLogoutAllBusy] = React.useState(false);
+  const [sessionBusySid, setSessionBusySid] = React.useState<string | null>(null);
 
   const loadSecurity = React.useCallback(async () => {
     setLoading(true);
@@ -93,7 +103,7 @@ export default function AccountCenterSecuritySettingsScreen() {
       setRememberLoginEnabled((current) => !current);
       const normalized = normalizeApiError(e);
       if (normalized.kind === "auth") {
-        router.replace(buildAuthRoute("/(auth)/login", pathname));
+        replaceWithRootLogin();
         return;
       }
       showToast(normalized.description || normalized.title, { tone: "error" });
@@ -140,7 +150,7 @@ export default function AccountCenterSecuritySettingsScreen() {
       setMarketingPushConsent(previous);
       const normalized = normalizeApiError(e);
       if (normalized.kind === "auth") {
-        router.replace(buildAuthRoute("/(auth)/login", pathname));
+        replaceWithRootLogin();
         return;
       }
       showToast(normalized.description || normalized.title, { tone: "error" });
@@ -154,16 +164,43 @@ export default function AccountCenterSecuritySettingsScreen() {
     try {
       await apiPost("/api/logout-all", {});
       await signOut();
-      router.replace("/(auth)");
+      replaceWithRootLogin();
     } catch (e) {
       const normalized = normalizeApiError(e);
       if (normalized.kind === "auth") {
-        router.replace(buildAuthRoute("/(auth)/login", pathname));
+        replaceWithRootLogin();
         return;
       }
       showToast(normalized.description || normalized.title, { tone: "error" });
     } finally {
       setLogoutAllBusy(false);
+    }
+  }
+
+  async function onLogoutSession(session: SessionItem) {
+    if (!session.sid || sessionBusySid) return;
+
+    setSessionBusySid(session.sid);
+    try {
+      await apiDelete(`/api/me/sessions/${encodeURIComponent(session.sid)}`);
+      if (session.current) {
+        await signOut();
+        replaceWithRootLogin();
+        return;
+      }
+
+      setSessions((current) => current.filter((item) => item.sid !== session.sid));
+      showToast("선택한 기기에서 로그아웃했어요.", { tone: "success" });
+    } catch (e) {
+      const normalized = normalizeApiError(e);
+      if (normalized.kind === "auth") {
+        await signOut();
+        replaceWithRootLogin();
+        return;
+      }
+      showToast(normalized.description || normalized.title, { tone: "error" });
+    } finally {
+      setSessionBusySid(null);
     }
   }
 
@@ -188,7 +225,7 @@ export default function AccountCenterSecuritySettingsScreen() {
             description="보안 설정은 로그인 후 이용할 수 있어요."
             primaryAction={{
               label: "로그인 하러가기",
-              onPress: () => router.replace(buildAuthRoute("/(auth)/login", pathname)),
+              onPress: replaceWithRootLogin,
             }}
           />
         </View>
@@ -307,7 +344,7 @@ export default function AccountCenterSecuritySettingsScreen() {
         <View style={styles.card}>
           <Text style={styles.cardTitle}>활성 세션</Text>
           <Text style={styles.cardDescription}>
-            현재 로그인된 기기를 확인하고 모든 기기에서 로그아웃할 수 있어요.
+            현재 로그인된 기기를 확인하고 필요한 기기만 로그아웃할 수 있어요.
           </Text>
 
           {sessions.length === 0 ? (
@@ -316,9 +353,31 @@ export default function AccountCenterSecuritySettingsScreen() {
             <View style={styles.sessionList}>
               {sessions.map((session) => (
                 <View key={session.sid} style={styles.sessionCard}>
-                  <Text style={styles.sessionTitle}>
-                    {session.current ? "현재 기기" : "다른 기기"}
-                  </Text>
+                  <View style={styles.sessionHeader}>
+                    <Text style={styles.sessionTitle}>
+                      {session.current ? "현재 기기" : "다른 기기"}
+                    </Text>
+                    <Pressable
+                      onPress={() => void onLogoutSession(session)}
+                      style={[
+                        styles.sessionLogoutBtn,
+                        session.current && styles.sessionLogoutBtnDanger,
+                        (sessionBusySid === session.sid || logoutAllBusy) && styles.disabledBtn,
+                      ]}
+                      disabled={sessionBusySid === session.sid || logoutAllBusy}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${session.current ? "현재 기기" : "다른 기기"} 로그아웃`}
+                    >
+                      <Text
+                        style={[
+                          styles.sessionLogoutBtnText,
+                          session.current && styles.sessionLogoutBtnDangerText,
+                        ]}
+                      >
+                        {sessionBusySid === session.sid ? "처리 중..." : "로그아웃"}
+                      </Text>
+                    </Pressable>
+                  </View>
                   <Text style={styles.sessionMeta}>{session.userAgent}</Text>
                   <Text style={styles.sessionMeta}>
                     최근 활동 {formatDateTime(session.lastSeenAt)}
@@ -468,14 +527,42 @@ const styles = StyleSheet.create({
     padding: tokens.space.md,
     gap: 6,
   },
+  sessionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: tokens.space.sm as any,
+  },
   sessionTitle: {
     fontSize: 15,
     fontWeight: "900",
     color: tokens.colors.text,
+    flex: 1,
   },
   sessionMeta: {
     fontSize: tokens.font.small,
     color: tokens.colors.textMuted,
+  },
+  sessionLogoutBtn: {
+    borderWidth: 1,
+    borderColor: tokens.colors.borderStrong,
+    borderRadius: tokens.radius.pill,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    backgroundColor: tokens.colors.surfaceStrong,
+    minWidth: 78,
+    alignItems: "center",
+  },
+  sessionLogoutBtnDanger: {
+    borderColor: tokens.colors.danger,
+  },
+  sessionLogoutBtnText: {
+    fontSize: 12,
+    fontWeight: "900",
+    color: tokens.colors.text,
+  },
+  sessionLogoutBtnDangerText: {
+    color: tokens.colors.danger,
   },
   secondaryBtn: {
     backgroundColor: tokens.colors.surface,
