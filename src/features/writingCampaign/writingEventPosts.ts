@@ -72,10 +72,11 @@ function normalizeWritingEventPost(input: unknown): WritingEventPost | null {
   };
 }
 
-export async function fetchWritingEventPosts(eventKey: string) {
+export async function fetchWritingEventPosts(eventKey: string, limit = 12) {
   const encoded = encodeURIComponent(eventKey);
+  const safeLimit = Math.max(1, Math.min(30, Math.floor(limit)));
   const res = await apiGet<WritingEventPostsResponse>(
-    `/api/writing-events/${encoded}/me/posts?limit=12`
+    `/api/writing-events/${encoded}/me/posts?limit=${safeLimit}`
   );
 
   if (!res?.ok) {

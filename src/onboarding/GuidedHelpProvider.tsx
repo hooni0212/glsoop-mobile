@@ -45,6 +45,12 @@ type HighlightTargetArgs = {
   bottom: number;
 };
 type HighlightFrame = { left: number; top: number; width: number; height: number };
+type GuidedActiveTarget = { pageKey: GuidedHelpPageKey; buttonKey: string } | null;
+export type GuidedHelpTargetRef = React.RefObject<View | null>;
+export type GuidedHelpScrollIntoView = (targetRef: GuidedHelpTargetRef) => void;
+type GuidedHelpTargetOptions = {
+  scrollIntoView?: GuidedHelpScrollIntoView;
+};
 type GuidedHighlightTarget = {
   buttonKey: string;
   highlightShape: HighlightShape;
@@ -57,6 +63,7 @@ type GuidedTargetFrames = Partial<Record<GuidedTargetId, HighlightFrame>>;
 type GuidedHelpTargetRegistry = {
   registerTarget: (pageKey: GuidedHelpPageKey, buttonKey: string, frame: HighlightFrame) => void;
   unregisterTarget: (pageKey: GuidedHelpPageKey, buttonKey: string) => void;
+  activeTarget: GuidedActiveTarget;
 };
 
 const GuidedHelpTargetContext = React.createContext<GuidedHelpTargetRegistry | null>(null);
@@ -102,26 +109,61 @@ function expandFrame(frame: HighlightFrame, padding: number): HighlightFrame {
   };
 }
 
-export function useGuidedHelpTarget(pageKey: GuidedHelpPageKey, buttonKey: string) {
+export function useGuidedHelpTarget(
+  pageKey: GuidedHelpPageKey,
+  buttonKey: string,
+  options: GuidedHelpTargetOptions = {}
+) {
   const registry = React.useContext(GuidedHelpTargetContext);
+  const registerTarget = registry?.registerTarget;
+  const unregisterTarget = registry?.unregisterTarget;
+  const activeTarget = registry?.activeTarget;
+  const scrollIntoView = options.scrollIntoView;
   const ref = React.useRef<View | null>(null);
 
   const measure = React.useCallback(() => {
-    if (!registry) return;
+    if (!registerTarget) return;
     requestAnimationFrame(() => {
       ref.current?.measureInWindow((left, top, width, height) => {
         if (width <= 0 || height <= 0) return;
-        registry.registerTarget(pageKey, buttonKey, { left, top, width, height });
+        registerTarget(pageKey, buttonKey, { left, top, width, height });
       });
     });
-  }, [buttonKey, pageKey, registry]);
+  }, [buttonKey, pageKey, registerTarget]);
 
   React.useEffect(() => {
     measure();
     return () => {
-      registry?.unregisterTarget(pageKey, buttonKey);
+      unregisterTarget?.(pageKey, buttonKey);
     };
-  }, [buttonKey, measure, pageKey, registry]);
+  }, [buttonKey, measure, pageKey, unregisterTarget]);
+
+  const isActiveTarget =
+    activeTarget?.pageKey === pageKey && activeTarget.buttonKey === buttonKey;
+
+  React.useEffect(() => {
+    if (!isActiveTarget) return;
+
+    let cancelled = false;
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    const remeasure = () => {
+      if (!cancelled) measure();
+    };
+
+    const frame = requestAnimationFrame(() => {
+      scrollIntoView?.(ref);
+      remeasure();
+      timers.push(setTimeout(remeasure, 120));
+      timers.push(setTimeout(remeasure, 320));
+      timers.push(setTimeout(remeasure, 560));
+    });
+
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(frame);
+      timers.forEach(clearTimeout);
+    };
+  }, [isActiveTarget, measure, scrollIntoView]);
 
   return React.useMemo(
     () => ({
@@ -371,6 +413,7 @@ export function GuidedHelpProvider({ children }: { children: React.ReactNode }) 
   const [introPageKey, setIntroPageKey] = React.useState<GuidedHelpPageKey | null>(null);
   const [buttonPageKey, setButtonPageKey] = React.useState<GuidedHelpPageKey | null>(null);
   const [targetFrames, setTargetFrames] = React.useState<GuidedTargetFrames>({});
+  const [activeTarget, setActiveTarget] = React.useState<GuidedActiveTarget>(null);
   const sessionClosedIntroPagesRef = React.useRef(new Set<GuidedHelpPageKey>());
   const currentPageKey = React.useMemo(
     () => resolveGuidedHelpPageKey(pathname, segments as string[]),
@@ -399,13 +442,14 @@ export function GuidedHelpProvider({ children }: { children: React.ReactNode }) 
   }, []);
 
   const targetRegistry = React.useMemo(
-    () => ({ registerTarget, unregisterTarget }),
-    [registerTarget, unregisterTarget]
+    () => ({ registerTarget, unregisterTarget, activeTarget }),
+    [activeTarget, registerTarget, unregisterTarget]
   );
 
   React.useEffect(() => {
     setIntroPageKey(null);
     setButtonPageKey(null);
+    setActiveTarget(null);
     if (!currentPageKey) return;
 
     let cancelled = false;
@@ -496,6 +540,7 @@ export function GuidedHelpProvider({ children }: { children: React.ReactNode }) 
         targetFrames={targetFrames}
         visible={Boolean(buttonPage && buttonHighlightSteps.length > 0)}
         onClose={() => setButtonPageKey(null)}
+        onActiveTargetChange={setActiveTarget}
       />
       <ButtonHelpSheet
         page={buttonPage}
@@ -608,16 +653,19 @@ function ButtonHighlightTour({
   targetFrames,
   visible,
   onClose,
+  onActiveTargetChange,
 }: {
   page: GuidedHelpPage | null;
   steps: GuidedHighlightStep[];
   targetFrames: GuidedTargetFrames;
   visible: boolean;
   onClose: () => void;
+  onActiveTargetChange: (target: GuidedActiveTarget) => void;
 }) {
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
   const [stepIndex, setStepIndex] = React.useState(0);
+  const [cardHeight, setCardHeight] = React.useState(252);
 
   React.useEffect(() => {
     if (visible) {
@@ -627,13 +675,27 @@ function ButtonHighlightTour({
 
   const close = React.useCallback(() => {
     setStepIndex(0);
+    onActiveTargetChange(null);
     onClose();
-  }, [onClose]);
+  }, [onActiveTargetChange, onClose]);
 
-  if (!page || !visible || steps.length === 0) return null;
+  const safeStepIndex = Math.min(stepIndex, Math.max(0, steps.length - 1));
+  const step = steps[safeStepIndex] ?? null;
+  const activePageKey = page?.key ?? null;
+  const activeButtonKey = step?.buttonKey ?? null;
 
-  const safeStepIndex = Math.min(stepIndex, steps.length - 1);
-  const step = steps[safeStepIndex] ?? steps[0];
+  React.useEffect(() => {
+    if (!activePageKey || !activeButtonKey || !visible) {
+      onActiveTargetChange(null);
+      return;
+    }
+
+    onActiveTargetChange({ pageKey: activePageKey, buttonKey: activeButtonKey });
+    return () => onActiveTargetChange(null);
+  }, [activeButtonKey, activePageKey, onActiveTargetChange, visible]);
+
+  if (!page || !visible || !step) return null;
+
   const measuredTarget = targetFrames[targetId(page.key, step.buttonKey)];
   const rawTarget = measuredTarget
     ? expandFrame(measuredTarget, step.highlightShape === "circle" ? 6 : 8)
@@ -657,16 +719,27 @@ function ButtonHighlightTour({
     18,
     Math.max(18, width - cardWidth - 18)
   );
-  const cardTop =
+  const cardGap = 22;
+  const minCardTop = insets.top + 18;
+  const maxCardTop = Math.max(minCardTop, height - insets.bottom - cardHeight - 18);
+  const availableAbove = target.top - minCardTop;
+  const availableBelow = height - insets.bottom - (target.top + target.height) - 18;
+  const cardFitsAbove = availableAbove >= cardHeight + cardGap;
+  const cardFitsBelow = availableBelow >= cardHeight + cardGap;
+  const placeCardBelow =
     step.placement === "bottom"
-      ? clamp(target.top - 248, insets.top + 18, Math.max(insets.top + 18, height - insets.bottom - 232))
-      : clamp(target.top + target.height + 22, insets.top + 18, Math.max(insets.top + 18, height - insets.bottom - 232));
+      ? !cardFitsAbove && (cardFitsBelow || availableBelow > availableAbove)
+      : cardFitsBelow || (!cardFitsAbove && availableBelow >= availableAbove);
+  const desiredCardTop = placeCardBelow
+    ? target.top + target.height + cardGap
+    : target.top - cardHeight - cardGap;
+  const cardTop = clamp(desiredCardTop, minCardTop, maxCardTop);
   const arrowLeft = clamp(
     target.left + target.width / 2 - cardLeft - 11,
     26,
     cardWidth - 48
   );
-  const arrowOnTop = step.placement !== "bottom";
+  const arrowOnTop = placeCardBelow;
   const isLast = safeStepIndex === steps.length - 1;
   const label = requirementLabel(step.requirement);
 
@@ -688,6 +761,7 @@ function ButtonHighlightTour({
         <View style={styles.tourScrim} />
         <View
           pointerEvents="none"
+          testID="guided-button-highlight-frame"
           accessibilityElementsHidden
           importantForAccessibility="no-hide-descendants"
           style={[
@@ -703,7 +777,16 @@ function ButtonHighlightTour({
           ]}
         />
 
-        <View style={[styles.tourCard, { left: cardLeft, top: cardTop, width: cardWidth }]}>
+        <View
+          testID="guided-button-highlight-card"
+          style={[styles.tourCard, { left: cardLeft, top: cardTop, width: cardWidth }]}
+          onLayout={(event) => {
+            const nextHeight = event.nativeEvent.layout.height;
+            if (nextHeight > 0 && Math.abs(nextHeight - cardHeight) > 1) {
+              setCardHeight(nextHeight);
+            }
+          }}
+        >
           <View
             pointerEvents="none"
             style={[

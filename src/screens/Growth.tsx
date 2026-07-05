@@ -1,6 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  Dimensions,
+  findNodeHandle,
+  Platform,
   Pressable,
   RefreshControl,
   SafeAreaView,
@@ -21,15 +24,22 @@ import {
   type GrowthSummary,
   useGrowthData,
 } from "@/features/growth/useGrowthData";
-import { DailyWritingCampaignStepper } from "@/features/writingCampaign/DailyWritingCampaignStepper";
+import {
+  fetchWritingEventPosts,
+  type WritingEventPost,
+} from "@/features/writingCampaign/writingEventPosts";
 import {
   buildDailyWritingPromptWritePath,
-  getDailyWritingCampaignFocusSteps,
+  getDailyWritingCampaignProgressSteps,
   getDailyWritingCampaignStatus,
+  type DailyWritingCampaignProgressStep,
   type DailyWritingCampaignStatus,
 } from "@/features/writingCampaign/dailyWritingCampaign";
 import { toTimestampMs } from "@/lib/dateTime";
-import { useGuidedHelpTarget } from "@/onboarding/GuidedHelpProvider";
+import {
+  useGuidedHelpTarget,
+  type GuidedHelpScrollIntoView,
+} from "@/onboarding/GuidedHelpProvider";
 import { tokens } from "@/theme/tokens";
 
 type AchievementHighlight = {
@@ -44,6 +54,19 @@ type CampaignPreviewItem = {
   title: string;
   typeLabel: string;
 };
+
+type WritingCampaignDayState = "written" | "missed" | "upcoming" | "pending";
+
+type WritingCampaignDayItem = DailyWritingCampaignProgressStep & {
+  calendarState: WritingCampaignDayState;
+  isToday: boolean;
+  post: WritingEventPost | null;
+};
+
+const GUIDED_SCROLL_VISIBLE_TOP = 140;
+const GUIDED_SCROLL_VISIBLE_BOTTOM_GAP = 260;
+const GUIDED_SCROLL_TARGET_TOP = 260;
+const WRITING_EVENT_POST_LIMIT = 30;
 
 function clampPercent(value: number) {
   return Math.max(0, Math.min(100, Math.round(value)));
@@ -120,10 +143,50 @@ function selectCampaignPreview(campaigns: GrowthCampaign[]): CampaignPreviewItem
   };
 }
 
+function buildWritingCampaignDays({
+  posts,
+  postsLoaded,
+  status,
+  steps,
+}: {
+  posts: WritingEventPost[];
+  postsLoaded: boolean;
+  status: DailyWritingCampaignStatus;
+  steps: DailyWritingCampaignProgressStep[];
+}): WritingCampaignDayItem[] {
+  const postByPromptKey = new Map(posts.map((post) => [post.promptKey, post]));
+
+  return steps.map((step) => {
+    const post = postByPromptKey.get(step.key) ?? null;
+    const isToday = step.day === status.currentDay;
+    let calendarState: WritingCampaignDayState = "upcoming";
+
+    if (post) {
+      calendarState = "written";
+    } else if (!postsLoaded && step.day <= status.currentDay) {
+      calendarState = "pending";
+    } else if (step.day <= status.currentDay) {
+      calendarState = "missed";
+    }
+
+    return {
+      ...step,
+      calendarState,
+      isToday,
+      post,
+    };
+  });
+}
+
 export default function GrowthScreen() {
   const router = useRouter();
+  const scrollRef = React.useRef<ScrollView | null>(null);
   const { summary, achievements, campaigns, loading, error, refetch } = useGrowthData();
   const [refreshing, setRefreshing] = useState(false);
+  const [writingEventPosts, setWritingEventPosts] = useState<WritingEventPost[]>([]);
+  const [writingEventPostsLoaded, setWritingEventPostsLoaded] = useState(false);
+  const [writingEventPostsLoading, setWritingEventPostsLoading] = useState(false);
+  const [writingEventPostsError, setWritingEventPostsError] = useState<string | null>(null);
 
   const achievementHighlight = useMemo(
     () => selectAchievementHighlight(achievements),
@@ -132,18 +195,99 @@ export default function GrowthScreen() {
   const campaignPreview = useMemo(() => selectCampaignPreview(campaigns), [campaigns]);
   const dailyWritingCampaign = useMemo(() => getDailyWritingCampaignStatus(), []);
   const dailyWritingCampaignSteps = useMemo(
-    () => getDailyWritingCampaignFocusSteps(dailyWritingCampaign),
+    () => getDailyWritingCampaignProgressSteps(dailyWritingCampaign),
     [dailyWritingCampaign]
   );
-  const recordsTarget = useGuidedHelpTarget("growth", "records");
+  const writingCampaignDays = useMemo(
+    () =>
+      buildWritingCampaignDays({
+        posts: writingEventPosts,
+        postsLoaded: writingEventPostsLoaded,
+        status: dailyWritingCampaign,
+        steps: dailyWritingCampaignSteps,
+      }),
+    [dailyWritingCampaign, dailyWritingCampaignSteps, writingEventPosts, writingEventPostsLoaded]
+  );
+  const loadWritingEventPosts = useCallback(
+    async (silent = false) => {
+      if (!silent) setWritingEventPostsLoading(true);
+      setWritingEventPostsError(null);
+      try {
+        const posts = await fetchWritingEventPosts(
+          dailyWritingCampaign.campaignKey,
+          WRITING_EVENT_POST_LIMIT
+        );
+        setWritingEventPosts(posts);
+        setWritingEventPostsLoaded(true);
+      } catch (postsError) {
+        setWritingEventPostsLoaded(false);
+        setWritingEventPostsError(
+          postsError instanceof Error
+            ? postsError.message
+            : "프로젝트 작성 기록을 불러오지 못했어요."
+        );
+      } finally {
+        if (!silent) setWritingEventPostsLoading(false);
+      }
+    },
+    [dailyWritingCampaign.campaignKey]
+  );
+  const scrollGuidedTargetIntoView = useCallback<GuidedHelpScrollIntoView>((targetRef) => {
+    const scrollView = scrollRef.current;
+    const target = targetRef.current;
+    if (!scrollView || !target || typeof target.measureLayout !== "function") return;
+
+    const scrollHandle =
+      Platform.OS === "web"
+        ? ((scrollView as { getScrollableNode?: () => unknown }).getScrollableNode?.() ?? scrollView)
+        : findNodeHandle(scrollView);
+    if (!scrollHandle) return;
+
+    const scrollToTarget = () => {
+      target.measureLayout(
+        scrollHandle as Parameters<typeof target.measureLayout>[0],
+        (_x, y) => {
+          scrollView.scrollTo({ y: Math.max(0, y - GUIDED_SCROLL_TARGET_TOP), animated: true });
+        },
+        () => undefined
+      );
+    };
+
+    if (typeof target.measureInWindow !== "function") {
+      scrollToTarget();
+      return;
+    }
+
+    target.measureInWindow((_x, windowY, _width, targetHeight) => {
+      const viewportHeight = Dimensions.get("window").height;
+      const comfortableBottom = viewportHeight - GUIDED_SCROLL_VISIBLE_BOTTOM_GAP;
+      const targetBottom = windowY + targetHeight;
+      if (windowY >= GUIDED_SCROLL_VISIBLE_TOP && targetBottom <= comfortableBottom) return;
+      scrollToTarget();
+    });
+  }, []);
+  const recordsTarget = useGuidedHelpTarget("growth", "records", {
+    scrollIntoView: scrollGuidedTargetIntoView,
+  });
   const openDailyWritingPrompt = useCallback(() => {
     trackGrowthTelemetry("growth_action_clicked", { action: "open_daily_writing_prompt" });
     router.push(buildDailyWritingPromptWritePath(dailyWritingCampaign) as never);
   }, [dailyWritingCampaign, router]);
+  const openWritingEventPost = useCallback(
+    (postId: string) => {
+      trackGrowthTelemetry("growth_action_clicked", { action: "open_writing_event_post" });
+      router.push(`/posts/${postId}` as never);
+    },
+    [router]
+  );
 
   useEffect(() => {
     trackGrowthTelemetry("growth_screen_viewed", { screen: "home" });
   }, []);
+
+  useEffect(() => {
+    void loadWritingEventPosts();
+  }, [loadWritingEventPosts]);
 
   const onRefresh = useCallback(async () => {
     if (refreshing || loading) return;
@@ -151,7 +295,7 @@ export default function GrowthScreen() {
     trackGrowthTelemetry("growth_refresh_started", { screen: "home" });
     setRefreshing(true);
     try {
-      await refetch();
+      await Promise.all([refetch(), loadWritingEventPosts(true)]);
       trackGrowthTelemetry("growth_refresh_succeeded", {
         screen: "home",
         durationMs: Date.now() - startedAt,
@@ -165,7 +309,7 @@ export default function GrowthScreen() {
     } finally {
       setRefreshing(false);
     }
-  }, [refreshing, loading, refetch]);
+  }, [refreshing, loading, refetch, loadWritingEventPosts]);
 
   if (error?.kind === "auth") {
     return (
@@ -187,6 +331,7 @@ export default function GrowthScreen() {
   return (
     <SafeAreaView style={styles.safe} testID="growth-screen">
       <ScrollView
+        ref={scrollRef}
         testID="growth-scroll"
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
@@ -208,8 +353,12 @@ export default function GrowthScreen() {
 
         <WritingCampaignProjectCard
           status={dailyWritingCampaign}
-          steps={dailyWritingCampaignSteps}
+          days={writingCampaignDays}
+          postsLoading={writingEventPostsLoading}
+          postsError={writingEventPostsError}
+          scrollIntoView={scrollGuidedTargetIntoView}
           onPress={openDailyWritingPrompt}
+          onPressPost={openWritingEventPost}
         />
 
         <Pressable
@@ -232,6 +381,7 @@ export default function GrowthScreen() {
             title="업적"
             icon="trophy-outline"
             guidedHelpButtonKey="achievements"
+            scrollIntoView={scrollGuidedTargetIntoView}
             onPress={() => {
               trackGrowthTelemetry("growth_action_clicked", { action: "open_achievements" });
               router.push("/growth/achievements");
@@ -242,6 +392,7 @@ export default function GrowthScreen() {
             title="퀘스트"
             icon="trail-sign-outline"
             guidedHelpButtonKey="quests"
+            scrollIntoView={scrollGuidedTargetIntoView}
             onPress={() => {
               trackGrowthTelemetry("growth_action_clicked", { action: "open_quests" });
               router.push("/growth/quests");
@@ -335,16 +486,20 @@ function ActionButton({
   title,
   icon,
   guidedHelpButtonKey,
+  scrollIntoView,
   onPress,
   testID,
 }: {
   title: string;
   icon: React.ComponentProps<typeof Ionicons>["name"];
   guidedHelpButtonKey: string;
+  scrollIntoView: GuidedHelpScrollIntoView;
   onPress: () => void;
   testID: string;
 }) {
-  const guidedTarget = useGuidedHelpTarget("growth", guidedHelpButtonKey);
+  const guidedTarget = useGuidedHelpTarget("growth", guidedHelpButtonKey, {
+    scrollIntoView,
+  });
 
   return (
     <Pressable
@@ -413,22 +568,31 @@ function ReflectionCard({ summary }: { summary: GrowthSummary | null }) {
 
 function WritingCampaignProjectCard({
   status,
-  steps,
+  days,
+  postsLoading,
+  postsError,
+  scrollIntoView,
   onPress,
+  onPressPost,
 }: {
   status: DailyWritingCampaignStatus;
-  steps: ReturnType<typeof getDailyWritingCampaignFocusSteps>;
+  days: WritingCampaignDayItem[];
+  postsLoading: boolean;
+  postsError: string | null;
+  scrollIntoView: GuidedHelpScrollIntoView;
   onPress: () => void;
+  onPressPost: (postId: string) => void;
 }) {
-  const writePromptTarget = useGuidedHelpTarget("growth", "write-prompt");
+  const writePromptTarget = useGuidedHelpTarget("growth", "write-prompt", {
+    scrollIntoView,
+  });
+  const writtenDaysCount = days.filter((day) => day.calendarState === "written").length;
+  const writtenCountLabel = postsLoading ? "확인 중" : `작성 ${writtenDaysCount}개`;
 
   return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [styles.writingCampaignCard, pressed && styles.pressed]}
+    <View
+      style={styles.writingCampaignCard}
       testID="growth-writing-campaign-card"
-      accessibilityRole="button"
-      accessibilityLabel={`${status.title} 오늘 주제로 글쓰기`}
     >
       <View style={styles.writingCampaignHeader}>
         <View style={styles.writingCampaignHeading}>
@@ -439,6 +603,7 @@ function WritingCampaignProjectCard({
           <Text style={styles.writingCampaignBadgeText}>
             {status.prompt.day}/{status.totalDays}
           </Text>
+          <Text style={styles.writingCampaignBadgeSubText}>{writtenCountLabel}</Text>
         </View>
       </View>
 
@@ -458,10 +623,31 @@ function WritingCampaignProjectCard({
         </View>
       </View>
 
-      <DailyWritingCampaignStepper
-        steps={steps}
-        title={`오늘 ${status.prompt.day}일차 진행 중`}
+      <WritingCampaignCalendar
+        days={days}
+        onPressPost={onPressPost}
       />
+
+      <View style={styles.writingCampaignLegend} accessibilityElementsHidden>
+        <View style={styles.writingCampaignLegendItem}>
+          <View style={[styles.writingCampaignLegendDot, styles.writingCampaignLegendWritten]} />
+          <Text style={styles.writingCampaignLegendText}>작성</Text>
+        </View>
+        <View style={styles.writingCampaignLegendItem}>
+          <View style={[styles.writingCampaignLegendDot, styles.writingCampaignLegendMissed]} />
+          <Text style={styles.writingCampaignLegendText}>미작성</Text>
+        </View>
+        <View style={styles.writingCampaignLegendItem}>
+          <View style={[styles.writingCampaignLegendDot, styles.writingCampaignLegendUpcoming]} />
+          <Text style={styles.writingCampaignLegendText}>예정</Text>
+        </View>
+      </View>
+
+      {postsError ? (
+        <Text style={styles.writingCampaignStatusNotice}>
+          작성 기록을 확인하지 못해 지난 날짜를 보류 표시했어요.
+        </Text>
+      ) : null}
 
       <View style={styles.writingPromptPreview}>
         <Text style={styles.writingPromptMeta}>
@@ -475,12 +661,88 @@ function WritingCampaignProjectCard({
         <Text style={styles.writingCampaignHint}>
           남은 주제 {status.remainingDays}개
         </Text>
-        <View {...writePromptTarget} style={styles.writingCampaignCta}>
+        <Pressable
+          {...writePromptTarget}
+          onPress={onPress}
+          style={({ pressed }) => [styles.writingCampaignCta, pressed && styles.pressed]}
+          accessibilityRole="button"
+          accessibilityLabel={`${status.promptLabel} ${status.prompt.day}일차 주제로 글쓰기`}
+          testID="growth-writing-campaign-write-btn"
+        >
           <Text style={styles.writingCampaignCtaText}>이 주제로 쓰기</Text>
           <Ionicons name="chevron-forward" size={15} color={tokens.colors.textInverse} />
-        </View>
+        </Pressable>
       </View>
-    </Pressable>
+    </View>
+  );
+}
+
+function WritingCampaignCalendar({
+  days,
+  onPressPost,
+}: {
+  days: WritingCampaignDayItem[];
+  onPressPost: (postId: string) => void;
+}) {
+  return (
+    <View
+      style={styles.writingCampaignCalendar}
+      testID="growth-writing-campaign-calendar"
+      accessibilityLabel="30일 글쓰기 프로젝트 달력"
+    >
+      {days.map((day) => {
+        const dayStyle = [
+          styles.writingCampaignDay,
+          day.calendarState === "written" && styles.writingCampaignDayWritten,
+          day.calendarState === "missed" && styles.writingCampaignDayMissed,
+          day.calendarState === "upcoming" && styles.writingCampaignDayUpcoming,
+          day.calendarState === "pending" && styles.writingCampaignDayPending,
+          day.isToday && styles.writingCampaignDayToday,
+        ];
+        const dayTextStyle = [
+          styles.writingCampaignDayText,
+          day.calendarState === "written" && styles.writingCampaignDayTextWritten,
+          day.calendarState === "missed" && styles.writingCampaignDayTextMissed,
+          day.calendarState === "pending" && styles.writingCampaignDayTextPending,
+          day.isToday && styles.writingCampaignDayTextToday,
+        ];
+        const stateLabel =
+          day.calendarState === "written"
+            ? "작성 완료"
+            : day.calendarState === "missed"
+              ? "미작성"
+              : day.calendarState === "pending"
+                ? "확인 중"
+                : "예정";
+        const label = `${day.day}일차 ${stateLabel}${day.isToday ? ", 오늘" : ""}`;
+
+        if (day.post) {
+          return (
+            <Pressable
+              key={day.key}
+              onPress={() => onPressPost(day.post!.id)}
+              style={({ pressed }) => [dayStyle, pressed && styles.pressed]}
+              accessibilityRole="button"
+              accessibilityLabel={`${label}, 글 상세로 이동`}
+              testID={`growth-writing-campaign-day-${day.day}`}
+            >
+              <Text style={dayTextStyle}>{day.day}</Text>
+            </Pressable>
+          );
+        }
+
+        return (
+          <View
+            key={day.key}
+            style={dayStyle}
+            accessibilityLabel={label}
+            testID={`growth-writing-campaign-day-${day.day}`}
+          >
+            <Text style={dayTextStyle}>{day.day}</Text>
+          </View>
+        );
+      })}
+    </View>
   );
 }
 
@@ -742,11 +1004,112 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 12,
+    paddingVertical: 6,
   },
   writingCampaignBadgeText: {
     fontSize: tokens.font.small,
     fontWeight: "900",
     color: tokens.colors.green700,
+  },
+  writingCampaignBadgeSubText: {
+    marginTop: 1,
+    fontSize: 10,
+    lineHeight: 13,
+    fontWeight: "800",
+    color: tokens.colors.textMuted,
+  },
+  writingCampaignCalendar: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+  },
+  writingCampaignDay: {
+    width: "18.9%",
+    aspectRatio: 1.65,
+    minHeight: 32,
+    borderRadius: tokens.radius.sm,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  writingCampaignDayWritten: {
+    borderColor: tokens.colors.green700,
+    backgroundColor: tokens.colors.green700,
+  },
+  writingCampaignDayMissed: {
+    borderColor: tokens.colors.danger,
+    backgroundColor: tokens.colors.dangerSoft,
+  },
+  writingCampaignDayUpcoming: {
+    borderColor: tokens.colors.border,
+    backgroundColor: tokens.colors.surface,
+  },
+  writingCampaignDayPending: {
+    borderColor: tokens.colors.borderStrong,
+    backgroundColor: tokens.colors.bgMuted,
+  },
+  writingCampaignDayToday: {
+    borderWidth: 2,
+  },
+  writingCampaignDayText: {
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: "900",
+    color: tokens.colors.textMuted,
+  },
+  writingCampaignDayTextWritten: {
+    color: tokens.colors.textInverse,
+  },
+  writingCampaignDayTextMissed: {
+    color: tokens.colors.danger,
+  },
+  writingCampaignDayTextPending: {
+    color: tokens.colors.textFaint,
+  },
+  writingCampaignDayTextToday: {
+    fontSize: 13,
+  },
+  writingCampaignLegend: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: tokens.space.sm as any,
+    marginTop: -2,
+  },
+  writingCampaignLegendItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  writingCampaignLegendDot: {
+    width: 9,
+    height: 9,
+    borderRadius: 5,
+    borderWidth: 1,
+  },
+  writingCampaignLegendWritten: {
+    borderColor: tokens.colors.green700,
+    backgroundColor: tokens.colors.green700,
+  },
+  writingCampaignLegendMissed: {
+    borderColor: tokens.colors.danger,
+    backgroundColor: tokens.colors.dangerSoft,
+  },
+  writingCampaignLegendUpcoming: {
+    borderColor: tokens.colors.border,
+    backgroundColor: tokens.colors.surface,
+  },
+  writingCampaignLegendText: {
+    fontSize: 11,
+    lineHeight: 14,
+    fontWeight: "800",
+    color: tokens.colors.textMuted,
+  },
+  writingCampaignStatusNotice: {
+    marginTop: -4,
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: "700",
+    color: tokens.colors.textMuted,
   },
   writingPromptPreview: {
     borderRadius: tokens.radius.lg,
