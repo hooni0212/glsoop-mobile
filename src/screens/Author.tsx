@@ -1,8 +1,11 @@
 import React, { useCallback, useMemo, useState } from "react";
 import {
   Alert,
+  Dimensions,
   FlatList,
+  findNodeHandle,
   InteractionManager,
+  Platform,
   Pressable,
   SafeAreaView,
   Share,
@@ -44,7 +47,10 @@ import { toggleFollowUser } from "@/services/userService";
 import { ApiError } from "@/lib/errors";
 import { useRuntimeLegalConfig } from "@/hooks/useRuntimeLegalConfig";
 import { useBottomDock } from "@/navigation/bottomDock";
-import { useGuidedHelpTarget } from "@/onboarding/GuidedHelpProvider";
+import {
+  useGuidedHelpTarget,
+  type GuidedHelpScrollIntoView,
+} from "@/onboarding/GuidedHelpProvider";
 import {
   normalizeProfileCosmeticsExpanded,
   type CosmeticStickerSlot,
@@ -59,6 +65,10 @@ type AuthorProps = {
   reserveBottomDock?: boolean;
   forceOwnProfile?: boolean;
 };
+
+const GUIDED_SCROLL_VISIBLE_TOP = 140;
+const GUIDED_SCROLL_VISIBLE_BOTTOM_GAP = 260;
+const GUIDED_SCROLL_TARGET_TOP = 260;
 
 function toRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
@@ -156,6 +166,7 @@ export default function Author({
   reserveBottomDock = false,
   forceOwnProfile = false,
 }: AuthorProps = {}) {
+  const listRef = React.useRef<FlatList<Post> | null>(null);
   const params = useLocalSearchParams<{ id: string }>();
   const pathname = usePathname();
   const routeUserId = params?.id ? String(params.id) : undefined;
@@ -198,11 +209,55 @@ export default function Author({
   const [overflowOpen, setOverflowOpen] = useState(false);
   const [reportReasonVisible, setReportReasonVisible] = useState(false);
   const [reportSubmitting, setReportSubmitting] = useState(false);
-  const followersTarget = useGuidedHelpTarget("me", "followers");
-  const followingsTarget = useGuidedHelpTarget("me", "followings");
-  const customizeTarget = useGuidedHelpTarget("me", "customize");
-  const settingsTarget = useGuidedHelpTarget("me", "settings");
-  const postTarget = useGuidedHelpTarget("me", "post");
+  const scrollGuidedTargetIntoView = useCallback<GuidedHelpScrollIntoView>((targetRef) => {
+    const list = listRef.current;
+    const target = targetRef.current;
+    if (!list || !target || typeof target.measureLayout !== "function") return;
+
+    const listHandle =
+      Platform.OS === "web"
+        ? ((list as { getScrollableNode?: () => unknown }).getScrollableNode?.() ?? list)
+        : findNodeHandle(list);
+    if (!listHandle) return;
+
+    const scrollToTarget = () => {
+      target.measureLayout(
+        listHandle as Parameters<typeof target.measureLayout>[0],
+        (_x, y) => {
+          list.scrollToOffset({ offset: Math.max(0, y - GUIDED_SCROLL_TARGET_TOP), animated: true });
+        },
+        () => undefined
+      );
+    };
+
+    if (typeof target.measureInWindow !== "function") {
+      scrollToTarget();
+      return;
+    }
+
+    target.measureInWindow((_x, windowY, _width, targetHeight) => {
+      const viewportHeight = Dimensions.get("window").height;
+      const comfortableBottom = viewportHeight - GUIDED_SCROLL_VISIBLE_BOTTOM_GAP;
+      const targetBottom = windowY + targetHeight;
+      if (windowY >= GUIDED_SCROLL_VISIBLE_TOP && targetBottom <= comfortableBottom) return;
+      scrollToTarget();
+    });
+  }, []);
+  const followersTarget = useGuidedHelpTarget("me", "followers", {
+    scrollIntoView: scrollGuidedTargetIntoView,
+  });
+  const followingsTarget = useGuidedHelpTarget("me", "followings", {
+    scrollIntoView: scrollGuidedTargetIntoView,
+  });
+  const customizeTarget = useGuidedHelpTarget("me", "customize", {
+    scrollIntoView: scrollGuidedTargetIntoView,
+  });
+  const settingsTarget = useGuidedHelpTarget("me", "settings", {
+    scrollIntoView: scrollGuidedTargetIntoView,
+  });
+  const postTarget = useGuidedHelpTarget("me", "post", {
+    scrollIntoView: scrollGuidedTargetIntoView,
+  });
 
   const name = normalizePublicDisplayName(user?.display_name, user?.nickname);
   const bio = user?.bio || "소개가 아직 없어요.";
@@ -925,6 +980,7 @@ export default function Author({
       )}
 
       <FlatList<Post>
+        ref={listRef}
         data={visibleItems}
         keyExtractor={(item) => item.id}
         contentContainerStyle={[

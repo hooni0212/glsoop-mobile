@@ -1,6 +1,7 @@
 import { expect, test, type Page, type Route } from "@playwright/test";
 
 const AUTH_TOKEN_KEY = "glsoop_auth_token_v1";
+const GUIDED_HELP_DISMISSED_KEY = "glsoop.guidedHelp.dismissed.v1";
 const PUBLIC_UGC_NOTICE_STORAGE_KEY = "glsoop.public_ugc_notice_ack";
 const COOKIE_SESSION_TOKEN = "__glsoop_cookie_session__";
 const AUTHOR_ID = "42";
@@ -15,12 +16,20 @@ async function setAuthToken(page: Page, token: string) {
   const storagePayload = {
     key: AUTH_TOKEN_KEY,
     value: token,
+    guidedHelpDismissedKey: GUIDED_HELP_DISMISSED_KEY,
     noticeKey: PUBLIC_UGC_NOTICE_STORAGE_KEY,
   };
 
   await page.addInitScript(
-    ({ key, value, noticeKey }) => {
+    ({ key, value, guidedHelpDismissedKey, noticeKey }) => {
       localStorage.setItem(key, value);
+      localStorage.setItem(
+        guidedHelpDismissedKey,
+        JSON.stringify({
+          version: "guided-help.v1",
+          completedAt: "2026-07-06T00:00:00.000Z",
+        })
+      );
       localStorage.setItem(
         noticeKey,
         JSON.stringify({
@@ -34,8 +43,15 @@ async function setAuthToken(page: Page, token: string) {
   await page.goto("/");
   await page.waitForLoadState("domcontentloaded");
   await page.evaluate(
-    ({ key, value, noticeKey }) => {
+    ({ key, value, guidedHelpDismissedKey, noticeKey }) => {
       localStorage.setItem(key, value);
+      localStorage.setItem(
+        guidedHelpDismissedKey,
+        JSON.stringify({
+          version: "guided-help.v1",
+          completedAt: "2026-07-06T00:00:00.000Z",
+        })
+      );
       localStorage.setItem(
         noticeKey,
         JSON.stringify({
