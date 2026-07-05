@@ -1,6 +1,7 @@
 import { expect, test, type Page, type Route } from "@playwright/test";
 
 const AUTH_TOKEN_KEY = "glsoop_auth_token_v1";
+const WRITING_EVENT_KEY = "glsoop-monthly-writing-project-prototype";
 
 function isApiRequest(route: Route, suffix: string) {
   return route.request().url().includes(suffix);
@@ -206,6 +207,75 @@ function growthDashboardFixture(options: GrowthMockOptions = {}) {
   return payload;
 }
 
+function writingEventPostsFixture() {
+  return [
+    {
+      id: "campaign-post-day-1",
+      title: "1일차 작성 글",
+      excerpt: "첫날에 남긴 문장입니다.",
+      category: "essay",
+      created_at: "2026-06-14T02:00:00.000Z",
+      event_key: WRITING_EVENT_KEY,
+      event_title: "글숲 한달 글쓰기 프로젝트",
+      prompt_key: "day-01-first-sentence",
+      prompt_day: 1,
+      prompt_title: "오늘 가장 기억에 남은 장면",
+      prompt_body: "오늘 하루 중 유독 마음에 남은 순간을 한 문장으로 시작해보세요.",
+    },
+    {
+      id: "campaign-post-day-3",
+      title: "3일차 작성 글",
+      excerpt: "작은 친절을 기록했습니다.",
+      category: "essay",
+      created_at: "2026-06-16T02:00:00.000Z",
+      event_key: WRITING_EVENT_KEY,
+      event_title: "글숲 한달 글쓰기 프로젝트",
+      prompt_key: "day-03-small-kindness",
+      prompt_day: 3,
+      prompt_title: "작은 친절을 받은 순간",
+      prompt_body: "크지는 않았지만 기억에 남은 친절한 말이나 행동을 기록해보세요.",
+    },
+  ];
+}
+
+async function freezeCampaignDate(page: Page) {
+  await page.addInitScript(() => {
+    const fixedNow = new Date("2026-07-06T03:00:00.000Z").valueOf();
+    const RealDate = Date;
+
+    class MockDate extends RealDate {
+      constructor(...args: any[]) {
+        if (args.length === 0) {
+          super(fixedNow);
+        } else {
+          const [yearOrValue, month, day, hours, minutes, seconds, ms] = args;
+          if (args.length === 1) {
+            super(yearOrValue);
+          } else if (args.length === 2) {
+            super(yearOrValue, month);
+          } else if (args.length === 3) {
+            super(yearOrValue, month, day);
+          } else if (args.length === 4) {
+            super(yearOrValue, month, day, hours);
+          } else if (args.length === 5) {
+            super(yearOrValue, month, day, hours, minutes);
+          } else if (args.length === 6) {
+            super(yearOrValue, month, day, hours, minutes, seconds);
+          } else {
+            super(yearOrValue, month, day, hours, minutes, seconds, ms);
+          }
+        }
+      }
+
+      static now() {
+        return fixedNow;
+      }
+    }
+
+    globalThis.Date = MockDate as DateConstructor;
+  });
+}
+
 async function mockGrowthApis(page: Page, options: GrowthMockOptions = {}) {
   const dashboardFixture = growthDashboardFixture(options);
   const dashboardShouldFail = options.dashboardShouldFail ?? false;
@@ -230,6 +300,19 @@ async function mockGrowthApis(page: Page, options: GrowthMockOptions = {}) {
             ? { ok: false, message: "dashboard disabled for fallback test" }
             : dashboardFixture
         ),
+      });
+      return;
+    }
+
+    if (isApiRequest(route, `/api/writing-events/${WRITING_EVENT_KEY}/me/posts`)) {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          event_key: WRITING_EVENT_KEY,
+          posts: writingEventPostsFixture(),
+        }),
       });
       return;
     }
@@ -359,15 +442,24 @@ async function mockGrowthApis(page: Page, options: GrowthMockOptions = {}) {
       return;
     }
 
-    if (isApiRequest(route, "/api/posts/701")) {
+    if (
+      isApiRequest(route, "/api/posts/701") ||
+      isApiRequest(route, "/api/posts/campaign-post-day-1") ||
+      isApiRequest(route, "/api/posts/campaign-post-day-3")
+    ) {
+      const postId = route.request().url().includes("campaign-post-day-3")
+        ? "campaign-post-day-3"
+        : route.request().url().includes("campaign-post-day-1")
+          ? "campaign-post-day-1"
+          : "701";
       await route.fulfill({
         status: 200,
         contentType: "application/json",
         body: JSON.stringify({
           ok: true,
           post: {
-            id: 701,
-            title: "테스트 인기 글",
+            id: postId,
+            title: postId === "701" ? "테스트 인기 글" : "프로젝트 작성 글",
             content: "<p>테스트 상세 본문</p>",
             author_name: "테스터",
             created_at: "2026-02-10T11:00:00.000Z",
@@ -441,6 +533,32 @@ test.describe("Growth 플로우", () => {
 
     await page.goBack();
     await expect(page.getByTestId("growth-screen")).toBeVisible();
+  });
+
+  test("글쓰기 프로젝트 달력은 작성, 미작성, 예정 날짜를 구분한다", async ({ page }) => {
+    await freezeCampaignDate(page);
+    await mockGrowthApis(page);
+    await setAuthToken(page, "mock-token-for-growth");
+
+    await page.goto("/growth");
+
+    await expect(page.getByTestId("growth-writing-campaign-calendar")).toBeVisible();
+    await expect(page.getByText("작성 2개")).toBeVisible();
+    await expect(page.getByTestId("growth-writing-campaign-day-1")).toHaveCSS(
+      "background-color",
+      "rgb(73, 128, 90)"
+    );
+    await expect(page.getByTestId("growth-writing-campaign-day-2")).toHaveCSS(
+      "background-color",
+      "rgb(253, 241, 243)"
+    );
+    await expect(page.getByTestId("growth-writing-campaign-day-24")).toHaveCSS(
+      "background-color",
+      "rgb(255, 255, 255)"
+    );
+
+    await page.getByTestId("growth-writing-campaign-day-1").click();
+    await expect(page).toHaveURL(/\/posts\/campaign-post-day-1/);
   });
 
   test("dashboard 요청이 실패하면 fallback 데이터로 성장 홈을 유지한다", async ({ page }) => {
