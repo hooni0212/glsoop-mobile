@@ -167,6 +167,7 @@ export async function updatePost(input: {
   title?: string;
   content: string;
   contentPages?: string[];
+  contentFormat?: "plain";
   hashtags?: string[];
   layoutJson?: unknown;
   fontKey?: PostFontKey;
@@ -176,6 +177,7 @@ export async function updatePost(input: {
   const res = await apiPut<UpdatePostResponse>(`/api/posts/${encodeURIComponent(input.postId)}`, {
     title: input.title,
     content: withPostFontMeta(input.content, input.fontKey ?? "serif"),
+    content_format: input.contentFormat ?? "plain",
     ...(input.contentPages && input.contentPages.length > 0
       ? { content_pages: input.contentPages }
       : {}),
