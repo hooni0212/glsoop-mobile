@@ -40,7 +40,9 @@ import {
   useGuidedHelpTarget,
   type GuidedHelpScrollIntoView,
 } from "@/onboarding/GuidedHelpProvider";
+import { getTabBarTotalHeight } from "@/navigation/tabs.styles";
 import { tokens } from "@/theme/tokens";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 type AchievementHighlight = {
   id: string;
@@ -67,6 +69,18 @@ const GUIDED_SCROLL_VISIBLE_TOP = 140;
 const GUIDED_SCROLL_VISIBLE_BOTTOM_GAP = 260;
 const GUIDED_SCROLL_TARGET_TOP = 260;
 const WRITING_EVENT_POST_LIMIT = 30;
+
+const GROWTH_COLORS = {
+  green: "#3F7D55",
+  greenDark: "#2F6845",
+  greenSoft: "#EEF7F0",
+  paper: "#FAF8F1",
+  text: "#2F3832",
+  muted: "#7A857D",
+  inactiveBg: "#F3EFEA",
+  inactiveBorder: "#E3DDD2",
+  inactiveText: "#8D948C",
+} as const;
 
 function clampPercent(value: number) {
   return Math.max(0, Math.min(100, Math.round(value)));
@@ -180,6 +194,7 @@ function buildWritingCampaignDays({
 
 export default function GrowthScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const scrollRef = React.useRef<ScrollView | null>(null);
   const { summary, achievements, campaigns, loading, error, refetch } = useGrowthData();
   const [refreshing, setRefreshing] = useState(false);
@@ -333,7 +348,10 @@ export default function GrowthScreen() {
       <ScrollView
         ref={scrollRef}
         testID="growth-scroll"
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: getTabBarTotalHeight(insets.bottom) + 112 },
+        ]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -587,80 +605,62 @@ function WritingCampaignProjectCard({
     scrollIntoView,
   });
   const writtenDaysCount = days.filter((day) => day.calendarState === "written").length;
-  const writtenCountLabel = postsLoading ? "확인 중" : `작성 ${writtenDaysCount}개`;
+  const writingProgressPercent = clampPercent((writtenDaysCount / status.totalDays) * 100);
+  const writtenCountLabel = postsLoading ? "확인 중" : `${writtenDaysCount}편`;
+  const writingProgressLabel = postsLoading ? "확인 중" : `${writingProgressPercent}%`;
 
   return (
     <View
-      style={styles.writingCampaignCard}
+      style={styles.writingCampaignStack}
       testID="growth-writing-campaign-card"
     >
-      <View style={styles.writingCampaignHeader}>
-        <View style={styles.writingCampaignHeading}>
-          <Text style={styles.sectionLabel}>진행 중인 캠페인</Text>
-          <Text style={styles.writingCampaignTitle}>{status.title}</Text>
+      <View style={styles.campaignSummaryCard}>
+        <View style={styles.writingCampaignHeader}>
+          <View style={styles.writingCampaignHeading}>
+            <Text style={styles.sectionLabel}>진행 중인 캠페인</Text>
+            <Text style={styles.writingCampaignTitle}>{status.title}</Text>
+            <Text style={styles.writingCampaignSubtitle}>{status.subtitle}</Text>
+          </View>
+          <View style={styles.writingCampaignBadge}>
+            <Text style={styles.writingCampaignBadgeText}>{status.currentDay}일차</Text>
+            <Text style={styles.writingCampaignBadgeSubText}>{status.remainingDays}일 남음</Text>
+          </View>
         </View>
-        <View style={styles.writingCampaignBadge}>
-          <Text style={styles.writingCampaignBadgeText}>
-            {status.prompt.day}/{status.totalDays}
-          </Text>
-          <Text style={styles.writingCampaignBadgeSubText}>{writtenCountLabel}</Text>
-        </View>
-      </View>
 
-      <View style={styles.progressBlock}>
-        <View style={styles.progressHeader}>
-          <Text style={styles.progressSmallText}>프로젝트 진행률</Text>
-          <Text style={styles.progressSmallText}>{status.progressPercent}%</Text>
+        <View style={styles.campaignMetricGrid}>
+          <CampaignMetric label="작성한 글" value={writtenCountLabel} />
+          <CampaignMetric label="기간 진행률" value={`${status.progressPercent}%`} />
+          <CampaignMetric label="글쓰기 달성률" value={writingProgressLabel} tone="primary" />
         </View>
-        <View style={styles.progressTrackSoft}>
-          <View
-            style={[
-              styles.progressBarSoft,
-              status.progressPercent > 0 && styles.progressBarSoftMinimum,
-              { width: `${status.progressPercent}%` },
-            ]}
+
+        <View style={styles.campaignProgressGroup}>
+          <CampaignProgressRow
+            label="기간 진행률"
+            value={`${status.progressPercent}%`}
+            percent={status.progressPercent}
+          />
+          <CampaignProgressRow
+            label="글쓰기 달성률"
+            value={writingProgressLabel}
+            percent={postsLoading ? 0 : writingProgressPercent}
+            muted
           />
         </View>
       </View>
 
-      <WritingCampaignCalendar
-        days={days}
-        onPressPost={onPressPost}
-      />
-
-      <View style={styles.writingCampaignLegend} accessibilityElementsHidden>
-        <View style={styles.writingCampaignLegendItem}>
-          <View style={[styles.writingCampaignLegendDot, styles.writingCampaignLegendWritten]} />
-          <Text style={styles.writingCampaignLegendText}>작성</Text>
+      <View style={styles.todayPromptCard}>
+        <View style={styles.todayPromptHeader}>
+          <View style={styles.todayPromptLabelRow}>
+            <Ionicons name="leaf-outline" size={15} color={GROWTH_COLORS.green} />
+            <Text style={styles.writingPromptMeta}>
+              {status.promptLabel} · {status.prompt.day}일차
+            </Text>
+          </View>
+          <Text style={styles.todayPromptDayText}>오늘</Text>
         </View>
-        <View style={styles.writingCampaignLegendItem}>
-          <View style={[styles.writingCampaignLegendDot, styles.writingCampaignLegendMissed]} />
-          <Text style={styles.writingCampaignLegendText}>미작성</Text>
-        </View>
-        <View style={styles.writingCampaignLegendItem}>
-          <View style={[styles.writingCampaignLegendDot, styles.writingCampaignLegendUpcoming]} />
-          <Text style={styles.writingCampaignLegendText}>예정</Text>
-        </View>
-      </View>
-
-      {postsError ? (
-        <Text style={styles.writingCampaignStatusNotice}>
-          작성 기록을 확인하지 못해 지난 날짜를 보류 표시했어요.
-        </Text>
-      ) : null}
-
-      <View style={styles.writingPromptPreview}>
-        <Text style={styles.writingPromptMeta}>
-          {status.promptLabel} · {status.prompt.day}일차
-        </Text>
         <Text style={styles.writingPromptTitle}>{status.prompt.title}</Text>
         <Text style={styles.writingPromptBody}>{status.prompt.body}</Text>
-      </View>
 
-      <View style={styles.writingCampaignFooter}>
-        <Text style={styles.writingCampaignHint}>
-          남은 주제 {status.remainingDays}개
-        </Text>
         <Pressable
           {...writePromptTarget}
           onPress={onPress}
@@ -669,9 +669,108 @@ function WritingCampaignProjectCard({
           accessibilityLabel={`${status.promptLabel} ${status.prompt.day}일차 주제로 글쓰기`}
           testID="growth-writing-campaign-write-btn"
         >
-          <Text style={styles.writingCampaignCtaText}>이 주제로 쓰기</Text>
+          <Text style={styles.writingCampaignCtaText}>이 글감으로 글쓰기</Text>
           <Ionicons name="chevron-forward" size={15} color={tokens.colors.textInverse} />
         </Pressable>
+      </View>
+
+      <View style={styles.calendarCard}>
+        <View style={styles.calendarHeader}>
+          <View>
+            <Text style={styles.sectionLabel}>이번 달 기록</Text>
+            <Text style={styles.calendarTitle}>조용히 쌓이는 30일의 문장</Text>
+          </View>
+          <Text style={styles.calendarCountText}>
+            {postsLoading ? "확인 중" : `${writtenDaysCount}/${status.totalDays}`}
+          </Text>
+        </View>
+
+        <WritingCampaignCalendar
+          days={days}
+          onPressPost={onPressPost}
+        />
+
+        <View style={styles.writingCampaignLegend} accessibilityElementsHidden>
+          <View style={styles.writingCampaignLegendItem}>
+            <View style={[styles.writingCampaignLegendDot, styles.writingCampaignLegendWritten]} />
+            <Text style={styles.writingCampaignLegendText}>작성 완료</Text>
+          </View>
+          <View style={styles.writingCampaignLegendItem}>
+            <View style={[styles.writingCampaignLegendDot, styles.writingCampaignLegendToday]} />
+            <Text style={styles.writingCampaignLegendText}>오늘</Text>
+          </View>
+          <View style={styles.writingCampaignLegendItem}>
+            <View style={[styles.writingCampaignLegendDot, styles.writingCampaignLegendMissed]} />
+            <Text style={styles.writingCampaignLegendText}>미작성</Text>
+          </View>
+          <View style={styles.writingCampaignLegendItem}>
+            <View style={[styles.writingCampaignLegendDot, styles.writingCampaignLegendUpcoming]} />
+            <Text style={styles.writingCampaignLegendText}>예정</Text>
+          </View>
+        </View>
+
+        {postsError ? (
+          <Text style={styles.writingCampaignStatusNotice}>
+            작성 기록을 확인하지 못해 지난 날짜를 보류 표시했어요.
+          </Text>
+        ) : null}
+      </View>
+    </View>
+  );
+}
+
+function CampaignMetric({
+  label,
+  value,
+  tone = "muted",
+}: {
+  label: string;
+  value: string;
+  tone?: "primary" | "muted";
+}) {
+  return (
+    <View style={styles.campaignMetric}>
+      <Text style={styles.campaignMetricLabel}>{label}</Text>
+      <Text
+        style={[
+          styles.campaignMetricValue,
+          tone === "primary" && styles.campaignMetricValuePrimary,
+        ]}
+      >
+        {value}
+      </Text>
+    </View>
+  );
+}
+
+function CampaignProgressRow({
+  label,
+  value,
+  percent,
+  muted = false,
+}: {
+  label: string;
+  value: string;
+  percent: number;
+  muted?: boolean;
+}) {
+  const safePercent = clampPercent(percent);
+
+  return (
+    <View style={styles.progressBlock}>
+      <View style={styles.progressHeader}>
+        <Text style={styles.progressSmallText}>{label}</Text>
+        <Text style={styles.progressSmallText}>{value}</Text>
+      </View>
+      <View style={styles.progressTrackSoft}>
+        <View
+          style={[
+            styles.progressBarSoft,
+            muted && styles.progressBarSoftMuted,
+            safePercent > 0 && styles.progressBarSoftMinimum,
+            { width: `${safePercent}%` },
+          ]}
+        />
       </View>
     </View>
   );
@@ -691,20 +790,22 @@ function WritingCampaignCalendar({
       accessibilityLabel="30일 글쓰기 프로젝트 달력"
     >
       {days.map((day) => {
+        const isWritten = day.calendarState === "written";
         const dayStyle = [
           styles.writingCampaignDay,
-          day.calendarState === "written" && styles.writingCampaignDayWritten,
+          isWritten && styles.writingCampaignDayWritten,
           day.calendarState === "missed" && styles.writingCampaignDayMissed,
           day.calendarState === "upcoming" && styles.writingCampaignDayUpcoming,
           day.calendarState === "pending" && styles.writingCampaignDayPending,
-          day.isToday && styles.writingCampaignDayToday,
+          day.isToday && !isWritten && styles.writingCampaignDayToday,
+          day.isToday && isWritten && styles.writingCampaignDayTodayWritten,
         ];
         const dayTextStyle = [
           styles.writingCampaignDayText,
-          day.calendarState === "written" && styles.writingCampaignDayTextWritten,
+          isWritten && styles.writingCampaignDayTextWritten,
           day.calendarState === "missed" && styles.writingCampaignDayTextMissed,
           day.calendarState === "pending" && styles.writingCampaignDayTextPending,
-          day.isToday && styles.writingCampaignDayTextToday,
+          day.isToday && !isWritten && styles.writingCampaignDayTextToday,
         ];
         const stateLabel =
           day.calendarState === "written"
@@ -965,15 +1066,18 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: tokens.colors.green700,
   },
-  writingCampaignCard: {
+  writingCampaignStack: {
+    gap: tokens.space.md as any,
+  },
+  campaignSummaryCard: {
     borderRadius: tokens.radius.xl,
     borderWidth: 1,
-    borderColor: tokens.colors.green100,
-    backgroundColor: tokens.colors.green050,
+    borderColor: tokens.colors.border,
+    backgroundColor: GROWTH_COLORS.paper,
     padding: tokens.space.lg,
     gap: tokens.space.md as any,
     shadowColor: tokens.shadow.color,
-    shadowOpacity: 0.04,
+    shadowOpacity: 0.035,
     shadowRadius: 14,
     shadowOffset: { width: 0, height: 7 },
     elevation: 1,
@@ -992,15 +1096,21 @@ const styles = StyleSheet.create({
     fontSize: 18,
     lineHeight: 24,
     fontWeight: "900",
-    color: tokens.colors.green900,
+    color: GROWTH_COLORS.text,
     letterSpacing: 0,
+  },
+  writingCampaignSubtitle: {
+    fontSize: tokens.font.small,
+    lineHeight: 18,
+    fontWeight: "700",
+    color: GROWTH_COLORS.muted,
   },
   writingCampaignBadge: {
     minHeight: 32,
     borderRadius: tokens.radius.pill,
     backgroundColor: tokens.colors.surface,
     borderWidth: 1,
-    borderColor: tokens.colors.green100,
+    borderColor: "#E8E2D7",
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 12,
@@ -1009,7 +1119,7 @@ const styles = StyleSheet.create({
   writingCampaignBadgeText: {
     fontSize: tokens.font.small,
     fontWeight: "900",
-    color: tokens.colors.green700,
+    color: GROWTH_COLORS.green,
   },
   writingCampaignBadgeSubText: {
     marginTop: 1,
@@ -1018,30 +1128,127 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: tokens.colors.textMuted,
   },
+  campaignMetricGrid: {
+    flexDirection: "row",
+    gap: tokens.space.sm as any,
+  },
+  campaignMetric: {
+    flex: 1,
+    minHeight: 56,
+    borderRadius: tokens.radius.md,
+    backgroundColor: "rgba(255, 255, 255, 0.72)",
+    borderWidth: 1,
+    borderColor: "#EDE7DC",
+    paddingHorizontal: tokens.space.sm,
+    paddingVertical: tokens.space.sm,
+    justifyContent: "center",
+    gap: 3,
+  },
+  campaignMetricLabel: {
+    fontSize: 11,
+    lineHeight: 14,
+    fontWeight: "800",
+    color: GROWTH_COLORS.muted,
+  },
+  campaignMetricValue: {
+    fontSize: tokens.font.body,
+    lineHeight: 18,
+    fontWeight: "900",
+    color: GROWTH_COLORS.text,
+  },
+  campaignMetricValuePrimary: {
+    color: GROWTH_COLORS.green,
+  },
+  campaignProgressGroup: {
+    gap: tokens.space.sm as any,
+  },
+  todayPromptCard: {
+    borderRadius: tokens.radius.xl,
+    borderWidth: 1,
+    borderColor: tokens.colors.green100,
+    backgroundColor: tokens.colors.surface,
+    padding: tokens.space.lg,
+    gap: tokens.space.sm as any,
+    shadowColor: tokens.shadow.color,
+    shadowOpacity: 0.035,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 1,
+  },
+  todayPromptHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: tokens.space.sm as any,
+  },
+  todayPromptLabelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  todayPromptDayText: {
+    fontSize: 12,
+    lineHeight: 15,
+    fontWeight: "900",
+    color: GROWTH_COLORS.muted,
+  },
+  calendarCard: {
+    borderRadius: tokens.radius.xl,
+    borderWidth: 1,
+    borderColor: tokens.colors.green100,
+    backgroundColor: GROWTH_COLORS.greenSoft,
+    padding: tokens.space.lg,
+    gap: tokens.space.md as any,
+  },
+  calendarHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: tokens.space.sm as any,
+  },
+  calendarTitle: {
+    marginTop: 3,
+    fontSize: tokens.font.body,
+    lineHeight: 20,
+    fontWeight: "900",
+    color: GROWTH_COLORS.text,
+  },
+  calendarCountText: {
+    borderRadius: tokens.radius.pill,
+    backgroundColor: "rgba(255, 255, 255, 0.72)",
+    borderWidth: 1,
+    borderColor: tokens.colors.green100,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    fontSize: 12,
+    lineHeight: 15,
+    fontWeight: "900",
+    color: GROWTH_COLORS.green,
+  },
   writingCampaignCalendar: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 6,
+    gap: 5,
   },
   writingCampaignDay: {
-    width: "18.9%",
-    aspectRatio: 1.65,
-    minHeight: 32,
-    borderRadius: tokens.radius.sm,
+    width: "12.3%",
+    aspectRatio: 1,
+    minHeight: 30,
+    borderRadius: tokens.radius.pill,
     borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
   },
   writingCampaignDayWritten: {
-    borderColor: tokens.colors.green700,
-    backgroundColor: tokens.colors.green700,
+    borderColor: GROWTH_COLORS.green,
+    backgroundColor: GROWTH_COLORS.green,
   },
   writingCampaignDayMissed: {
-    borderColor: tokens.colors.danger,
-    backgroundColor: tokens.colors.dangerSoft,
+    borderColor: GROWTH_COLORS.inactiveBorder,
+    backgroundColor: GROWTH_COLORS.inactiveBg,
   },
   writingCampaignDayUpcoming: {
-    borderColor: tokens.colors.border,
+    borderColor: "rgba(224, 224, 218, 0.8)",
     backgroundColor: tokens.colors.surface,
   },
   writingCampaignDayPending: {
@@ -1049,11 +1256,17 @@ const styles = StyleSheet.create({
     backgroundColor: tokens.colors.bgMuted,
   },
   writingCampaignDayToday: {
+    borderWidth: 1.5,
+    borderColor: GROWTH_COLORS.green,
+    backgroundColor: "#F7FBF8",
+  },
+  writingCampaignDayTodayWritten: {
     borderWidth: 2,
+    borderColor: GROWTH_COLORS.greenDark,
   },
   writingCampaignDayText: {
-    fontSize: 12,
-    lineHeight: 16,
+    fontSize: 11,
+    lineHeight: 14,
     fontWeight: "900",
     color: tokens.colors.textMuted,
   },
@@ -1061,13 +1274,14 @@ const styles = StyleSheet.create({
     color: tokens.colors.textInverse,
   },
   writingCampaignDayTextMissed: {
-    color: tokens.colors.danger,
+    color: GROWTH_COLORS.inactiveText,
   },
   writingCampaignDayTextPending: {
     color: tokens.colors.textFaint,
   },
   writingCampaignDayTextToday: {
-    fontSize: 13,
+    color: GROWTH_COLORS.green,
+    fontSize: 12,
   },
   writingCampaignLegend: {
     flexDirection: "row",
@@ -1091,8 +1305,12 @@ const styles = StyleSheet.create({
     backgroundColor: tokens.colors.green700,
   },
   writingCampaignLegendMissed: {
-    borderColor: tokens.colors.danger,
-    backgroundColor: tokens.colors.dangerSoft,
+    borderColor: GROWTH_COLORS.inactiveBorder,
+    backgroundColor: GROWTH_COLORS.inactiveBg,
+  },
+  writingCampaignLegendToday: {
+    borderColor: GROWTH_COLORS.green,
+    backgroundColor: "#F7FBF8",
   },
   writingCampaignLegendUpcoming: {
     borderColor: tokens.colors.border,
@@ -1122,11 +1340,11 @@ const styles = StyleSheet.create({
   writingPromptMeta: {
     fontSize: 12,
     fontWeight: "900",
-    color: tokens.colors.green700,
+    color: GROWTH_COLORS.green,
   },
   writingPromptTitle: {
-    fontSize: tokens.font.body,
-    lineHeight: 21,
+    fontSize: 18,
+    lineHeight: 25,
     fontWeight: "900",
     color: tokens.colors.text,
   },
@@ -1149,13 +1367,14 @@ const styles = StyleSheet.create({
     color: tokens.colors.textMuted,
   },
   writingCampaignCta: {
-    minHeight: 38,
+    minHeight: 42,
     borderRadius: tokens.radius.pill,
-    backgroundColor: tokens.colors.green700,
+    backgroundColor: GROWTH_COLORS.green,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: tokens.space.md,
+    marginTop: tokens.space.xs,
     gap: 4,
   },
   writingCampaignCtaText: {
@@ -1171,13 +1390,16 @@ const styles = StyleSheet.create({
   progressTrackSoft: {
     height: 7,
     borderRadius: tokens.radius.pill,
-    backgroundColor: tokens.colors.green050,
+    backgroundColor: "rgba(63, 125, 85, 0.12)",
     overflow: "hidden",
   },
   progressBarSoft: {
     height: "100%",
     borderRadius: tokens.radius.pill,
-    backgroundColor: tokens.colors.green600,
+    backgroundColor: GROWTH_COLORS.green,
+  },
+  progressBarSoftMuted: {
+    backgroundColor: "rgba(63, 125, 85, 0.72)",
   },
   progressBarSoftMinimum: {
     minWidth: 22,
