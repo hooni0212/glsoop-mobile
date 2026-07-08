@@ -543,14 +543,17 @@ test.describe("Growth 플로우", () => {
     await page.goto("/growth");
 
     await expect(page.getByTestId("growth-writing-campaign-calendar")).toBeVisible();
-    await expect(page.getByText("작성 2개")).toBeVisible();
+    await expect(page.getByText("작성한 글")).toBeVisible();
+    await expect(page.getByText("2편")).toBeVisible();
+    await expect(page.getByText("글쓰기 달성률").first()).toBeVisible();
+    await expect(page.getByText("7%").first()).toBeVisible();
     await expect(page.getByTestId("growth-writing-campaign-day-1")).toHaveCSS(
       "background-color",
-      "rgb(73, 128, 90)"
+      "rgb(63, 125, 85)"
     );
     await expect(page.getByTestId("growth-writing-campaign-day-2")).toHaveCSS(
       "background-color",
-      "rgb(253, 241, 243)"
+      "rgb(243, 239, 234)"
     );
     await expect(page.getByTestId("growth-writing-campaign-day-24")).toHaveCSS(
       "background-color",
