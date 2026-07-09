@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import { useFocusEffect } from "@react-navigation/native";
 import { Modal, Platform, Pressable, ScrollView, Text, useWindowDimensions, View } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -31,8 +32,9 @@ import { type Post } from "@/types/post";
 import { blockUserById, pickSafetyReasons, reportPost } from "@/services/safetyService";
 import {
   buildDailyWritingPromptWritePath,
-  getDailyWritingCampaignStatus,
+  type DailyWritingCampaignStatus,
 } from "@/features/writingCampaign/dailyWritingCampaign";
+import { fetchWritingEventStatus } from "@/features/writingCampaign/writingEventPosts";
 import {
   dismissWritingCampaignNoticeForToday,
   isWritingCampaignNoticeDismissed,
@@ -50,7 +52,10 @@ import {
   listPostBookmarkLists,
   removePostFromBookmarkList,
 } from "@/services/bookmarkService";
-import { updateTodayPromptWidgetSnapshot } from "@/services/widgetSnapshotService";
+import {
+  clearTodayPromptWidgetSnapshot,
+  updateTodayPromptWidgetSnapshot,
+} from "@/services/widgetSnapshotService";
 
 const CATEGORIES = ["추천", "팔로잉", "최신"] as const;
 type Category = (typeof CATEGORIES)[number];
@@ -79,7 +84,8 @@ export default function Home() {
   const [writingCampaignNoticeVisible, setWritingCampaignNoticeVisible] = useState(false);
   const [reportSubmitting, setReportSubmitting] = useState(false);
   const [blockSubmitting, setBlockSubmitting] = useState(false);
-  const writingCampaignStatus = useMemo(() => getDailyWritingCampaignStatus(), []);
+  const [writingCampaignStatus, setWritingCampaignStatus] =
+    useState<DailyWritingCampaignStatus | null>(null);
   const useWritingCampaignDialog = Platform.OS === "android";
   const writingCampaignNoticeBlocked =
     safetyMenuVisible ||
@@ -132,7 +138,30 @@ export default function Home() {
     if (active === "추천") return "오늘의 추천";
     return `${active} 피드`;
   }, [active]);
+  useFocusEffect(
+    React.useCallback(() => {
+      let mounted = true;
+
+      void fetchWritingEventStatus()
+        .then((status) => {
+          if (mounted) setWritingCampaignStatus(status);
+        })
+        .catch(() => {
+          if (mounted) setWritingCampaignStatus(null);
+        });
+
+      return () => {
+        mounted = false;
+      };
+    }, [])
+  );
+
   React.useEffect(() => {
+    if (!writingCampaignStatus) {
+      void clearTodayPromptWidgetSnapshot();
+      return;
+    }
+
     void updateTodayPromptWidgetSnapshot(writingCampaignStatus);
   }, [writingCampaignStatus]);
 
@@ -151,7 +180,8 @@ export default function Home() {
     if (
       WRITING_CAMPAIGN_NOTICE_DISABLED ||
       runtimeLegalConfigLoading ||
-      writingCampaignNoticeBlocked
+      writingCampaignNoticeBlocked ||
+      !writingCampaignStatus
     ) {
       setWritingCampaignNoticeVisible(false);
       return;
@@ -194,8 +224,7 @@ export default function Home() {
     runtimeLegalConfig,
     runtimeLegalConfigLoading,
     writingCampaignNoticeBlocked,
-    writingCampaignStatus.campaignKey,
-    writingCampaignStatus.localDateKey,
+    writingCampaignStatus,
   ]);
 
   const setPending = (postId: string, pending: boolean) => {
@@ -253,14 +282,16 @@ export default function Home() {
   }, []);
 
   const dismissWritingCampaignNoticeToday = React.useCallback(() => {
+    if (!writingCampaignStatus) return;
     setWritingCampaignNoticeVisible(false);
     void dismissWritingCampaignNoticeForToday(
       writingCampaignStatus.localDateKey,
       writingCampaignStatus.campaignKey
     );
-  }, [writingCampaignStatus.campaignKey, writingCampaignStatus.localDateKey]);
+  }, [writingCampaignStatus]);
 
   const startDailyWritingPrompt = React.useCallback(() => {
+    if (!writingCampaignStatus) return;
     haptics.selection();
     setWritingCampaignNoticeVisible(false);
     void dismissWritingCampaignNoticeForToday(
@@ -575,7 +606,7 @@ export default function Home() {
         ]}
       />
 
-      {writingCampaignNoticeVisible ? (
+      {writingCampaignNoticeVisible && writingCampaignStatus ? (
         <Modal
           visible
           transparent

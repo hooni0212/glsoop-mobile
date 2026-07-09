@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { useFocusEffect } from "@react-navigation/native";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Dimensions,
@@ -25,13 +26,13 @@ import {
   useGrowthData,
 } from "@/features/growth/useGrowthData";
 import {
+  fetchWritingEventStatus,
   fetchWritingEventPosts,
   type WritingEventPost,
 } from "@/features/writingCampaign/writingEventPosts";
 import {
   buildDailyWritingPromptWritePath,
   getDailyWritingCampaignProgressSteps,
-  getDailyWritingCampaignStatus,
   type DailyWritingCampaignProgressStep,
   type DailyWritingCampaignStatus,
 } from "@/features/writingCampaign/dailyWritingCampaign";
@@ -198,6 +199,8 @@ export default function GrowthScreen() {
   const scrollRef = React.useRef<ScrollView | null>(null);
   const { summary, achievements, campaigns, loading, error, refetch } = useGrowthData();
   const [refreshing, setRefreshing] = useState(false);
+  const [dailyWritingCampaign, setDailyWritingCampaign] =
+    useState<DailyWritingCampaignStatus | null>(null);
   const [writingEventPosts, setWritingEventPosts] = useState<WritingEventPost[]>([]);
   const [writingEventPostsLoaded, setWritingEventPostsLoaded] = useState(false);
   const [writingEventPostsLoading, setWritingEventPostsLoading] = useState(false);
@@ -208,33 +211,47 @@ export default function GrowthScreen() {
     [achievements]
   );
   const campaignPreview = useMemo(() => selectCampaignPreview(campaigns), [campaigns]);
-  const dailyWritingCampaign = useMemo(() => getDailyWritingCampaignStatus(), []);
   const dailyWritingCampaignSteps = useMemo(
-    () => getDailyWritingCampaignProgressSteps(dailyWritingCampaign),
+    () =>
+      dailyWritingCampaign
+        ? getDailyWritingCampaignProgressSteps(dailyWritingCampaign)
+        : [],
     [dailyWritingCampaign]
   );
   const writingCampaignDays = useMemo(
-    () =>
-      buildWritingCampaignDays({
+    () => {
+      if (!dailyWritingCampaign) return [];
+      return buildWritingCampaignDays({
         posts: writingEventPosts,
         postsLoaded: writingEventPostsLoaded,
         status: dailyWritingCampaign,
         steps: dailyWritingCampaignSteps,
-      }),
+      });
+    },
     [dailyWritingCampaign, dailyWritingCampaignSteps, writingEventPosts, writingEventPostsLoaded]
   );
-  const loadWritingEventPosts = useCallback(
+  const loadWritingCampaign = useCallback(
     async (silent = false) => {
       if (!silent) setWritingEventPostsLoading(true);
       setWritingEventPostsError(null);
       try {
+        const status = await fetchWritingEventStatus();
+        setDailyWritingCampaign(status);
+        if (!status) {
+          setWritingEventPosts([]);
+          setWritingEventPostsLoaded(false);
+          return;
+        }
+
         const posts = await fetchWritingEventPosts(
-          dailyWritingCampaign.campaignKey,
+          status.campaignKey,
           WRITING_EVENT_POST_LIMIT
         );
         setWritingEventPosts(posts);
         setWritingEventPostsLoaded(true);
       } catch (postsError) {
+        setDailyWritingCampaign(null);
+        setWritingEventPosts([]);
         setWritingEventPostsLoaded(false);
         setWritingEventPostsError(
           postsError instanceof Error
@@ -245,7 +262,7 @@ export default function GrowthScreen() {
         if (!silent) setWritingEventPostsLoading(false);
       }
     },
-    [dailyWritingCampaign.campaignKey]
+    []
   );
   const scrollGuidedTargetIntoView = useCallback<GuidedHelpScrollIntoView>((targetRef) => {
     const scrollView = scrollRef.current;
@@ -285,6 +302,7 @@ export default function GrowthScreen() {
     scrollIntoView: scrollGuidedTargetIntoView,
   });
   const openDailyWritingPrompt = useCallback(() => {
+    if (!dailyWritingCampaign) return;
     trackGrowthTelemetry("growth_action_clicked", { action: "open_daily_writing_prompt" });
     router.push(buildDailyWritingPromptWritePath(dailyWritingCampaign) as never);
   }, [dailyWritingCampaign, router]);
@@ -300,9 +318,11 @@ export default function GrowthScreen() {
     trackGrowthTelemetry("growth_screen_viewed", { screen: "home" });
   }, []);
 
-  useEffect(() => {
-    void loadWritingEventPosts();
-  }, [loadWritingEventPosts]);
+  useFocusEffect(
+    useCallback(() => {
+      void loadWritingCampaign();
+    }, [loadWritingCampaign])
+  );
 
   const onRefresh = useCallback(async () => {
     if (refreshing || loading) return;
@@ -310,7 +330,7 @@ export default function GrowthScreen() {
     trackGrowthTelemetry("growth_refresh_started", { screen: "home" });
     setRefreshing(true);
     try {
-      await Promise.all([refetch(), loadWritingEventPosts(true)]);
+      await Promise.all([refetch(), loadWritingCampaign(true)]);
       trackGrowthTelemetry("growth_refresh_succeeded", {
         screen: "home",
         durationMs: Date.now() - startedAt,
@@ -324,7 +344,7 @@ export default function GrowthScreen() {
     } finally {
       setRefreshing(false);
     }
-  }, [refreshing, loading, refetch, loadWritingEventPosts]);
+  }, [refreshing, loading, refetch, loadWritingCampaign]);
 
   if (error?.kind === "auth") {
     return (
@@ -369,15 +389,17 @@ export default function GrowthScreen() {
 
         <ForestCard summary={summary} loading={loading} error={error} />
 
-        <WritingCampaignProjectCard
-          status={dailyWritingCampaign}
-          days={writingCampaignDays}
-          postsLoading={writingEventPostsLoading}
-          postsError={writingEventPostsError}
-          scrollIntoView={scrollGuidedTargetIntoView}
-          onPress={openDailyWritingPrompt}
-          onPressPost={openWritingEventPost}
-        />
+        {dailyWritingCampaign ? (
+          <WritingCampaignProjectCard
+            status={dailyWritingCampaign}
+            days={writingCampaignDays}
+            postsLoading={writingEventPostsLoading}
+            postsError={writingEventPostsError}
+            scrollIntoView={scrollGuidedTargetIntoView}
+            onPress={openDailyWritingPrompt}
+            onPressPost={openWritingEventPost}
+          />
+        ) : null}
 
         <Pressable
           {...recordsTarget}

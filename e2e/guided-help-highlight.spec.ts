@@ -52,6 +52,49 @@ async function seedGuidedHelpReplay(page: Page, pageKey: "growth" | "me") {
   );
 }
 
+function writingEventStatusFixture() {
+  const prompts = Array.from({ length: 30 }, (_, index) => {
+    const day = index + 1;
+    const paddedDay = String(day).padStart(2, "0");
+    return {
+      key: day === 23 ? "day-23-window-light" : `day-${paddedDay}-prompt`,
+      day,
+      title: day === 23 ? "창가에 남은 빛" : `${day}일차 글감`,
+      body: day === 23 ? "오늘 오래 바라본 빛이나 풍경을 적어보세요." : `${day}일차 글감을 적어보세요.`,
+      defaultCategory: "essay",
+      suggestedHashtags: ["글숲프로젝트"],
+    };
+  });
+  const todayPrompt = prompts[22];
+
+  return {
+    ok: true,
+    event: {
+      key: WRITING_EVENT_KEY,
+      title: "글숲 한달 글쓰기 프로젝트",
+      subtitle: "매일 하나의 글감으로 30일 동안 글을 쌓아가요.",
+      active: true,
+      total_days: 30,
+      current_day: 23,
+      completed_days: 22,
+      remaining_days: 7,
+      progress_percent: 77,
+      local_date_key: "2026-07-06",
+      prompt_label: "오늘의 글감",
+      write_path: `/write?campaignKey=${WRITING_EVENT_KEY}&campaignPromptKey=${todayPrompt.key}`,
+    },
+    today_prompt: {
+      ...todayPrompt,
+      write_path: `/write?campaignKey=${WRITING_EVENT_KEY}&campaignPromptKey=${todayPrompt.key}`,
+    },
+    prompts,
+    progress_steps: prompts.map((prompt) => ({
+      ...prompt,
+      state: prompt.day < 23 ? "completed" : prompt.day === 23 ? "current" : "upcoming",
+    })),
+  };
+}
+
 async function mockGuidedHelpApis(page: Page) {
   await page.route("**/api/**", async (route) => {
     const url = new URL(route.request().url());
@@ -109,6 +152,15 @@ async function mockGuidedHelpApis(page: Page) {
           event_key: WRITING_EVENT_KEY,
           posts: [],
         }),
+      });
+      return;
+    }
+
+    if (isApiRequest(route, `/api/writing-events/${WRITING_EVENT_KEY}`)) {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(writingEventStatusFixture()),
       });
       return;
     }
