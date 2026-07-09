@@ -186,6 +186,10 @@ export async function updateTodayPromptWidgetSnapshot(
   );
 }
 
+export async function clearTodayPromptWidgetSnapshot(): Promise<WidgetSnapshotResult> {
+  return removeWidgetSnapshot(TODAY_PROMPT_WIDGET_SNAPSHOT_KEY, "today prompt");
+}
+
 export async function saveSentenceFrameWidgetSnapshot(
   post: SentenceFrameSourcePost
 ): Promise<WidgetSnapshotResult> {

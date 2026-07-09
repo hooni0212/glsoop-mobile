@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useFocusEffect } from "@react-navigation/native";
 import {
   Pressable,
   RefreshControl,
@@ -20,10 +21,10 @@ import { DailyWritingCampaignStepper } from "@/features/writingCampaign/DailyWri
 import {
   buildDailyWritingPromptWritePath,
   getDailyWritingCampaignFocusSteps,
-  getDailyWritingCampaignStatus,
   type DailyWritingCampaignStatus,
 } from "@/features/writingCampaign/dailyWritingCampaign";
 import {
+  fetchWritingEventStatus,
   fetchWritingEventPosts,
   type WritingEventPost,
 } from "@/features/writingCampaign/writingEventPosts";
@@ -54,23 +55,36 @@ export default function GrowthRecordsScreen() {
   const router = useRouter();
   const { summary, achievements, loading, error, refetch } = useGrowthData();
   const [refreshing, setRefreshing] = useState(false);
+  const [dailyWritingCampaign, setDailyWritingCampaign] =
+    useState<DailyWritingCampaignStatus | null>(null);
   const [writingEventPosts, setWritingEventPosts] = useState<WritingEventPost[]>([]);
   const [writingEventPostsLoading, setWritingEventPostsLoading] = useState(false);
   const [writingEventPostsError, setWritingEventPostsError] = useState<string | null>(null);
-  const dailyWritingCampaign = useMemo(() => getDailyWritingCampaignStatus(), []);
   const dailyWritingProgressSteps = useMemo(
-    () => getDailyWritingCampaignFocusSteps(dailyWritingCampaign),
+    () =>
+      dailyWritingCampaign
+        ? getDailyWritingCampaignFocusSteps(dailyWritingCampaign)
+        : [],
     [dailyWritingCampaign]
   );
 
-  const loadWritingEventPosts = useCallback(
+  const loadWritingCampaign = useCallback(
     async (silent = false) => {
       if (!silent) setWritingEventPostsLoading(true);
       setWritingEventPostsError(null);
       try {
-        const posts = await fetchWritingEventPosts(dailyWritingCampaign.campaignKey);
+        const status = await fetchWritingEventStatus();
+        setDailyWritingCampaign(status);
+        if (!status) {
+          setWritingEventPosts([]);
+          return;
+        }
+
+        const posts = await fetchWritingEventPosts(status.campaignKey);
         setWritingEventPosts(posts);
       } catch (postsError) {
+        setDailyWritingCampaign(null);
+        setWritingEventPosts([]);
         setWritingEventPostsError(
           postsError instanceof Error
             ? postsError.message
@@ -80,7 +94,7 @@ export default function GrowthRecordsScreen() {
         if (!silent) setWritingEventPostsLoading(false);
       }
     },
-    [dailyWritingCampaign.campaignKey]
+    []
   );
 
   const completedAchievements = useMemo(
@@ -92,9 +106,11 @@ export default function GrowthRecordsScreen() {
     trackGrowthTelemetry("growth_screen_viewed", { screen: "records" });
   }, []);
 
-  useEffect(() => {
-    void loadWritingEventPosts();
-  }, [loadWritingEventPosts]);
+  useFocusEffect(
+    useCallback(() => {
+      void loadWritingCampaign();
+    }, [loadWritingCampaign])
+  );
 
   const onRefresh = useCallback(async () => {
     if (refreshing || loading) return;
@@ -102,7 +118,7 @@ export default function GrowthRecordsScreen() {
     trackGrowthTelemetry("growth_refresh_started", { screen: "records" });
     setRefreshing(true);
     try {
-      await Promise.all([refetch(), loadWritingEventPosts(true)]);
+      await Promise.all([refetch(), loadWritingCampaign(true)]);
       trackGrowthTelemetry("growth_refresh_succeeded", {
         screen: "records",
         durationMs: Date.now() - startedAt,
@@ -116,9 +132,10 @@ export default function GrowthRecordsScreen() {
     } finally {
       setRefreshing(false);
     }
-  }, [refreshing, loading, refetch, loadWritingEventPosts]);
+  }, [refreshing, loading, refetch, loadWritingCampaign]);
 
   const openDailyWritingPrompt = useCallback(() => {
+    if (!dailyWritingCampaign) return;
     trackGrowthTelemetry("growth_action_clicked", {
       action: "open_daily_writing_prompt_from_records",
     });
@@ -206,11 +223,13 @@ export default function GrowthRecordsScreen() {
 
             <RecordHero summary={summary} />
 
-            <DailyWritingCampaignProgressCard
-              status={dailyWritingCampaign}
-              steps={dailyWritingProgressSteps}
-              onPressWrite={openDailyWritingPrompt}
-            />
+            {dailyWritingCampaign ? (
+              <DailyWritingCampaignProgressCard
+                status={dailyWritingCampaign}
+                steps={dailyWritingProgressSteps}
+                onPressWrite={openDailyWritingPrompt}
+              />
+            ) : null}
 
             <RecordSection title="이번 흐름">
               <RecordRow label="오늘 XP" value={`+${summary.todayXp}`} />
@@ -243,14 +262,16 @@ export default function GrowthRecordsScreen() {
               </View>
             ) : null}
 
-            <WritingEventPostsCarousel
-              posts={writingEventPosts}
-              loading={writingEventPostsLoading}
-              error={writingEventPostsError}
-              promptLabel={dailyWritingCampaign.promptLabel}
-              onPressWrite={openDailyWritingPrompt}
-              onPressPost={openWritingEventPost}
-            />
+            {dailyWritingCampaign ? (
+              <WritingEventPostsCarousel
+                posts={writingEventPosts}
+                loading={writingEventPostsLoading}
+                error={writingEventPostsError}
+                promptLabel={dailyWritingCampaign.promptLabel}
+                onPressWrite={openDailyWritingPrompt}
+                onPressPost={openWritingEventPost}
+              />
+            ) : null}
           </>
         ) : null}
       </ScrollView>

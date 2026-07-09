@@ -238,6 +238,72 @@ function writingEventPostsFixture() {
   ];
 }
 
+function writingEventStatusFixture() {
+  const prompts = Array.from({ length: 30 }, (_, index) => {
+    const day = index + 1;
+    const paddedDay = String(day).padStart(2, "0");
+    const overrides: Record<number, { key: string; title: string; body: string }> = {
+      1: {
+        key: "day-01-first-sentence",
+        title: "오늘 가장 기억에 남은 장면",
+        body: "오늘 하루 중 유독 마음에 남은 순간을 한 문장으로 시작해보세요.",
+      },
+      3: {
+        key: "day-03-small-kindness",
+        title: "작은 친절을 받은 순간",
+        body: "크지는 않았지만 기억에 남은 친절한 말이나 행동을 기록해보세요.",
+      },
+      23: {
+        key: "day-23-window-light",
+        title: "창가에 남은 빛",
+        body: "오늘 오래 바라본 빛이나 풍경을 적어보세요.",
+      },
+    };
+    const prompt = overrides[day] ?? {
+      key: `day-${paddedDay}-prompt`,
+      title: `${day}일차 글감`,
+      body: `${day}일차 글감을 적어보세요.`,
+    };
+
+    return {
+      ...prompt,
+      day,
+      defaultCategory: "essay",
+      suggestedHashtags: ["글숲프로젝트"],
+    };
+  });
+  const todayPrompt = prompts[22];
+
+  return {
+    ok: true,
+    event: {
+      key: WRITING_EVENT_KEY,
+      title: "글숲 한달 글쓰기 프로젝트",
+      subtitle: "매일 하나의 글감으로 30일 동안 글을 쌓아가요.",
+      active: true,
+      total_days: 30,
+      current_day: 23,
+      completed_days: 22,
+      remaining_days: 7,
+      progress_percent: 77,
+      local_date_key: "2026-07-06",
+      prompt_label: "오늘의 글감",
+      write_path: `/write?campaignKey=${WRITING_EVENT_KEY}&campaignPromptKey=${todayPrompt.key}`,
+      prompt_set_key: "current-2026-06",
+      prompt_set_starts_local_date: "2026-06-14",
+    },
+    today_prompt: {
+      ...todayPrompt,
+      write_path: `/write?campaignKey=${WRITING_EVENT_KEY}&campaignPromptKey=${todayPrompt.key}`,
+    },
+    prompts,
+    progress_steps: prompts.map((prompt) => ({
+      ...prompt,
+      state: prompt.day < 23 ? "completed" : prompt.day === 23 ? "current" : "upcoming",
+    })),
+  };
+}
+
 async function freezeCampaignDate(page: Page) {
   await page.addInitScript(() => {
     const fixedNow = new Date("2026-07-06T03:00:00.000Z").valueOf();
@@ -313,6 +379,15 @@ async function mockGrowthApis(page: Page, options: GrowthMockOptions = {}) {
           event_key: WRITING_EVENT_KEY,
           posts: writingEventPostsFixture(),
         }),
+      });
+      return;
+    }
+
+    if (isApiRequest(route, `/api/writing-events/${WRITING_EVENT_KEY}`)) {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(writingEventStatusFixture()),
       });
       return;
     }
