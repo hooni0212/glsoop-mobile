@@ -1,7 +1,7 @@
 import React from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { router, usePathname } from "expo-router";
+import { router, useLocalSearchParams, usePathname } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useAuth } from "@/auth/AuthContext";
@@ -13,6 +13,10 @@ import { useToast } from "@/feedback/ToastProvider";
 import { buildAuthRoute } from "@/lib/authRedirect";
 import { normalizeApiError, type AppErrorModel } from "@/lib/errors";
 import { openExternalUrl } from "@/lib/externalLinks";
+import {
+  normalizePremiumEntrySource,
+  trackPremiumFunnelEvent,
+} from "@/lib/premiumDiscovery";
 import {
   hasActiveEntitlement,
   listMyEntitlements,
@@ -53,8 +57,17 @@ const BENEFITS = [
   },
 ] as const;
 
+function isPurchaseCancellation(error: unknown) {
+  const row = error && typeof error === "object" ? (error as Record<string, unknown>) : {};
+  const code = String(row.code || "").toLowerCase();
+  const message = error instanceof Error ? error.message.toLowerCase() : "";
+  return code.includes("cancel") || message.includes("cancel") || message.includes("취소");
+}
+
 export default function PremiumPaywallScreen() {
   const pathname = usePathname();
+  const params = useLocalSearchParams<{ source?: string }>();
+  const entrySource = normalizePremiumEntrySource(params.source);
   const { token } = useAuth();
   const { showToast } = useToast();
   const [plans, setPlans] = React.useState<PremiumPlan[]>([]);
@@ -65,6 +78,13 @@ export default function PremiumPaywallScreen() {
   const [restoreBusy, setRestoreBusy] = React.useState(false);
   const [manageBusy, setManageBusy] = React.useState(false);
   const [processingPurchase, setProcessingPurchase] = React.useState(false);
+  const paywallViewTrackedRef = React.useRef(false);
+
+  React.useEffect(() => {
+    if (paywallViewTrackedRef.current) return;
+    paywallViewTrackedRef.current = true;
+    void trackPremiumFunnelEvent("premium_paywall_view", entrySource);
+  }, [entrySource]);
 
   const loadEntitlementState = React.useCallback(async () => {
     if (!token) {
@@ -106,6 +126,9 @@ export default function PremiumPaywallScreen() {
         const active = await loadEntitlementState();
 
         if (result.entitlementActive || active) {
+          void trackPremiumFunnelEvent("premium_purchase_success", entrySource, {
+            store_sku: purchase.productId || null,
+          });
           showToast("글숲 프리미엄이 활성화됐어요.", { tone: "success" });
         } else if (result.purchaseStatus === "pending") {
           showToast("결제 검증이 접수됐어요. 잠시 후 다시 확인해주세요.", {
@@ -118,6 +141,10 @@ export default function PremiumPaywallScreen() {
         }
       } catch (e) {
         const normalized = normalizeApiError(e);
+        void trackPremiumFunnelEvent("premium_purchase_error", entrySource, {
+          stage: "verify",
+          error_kind: normalized.kind,
+        });
         if (normalized.kind === "auth") {
           router.replace(buildAuthRoute("/(auth)/login", pathname));
           return;
@@ -128,7 +155,7 @@ export default function PremiumPaywallScreen() {
         setBusySku(null);
       }
     },
-    [loadEntitlementState, pathname, showToast]
+    [entrySource, loadEntitlementState, pathname, showToast]
   );
 
   React.useEffect(() => {
@@ -144,16 +171,23 @@ export default function PremiumPaywallScreen() {
       onError: (purchaseError) => {
         const code = String(purchaseError.code || "");
         if (code.toLowerCase().includes("cancel")) {
+          void trackPremiumFunnelEvent("premium_purchase_cancel", entrySource, {
+            stage: "store",
+          });
           setBusySku(null);
           return;
         }
+        void trackPremiumFunnelEvent("premium_purchase_error", entrySource, {
+          stage: "store",
+          error_code: code || null,
+        });
         setBusySku(null);
         showToast(purchaseError.message || "결제를 시작하지 못했어요.", {
           tone: "error",
         });
       },
     });
-  }, [handleVerifiedPurchase, showToast]);
+  }, [entrySource, handleVerifiedPurchase, showToast]);
 
   async function onPurchase(plan: PremiumPlan) {
     if (isPremium || busySku || processingPurchase) return;
@@ -166,12 +200,32 @@ export default function PremiumPaywallScreen() {
       return;
     }
 
+    void trackPremiumFunnelEvent("premium_plan_select", entrySource, {
+      store_sku: plan.storeSku,
+      billing_period: plan.billingPeriod,
+    });
     setBusySku(plan.storeSku);
     try {
+      void trackPremiumFunnelEvent("premium_purchase_start", entrySource, {
+        store_sku: plan.storeSku,
+        billing_period: plan.billingPeriod,
+      });
       await requestPremiumPurchase(plan.storeSku);
     } catch (e) {
       setBusySku(null);
+      if (isPurchaseCancellation(e)) {
+        void trackPremiumFunnelEvent("premium_purchase_cancel", entrySource, {
+          stage: "request",
+          store_sku: plan.storeSku,
+        });
+        return;
+      }
       const normalized = normalizeApiError(e);
+      void trackPremiumFunnelEvent("premium_purchase_error", entrySource, {
+        stage: "request",
+        store_sku: plan.storeSku,
+        error_kind: normalized.kind,
+      });
       showToast(normalized.description || normalized.title, { tone: "error" });
     }
   }
@@ -302,7 +356,7 @@ export default function PremiumPaywallScreen() {
           </View>
           <Text style={styles.title}>글숲 프리미엄</Text>
           <Text style={styles.description}>
-            글을 저장하고 공유하는 흐름은 더 조용하게, 프로필은 더 선명하게 관리해요.
+            광고 없이 글을 저장하고, 내 이름과 사진으로 문장을 더 오래 간직해요.
           </Text>
         </View>
 

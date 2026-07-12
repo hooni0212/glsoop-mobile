@@ -10,6 +10,7 @@ import { SafetyReasonModal } from "@/components/safety/SafetyReasonModal";
 import { AppEmpty } from "@/components/state/AppEmpty";
 import { AppError } from "@/components/state/AppError";
 import { AppLoading } from "@/components/state/AppLoading";
+import { PremiumFeaturePrompt } from "@/components/premium/PremiumFeaturePrompt";
 import { PostTopBar } from "@/components/post/PostTopBar";
 import { releaseConfig } from "@/config/release";
 import { useAuth } from "@/auth/AuthContext";
@@ -48,6 +49,7 @@ import { normalizePostBackgroundTemplateId } from "@/lib/postBackgroundTemplates
 import { resolvePostLayout } from "@/lib/postLayout";
 import { resolvePostRenderImages } from "@/lib/postRenderImages";
 import { showRewardedPhotoSaveAd } from "@/lib/rewardedPhotoSaveAd";
+import { buildPremiumPath, trackPremiumFunnelEvent } from "@/lib/premiumDiscovery";
 import { tokens } from "@/theme/tokens";
 import type { Post } from "@/types/post";
 import * as FileSystem from "expo-file-system/legacy";
@@ -286,15 +288,21 @@ function isPhotoSaveAdCancelled(error: unknown) {
   );
 }
 
+type RewardedPhotoSaveChoice = "cancel" | "ad" | "premium";
+
 function confirmRewardedPhotoSave(policy: PhotoSavePolicy) {
   const freeLimit =
     typeof policy.free_daily_limit === "number"
       ? `하루 ${policy.free_daily_limit}회 무료 저장을 모두 사용했어요.`
       : "무료 저장 횟수를 모두 사용했어요.";
 
-  return new Promise<boolean>((resolve) => {
+  void trackPremiumFunnelEvent("premium_entry_impression", "photo_save", {
+    placement: "rewarded_ad_prompt",
+  });
+
+  return new Promise<RewardedPhotoSaveChoice>((resolve) => {
     let settled = false;
-    const settle = (value: boolean) => {
+    const settle = (value: RewardedPhotoSaveChoice) => {
       if (settled) return;
       settled = true;
       resolve(value);
@@ -304,10 +312,11 @@ function confirmRewardedPhotoSave(policy: PhotoSavePolicy) {
       "광고 보고 사진 저장",
       `${freeLimit}\n광고를 끝까지 보면 이 글 이미지를 사진 앱에 저장할 수 있어요.`,
       [
-        { text: "나중에", style: "cancel", onPress: () => settle(false) },
-        { text: "광고 보기", onPress: () => settle(true) },
+        { text: "나중에", style: "cancel", onPress: () => settle("cancel") },
+        { text: "프리미엄 보기", onPress: () => settle("premium") },
+        { text: "광고 보기", onPress: () => settle("ad") },
       ],
-      { cancelable: true, onDismiss: () => settle(false) }
+      { cancelable: true, onDismiss: () => settle("cancel") }
     );
   });
 }
@@ -351,6 +360,8 @@ export default function PostDetail() {
   const [canManagePost, setCanManagePost] = useState(false);
   const [manageBusy, setManageBusy] = useState(false);
   const [sentenceFramePending, setSentenceFramePending] = useState(false);
+  const [premiumPromptVisible, setPremiumPromptVisible] = useState(false);
+  const [signaturePremiumPromptVisible, setSignaturePremiumPromptVisible] = useState(false);
   const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
   const [comments, setComments] = useState<PostComment[]>([]);
   const [commentsLoading, setCommentsLoading] = useState(false);
@@ -911,8 +922,15 @@ export default function PostDetail() {
       throw new Error("사진 저장 광고를 준비하지 못했어요. 잠시 후 다시 시도해주세요.");
     }
 
-    const shouldShowAd = await confirmRewardedPhotoSave(policy);
-    if (!shouldShowAd) {
+    const photoSaveChoice = await confirmRewardedPhotoSave(policy);
+    if (photoSaveChoice === "premium") {
+      void trackPremiumFunnelEvent("premium_entry_click", "photo_save", {
+        placement: "rewarded_ad_prompt",
+      });
+      router.push(buildPremiumPath("photo_save") as never);
+      throw createPhotoSaveAdCancelledError();
+    }
+    if (photoSaveChoice !== "ad") {
       throw createPhotoSaveAdCancelledError();
     }
 
@@ -1238,8 +1256,7 @@ export default function PostDetail() {
         const entitlements = await listMyEntitlements();
         if (!hasActiveEntitlement(entitlements)) {
           setSafetyMenuVisible(false);
-          showToast("문장 액자는 글숲 프리미엄에서 사용할 수 있어요.", { tone: "error" });
-          router.push("/premium" as never);
+          setPremiumPromptVisible(true);
           return;
         }
 
@@ -1902,7 +1919,7 @@ export default function PostDetail() {
               </View>
             ) : null}
 
-            {canUseAuthorSignature && Platform.OS !== "web" ? (
+            {Platform.OS !== "web" && canUseAuthorSignature ? (
               <Pressable
                 onPress={() => setAuthorSignatureEnabled((current) => !current)}
                 disabled={Boolean(shareSubmitting)}
@@ -1925,6 +1942,27 @@ export default function PostDetail() {
                   size={22}
                   color={authorSignatureEnabled ? tokens.colors.green700 : tokens.colors.textMuted}
                 />
+              </Pressable>
+            ) : Platform.OS !== "web" && token ? (
+              <Pressable
+                onPress={() => {
+                  setShareModalVisible(false);
+                  setSignaturePremiumPromptVisible(true);
+                }}
+                disabled={Boolean(shareSubmitting)}
+                style={[
+                  styles.shareSignatureToggle,
+                  shareSubmitting && styles.bookmarkModalListItemDisabled,
+                ]}
+                testID="post-share-author-signature-premium-btn"
+              >
+                <View style={styles.shareSignatureTextWrap}>
+                  <Text style={styles.shareSignatureTitle}>작가 이름 표시</Text>
+                  <Text style={styles.shareSignatureHint}>공유 이미지에 내 이름을 담아요</Text>
+                </View>
+                <View style={styles.valuePill}>
+                  <Text style={styles.valuePillText}>프리미엄</Text>
+                </View>
               </Pressable>
             ) : null}
 
@@ -2154,6 +2192,22 @@ export default function PostDetail() {
           setReportReasonVisible(false);
         }}
         onSubmit={({ reasonCode, detail }) => submitPostReport(reasonCode, detail)}
+      />
+      <PremiumFeaturePrompt
+        visible={premiumPromptVisible}
+        source="sentence_frame"
+        title="좋아하는 문장을 홈 화면에 두세요"
+        description="문장 액자는 저장한 글을 조용한 위젯으로 간직하는 프리미엄 기능이에요."
+        benefit="직접 고른 문장을 홈 화면 위젯에 담을 수 있어요."
+        onClose={() => setPremiumPromptVisible(false)}
+      />
+      <PremiumFeaturePrompt
+        visible={signaturePremiumPromptVisible}
+        source="author_signature"
+        title="내 문장에 작가 이름을 남기세요"
+        description="공유용 글 이미지에 공개 이름을 더해 글의 출처와 작가 정체성을 함께 전할 수 있어요."
+        benefit="프리미엄에서는 저장·공유 이미지에 작가 이름을 선택해서 표시할 수 있어요."
+        onClose={() => setSignaturePremiumPromptVisible(false)}
       />
     </SafeAreaView>
   );

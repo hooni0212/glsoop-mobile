@@ -53,6 +53,9 @@ export const authorScreenStyles = StyleSheet.create({
     shadowOffset: { width: 0, height: 8 },
     elevation: 3,
   },
+  premiumDiscoveryWrap: {
+    marginTop: tokens.space.md,
+  },
   profilePaperWash: {
     position: "absolute",
     top: 18,

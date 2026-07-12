@@ -18,6 +18,7 @@ import { FeedCard } from "@/components/FeedCard";
 import { AppEmpty } from "@/components/state/AppEmpty";
 import { AppError } from "@/components/state/AppError";
 import { AppLoading } from "@/components/state/AppLoading";
+import { PremiumFeaturePrompt } from "@/components/premium/PremiumFeaturePrompt";
 import { buildAuthRoute } from "@/lib/authRedirect";
 import { useToast } from "@/feedback/ToastProvider";
 import { getLike, setLike, useLikeSnapshot } from "@/features/likes/likeStore";
@@ -79,6 +80,7 @@ export default function BookmarksScreen() {
   const [renamingListId, setRenamingListId] = useState<string | null>(null);
   const [likePending, setLikePending] = useState<Record<string, boolean>>({});
   const [sentenceFramePending, setSentenceFramePending] = useState<Record<string, boolean>>({});
+  const [premiumPromptVisible, setPremiumPromptVisible] = useState(false);
   const createTarget = useGuidedHelpTarget("bookmarks", "create");
   const folderTarget = useGuidedHelpTarget("bookmarks", "folder");
   const renameTarget = useGuidedHelpTarget("bookmarks", "rename");
@@ -391,8 +393,7 @@ export default function BookmarksScreen() {
       try {
         const entitlements = await listMyEntitlements();
         if (!hasActiveEntitlement(entitlements)) {
-          showToast("문장 액자는 글숲 프리미엄에서 사용할 수 있어요.", { tone: "error" });
-          router.push("/premium" as never);
+          setPremiumPromptVisible(true);
           return;
         }
 
@@ -724,6 +725,14 @@ export default function BookmarksScreen() {
           {renderItemsScreen()}
         </>
       )}
+      <PremiumFeaturePrompt
+        visible={premiumPromptVisible}
+        source="sentence_frame"
+        title="좋아하는 문장을 홈 화면에 두세요"
+        description="문장 액자는 저장한 글을 조용한 위젯으로 간직하는 프리미엄 기능이에요."
+        benefit="직접 고른 문장을 홈 화면 위젯에 담을 수 있어요."
+        onClose={() => setPremiumPromptVisible(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -776,6 +785,11 @@ function BookmarkFeedItem({
         <Text style={styles.sentenceFrameBtnText}>
           {sentenceFramePending ? "문장 액자에 담는 중..." : "문장 액자에 담기"}
         </Text>
+        {!sentenceFramePending ? (
+          <View style={styles.premiumPill}>
+            <Text style={styles.premiumPillText}>프리미엄</Text>
+          </View>
+        ) : null}
       </Pressable>
     </View>
   );
@@ -1043,6 +1057,19 @@ const styles = StyleSheet.create({
     backgroundColor: tokens.colors.green050,
     paddingHorizontal: tokens.space.md,
     paddingVertical: 10,
+  },
+  premiumPill: {
+    borderRadius: tokens.radius.pill,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    backgroundColor: tokens.colors.green050,
+    borderWidth: 1,
+    borderColor: tokens.colors.green100,
+  },
+  premiumPillText: {
+    fontSize: 10,
+    fontWeight: "900",
+    color: tokens.colors.green700,
   },
   sentenceFrameBtnText: {
     fontSize: 13,

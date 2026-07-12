@@ -18,6 +18,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 
 import { FeedCard } from "@/components/FeedCard";
+import { PremiumDiscoveryCard } from "@/components/premium/PremiumDiscoveryCard";
 import { SafetyReasonModal } from "@/components/safety/SafetyReasonModal";
 import { useBookmarkSnapshot } from "@/features/bookmarks/bookmarkStore";
 import { PostTopBar } from "@/components/post/PostTopBar";
@@ -46,6 +47,7 @@ import { resolveRuntimeLegalDocumentUrl } from "@/services/runtimeConfigService"
 import { toggleFollowUser } from "@/services/userService";
 import { ApiError } from "@/lib/errors";
 import { useRuntimeLegalConfig } from "@/hooks/useRuntimeLegalConfig";
+import { usePremiumStatus } from "@/hooks/usePremiumStatus";
 import { useBottomDock } from "@/navigation/bottomDock";
 import {
   useGuidedHelpTarget,
@@ -273,6 +275,7 @@ export default function Author({
   const joinedAtLabel = joinedAtValue ? `${formatKstDateKorean(joinedAtValue)} 가입` : "";
   const showProfileCustomize = forceOwnProfile || isOwnProfile(viewer, user);
   const showFollowButton = Boolean(userId && !showProfileCustomize);
+  const { isPremium } = usePremiumStatus(showProfileCustomize);
   const profilePhotoUrl = toProfilePhotoDisplayUrl(
     user?.profile_photo_thumbnail_url ??
       user?.profilePhotoThumbnailUrl ??
@@ -854,6 +857,12 @@ export default function Author({
             ) : null}
           </View>
 
+          {showProfileCustomize ? (
+            <View style={authorScreenStyles.premiumDiscoveryWrap}>
+              <PremiumDiscoveryCard source="me_card" isPremium={isPremium} />
+            </View>
+          ) : null}
+
           <View style={authorScreenStyles.sectionRow}>
             <Text style={authorScreenStyles.sectionLabel}>작성한 글</Text>
             <View style={authorScreenStyles.sortRow}>
@@ -926,6 +935,7 @@ export default function Author({
       promptBlockAuthor,
       promptReportAuthor,
       showProfileCustomize,
+      isPremium,
       showFollowButton,
       settingsTarget,
       overflowOpen,

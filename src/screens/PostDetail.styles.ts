@@ -705,6 +705,19 @@ export function createPostDetailStyles(actionBarHeight: number, topInset = 0) {
       fontSize: 12,
       fontWeight: "700",
     },
+    valuePill: {
+      borderRadius: tokens.radius.pill,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      backgroundColor: tokens.colors.surface,
+      borderWidth: 1,
+      borderColor: tokens.colors.green100,
+    },
+    valuePillText: {
+      color: tokens.colors.green700,
+      fontSize: 10,
+      fontWeight: "900",
+    },
     modalActionList: {
       marginTop: 16,
       gap: 10,
