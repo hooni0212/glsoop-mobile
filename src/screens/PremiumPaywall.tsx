@@ -23,6 +23,7 @@ import {
 } from "@/services/entitlementService";
 import {
   getPremiumPlans,
+  getPremiumIosSupportReason,
   isPremiumIosSupported,
   openPremiumSubscriptionManagement,
   requestPremiumPurchase,
@@ -292,13 +293,31 @@ export default function PremiumPaywallScreen() {
   }
 
   if (!isPremiumIosSupported()) {
+    const supportReason = getPremiumIosSupportReason();
     return (
       <SafeAreaView style={styles.safe}>
         <TopBar />
         <View style={styles.center}>
           <AppEmpty
-            title="iOS 결제부터 준비 중이에요"
-            description="프리미엄 결제는 iOS 앱내 구입으로 먼저 연결하고, Android 결제는 추후 반영할 예정이에요."
+            title={
+              supportReason === "native_module_unavailable"
+                ? "이 빌드에서는 결제를 열 수 없어요"
+                : "iOS 결제부터 준비 중이에요"
+            }
+            description={
+              supportReason === "native_module_unavailable"
+                ? "현재 앱에 App Store 결제 모듈이 포함되어 있지 않아요. 최신 개발 빌드나 TestFlight 앱에서 다시 확인해주세요."
+                : "프리미엄 결제는 iOS 앱내 구입으로 먼저 연결하고, Android 결제는 추후 반영할 예정이에요."
+            }
+            primaryAction={
+              supportReason === "native_module_unavailable"
+                ? {
+                    label: "App Store 구독 관리",
+                    onPress: () =>
+                      void openExternalUrl("https://apps.apple.com/account/subscriptions"),
+                  }
+                : undefined
+            }
           />
         </View>
       </SafeAreaView>
