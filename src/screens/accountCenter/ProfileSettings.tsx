@@ -10,6 +10,7 @@ import { useToast } from "@/feedback/ToastProvider";
 import { AppEmpty } from "@/components/state/AppEmpty";
 import { AppError } from "@/components/state/AppError";
 import { AppLoading } from "@/components/state/AppLoading";
+import { PremiumFeaturePrompt } from "@/components/premium/PremiumFeaturePrompt";
 import { buildAuthRoute } from "@/lib/authRedirect";
 import { apiGet, apiPut } from "@/lib/api";
 import { normalizeApiError } from "@/lib/errors";
@@ -39,6 +40,7 @@ export default function AccountCenterProfileSettingsScreen() {
   const [profilePhoto, setProfilePhoto] = React.useState<ProfilePhoto | null>(null);
   const [photoUploadAllowed, setPhotoUploadAllowed] = React.useState(false);
   const [photoBusy, setPhotoBusy] = React.useState(false);
+  const [premiumPromptVisible, setPremiumPromptVisible] = React.useState(false);
 
   const loadMe = React.useCallback(async () => {
     setLoading(true);
@@ -70,7 +72,7 @@ export default function AccountCenterProfileSettingsScreen() {
       showToast("프로필 사진 업로드는 준비 중이에요.", { tone: "error" });
       return;
     }
-    router.push("/premium" as never);
+    setPremiumPromptVisible(true);
   }
 
   async function onSave() {
@@ -409,6 +411,14 @@ export default function AccountCenterProfileSettingsScreen() {
           </View>
         </View>
       </ScrollView>
+      <PremiumFeaturePrompt
+        visible={premiumPromptVisible}
+        source="profile_photo"
+        title="내 사진으로 작가 프로필을 완성하세요"
+        description="기본 아바타 대신 직접 고른 사진으로 글숲 안의 나를 표현할 수 있어요."
+        benefit="프리미엄에서는 프로필 사진을 업로드하고 언제든 교체할 수 있어요."
+        onClose={() => setPremiumPromptVisible(false)}
+      />
     </SafeAreaView>
   );
 }

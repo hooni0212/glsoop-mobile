@@ -1,18 +1,6 @@
 import { Platform } from "react-native";
-import {
-  fetchProducts,
-  finishTransaction,
-  getAvailablePurchases,
-  getStorefront,
-  initConnection,
-  purchaseErrorListener,
-  purchaseUpdatedListener,
-  requestPurchase,
-  restorePurchases,
-  showManageSubscriptionsIOS,
-  type ProductOrSubscription,
-  type Purchase,
-} from "expo-iap";
+import type { ProductOrSubscription, Purchase } from "expo-iap";
+import { requireOptionalNativeModule } from "expo-modules-core";
 
 import { apiGet, apiPost } from "@/lib/api";
 import { ApiError } from "@/lib/errors";
@@ -105,6 +93,38 @@ export type PremiumRestoreSummary = {
 };
 
 let connectionPromise: Promise<boolean> | null = null;
+let expoIapModule: typeof import("expo-iap") | null = null;
+let expoIapLoadAttempted = false;
+
+function loadExpoIapModule() {
+  if (expoIapModule) return expoIapModule;
+  if (expoIapLoadAttempted) return null;
+  expoIapLoadAttempted = true;
+
+  try {
+    if (!requireOptionalNativeModule("ExpoIap")) {
+      logger.warn("[premium-store] ExpoIap native module is not registered");
+      return null;
+    }
+    // Native module이 없는 Expo Go/이전 개발 빌드에서 화면 import 자체가 실패하지 않도록 지연 로드한다.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    expoIapModule = require("expo-iap") as typeof import("expo-iap");
+    return expoIapModule;
+  } catch (error) {
+    logger.warn("[premium-store] expo-iap native module unavailable", { error });
+    return null;
+  }
+}
+
+function requireExpoIapModule() {
+  const module = loadExpoIapModule();
+  if (!module) {
+    throw new Error(
+      "현재 앱 빌드에는 App Store 결제 모듈이 포함되어 있지 않아요. 최신 개발 빌드나 TestFlight 앱에서 다시 시도해주세요."
+    );
+  }
+  return module;
+}
 
 function text(value: unknown) {
   return typeof value === "string" && value.trim() ? value.trim() : "";
@@ -194,14 +214,21 @@ function productLogSummary(product: ProductOrSubscription) {
 }
 
 export function isPremiumIosSupported() {
-  return Platform.OS === "ios";
+  return Platform.OS === "ios" && Boolean(loadExpoIapModule());
+}
+
+export function getPremiumIosSupportReason() {
+  if (Platform.OS !== "ios") return "platform" as const;
+  if (!loadExpoIapModule()) return "native_module_unavailable" as const;
+  return "supported" as const;
 }
 
 export async function ensurePremiumStoreConnection() {
   if (!isPremiumIosSupported()) return false;
+  const iap = requireExpoIapModule();
 
   if (!connectionPromise) {
-    connectionPromise = initConnection().catch((error) => {
+    connectionPromise = iap.initConnection().catch((error) => {
       connectionPromise = null;
       throw error;
     });
@@ -221,7 +248,7 @@ export async function getPremiumCatalogPlans(): Promise<PremiumCatalogPlan[]> {
 
 async function fetchStorefrontForLog() {
   try {
-    return await getStorefront();
+    return await requireExpoIapModule().getStorefront();
   } catch (error) {
     logger.warn("[premium-store] failed to read storefront", { error });
     return "";
@@ -231,7 +258,7 @@ async function fetchStorefrontForLog() {
 async function fetchPremiumStoreProducts(skus: string[]) {
   const fetchByType = async (type: "subs" | "all") => {
     try {
-      const fetchedProducts = await fetchProducts({ skus, type });
+      const fetchedProducts = await requireExpoIapModule().fetchProducts({ skus, type });
       return Array.isArray(fetchedProducts)
         ? (fetchedProducts as ProductOrSubscription[])
         : [];
@@ -412,7 +439,7 @@ export async function requestPremiumPurchase(storeSku: string) {
 
   await ensurePremiumStoreConnection();
   const appAccountToken = await getPremiumAppAccountToken();
-  await requestPurchase({
+  await requireExpoIapModule().requestPurchase({
     type: "subs",
     request: {
       apple: { sku: storeSku, appAccountToken },
@@ -465,7 +492,7 @@ export async function verifyPremiumPurchase(
   let transactionFinished = false;
 
   if (purchaseStatus && purchaseStatus !== "pending") {
-    await finishTransaction({ purchase, isConsumable: false });
+    await requireExpoIapModule().finishTransaction({ purchase, isConsumable: false });
     transactionFinished = true;
   }
 
@@ -498,8 +525,9 @@ export async function restorePremiumPurchases(): Promise<PremiumRestoreSummary> 
   }
 
   await ensurePremiumStoreConnection();
-  await restorePurchases();
-  const purchases = await getAvailablePurchases();
+  const iap = requireExpoIapModule();
+  await iap.restorePurchases();
+  const purchases = await iap.getAvailablePurchases();
   const premiumPurchases = purchases.filter(isPremiumPurchase);
   const results: PremiumPurchaseResult[] = [];
   const failures: PremiumRestoreFailure[] = [];
@@ -530,7 +558,7 @@ export async function openPremiumSubscriptionManagement() {
   }
 
   await ensurePremiumStoreConnection();
-  const changedPurchases = await showManageSubscriptionsIOS();
+  const changedPurchases = await requireExpoIapModule().showManageSubscriptionsIOS();
   const premiumPurchases = Array.isArray(changedPurchases)
     ? changedPurchases.filter(isPremiumPurchase)
     : [];
@@ -546,10 +574,13 @@ export function subscribeToPremiumPurchases({
   onPurchase: (purchase: Purchase) => void;
   onError: (error: { code?: string; message?: string }) => void;
 }) {
-  const purchaseSub = purchaseUpdatedListener((purchase) => {
+  const iap = loadExpoIapModule();
+  if (!iap) return () => undefined;
+
+  const purchaseSub = iap.purchaseUpdatedListener((purchase) => {
     if (isPremiumPurchase(purchase)) onPurchase(purchase);
   });
-  const errorSub = purchaseErrorListener((error) => {
+  const errorSub = iap.purchaseErrorListener((error) => {
     onError(error);
   });
 

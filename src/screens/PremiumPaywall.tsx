@@ -1,7 +1,7 @@
 import React from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { router, usePathname } from "expo-router";
+import { router, useLocalSearchParams, usePathname } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useAuth } from "@/auth/AuthContext";
@@ -14,11 +14,16 @@ import { buildAuthRoute } from "@/lib/authRedirect";
 import { normalizeApiError, type AppErrorModel } from "@/lib/errors";
 import { openExternalUrl } from "@/lib/externalLinks";
 import {
+  normalizePremiumEntrySource,
+  trackPremiumFunnelEvent,
+} from "@/lib/premiumDiscovery";
+import {
   hasActiveEntitlement,
   listMyEntitlements,
 } from "@/services/entitlementService";
 import {
   getPremiumPlans,
+  getPremiumIosSupportReason,
   isPremiumIosSupported,
   openPremiumSubscriptionManagement,
   requestPremiumPurchase,
@@ -53,8 +58,17 @@ const BENEFITS = [
   },
 ] as const;
 
+function isPurchaseCancellation(error: unknown) {
+  const row = error && typeof error === "object" ? (error as Record<string, unknown>) : {};
+  const code = String(row.code || "").toLowerCase();
+  const message = error instanceof Error ? error.message.toLowerCase() : "";
+  return code.includes("cancel") || message.includes("cancel") || message.includes("취소");
+}
+
 export default function PremiumPaywallScreen() {
   const pathname = usePathname();
+  const params = useLocalSearchParams<{ source?: string }>();
+  const entrySource = normalizePremiumEntrySource(params.source);
   const { token } = useAuth();
   const { showToast } = useToast();
   const [plans, setPlans] = React.useState<PremiumPlan[]>([]);
@@ -65,6 +79,13 @@ export default function PremiumPaywallScreen() {
   const [restoreBusy, setRestoreBusy] = React.useState(false);
   const [manageBusy, setManageBusy] = React.useState(false);
   const [processingPurchase, setProcessingPurchase] = React.useState(false);
+  const paywallViewTrackedRef = React.useRef(false);
+
+  React.useEffect(() => {
+    if (paywallViewTrackedRef.current) return;
+    paywallViewTrackedRef.current = true;
+    void trackPremiumFunnelEvent("premium_paywall_view", entrySource);
+  }, [entrySource]);
 
   const loadEntitlementState = React.useCallback(async () => {
     if (!token) {
@@ -106,6 +127,9 @@ export default function PremiumPaywallScreen() {
         const active = await loadEntitlementState();
 
         if (result.entitlementActive || active) {
+          void trackPremiumFunnelEvent("premium_purchase_success", entrySource, {
+            store_sku: purchase.productId || null,
+          });
           showToast("글숲 프리미엄이 활성화됐어요.", { tone: "success" });
         } else if (result.purchaseStatus === "pending") {
           showToast("결제 검증이 접수됐어요. 잠시 후 다시 확인해주세요.", {
@@ -118,6 +142,10 @@ export default function PremiumPaywallScreen() {
         }
       } catch (e) {
         const normalized = normalizeApiError(e);
+        void trackPremiumFunnelEvent("premium_purchase_error", entrySource, {
+          stage: "verify",
+          error_kind: normalized.kind,
+        });
         if (normalized.kind === "auth") {
           router.replace(buildAuthRoute("/(auth)/login", pathname));
           return;
@@ -128,7 +156,7 @@ export default function PremiumPaywallScreen() {
         setBusySku(null);
       }
     },
-    [loadEntitlementState, pathname, showToast]
+    [entrySource, loadEntitlementState, pathname, showToast]
   );
 
   React.useEffect(() => {
@@ -144,16 +172,23 @@ export default function PremiumPaywallScreen() {
       onError: (purchaseError) => {
         const code = String(purchaseError.code || "");
         if (code.toLowerCase().includes("cancel")) {
+          void trackPremiumFunnelEvent("premium_purchase_cancel", entrySource, {
+            stage: "store",
+          });
           setBusySku(null);
           return;
         }
+        void trackPremiumFunnelEvent("premium_purchase_error", entrySource, {
+          stage: "store",
+          error_code: code || null,
+        });
         setBusySku(null);
         showToast(purchaseError.message || "결제를 시작하지 못했어요.", {
           tone: "error",
         });
       },
     });
-  }, [handleVerifiedPurchase, showToast]);
+  }, [entrySource, handleVerifiedPurchase, showToast]);
 
   async function onPurchase(plan: PremiumPlan) {
     if (isPremium || busySku || processingPurchase) return;
@@ -166,12 +201,32 @@ export default function PremiumPaywallScreen() {
       return;
     }
 
+    void trackPremiumFunnelEvent("premium_plan_select", entrySource, {
+      store_sku: plan.storeSku,
+      billing_period: plan.billingPeriod,
+    });
     setBusySku(plan.storeSku);
     try {
+      void trackPremiumFunnelEvent("premium_purchase_start", entrySource, {
+        store_sku: plan.storeSku,
+        billing_period: plan.billingPeriod,
+      });
       await requestPremiumPurchase(plan.storeSku);
     } catch (e) {
       setBusySku(null);
+      if (isPurchaseCancellation(e)) {
+        void trackPremiumFunnelEvent("premium_purchase_cancel", entrySource, {
+          stage: "request",
+          store_sku: plan.storeSku,
+        });
+        return;
+      }
       const normalized = normalizeApiError(e);
+      void trackPremiumFunnelEvent("premium_purchase_error", entrySource, {
+        stage: "request",
+        store_sku: plan.storeSku,
+        error_kind: normalized.kind,
+      });
       showToast(normalized.description || normalized.title, { tone: "error" });
     }
   }
@@ -238,13 +293,31 @@ export default function PremiumPaywallScreen() {
   }
 
   if (!isPremiumIosSupported()) {
+    const supportReason = getPremiumIosSupportReason();
     return (
       <SafeAreaView style={styles.safe}>
         <TopBar />
         <View style={styles.center}>
           <AppEmpty
-            title="iOS 결제부터 준비 중이에요"
-            description="프리미엄 결제는 iOS 앱내 구입으로 먼저 연결하고, Android 결제는 추후 반영할 예정이에요."
+            title={
+              supportReason === "native_module_unavailable"
+                ? "이 빌드에서는 결제를 열 수 없어요"
+                : "iOS 결제부터 준비 중이에요"
+            }
+            description={
+              supportReason === "native_module_unavailable"
+                ? "현재 앱에 App Store 결제 모듈이 포함되어 있지 않아요. 최신 개발 빌드나 TestFlight 앱에서 다시 확인해주세요."
+                : "프리미엄 결제는 iOS 앱내 구입으로 먼저 연결하고, Android 결제는 추후 반영할 예정이에요."
+            }
+            primaryAction={
+              supportReason === "native_module_unavailable"
+                ? {
+                    label: "App Store 구독 관리",
+                    onPress: () =>
+                      void openExternalUrl("https://apps.apple.com/account/subscriptions"),
+                  }
+                : undefined
+            }
           />
         </View>
       </SafeAreaView>
@@ -302,7 +375,7 @@ export default function PremiumPaywallScreen() {
           </View>
           <Text style={styles.title}>글숲 프리미엄</Text>
           <Text style={styles.description}>
-            글을 저장하고 공유하는 흐름은 더 조용하게, 프로필은 더 선명하게 관리해요.
+            광고 없이 글을 저장하고, 내 글에 출처를 남기며 문장을 더 오래 간직해요.
           </Text>
         </View>
 
