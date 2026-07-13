@@ -8,6 +8,7 @@ import { FeedSection } from "@/components/home/FeedSection";
 import { SafetyActionSheet } from "@/components/safety/SafetyActionSheet";
 import { SafetyReasonModal } from "@/components/safety/SafetyReasonModal";
 import { HomeHeader } from "@/components/home/HomeHeader";
+import { PremiumDiscoveryCard } from "@/components/premium/PremiumDiscoveryCard";
 import { blurActiveElementBeforeRouteChange } from "@/lib/webFocus";
 import { homeScreenStyles, writingCampaignNoticeStyles } from "@/screens/Home.styles";
 import { useFeed } from "@/features/feed/useFeed";
@@ -44,6 +45,12 @@ import {
   getAcknowledgedPublicUgcNoticeVersion,
 } from "@/auth/publicUgcNoticeStorage";
 import { hasCompletedAppOnboardingTour } from "@/onboarding/appOnboardingTourStorage";
+import { usePremiumStatus } from "@/hooks/usePremiumStatus";
+import { isPremiumIapEnabled } from "@/lib/premiumFeatureFlags";
+import {
+  canShowPremiumHomeDiscovery,
+  dismissPremiumHomeDiscovery,
+} from "@/lib/premiumDiscoveryStorage";
 import {
   addPostToBookmarkList,
   createBookmarkList,
@@ -82,11 +89,15 @@ export default function Home() {
   const [reportReasonVisible, setReportReasonVisible] = useState(false);
   const [blockConfirmVisible, setBlockConfirmVisible] = useState(false);
   const [writingCampaignNoticeVisible, setWritingCampaignNoticeVisible] = useState(false);
+  const [premiumDiscoveryVisible, setPremiumDiscoveryVisible] = useState(false);
   const [reportSubmitting, setReportSubmitting] = useState(false);
   const [blockSubmitting, setBlockSubmitting] = useState(false);
   const [writingCampaignStatus, setWritingCampaignStatus] =
     useState<DailyWritingCampaignStatus | null>(null);
   const useWritingCampaignDialog = Platform.OS === "android";
+  const { isPremium, loading: premiumStatusLoading } = usePremiumStatus(
+    Boolean(token) && isPremiumIapEnabled()
+  );
   const writingCampaignNoticeBlocked =
     safetyMenuVisible ||
     reportReasonVisible ||
@@ -226,6 +237,30 @@ export default function Home() {
     writingCampaignNoticeBlocked,
     writingCampaignStatus,
   ]);
+
+  React.useEffect(() => {
+    if (!token || !isPremiumIapEnabled() || premiumStatusLoading || isPremium) {
+      setPremiumDiscoveryVisible(false);
+      return;
+    }
+
+    let mounted = true;
+    void Promise.all([canShowPremiumHomeDiscovery(), hasCompletedAppOnboardingTour()])
+      .then(([allowed, onboardingComplete]) => {
+        if (mounted) setPremiumDiscoveryVisible(allowed && onboardingComplete);
+      })
+      .catch(() => {
+        if (mounted) setPremiumDiscoveryVisible(false);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, [isPremium, premiumStatusLoading, token]);
+
+  const dismissPremiumDiscovery = React.useCallback(() => {
+    setPremiumDiscoveryVisible(false);
+    void dismissPremiumHomeDiscovery();
+  }, []);
 
   const setPending = (postId: string, pending: boolean) => {
     setLikePending((prev) => ({ ...prev, [postId]: pending }));
@@ -545,6 +580,16 @@ export default function Home() {
         active={active}
         onChange={changeCategory}
       />
+
+      {premiumDiscoveryVisible && !writingCampaignNoticeVisible ? (
+        <View style={homeScreenStyles.premiumDiscoveryWrap}>
+          <PremiumDiscoveryCard
+            source="home_discovery"
+            dismissible
+            onDismiss={dismissPremiumDiscovery}
+          />
+        </View>
+      ) : null}
 
       <FeedSection
         items={visibleItems}

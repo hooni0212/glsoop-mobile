@@ -5,6 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { isPremiumIapEnabled } from "@/lib/premiumFeatureFlags";
+import { buildPremiumPath, trackPremiumFunnelEvent } from "@/lib/premiumDiscovery";
 import { tokens } from "@/theme/tokens";
 
 type MenuItem = {
@@ -49,7 +50,7 @@ const BASE_MENU_ITEMS: MenuItem[] = [
 
 const PREMIUM_MENU_ITEM: MenuItem = {
   title: "프리미엄",
-  description: "앱내 구입으로 광고 제거와 프로필 사진 혜택을 관리해요.",
+  description: "광고 없는 사진 저장, 프로필 사진, 글 이미지 작가 서명과 문장 액자를 관리해요.",
   route: "/premium",
   icon: "sparkles-outline",
 };
@@ -59,6 +60,24 @@ export default function AccountCenterEntryScreen() {
   const menuItems = isPremiumIapEnabled()
     ? [...BASE_MENU_ITEMS.slice(0, 2), PREMIUM_MENU_ITEM, ...BASE_MENU_ITEMS.slice(2)]
     : BASE_MENU_ITEMS;
+
+  const openMenuItem = (item: MenuItem) => {
+    if (item.route === "/premium") {
+      void trackPremiumFunnelEvent("premium_entry_click", "account_center", {
+        placement: "account_center_menu",
+      });
+      router.push(buildPremiumPath("account_center") as never);
+      return;
+    }
+    router.push(item.route as never);
+  };
+
+  React.useEffect(() => {
+    if (!isPremiumIapEnabled()) return;
+    void trackPremiumFunnelEvent("premium_entry_impression", "account_center", {
+      placement: "account_center_menu",
+    });
+  }, []);
 
   return (
     <View style={styles.safe}>
@@ -95,7 +114,7 @@ export default function AccountCenterEntryScreen() {
               {menuItems.map((item) => (
                 <Pressable
                   key={item.route}
-                  onPress={() => router.push(item.route as never)}
+                  onPress={() => openMenuItem(item)}
                   style={styles.menuItem}
                 >
                   <View style={styles.menuIconWrap}>

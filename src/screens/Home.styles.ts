@@ -16,6 +16,10 @@ export const homeScreenStyles = StyleSheet.create({
     flex: 1,
     backgroundColor: tokens.colors.bg,
   },
+  premiumDiscoveryWrap: {
+    paddingHorizontal: 20,
+    paddingBottom: 10,
+  },
 });
 
 export const writingCampaignNoticeStyles = StyleSheet.create({

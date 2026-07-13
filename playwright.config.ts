@@ -34,6 +34,7 @@ export default defineConfig({
       ...process.env,
       EXPO_WEB_PORT: String(webPort),
       EXPO_PUBLIC_E2E: "true",
+      EXPO_PUBLIC_PREMIUM_IAP_ENABLED: "true",
     },
   },
 });
