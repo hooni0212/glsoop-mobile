@@ -133,7 +133,6 @@ function createShareFileName(postId: string, pageNumber = 1) {
 async function downloadPostShareImage(
   postId: string,
   imageUrl: string,
-  bearerToken?: string | null,
   pageNumber = 1
 ) {
   const cacheDirectory = FileSystem.cacheDirectory;
@@ -141,14 +140,9 @@ async function downloadPostShareImage(
     throw new Error("공유 이미지를 임시 저장할 공간을 찾지 못했어요.");
   }
 
-  const downloadOptions = bearerToken
-    ? { headers: { Authorization: `Bearer ${bearerToken}` } }
-    : undefined;
-
   const downloaded = await FileSystem.downloadAsync(
     imageUrl,
-    `${cacheDirectory}${createShareFileName(postId, pageNumber)}`,
-    downloadOptions
+    `${cacheDirectory}${createShareFileName(postId, pageNumber)}`
   );
 
   if (downloaded.status < 200 || downloaded.status >= 300) {
@@ -168,11 +162,9 @@ function getPostShareImagePageCount(post: Post) {
 function buildPostShareImageUrls({
   post,
   template,
-  includeAuthorSignature,
 }: {
   post: Post;
   template: ReturnType<typeof normalizePostBackgroundTemplateId>;
-  includeAuthorSignature: boolean;
 }) {
   const pageCount = getPostShareImagePageCount(post);
   return Array.from({ length: pageCount }, (_item, index) =>
@@ -180,8 +172,6 @@ function buildPostShareImageUrls({
       format: "png",
       template,
       page: index + 1,
-      authorSignature: includeAuthorSignature,
-      authorSignaturePosition: "bottomLeft",
     })
   );
 }
@@ -346,8 +336,6 @@ export default function PostDetail() {
   const [bookmarkPending, setBookmarkPending] = useState<Record<string, boolean>>({});
   const [shareSubmitting, setShareSubmitting] = useState<ShareMode | null>(null);
   const [photoSavePermissionDeniedOnce, setPhotoSavePermissionDeniedOnce] = useState(false);
-  const [canUseAuthorSignature, setCanUseAuthorSignature] = useState(false);
-  const [authorSignatureEnabled, setAuthorSignatureEnabled] = useState(true);
   const [canManagePost, setCanManagePost] = useState(false);
   const [manageBusy, setManageBusy] = useState(false);
   const [sentenceFramePending, setSentenceFramePending] = useState(false);
@@ -468,38 +456,6 @@ export default function PostDetail() {
       task.cancel();
     };
   }, [post?.id]);
-
-  React.useEffect(() => {
-    let cancelled = false;
-
-    if (!token) {
-      setCanUseAuthorSignature(false);
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    const task = InteractionManager.runAfterInteractions(() => {
-      void (async () => {
-        try {
-          const entitlements = await listMyEntitlements();
-          if (!cancelled) {
-            setCanUseAuthorSignature(hasActiveEntitlement(entitlements));
-          }
-        } catch (entitlementError) {
-          if (__DEV__) {
-            logger.warn("[share] failed to load entitlements", entitlementError);
-          }
-          if (!cancelled) setCanUseAuthorSignature(false);
-        }
-      })();
-    });
-
-    return () => {
-      cancelled = true;
-      task.cancel();
-    };
-  }, [token]);
 
   const handleAuthError = React.useCallback(async () => {
     await signOut();
@@ -989,17 +945,13 @@ export default function PostDetail() {
         const shareTemplate = normalizePostBackgroundTemplateId(
           post.renderImages?.template ?? postLayout.presetId
         );
-        const includeAuthorSignature = canUseAuthorSignature && authorSignatureEnabled;
         const imageUrls = buildPostShareImageUrls({
           post,
           template: shareTemplate,
-          includeAuthorSignature,
         });
         const imageUrl = imageUrls[0] ?? buildRenderedPostShareImageUrl(post.id, {
           format: "png",
           template: shareTemplate,
-          authorSignature: includeAuthorSignature,
-          authorSignaturePosition: "bottomLeft",
         });
         const imageMeta = {
           ...baseMeta,
@@ -1008,7 +960,7 @@ export default function PostDetail() {
           image_url: imageUrl,
           image_urls: imageUrls,
           image_count: imageUrls.length,
-          author_signature: includeAuthorSignature,
+          author_signature_policy: "post_author_auto",
         };
 
         if (mode === "imageSave") {
@@ -1054,7 +1006,6 @@ export default function PostDetail() {
             const imageUri = await downloadPostShareImage(
               post.id,
               imageUrl,
-              includeAuthorSignature ? token : null,
               1
             );
             await shareImageFile({ imageUri, shareTitle });
@@ -1080,7 +1031,6 @@ export default function PostDetail() {
               await downloadPostShareImage(
                 post.id,
                 nextImageUrl,
-                includeAuthorSignature ? token : null,
                 index + 1
               )
             );
@@ -1142,7 +1092,6 @@ export default function PostDetail() {
         const imageUri = await downloadPostShareImage(
           post.id,
           imageUrl,
-          includeAuthorSignature ? token : null,
           1
         );
         await shareImageFile({ imageUri, shareTitle });
@@ -1900,32 +1849,6 @@ export default function PostDetail() {
                   {getShareProgressMessage(shareSubmitting)}
                 </Text>
               </View>
-            ) : null}
-
-            {canUseAuthorSignature && Platform.OS !== "web" ? (
-              <Pressable
-                onPress={() => setAuthorSignatureEnabled((current) => !current)}
-                disabled={Boolean(shareSubmitting)}
-                accessibilityRole="checkbox"
-                accessibilityState={{ checked: authorSignatureEnabled }}
-                style={[
-                  styles.shareSignatureToggle,
-                  shareSubmitting && styles.bookmarkModalListItemDisabled,
-                ]}
-                testID="post-share-author-signature-toggle"
-              >
-                <View style={styles.shareSignatureTextWrap}>
-                  <Text style={styles.shareSignatureTitle}>작가 이름 표시</Text>
-                  <Text style={styles.shareSignatureHint} numberOfLines={1}>
-                    {authorName}
-                  </Text>
-                </View>
-                <Ionicons
-                  name={authorSignatureEnabled ? "checkmark-circle" : "ellipse-outline"}
-                  size={22}
-                  color={authorSignatureEnabled ? tokens.colors.green700 : tokens.colors.textMuted}
-                />
-              </Pressable>
             ) : null}
 
             <View style={styles.bookmarkModalList}>

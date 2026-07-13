@@ -150,7 +150,7 @@ function normalizeCatalogPlan(row: StoreCatalogProduct): PremiumCatalogPlan | nu
     title: text(row.title) || "글숲 프리미엄",
     description:
       text(row.description) ||
-      "광고 없이 사진을 저장하고 프로필 사진과 작가 서명을 사용할 수 있어요.",
+      "광고 없이 사진을 저장하고 내 글 이미지에 작가 서명을 자동으로 남길 수 있어요.",
     billingPeriod: billingPeriodFromMeta(row.meta),
   };
 }
