@@ -43,8 +43,8 @@ const BENEFITS = [
   },
   {
     icon: "create-outline",
-    title: "작가 서명 이미지",
-    body: "공유용 글 이미지에 내 공개 이름을 함께 담을 수 있어요.",
+    title: "글 이미지 작가 서명",
+    body: "내 글이 저장되거나 공유될 때 모든 이미지에 글숲 닉네임이 자동으로 남아요.",
   },
   {
     icon: "albums-outline",
