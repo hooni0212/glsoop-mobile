@@ -29,17 +29,11 @@ import {
   updateMarketingPushConsent,
   type MarketingPushConsent,
 } from "@/services/marketingPushService";
+import { navigateFromAppRoot } from "@/navigation/rootNavigation";
 import { tokens } from "@/theme/tokens";
 
 function replaceWithRootLogin() {
-  try {
-    if (router.canDismiss()) {
-      router.dismissAll();
-    }
-  } catch {
-    // dismissAll can be unavailable in preview/navigation edge cases.
-  }
-  router.replace("/(auth)/login");
+  void navigateFromAppRoot("/(auth)/login");
 }
 
 export default function AccountCenterSecuritySettingsScreen() {

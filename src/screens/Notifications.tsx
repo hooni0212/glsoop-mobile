@@ -26,6 +26,7 @@ import { buildAuthRoute } from "@/lib/authRedirect";
 import { formatRelativeKorean } from "@/lib/dateTime";
 import { normalizeApiError, type AppErrorModel } from "@/lib/errors";
 import * as haptics from "@/lib/haptics";
+import { resetToAppRoot } from "@/navigation/rootNavigation";
 import {
   listNotifications,
   markNotificationRead,
@@ -66,7 +67,7 @@ function TopBar() {
       router.back();
       return;
     }
-    router.replace("/(tabs)");
+    void resetToAppRoot();
   }, []);
 
   return (

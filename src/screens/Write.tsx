@@ -27,6 +27,7 @@ import { AppLoading } from "@/components/state/AppLoading";
 import { useToast } from "@/feedback/ToastProvider";
 import { normalizeApiError, type AppErrorModel } from "@/lib/errors";
 import { logger } from "@/lib/logger";
+import { navigateFromAppRoot, resetToAppRoot } from "@/navigation/rootNavigation";
 import type { PostBackgroundTemplateId } from "@/lib/postBackgroundTemplates";
 import type { PostFontKey } from "@/lib/postContent";
 import {
@@ -388,7 +389,7 @@ export default function Write() {
         navigation.goBack();
         return;
       }
-      router.replace("/(tabs)");
+      void resetToAppRoot();
     },
     buildConfirm: ({ action, proceed, dismiss }) => ({
       title: "작성중인 내용이 있어요.",
@@ -682,7 +683,7 @@ export default function Write() {
     setSubmitSuccess(false);
     allowNextLeave();
     resetWriteState();
-    router.replace("/(tabs)");
+    void resetToAppRoot();
   }, [allowNextLeave, resetWriteState]);
 
   const onSuccessViewPost = useCallback(() => {
@@ -691,7 +692,7 @@ export default function Write() {
     setSubmitSuccess(false);
     allowNextLeave();
     resetWriteState();
-    router.replace(`/posts/${postId}`);
+    void navigateFromAppRoot(`/posts/${postId}`);
   }, [createdPostId, allowNextLeave, resetWriteState]);
 
   // 1) 키보드 상태 감지

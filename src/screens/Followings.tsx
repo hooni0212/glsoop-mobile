@@ -10,6 +10,7 @@ import { AppLoading } from "@/components/state/AppLoading";
 import { apiGet } from "@/lib/api";
 import { normalizeApiError, type AppErrorModel } from "@/lib/errors";
 import { normalizePublicDisplayName, pickOptionalText } from "@/lib/publicDisplayName";
+import { navigateFromAppRoot } from "@/navigation/rootNavigation";
 import { softPanelShadowStyle } from "@/theme/shadows";
 import { tokens } from "@/theme/tokens";
 
@@ -87,7 +88,7 @@ export default function FollowingsScreen() {
       router.back();
       return;
     }
-    router.replace("/me");
+    void navigateFromAppRoot("/me");
   }, []);
 
   const renderItem = useCallback(({ item }: { item: FollowingUser }) => {
