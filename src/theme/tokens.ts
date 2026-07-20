@@ -2,11 +2,14 @@ export const tokens = {
   colors: {
     bg: '#fffefa',
     bgMuted: '#f8f6f1',
+    paper: '#fbf6eb',
+    paperBorder: 'rgba(80,58,32,0.10)',
     surface: '#ffffff',
     surfaceStrong: '#fffefa',
     white: '#ffffff',
     border: '#e0e0da',
     borderStrong: '#d8d4c9',
+    divider: 'rgba(45,59,50,0.10)',
     overlay: 'rgba(0,0,0,0.35)',
     overlaySoft: 'rgba(0,0,0,0.25)',
 

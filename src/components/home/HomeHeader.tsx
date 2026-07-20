@@ -27,18 +27,17 @@ export function HomeHeader({
           onPress={onPressSearch}
           hitSlop={12}
           style={({ pressed }) => [
-            homeHeaderStyles.searchPill,
-            pressed && homeHeaderStyles.searchPillPressed,
+            homeHeaderStyles.iconBtn,
+            pressed && homeHeaderStyles.iconBtnPressed,
           ]}
           accessibilityRole="button"
           accessibilityLabel="검색"
         >
           <Ionicons
             name="search-outline"
-            size={18}
-            color={tokens.colors.textMuted}
+            size={22}
+            color={tokens.colors.text}
           />
-          <Text style={homeHeaderStyles.searchText}>검색</Text>
         </Pressable>
 
         {showNotifications ? (
@@ -58,8 +57,8 @@ export function HomeHeader({
           >
             <Ionicons
               name="notifications-outline"
-              size={21}
-              color={tokens.colors.textMuted}
+              size={22}
+              color={tokens.colors.text}
             />
             {hasUnreadNotifications ? (
               <View

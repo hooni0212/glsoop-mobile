@@ -1,6 +1,7 @@
 import { StyleSheet } from "react-native";
 
 import { tokens } from "@/theme/tokens";
+import { typography } from "@/theme/typography";
 
 /**
  * Home screen design tokens + styles (single source of truth).
@@ -188,49 +189,32 @@ export const homeHeaderStyles = StyleSheet.create({
     width: "100%",
     maxWidth: 393,
     alignSelf: "center",
-    paddingTop: 8,
-    paddingHorizontal: 20,
-    paddingBottom: 10,
+    paddingTop: 10,
+    paddingHorizontal: 22,
+    paddingBottom: 8,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: 14,
+    gap: 18,
   },
   brand: {
-    fontSize: 28,
-    fontWeight: "900",
-    letterSpacing: 0,
+    ...typography.brand,
     color: tokens.colors.green900,
     flexShrink: 0,
-  },
-  searchPill: {
-    width: 142,
-    minHeight: 42,
-    borderRadius: tokens.radius.pill,
-    backgroundColor: tokens.colors.bgMuted,
-    paddingHorizontal: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  searchPillPressed: {
-    opacity: 0.76,
   },
   actions: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 2,
     flexShrink: 1,
   },
   iconBtn: {
-    width: 42,
-    height: 42,
-    borderRadius: tokens.radius.pill,
+    width: 44,
+    height: 44,
+    borderRadius: tokens.radius.md,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: tokens.colors.bgMuted,
-    borderWidth: 1,
-    borderColor: tokens.colors.border,
+    backgroundColor: "transparent",
     position: "relative",
   },
   iconBtnActive: {
@@ -238,26 +222,21 @@ export const homeHeaderStyles = StyleSheet.create({
     borderColor: tokens.colors.green700,
   },
   iconBtnPressed: {
-    opacity: 0.76,
+    backgroundColor: tokens.colors.bgMuted,
   },
   iconBtnDisabled: {
     opacity: 0.5,
   },
   notificationDot: {
     position: "absolute",
-    top: 9,
-    right: 9,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    top: 8,
+    right: 8,
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
     backgroundColor: tokens.colors.green700,
     borderWidth: 1,
-    borderColor: tokens.colors.bgMuted,
-  },
-  searchText: {
-    fontSize: tokens.font.body,
-    fontWeight: "800",
-    color: tokens.colors.textMuted,
+    borderColor: tokens.colors.bg,
   },
 });
 
@@ -266,23 +245,22 @@ export const categoryChipsStyles = StyleSheet.create({
     width: "100%",
     maxWidth: 393,
     alignSelf: "center",
-    paddingTop: 2,
-    paddingBottom: 8,
-    paddingHorizontal: 18,
+    paddingTop: 0,
+    paddingBottom: 10,
+    paddingHorizontal: 22,
   },
   content: {
-    minHeight: 38,
+    minHeight: 44,
     flexDirection: "row",
     alignItems: "center",
-    borderBottomWidth: 1,
-    borderBottomColor: tokens.colors.border,
+    gap: 26,
   },
   chip: {
-    flex: 1,
-    minHeight: 38,
+    minHeight: 44,
     alignItems: "center",
     justifyContent: "center",
     position: "relative",
+    paddingHorizontal: 1,
   },
   chipActive: {
     backgroundColor: "transparent",
@@ -292,9 +270,9 @@ export const categoryChipsStyles = StyleSheet.create({
   },
   activeLine: {
     position: "absolute",
-    left: "20%",
-    right: "20%",
-    bottom: -1,
+    left: 1,
+    width: 18,
+    bottom: 3,
     height: 2,
     borderRadius: tokens.radius.pill,
     backgroundColor: "transparent",
@@ -303,12 +281,11 @@ export const categoryChipsStyles = StyleSheet.create({
     backgroundColor: tokens.colors.green700,
   },
   chipText: {
-    fontSize: 14,
-    fontWeight: "800",
+    ...typography.tabLabel,
     color: tokens.colors.textMuted,
   },
   chipTextActive: {
-    color: tokens.colors.green700,
+    color: tokens.colors.text,
   },
 });
 
@@ -321,23 +298,24 @@ export const feedSectionStyles = StyleSheet.create({
     paddingBottom: 18,
   },
   sectionLabel: {
-    fontSize: 14,
-    fontWeight: "900",
-    color: tokens.colors.textMuted,
-    marginBottom: 12,
-    marginLeft: 20,
-    letterSpacing: 0,
+    ...typography.sectionTitle,
+    color: tokens.colors.text,
+    marginBottom: 10,
+    marginLeft: 22,
   },
   footer: {
     paddingVertical: tokens.space.lg,
   },
   headerSpacerTop: {
-    height: 4,
+    height: 6,
   },
   headerSpacerAfterLabel: {
-    height: 0,
+    height: 2,
   },
   itemSeparator: {
-    height: 22,
+    height: 28,
+    marginHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: tokens.colors.divider,
   },
 });
