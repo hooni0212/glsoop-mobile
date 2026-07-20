@@ -6,6 +6,10 @@ const TEST_USER_ID = 1;
 const DRAFTS_KEY = `glsoop:write:drafts:v2:user:${TEST_USER_ID}`;
 const PUBLIC_UGC_NOTICE_STORAGE_KEY = "glsoop.public_ugc_notice_ack";
 const GUIDED_HELP_DISMISSED_KEY = "glsoop.guidedHelp.dismissed.v1";
+const PREVIEW_IMAGE_PNG = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9Z4x8AAAAASUVORK5CYII=",
+  "base64"
+);
 type CapturedPostPayload = Record<string, unknown> & {
   layout_json?: Record<string, any>;
 };
@@ -107,6 +111,35 @@ async function getDrafts(page: Page) {
   }, DRAFTS_KEY);
 }
 
+function buildPreviewSessionResponse(sessionId: string, pageCount = 1) {
+  const images = Array.from(
+    { length: pageCount },
+    (_item, index) =>
+      `/api/feed-images/preview/sessions/${sessionId}?page=${index + 1}`
+  );
+
+  return {
+    ok: true,
+    preview_session_id: sessionId,
+    image_url: images[0],
+    primary_image: images[0],
+    images,
+    has_multiple: pageCount > 1,
+    render_images: {
+      preview_session_id: sessionId,
+      primary_image: images[0],
+      images,
+      has_multiple: pageCount > 1,
+      page_count: pageCount,
+      page_cap: 8,
+      is_truncated: false,
+      template: "paper01",
+      scale: 1,
+      expires_at: "2099-01-01T00:00:00.000Z",
+    },
+  };
+}
+
 test.describe("Write 임시저장 UX", () => {
   test.beforeEach(async ({ page }) => {
     await page.route("**/api/me", async (route) => {
@@ -137,6 +170,13 @@ test.describe("Write 임시저장 UX", () => {
         status: 200,
         contentType: "application/json",
         body: JSON.stringify({ ok: true, posts: [], hasMore: false }),
+      });
+    });
+    await page.route("**/api/feed-images/preview/sessions**", async (route) => {
+      await route.fulfill({
+        status: 503,
+        contentType: "application/json",
+        body: JSON.stringify({ ok: false, message: "preview unavailable in default fixture" }),
       });
     });
 
@@ -241,18 +281,32 @@ test.describe("Write 임시저장 UX", () => {
     expect(layoutJson?.footer_box?.letter_spacing).toBeUndefined();
   });
 
-  test("S2-1-1: 미리보기는 서버 세션 없이 로컬 렌더를 사용하고 저장 payload와 같은 입력을 쓴다", async ({ page }) => {
+  test("S2-1-1: 로컬 미리보기 뒤 서버 최종 렌더로 전환하고 모든 글꼴을 같은 payload로 보낸다", async ({ page }) => {
     await clearDrafts(page);
     await page.unroute("**/api/posts**");
+    await page.unroute("**/api/feed-images/preview/sessions**");
 
     let previewSessionCalls = 0;
+    const previewPayloads: CapturedPostPayload[] = [];
     const capture: { payload?: CapturedPostPayload } = {};
     await page.route("**/api/feed-images/preview/sessions**", async (route) => {
+      if (route.request().method() === "GET") {
+        await route.fulfill({
+          status: 200,
+          contentType: "image/png",
+          body: PREVIEW_IMAGE_PNG,
+        });
+        return;
+      }
+
       previewSessionCalls += 1;
+      previewPayloads.push(route.request().postDataJSON() as CapturedPostPayload);
       await route.fulfill({
-        status: 503,
+        status: 200,
         contentType: "application/json",
-        body: JSON.stringify({ ok: false, message: "preview sessions should not be called" }),
+        body: JSON.stringify(
+          buildPreviewSessionResponse(`preview-font-${previewSessionCalls}`)
+        ),
       });
     });
     await page.route("**/api/posts", async (route) => {
@@ -281,15 +335,103 @@ test.describe("Write 임시저장 UX", () => {
     await submitBtn.click();
     await expect(page.getByText("미리보기", { exact: true })).toBeVisible();
     await expect(page.getByTestId("write-preview-page-1")).toBeVisible();
-    expect(previewSessionCalls).toBe(0);
+    await expect(page.getByTestId("write-preview-render-status")).toContainText(
+      "최종 렌더"
+    );
+    await expect(page.getByTestId("write-server-preview-page-1")).toBeVisible();
+    expect(previewSessionCalls).toBe(1);
+    expect(previewPayloads[0]?.content).toBe(
+      "<!--FONT:serif-->로컬 미리보기 본문"
+    );
+
+    await page.getByTestId("write-font-sans").click();
+    await expect.poll(() => previewSessionCalls).toBe(2);
+    await expect(page.getByTestId("write-preview-render-status")).toContainText(
+      "최종 렌더"
+    );
+    expect(previewPayloads[1]?.content).toBe(
+      "<!--FONT:sans-->로컬 미리보기 본문"
+    );
 
     await page.getByTestId("write-font-hand").click();
+    await expect.poll(() => previewSessionCalls).toBe(3);
+    await expect(page.getByTestId("write-preview-render-status")).toContainText(
+      "최종 렌더"
+    );
+    expect(previewPayloads[2]?.content).toBe(
+      "<!--FONT:hand-->로컬 미리보기 본문"
+    );
+
     await submitBtn.click();
     await expect(page.getByText("완료되었어요")).toBeVisible();
-    expect(previewSessionCalls).toBe(0);
+    expect(previewSessionCalls).toBe(3);
     expect(capture.payload?.content).toBe("<!--FONT:hand-->로컬 미리보기 본문");
     expect(capture.payload?.content_pages).toEqual(["로컬 미리보기 본문"]);
     expect(capture.payload?.layout_json?.text_box).toBeTruthy();
+  });
+
+  test("S2-1-2: 서버 미리보기가 실패해도 로컬 렌더와 제출 흐름을 유지한다", async ({ page }) => {
+    await clearDrafts(page);
+    await page.goto("/write");
+    await page.getByTestId("write-title-input").fill("오프라인 미리보기");
+    await page.getByTestId("write-body-input").fill("서버 오류에도 작성은 이어져요.");
+
+    await page.getByTestId("write-submit-btn").click();
+    await expect(page.getByTestId("write-preview-page-1")).toBeVisible();
+    await expect(page.getByTestId("write-preview-render-status")).toContainText(
+      "로컬 미리보기"
+    );
+    await expect(page.getByTestId("write-preview-retry")).toBeVisible();
+    await expect(page.getByTestId("write-submit-btn")).toBeEnabled();
+  });
+
+  test("S2-1-3: 늦게 도착한 이전 서버 응답이 최신 글꼴 미리보기를 덮지 않는다", async ({ page }) => {
+    await clearDrafts(page);
+    await page.unroute("**/api/feed-images/preview/sessions**");
+
+    let previewSessionCalls = 0;
+    await page.route("**/api/feed-images/preview/sessions**", async (route) => {
+      if (route.request().method() === "GET") {
+        await route.fulfill({
+          status: 200,
+          contentType: "image/png",
+          body: PREVIEW_IMAGE_PNG,
+        });
+        return;
+      }
+
+      previewSessionCalls += 1;
+      const callNumber = previewSessionCalls;
+      if (callNumber === 1) {
+        // 첫 요청을 늦춰 두 번째 요청보다 나중에 도착하는 실제 경합을 만든다.
+        await new Promise((resolve) => setTimeout(resolve, 1_000));
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(
+          buildPreviewSessionResponse(
+            `preview-race-${callNumber}`,
+            callNumber === 1 ? 1 : 2
+          )
+        ),
+      });
+    });
+
+    await page.goto("/write");
+    await page.getByTestId("write-body-input").fill("응답 경합 테스트 본문");
+    await page.getByTestId("write-submit-btn").click();
+    await expect.poll(() => previewSessionCalls).toBe(1);
+
+    await page.getByTestId("write-font-hand").click();
+    await expect.poll(() => previewSessionCalls).toBe(2);
+    await expect(page.getByText(/총 2장$/)).toBeVisible();
+    await expect(page.getByTestId("write-preview-render-status")).toContainText(
+      "최종 렌더"
+    );
+
+    await page.waitForTimeout(1_100);
+    await expect(page.getByText(/총 2장$/)).toBeVisible();
   });
 
   test("S2-2: 세부 조정은 기본 닫힘이며 열면 위치/크기 미세 조정이 가능하다", async ({ page }) => {
