@@ -9,6 +9,7 @@ import { AppEmpty } from "@/components/state/AppEmpty";
 import { AppError } from "@/components/state/AppError";
 import { AppLoading } from "@/components/state/AppLoading";
 import { buildAuthRoute } from "@/lib/authRedirect";
+import { navigateFromAppRoot } from "@/navigation/rootNavigation";
 import { useToast } from "@/feedback/ToastProvider";
 import { refreshMyCosmetics, useMyCosmetics } from "@/features/cosmetics/useMyCosmetics";
 import { type MeResponse } from "@/features/me/accountCenter";
@@ -320,12 +321,12 @@ export default function ProfileCustomizeScreen() {
       setDirty(false);
       showToast("저장했어요", { tone: "success" });
       await refreshMyCosmetics(true);
-      router.replace("/me");
+      await navigateFromAppRoot("/me");
     } catch (err) {
       const normalized = normalizeApiError(err);
       if (normalized.kind === "auth") {
         showToast("로그인이 필요해요", { tone: "error" });
-        router.replace(buildAuthRoute("/(auth)/login", pathname));
+        await navigateFromAppRoot(buildAuthRoute("/(auth)/login", pathname));
         return;
       }
 
@@ -376,7 +377,7 @@ export default function ProfileCustomizeScreen() {
             description="프로필 꾸미기는 로그인 후 이용할 수 있어요."
             primaryAction={{
               label: "로그인 하러가기",
-              onPress: () => router.replace(buildAuthRoute("/(auth)/login", pathname)),
+              onPress: () => void navigateFromAppRoot(buildAuthRoute("/(auth)/login", pathname)),
             }}
           />
         </View>

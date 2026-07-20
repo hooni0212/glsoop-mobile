@@ -8,6 +8,7 @@ import { clearBlockedUserIds } from "@/features/safety/blockedUsersStore";
 import { apiPost } from "@/lib/api";
 import { clearAuthToken, getAuthToken, setAuthToken } from "@/lib/authToken";
 import { unregisterStoredPushTokenAsync } from "@/lib/pushNotifications";
+import { resetToAppRoot } from "@/navigation/rootNavigation";
 import { clearSentenceFrameWidgetSnapshot } from "@/services/widgetSnapshotService";
 
 type AuthState = {
@@ -65,6 +66,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await apiPost("/api/logout", {});
     } catch {
       // local token/session cleanup should still continue
+    }
+    try {
+      await resetToAppRoot();
+    } catch {
+      // Navigation cleanup must not prevent local logout completion.
     }
     await clearAuthToken();
     setToken(null);

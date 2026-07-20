@@ -16,6 +16,7 @@ import { AppError } from "@/components/state/AppError";
 import { AppLoading } from "@/components/state/AppLoading";
 import { useToast } from "@/feedback/ToastProvider";
 import { buildAuthRoute } from "@/lib/authRedirect";
+import { navigateFromAppRoot } from "@/navigation/rootNavigation";
 import { normalizeApiError } from "@/lib/errors";
 import { formatDateTime } from "@/features/me/accountCenter";
 import {
@@ -75,7 +76,7 @@ export default function AccountCenterBlockedUsersScreen() {
     } catch (e) {
       const normalized = normalizeApiError(e);
       if (normalized.kind === "auth") {
-        router.replace(buildAuthRoute("/(auth)/login", pathname));
+        await navigateFromAppRoot(buildAuthRoute("/(auth)/login", pathname));
         return;
       }
       showToast(normalized.description || normalized.title, { tone: "error" });
@@ -107,7 +108,7 @@ export default function AccountCenterBlockedUsersScreen() {
             description="차단 목록은 로그인 후 확인할 수 있어요."
             primaryAction={{
               label: "로그인 하러가기",
-              onPress: () => router.replace(buildAuthRoute("/(auth)/login", pathname)),
+              onPress: () => void navigateFromAppRoot(buildAuthRoute("/(auth)/login", pathname)),
             }}
           />
         </View>

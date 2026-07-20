@@ -12,6 +12,7 @@ import { AppError } from "@/components/state/AppError";
 import { AppLoading } from "@/components/state/AppLoading";
 import { PremiumFeaturePrompt } from "@/components/premium/PremiumFeaturePrompt";
 import { buildAuthRoute } from "@/lib/authRedirect";
+import { navigateFromAppRoot } from "@/navigation/rootNavigation";
 import { apiGet, apiPut } from "@/lib/api";
 import { normalizeApiError } from "@/lib/errors";
 import { isPremiumIapEnabled } from "@/lib/premiumFeatureFlags";
@@ -99,7 +100,7 @@ export default function AccountCenterProfileSettingsScreen() {
     } catch (e) {
       const normalized = normalizeApiError(e);
       if (normalized.kind === "auth") {
-        router.replace(buildAuthRoute("/(auth)/login", pathname));
+        await navigateFromAppRoot(buildAuthRoute("/(auth)/login", pathname));
         return;
       }
       setMessage(normalized.description || normalized.title);
@@ -163,7 +164,7 @@ export default function AccountCenterProfileSettingsScreen() {
     } catch (e) {
       const normalized = normalizeApiError(e);
       if (normalized.kind === "auth") {
-        router.replace(buildAuthRoute("/(auth)/login", pathname));
+        await navigateFromAppRoot(buildAuthRoute("/(auth)/login", pathname));
         return;
       }
       showToast(normalized.description || normalized.title, { tone: "error" });
@@ -200,7 +201,7 @@ export default function AccountCenterProfileSettingsScreen() {
           } catch (e) {
             const normalized = normalizeApiError(e);
             if (normalized.kind === "auth") {
-              router.replace(buildAuthRoute("/(auth)/login", pathname));
+              void navigateFromAppRoot(buildAuthRoute("/(auth)/login", pathname));
               return;
             }
             showToast(normalized.description || normalized.title, { tone: "error" });
@@ -233,7 +234,7 @@ export default function AccountCenterProfileSettingsScreen() {
             description="계정 센터는 로그인 후 이용할 수 있어요."
             primaryAction={{
               label: "로그인 하러가기",
-              onPress: () => router.replace(buildAuthRoute("/(auth)/login", pathname)),
+              onPress: () => void navigateFromAppRoot(buildAuthRoute("/(auth)/login", pathname)),
             }}
           />
         </View>

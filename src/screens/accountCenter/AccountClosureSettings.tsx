@@ -11,6 +11,7 @@ import { AppLoading } from "@/components/state/AppLoading";
 import { buildAuthRoute } from "@/lib/authRedirect";
 import { apiGet, apiPost } from "@/lib/api";
 import { normalizeApiError } from "@/lib/errors";
+import { navigateFromAppRoot } from "@/navigation/rootNavigation";
 import {
   type AccountClosureMode,
   type AccountClosureResponse,
@@ -88,7 +89,7 @@ export default function AccountCenterAccountClosureScreen() {
             onPress: () => {
               void (async () => {
                 await signOut();
-                router.replace("/(auth)");
+                await navigateFromAppRoot("/(auth)");
               })();
             },
           },
@@ -97,7 +98,7 @@ export default function AccountCenterAccountClosureScreen() {
     } catch (e) {
       const normalized = normalizeApiError(e);
       if (normalized.kind === "auth") {
-        router.replace(buildAuthRoute("/(auth)/login", pathname));
+        await navigateFromAppRoot(buildAuthRoute("/(auth)/login", pathname));
         return;
       }
       setMessage(normalized.description || normalized.title);
@@ -127,7 +128,7 @@ export default function AccountCenterAccountClosureScreen() {
             description="계정 관리는 로그인 후 이용할 수 있어요."
             primaryAction={{
               label: "로그인 하러가기",
-              onPress: () => router.replace(buildAuthRoute("/(auth)/login", pathname)),
+              onPress: () => void navigateFromAppRoot(buildAuthRoute("/(auth)/login", pathname)),
             }}
           />
         </View>

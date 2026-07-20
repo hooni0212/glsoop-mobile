@@ -49,6 +49,7 @@ import { ApiError } from "@/lib/errors";
 import { useRuntimeLegalConfig } from "@/hooks/useRuntimeLegalConfig";
 import { usePremiumStatus } from "@/hooks/usePremiumStatus";
 import { useBottomDock } from "@/navigation/bottomDock";
+import { resetToAppRoot } from "@/navigation/rootNavigation";
 import {
   useGuidedHelpTarget,
   type GuidedHelpScrollIntoView,
@@ -527,7 +528,7 @@ export default function Author({
                   reasonCode: userSafetyReasons[0]?.code || "harassment",
                 });
                 showToast(result.message, { tone: "success" });
-                router.replace("/(tabs)");
+                await resetToAppRoot();
               } catch (err) {
                 if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
                   await handleAuthError();

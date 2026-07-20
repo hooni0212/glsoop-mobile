@@ -12,9 +12,10 @@ import { logger } from "@/lib/logger";
 import { PREVIEW_FONT_ASSETS, PREVIEW_FONT_FAMILY } from "@/lib/previewFonts";
 import { usePushNotifications } from "@/lib/pushNotifications";
 import { BottomDockProvider } from "@/navigation/bottomDock";
+import { registerRootNavigationRef } from "@/navigation/rootNavigation";
 import { AppOnboardingTour } from "@/onboarding/AppOnboardingTour";
 import { GuidedHelpProvider } from "@/onboarding/GuidedHelpProvider";
-import { Stack } from "expo-router";
+import { Stack, useNavigationContainerRef } from "expo-router";
 import { StyleSheet, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider, initialWindowMetrics } from "react-native-safe-area-context";
@@ -36,11 +37,14 @@ export default function RootLayout() {
 }
 
 function RootLayoutContent() {
+  const navigationRef = useNavigationContainerRef();
   const { ready } = useAuth();
   const [fontsLoaded, fontLoadError] = useFonts(PREVIEW_FONT_ASSETS);
   const [layoutReady, setLayoutReady] = React.useState(false);
   const splashHiddenRef = React.useRef(false);
   const bootReady = ready && (fontsLoaded || Boolean(fontLoadError));
+
+  React.useEffect(() => registerRootNavigationRef(navigationRef), [navigationRef]);
 
   React.useEffect(() => {
     if (!fontLoadError) return;

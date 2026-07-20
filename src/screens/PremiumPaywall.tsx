@@ -11,6 +11,7 @@ import { AppLoading } from "@/components/state/AppLoading";
 import { getLegalDocumentUrl } from "@/config/release";
 import { useToast } from "@/feedback/ToastProvider";
 import { buildAuthRoute } from "@/lib/authRedirect";
+import { navigateFromAppRoot } from "@/navigation/rootNavigation";
 import { normalizeApiError, type AppErrorModel } from "@/lib/errors";
 import { openExternalUrl } from "@/lib/externalLinks";
 import {
@@ -147,7 +148,7 @@ export default function PremiumPaywallScreen() {
           error_kind: normalized.kind,
         });
         if (normalized.kind === "auth") {
-          router.replace(buildAuthRoute("/(auth)/login", pathname));
+          await navigateFromAppRoot(buildAuthRoute("/(auth)/login", pathname));
           return;
         }
         showToast(normalized.description || normalized.title, { tone: "error" });
@@ -193,7 +194,7 @@ export default function PremiumPaywallScreen() {
   async function onPurchase(plan: PremiumPlan) {
     if (isPremium || busySku || processingPurchase) return;
     if (!token) {
-      router.replace(buildAuthRoute("/(auth)/login", pathname));
+      await navigateFromAppRoot(buildAuthRoute("/(auth)/login", pathname));
       return;
     }
     if (!plan.availableInStore) {
@@ -234,7 +235,7 @@ export default function PremiumPaywallScreen() {
   async function onRestore() {
     if (restoreBusy || processingPurchase) return;
     if (!token) {
-      router.replace(buildAuthRoute("/(auth)/login", pathname));
+      await navigateFromAppRoot(buildAuthRoute("/(auth)/login", pathname));
       return;
     }
 
@@ -269,7 +270,7 @@ export default function PremiumPaywallScreen() {
     } catch (e) {
       const normalized = normalizeApiError(e);
       if (normalized.kind === "auth") {
-        router.replace(buildAuthRoute("/(auth)/login", pathname));
+        await navigateFromAppRoot(buildAuthRoute("/(auth)/login", pathname));
         return;
       }
       showToast(normalized.description || normalized.title, { tone: "error" });
@@ -334,7 +335,7 @@ export default function PremiumPaywallScreen() {
             description="프리미엄 구독과 구매 복원은 로그인 후 이용할 수 있어요."
             primaryAction={{
               label: "로그인 하러가기",
-              onPress: () => router.replace(buildAuthRoute("/(auth)/login", pathname)),
+              onPress: () => void navigateFromAppRoot(buildAuthRoute("/(auth)/login", pathname)),
             }}
           />
         </View>
