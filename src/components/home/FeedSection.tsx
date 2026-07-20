@@ -2,7 +2,6 @@ import React from "react";
 import {
   ActivityIndicator,
   FlatList,
-  Text,
   View,
 } from "react-native";
 
@@ -22,7 +21,6 @@ type Props<Item extends { id: string | number }> = {
   refreshing: boolean;
   error?: AppErrorModel | null;
   hasMore: boolean;
-  sectionLabel: string;
   scrollToTopKey?: string | number;
   onRefresh: () => void;
   onEndReached: () => void;
@@ -40,7 +38,6 @@ export function FeedSection<Item extends { id: string | number }>({
   refreshing,
   error,
   hasMore,
-  sectionLabel,
   scrollToTopKey,
   onRefresh,
   onEndReached,
@@ -76,8 +73,6 @@ export function FeedSection<Item extends { id: string | number }>({
       ListHeaderComponent={
         <View>
           <View style={styles.headerSpacerTop} />
-          <Text style={styles.sectionLabel}>{sectionLabel}</Text>
-          <View style={styles.headerSpacerAfterLabel} />
 
           {error ? (
             <AppError error={error} onRetry={error.canRetry ? onRefresh : undefined} />

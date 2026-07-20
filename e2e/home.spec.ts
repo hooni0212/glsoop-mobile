@@ -92,7 +92,7 @@ test.describe("홈 화면", () => {
 
     await expect(page.getByRole("button", { name: "검색" })).toBeVisible();
     await expect(page.getByRole("button", { name: "추천" })).toBeVisible();
-    await expect(page.getByText("오늘의 추천")).toBeVisible();
+    await expect(page.getByText("오늘의 추천")).toHaveCount(0);
   });
 
   test("검색 버튼을 누르면 검색 화면으로 이동한다", async ({ page }) => {

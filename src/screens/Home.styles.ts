@@ -297,20 +297,11 @@ export const feedSectionStyles = StyleSheet.create({
     paddingHorizontal: 0,
     paddingBottom: 18,
   },
-  sectionLabel: {
-    ...typography.sectionTitle,
-    color: tokens.colors.text,
-    marginBottom: 10,
-    marginLeft: 22,
-  },
   footer: {
     paddingVertical: tokens.space.lg,
   },
   headerSpacerTop: {
-    height: 6,
-  },
-  headerSpacerAfterLabel: {
-    height: 2,
+    height: 8,
   },
   itemSeparator: {
     height: 28,

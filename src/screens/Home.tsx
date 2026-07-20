@@ -143,12 +143,6 @@ export default function Home() {
   const userSafetyReasons = pickSafetyReasons(runtimeLegalConfig?.safety.reportReasons, "user");
   const reportDetailMaxLength = runtimeLegalConfig?.safety.detailMaxLength;
   const reportDetailRequiredReasonCodes = runtimeLegalConfig?.safety.detailRequiredReasonCodes;
-  const sectionLabel = useMemo(() => {
-    if (active === "최신") return "새로 올라온 글";
-    if (active === "팔로잉") return "팔로잉 피드";
-    if (active === "추천") return "오늘의 추천";
-    return `${active} 피드`;
-  }, [active]);
   useFocusEffect(
     React.useCallback(() => {
       let mounted = true;
@@ -597,7 +591,6 @@ export default function Home() {
         refreshing={refreshing}
         error={error}
         hasMore={hasMore}
-        sectionLabel={sectionLabel}
         scrollToTopKey={active}
         onRefresh={refresh}
         onEndReached={() => {
