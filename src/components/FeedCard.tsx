@@ -273,7 +273,6 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: 393,
     alignSelf: "center",
-    paddingHorizontal: 20,
   },
   cardSaved: {
     backgroundColor: "transparent",
@@ -286,6 +285,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
+    paddingHorizontal: 20,
   },
   authorPressArea: {
     flex: 1,
@@ -340,10 +340,10 @@ const styles = StyleSheet.create({
   renderedImageWrap: {
     position: "relative",
     marginHorizontal: 0,
-    borderRadius: 6,
     overflow: "hidden",
     backgroundColor: tokens.colors.paper,
-    borderWidth: 1,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
     borderColor: tokens.colors.paperBorder,
   },
   renderedImage: {
@@ -393,6 +393,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: tokens.colors.paperBorder,
     borderRadius: 6,
+    marginHorizontal: 20,
     paddingHorizontal: 22,
     paddingVertical: 24,
   },
@@ -402,6 +403,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     minHeight: 48,
+    paddingHorizontal: 20,
     paddingTop: 4,
   },
 
