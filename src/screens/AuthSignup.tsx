@@ -20,6 +20,7 @@ import { buildAuthRoute, resolvePostAuthRedirect } from "@/lib/authRedirect";
 import { apiGet, apiPost } from "@/lib/api";
 import { COOKIE_SESSION_TOKEN } from "@/lib/authToken";
 import { ApiError, normalizeApiError } from "@/lib/errors";
+import { navigateFromAppRoot } from "@/navigation/rootNavigation";
 import { tokens } from "@/theme/tokens";
 
 type SignupResponse = {
@@ -258,7 +259,7 @@ export default function AuthSignup() {
       }
 
       await signIn(nextAuthToken);
-      router.replace(resolvePostAuthRedirect(redirect));
+      await navigateFromAppRoot(resolvePostAuthRedirect(redirect));
     } catch (e) {
       handleApiError(e);
     } finally {

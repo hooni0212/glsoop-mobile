@@ -141,6 +141,50 @@ function addFrameworkOnce(project, frameworkName, targetUuid) {
   project.addFramework(frameworkName, { target: targetUuid });
 }
 
+function ensureTargetDependencySections(project) {
+  const objects = project.hash.project.objects;
+  objects.PBXContainerItemProxy = objects.PBXContainerItemProxy ?? {};
+  objects.PBXTargetDependency = objects.PBXTargetDependency ?? {};
+}
+
+function ensureTargetDependency(project, targetUuid, dependencyTargetUuid) {
+  ensureTargetDependencySections(project);
+
+  const target = project.pbxNativeTargetSection()[targetUuid];
+  const dependencySection = project.hash.project.objects.PBXTargetDependency;
+  const hasDependency = (target.dependencies ?? []).some((dependency) => {
+    return dependencySection[dependency.value]?.target === dependencyTargetUuid;
+  });
+
+  if (!hasDependency) {
+    project.addTargetDependency(targetUuid, [dependencyTargetUuid]);
+  }
+}
+
+function moveWidgetEmbedPhaseBeforeBundleScripts(project, appTargetUuid, widgetTargetUuid) {
+  const target = project.pbxNativeTargetSection()[appTargetUuid];
+  const copyFilesSection = project.hash.project.objects.PBXCopyFilesBuildPhase ?? {};
+  const buildFileSection = project.pbxBuildFileSection();
+  const widgetProductReference =
+    project.pbxNativeTargetSection()[widgetTargetUuid]?.productReference;
+
+  const embedPhaseIndex = (target.buildPhases ?? []).findIndex((phase) => {
+    const copyFilesPhase = copyFilesSection[phase.value];
+    return (copyFilesPhase?.files ?? []).some((file) => {
+      return buildFileSection[file.value]?.fileRef === widgetProductReference;
+    });
+  });
+
+  if (embedPhaseIndex < 0) return;
+
+  const [embedPhase] = target.buildPhases.splice(embedPhaseIndex, 1);
+  const bundleScriptIndex = target.buildPhases.findIndex(
+    (phase) => phase.comment === "Bundle React Native code and images"
+  );
+  const insertIndex = bundleScriptIndex >= 0 ? bundleScriptIndex : target.buildPhases.length;
+  target.buildPhases.splice(insertIndex, 0, embedPhase);
+}
+
 function writeNativeFiles(iosRoot, projectRoot, options) {
   const sourceRoot = IOSConfig.Paths.getSourceRoot(projectRoot);
   const widgetRoot = path.join(iosRoot, options.widgetTargetName);
@@ -366,6 +410,7 @@ function applyXcodeProject(config, project, options) {
 
   let widgetTargetUuid = getTargetUuid(project, options.widgetTargetName);
   if (!widgetTargetUuid) {
+    ensureTargetDependencySections(project);
     project.addTarget(
       options.widgetTargetName,
       "app_extension",
@@ -403,6 +448,8 @@ function applyXcodeProject(config, project, options) {
   addFrameworkOnce(project, "WidgetKit.framework", widgetTargetUuid);
   addFrameworkOnce(project, "SwiftUI.framework", widgetTargetUuid);
   updateTargetBuildSettings(project, widgetTargetUuid, config, options);
+  ensureTargetDependency(project, appTargetUuid, widgetTargetUuid);
+  moveWidgetEmbedPhaseBeforeBundleScripts(project, appTargetUuid, widgetTargetUuid);
 }
 
 function createSnapshotNativeModuleBridge() {

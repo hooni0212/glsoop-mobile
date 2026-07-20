@@ -1,5 +1,5 @@
 import React from "react";
-import { Redirect, usePathname, useRouter, useSegments } from "expo-router";
+import { type Href, usePathname, useSegments } from "expo-router";
 import { AppState, StyleSheet, View } from "react-native";
 
 import { useAuth } from "@/auth/AuthContext";
@@ -8,6 +8,7 @@ import { buildAuthRoute } from "@/lib/authRedirect";
 import { apiGet } from "@/lib/api";
 import { ApiError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
+import { APP_ROOT_HREF, navigateFromAppRoot } from "@/navigation/rootNavigation";
 import { isProtectedRoute, isPublicUgcRoute } from "@/lib/routeAccess";
 
 import { PublicUgcNoticeGate } from "./PublicUgcNoticeGate";
@@ -23,10 +24,9 @@ function shouldLoginReturnHome(path: string) {
  * - 로그인 후 auth 그룹으로 들어오면 홈으로 돌려보냄
  */
 export function AuthGate() {
-  const router = useRouter();
   const pathname = usePathname();
   const segments = useSegments();
-  const { ready, token, signOut } = useAuth();
+  const { ready, token, signInSerial, signOut } = useAuth();
   const [validating, setValidating] = React.useState(false);
   const [validationTick, setValidationTick] = React.useState(0);
   const [validatedKey, setValidatedKey] = React.useState<string | null>(null);
@@ -35,6 +35,7 @@ export function AuthGate() {
     needsAuth: false,
     pathname: "/",
   });
+  const rootNavigationInFlightRef = React.useRef(false);
 
   const inAuthGroup = segments[0] === "(auth)";
   const needsAuth = isProtectedRoute(pathname, segments as string[]);
@@ -44,6 +45,17 @@ export function AuthGate() {
   React.useEffect(() => {
     latestRouteRef.current = { inAuthGroup, needsAuth, pathname };
   }, [inAuthGroup, needsAuth, pathname]);
+
+  const navigateFromRootOnce = React.useCallback(async (href: Href) => {
+    if (rootNavigationInFlightRef.current) return;
+
+    rootNavigationInFlightRef.current = true;
+    try {
+      await navigateFromAppRoot(href);
+    } finally {
+      rootNavigationInFlightRef.current = false;
+    }
+  }, []);
 
   React.useEffect(() => {
     if (!ready || !token) return;
@@ -72,17 +84,19 @@ export function AuthGate() {
       return;
     }
 
-    if (validatedKey && inAuthGroup) {
-      router.replace("/(tabs)");
+    // Persisted sessions can boot into an auth deep link. Interactive login and
+    // signup flows own their redirect and therefore skip this fallback.
+    if (validatedKey && inAuthGroup && signInSerial === 0) {
+      void navigateFromRootOnce(APP_ROOT_HREF);
     }
-  }, [ready, token, validatedKey, inAuthGroup, router]);
+  }, [ready, token, validatedKey, inAuthGroup, signInSerial, navigateFromRootOnce]);
 
   React.useEffect(() => {
     if (!ready) return;
 
     if (!token) {
       if (needsAuth && !inAuthGroup) {
-        router.replace(
+        void navigateFromRootOnce(
           buildAuthRoute("/(auth)/login", shouldLoginReturnHome(pathname) ? undefined : pathname)
         );
       }
@@ -109,7 +123,7 @@ export function AuthGate() {
           await signOut();
           setValidatedKey(null);
           if (latestRoute.needsAuth || latestRoute.inAuthGroup) {
-            router.replace(
+            await navigateFromRootOnce(
               buildAuthRoute(
                 "/(auth)/login",
                 shouldLoginReturnHome(latestRoute.pathname) ? undefined : latestRoute.pathname
@@ -135,7 +149,17 @@ export function AuthGate() {
     return () => {
       cancelled = true;
     };
-  }, [ready, token, validatedKey, signOut, validationTick, inAuthGroup, needsAuth, pathname, router]);
+  }, [
+    ready,
+    token,
+    validatedKey,
+    signOut,
+    validationTick,
+    inAuthGroup,
+    needsAuth,
+    pathname,
+    navigateFromRootOnce,
+  ]);
 
   // 최초 로딩 중에는 화면 전환을 막기 위해 아무것도 렌더링하지 않음
   if (!ready) {
@@ -153,15 +177,12 @@ export function AuthGate() {
     );
   }
 
-  // 토큰이 없고 auth 그룹 밖이면 즉시 리다이렉트(깜빡임 최소화)
+  // 루트 스택을 정리하는 동안 보호 화면의 상호작용과 깜빡임을 막습니다.
   if (!token && needsAuth && !inAuthGroup) {
     return (
-      <Redirect
-        href={buildAuthRoute(
-          "/(auth)/login",
-          shouldLoginReturnHome(pathname) ? undefined : pathname
-        )}
-      />
+      <View pointerEvents="auto" style={styles.blockingOverlay}>
+        <AppBootScreen title="글숲" message="로그인 화면을 준비하고 있어요." />
+      </View>
     );
   }
 

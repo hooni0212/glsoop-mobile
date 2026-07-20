@@ -5,6 +5,7 @@ import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
 import { requestAppOnboardingTourReplay } from "@/onboarding/appOnboardingTourStorage";
+import { resetToAppRoot } from "@/navigation/rootNavigation";
 import {
   GUIDED_HELP_BUTTON_DICTIONARY,
   GUIDED_HELP_PAGE_ORDER,
@@ -112,7 +113,7 @@ const QUICK_ACTIONS = [
 export default function AppGuideScreen() {
   const startInteractiveGuide = React.useCallback(async () => {
     await requestAppOnboardingTourReplay();
-    router.replace("/(tabs)" as never);
+    await resetToAppRoot();
   }, []);
 
   const replayPageGuide = React.useCallback(async (pageKey: GuidedHelpPageKey) => {

@@ -22,6 +22,7 @@ import { apiPost } from "@/lib/api";
 import { COOKIE_SESSION_TOKEN } from "@/lib/authToken";
 import { formatKstDateTime } from "@/lib/dateTime";
 import { ApiError, normalizeApiError } from "@/lib/errors";
+import { navigateFromAppRoot } from "@/navigation/rootNavigation";
 import { tokens } from "@/theme/tokens";
 
 const glsoopIcon = require("../../assets/images/icon.png");
@@ -70,7 +71,7 @@ export default function AuthLogin() {
     }
 
     await signIn(nextAuthToken);
-    router.replace(resolvePostAuthRedirect(redirect));
+    await navigateFromAppRoot(resolvePostAuthRedirect(redirect));
   }
 
   async function onReactivate() {

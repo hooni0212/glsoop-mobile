@@ -45,6 +45,7 @@ import { ApiError } from "@/lib/errors";
 import { buildRenderedPostShareImageUrl } from "@/lib/feedImage";
 import * as haptics from "@/lib/haptics";
 import { logger } from "@/lib/logger";
+import { resetToAppRoot } from "@/navigation/rootNavigation";
 import { normalizePostBackgroundTemplateId } from "@/lib/postBackgroundTemplates";
 import { resolvePostLayout } from "@/lib/postLayout";
 import { resolvePostRenderImages } from "@/lib/postRenderImages";
@@ -430,7 +431,7 @@ export default function PostDetail() {
       router.back();
       return;
     }
-    router.replace("/(tabs)" as never);
+    void resetToAppRoot();
   };
   const showNotFound = error?.kind === "not_found";
 
@@ -1255,7 +1256,7 @@ export default function PostDetail() {
         await deletePost(post.id);
         setDeleteConfirmVisible(false);
         showToast("글을 삭제했어요.", { tone: "success" });
-        router.replace("/(tabs)");
+        await resetToAppRoot();
       } catch (err) {
         if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
           setDeleteConfirmVisible(false);
@@ -1314,7 +1315,7 @@ export default function PostDetail() {
         contextPostId: postId,
       });
       showToast(result.message, { tone: "success" });
-      router.replace("/(tabs)");
+      await resetToAppRoot();
     } catch (err) {
       if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
         await handleAuthError();
