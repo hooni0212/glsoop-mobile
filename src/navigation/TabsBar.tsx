@@ -15,7 +15,7 @@ import { createTabsStyles } from "./tabs.styles";
  * - 바: 완전 직사각형
  * - 가운데 FAB: 위로 살짝 떠있게(오버레이)
  * - 탭 선택 표시: 상단 라인
- * - 탭 구성: 홈 / 저장 / (FAB) / 성장 / 내 정보
+ * - 탭 구성: 오늘 / 발견 / (쓰기) / 문집 / 나
  *
  * IMPORTANT
  * - app/(tabs) 안에 __write.tsx 같은 더미 라우트를 만들지 마세요.
@@ -40,7 +40,7 @@ export function TabsBar(props: any /* BottomTabBarProps */) {
 
   const go = (name: TabRouteName) => {
     haptics.selection();
-    if (!token && name !== "index") {
+    if (!token && name !== "index" && name !== "explore") {
       router.push(buildAuthRoute("/(auth)/login"));
       return;
     }
@@ -100,6 +100,7 @@ export function TabsBar(props: any /* BottomTabBarProps */) {
           testID="fab-write"
         >
           <Ionicons name="create-outline" size={26} color="#FFFFFF" />
+          <Text style={styles.fabLabel}>쓰기</Text>
         </Pressable>
       </View>
     </View>
@@ -122,7 +123,14 @@ function TabButton({
   const color = active ? COLORS.active : COLORS.inactive;
 
   return (
-    <Pressable onPress={onPress} style={styles.tabSlot} hitSlop={10}>
+    <Pressable
+      onPress={onPress}
+      style={styles.tabSlot}
+      hitSlop={10}
+      accessibilityRole="tab"
+      accessibilityLabel={label}
+      accessibilityState={{ selected: active }}
+    >
       {/* 선택 상단 라인 */}
       <View style={[styles.activeLine, active && styles.activeLineOn]} />
 

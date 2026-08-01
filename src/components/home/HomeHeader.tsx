@@ -6,6 +6,8 @@ import { homeHeaderStyles } from "@/screens/Home.styles";
 import { tokens } from "@/theme/tokens";
 
 type Props = {
+  title?: string;
+  subtitle?: string;
   onPressSearch?: () => void;
   onPressNotifications?: () => void;
   hasUnreadNotifications?: boolean;
@@ -13,6 +15,8 @@ type Props = {
 };
 
 export function HomeHeader({
+  title = "글숲",
+  subtitle,
   onPressSearch,
   onPressNotifications,
   hasUnreadNotifications = false,
@@ -20,7 +24,14 @@ export function HomeHeader({
 }: Props) {
   return (
     <View style={homeHeaderStyles.header}>
-      <Text style={homeHeaderStyles.brand}>글숲</Text>
+      <View style={homeHeaderStyles.titleWrap}>
+        <Text style={homeHeaderStyles.brand}>{title}</Text>
+        {subtitle ? (
+          <Text style={homeHeaderStyles.subtitle} numberOfLines={1}>
+            {subtitle}
+          </Text>
+        ) : null}
+      </View>
 
       <View style={homeHeaderStyles.actions}>
         <Pressable

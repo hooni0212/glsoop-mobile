@@ -27,10 +27,14 @@ export default function TabsLayout() {
       }}
       tabBar={(props) => <TabsBar {...props} />}
     >
-      <Tabs.Screen name="index" options={{ title: "홈" }} />
-      <Tabs.Screen name="bookmarks" options={{ title: "저장" }} />
-      <Tabs.Screen name="growth" options={{ title: "성장" }} />
-      <Tabs.Screen name="me" options={{ title: "내 정보" }} />
+      <Tabs.Screen name="index" options={{ title: "오늘" }} />
+      <Tabs.Screen name="explore" options={{ title: "발견" }} />
+      <Tabs.Screen name="book" options={{ title: "문집" }} />
+      <Tabs.Screen name="me" options={{ title: "나" }} />
+
+      {/* 기존 경로는 딥링크/내부 이동 호환을 위해 유지하되 하단 탭에서는 숨긴다. */}
+      <Tabs.Screen name="bookmarks" options={{ href: null }} />
+      <Tabs.Screen name="growth" options={{ href: null }} />
     </Tabs>
   );
 }
