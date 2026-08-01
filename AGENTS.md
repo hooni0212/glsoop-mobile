@@ -16,10 +16,14 @@ It owns:
 
 ## Branching rules
 
+- `main` is the store/production-stable line. Only release-ready changes integrated and verified on `dev` move to `main`.
+- `dev` is the next-release integration line. Feature and fix branches merge into `dev` first.
 - Start all work from the `dev` branch.
 - Do not work directly on `main`, `master`, or `dev`.
 - Create a focused task branch from `dev` before making changes.
 - Use descriptive branch names such as `feature/...`, `fix/...`, `chore/...`, or `docs/...`.
+- Keep release direction one-way: task branch -> `dev` -> `main`. Do not merge `main` back into task branches as a routine workflow.
+- Store builds and submissions are tied to an explicitly approved `main` release, never to an arbitrary task branch.
 
 ## Code/document separation
 

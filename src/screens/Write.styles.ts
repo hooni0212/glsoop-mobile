@@ -242,37 +242,6 @@ export function createWriteStyles() {
       paddingBottom: 18,
       borderRadius: 22,
     },
-    quickMetaRow: {
-      flexDirection: "row",
-      flexWrap: "wrap",
-      gap: 10,
-      paddingHorizontal: 2,
-    },
-    quickMetaChip: {
-      minHeight: 36,
-      minWidth: 62,
-      borderRadius: tokens.radius.pill,
-      borderWidth: 1,
-      borderColor: tokens.colors.border,
-      backgroundColor: tokens.colors.surface,
-      alignItems: "center",
-      justifyContent: "center",
-      paddingHorizontal: 18,
-    },
-    quickMetaChipActive: {
-      borderColor: tokens.colors.green700,
-      backgroundColor: tokens.colors.green100,
-    },
-    quickMetaChipText: {
-      fontSize: 13,
-      fontWeight: "900",
-      color: tokens.colors.textMuted,
-      letterSpacing: 0,
-    },
-    quickMetaChipTextActive: {
-      color: tokens.colors.green700,
-    },
-
     label: {
       fontSize: tokens.font.small,
       fontWeight: "800",

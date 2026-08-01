@@ -1,12 +1,13 @@
 import type { PostFontKey } from "@/lib/postContent";
+import { appFontFamily } from "@/theme/typography";
 
 export const PREVIEW_FONT_FAMILY: Record<PostFontKey, string> = {
-  serif: "Hahmlet-SemiBold",
-  sans: "IBMPlexSansKR-Medium",
-  hand: "Gaegu-Regular",
+  serif: appFontFamily.editorialStrong,
+  sans: appFontFamily.ui,
+  hand: appFontFamily.handwriting,
 };
 
-const PREVIEW_SIGNATURE_FONT_FAMILY = "Hahmlet-Medium";
+const PREVIEW_SIGNATURE_FONT_FAMILY = appFontFamily.editorial;
 
 export const PREVIEW_FONT_ASSETS = {
   [PREVIEW_FONT_FAMILY.serif]: require("../../assets/fonts/glsoop-preview/Hahmlet-SemiBold.ttf"),

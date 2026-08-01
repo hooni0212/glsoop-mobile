@@ -31,7 +31,7 @@ export const ACTION_BAR_PADDING_BOTTOM = 10;
 export const TAB_BAR_CENTER_GAP = 74;
 
 /** FAB 크기(지름) */
-export const TAB_BAR_FAB_SIZE = 64;
+export const TAB_BAR_FAB_SIZE = 66;
 
 /** FAB가 바 위로 떠 있는 정도(기존 디자인 유지) */
 export const TAB_BAR_FAB_LIFT = 14;
@@ -147,6 +147,14 @@ export function createTabsStyles(insetBottom?: number) {
       backgroundColor: COLORS.active,
       alignItems: "center",
       justifyContent: "center",
+    },
+
+    fabLabel: {
+      marginTop: -2,
+      color: "#ffffff",
+      fontSize: 10,
+      lineHeight: 12,
+      fontWeight: "800",
     },
   });
 }
