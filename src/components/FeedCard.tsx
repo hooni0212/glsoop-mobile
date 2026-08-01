@@ -13,6 +13,7 @@ import {
   View,
 } from "react-native";
 import { Image } from "expo-image";
+import { typography } from "@/theme/typography";
 
 type Props = {
   post: Post;
@@ -83,13 +84,16 @@ export function FeedCard({
             />
           ) : null}
           <View style={styles.authorTextBlock}>
-            <Text style={styles.authorName} numberOfLines={1}>
-              {authorBadge ? <Text style={styles.authorBadge}>{authorBadge} </Text> : null}
-              {author}
-            </Text>
-            <Text style={styles.postMeta} numberOfLines={1}>
-              {timeLabel}
-            </Text>
+            <View style={styles.authorMetaLine}>
+              <Text style={styles.authorName} numberOfLines={1}>
+                {authorBadge ? <Text style={styles.authorBadge}>{authorBadge} </Text> : null}
+                {author}
+              </Text>
+              <View style={styles.metaDot} />
+              <Text style={styles.postMeta} numberOfLines={1}>
+                {timeLabel}
+              </Text>
+            </View>
           </View>
         </Pressable>
 
@@ -170,8 +174,8 @@ export function FeedCard({
               >
                 <Ionicons
                   name={liked ? "heart" : "heart-outline"}
-                  size={24}
-                  color={liked ? tokens.colors.green700 : tokens.colors.text}
+                  size={21}
+                  color={liked ? tokens.colors.green700 : tokens.colors.textMuted}
                 />
                 <Text style={[styles.actionCountText, liked && styles.actionCountTextActive]}>
                   {likeCount}
@@ -196,8 +200,8 @@ export function FeedCard({
             >
               <Ionicons
                 name={bookmarked ? "bookmark" : "bookmark-outline"}
-                size={24}
-                color={bookmarked ? tokens.colors.green700 : tokens.colors.text}
+                size={21}
+                color={bookmarked ? tokens.colors.green700 : tokens.colors.textMuted}
               />
             </Pressable>
           ) : null}
@@ -269,58 +273,66 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: 393,
     alignSelf: "center",
-    backgroundColor: tokens.colors.surface,
-    borderRadius: 28,
-    paddingBottom: 14,
-    overflow: "hidden",
   },
   cardSaved: {
-    backgroundColor: tokens.colors.surface,
+    backgroundColor: "transparent",
   },
   cardPressed: {
     opacity: 0.78,
   },
   authorRow: {
-    minHeight: 58,
+    minHeight: 52,
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 14,
-    gap: 10,
+    gap: 8,
+    paddingHorizontal: 20,
   },
   authorPressArea: {
     flex: 1,
     minWidth: 0,
     flexDirection: "row",
     alignItems: "center",
+    minHeight: 52,
   },
   authorTextBlock: {
     flex: 1,
     minWidth: 0,
   },
   authorPhoto: {
-    width: 34,
-    height: 34,
-    borderRadius: 12,
-    marginRight: 10,
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    marginRight: 9,
     backgroundColor: tokens.colors.surfaceStrong,
     borderWidth: 1,
     borderColor: tokens.colors.border,
   },
   authorName: {
-    fontSize: 14,
-    fontWeight: "900",
+    ...typography.author,
     color: tokens.colors.text,
+    flexShrink: 1,
   },
   authorBadge: {
     fontSize: 13,
-    fontWeight: "900",
     color: tokens.colors.green700,
   },
+  authorMetaLine: {
+    flexDirection: "row",
+    alignItems: "center",
+    minWidth: 0,
+    gap: 7,
+  },
+  metaDot: {
+    width: 2,
+    height: 2,
+    borderRadius: 1,
+    backgroundColor: tokens.colors.textFaint,
+    flexShrink: 0,
+  },
   postMeta: {
-    marginTop: 2,
-    fontSize: 12,
-    fontWeight: "700",
-    color: tokens.colors.textMuted,
+    ...typography.meta,
+    color: tokens.colors.textFaint,
+    flexShrink: 0,
   },
   openContentArea: {
     width: "100%",
@@ -328,16 +340,16 @@ const styles = StyleSheet.create({
   renderedImageWrap: {
     position: "relative",
     marginHorizontal: 0,
-    borderRadius: 10,
     overflow: "hidden",
-    backgroundColor: "#f7f3ea",
-    borderWidth: 1,
-    borderColor: tokens.colors.border,
+    backgroundColor: tokens.colors.paper,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: tokens.colors.paperBorder,
   },
   renderedImage: {
     width: "100%",
     aspectRatio: 500 / 666,
-    backgroundColor: "#f7f3ea",
+    backgroundColor: tokens.colors.paper,
   },
   renderedImageFallback: {
     alignItems: "center",
@@ -347,28 +359,27 @@ const styles = StyleSheet.create({
   renderedImageFallbackText: {
     color: tokens.colors.textMuted,
     fontSize: 13,
-    fontWeight: "800",
+    fontFamily: typography.meta.fontFamily,
     textAlign: "center",
   },
   renderedPageBadge: {
     position: "absolute",
-    top: 12,
-    right: 12,
+    top: 10,
+    right: 10,
     zIndex: 2,
     borderRadius: tokens.radius.pill,
     backgroundColor: tokens.colors.overlaySoft,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
   },
   renderedPageBadgeText: {
-    fontSize: 12,
-    fontWeight: "800",
+    ...typography.meta,
     color: tokens.colors.textInverse,
   },
   moreBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: tokens.radius.pill,
+    width: 44,
+    height: 44,
+    borderRadius: tokens.radius.md,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "transparent",
@@ -376,21 +387,24 @@ const styles = StyleSheet.create({
   moreBtnPressed: { opacity: 0.78 },
 
   excerpt: {
-    fontSize: 14,
-    lineHeight: 22,
-    color: tokens.colors.textMuted,
-    paddingHorizontal: 18,
-    paddingVertical: 18,
-    fontWeight: "600",
+    ...typography.excerpt,
+    color: tokens.colors.text,
+    backgroundColor: tokens.colors.paper,
+    borderWidth: 1,
+    borderColor: tokens.colors.paperBorder,
+    borderRadius: 6,
+    marginHorizontal: 20,
+    paddingHorizontal: 22,
+    paddingVertical: 24,
   },
 
   socialRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    minHeight: 44,
-    paddingHorizontal: 14,
-    paddingTop: 8,
+    minHeight: 48,
+    paddingHorizontal: 20,
+    paddingTop: 4,
   },
 
   leftActions: {
@@ -399,18 +413,18 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   actionBtn: {
-    minWidth: 42,
-    height: 32,
-    paddingHorizontal: 2,
+    minWidth: 44,
+    height: 44,
+    paddingHorizontal: 1,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: tokens.radius.pill,
     flexDirection: "row",
-    gap: 4,
+    gap: 5,
   },
   iconOnlyBtn: {
-    width: 28,
-    height: 32,
+    width: 44,
+    height: 44,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: tokens.radius.pill,
@@ -422,10 +436,8 @@ const styles = StyleSheet.create({
     opacity: 0.45,
   },
   actionCountText: {
-    fontSize: 13,
-    lineHeight: 18,
-    fontWeight: "900",
-    color: tokens.colors.text,
+    ...typography.actionMeta,
+    color: tokens.colors.textMuted,
   },
   actionCountTextActive: {
     color: tokens.colors.green700,

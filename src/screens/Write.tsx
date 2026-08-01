@@ -27,6 +27,7 @@ import { AppLoading } from "@/components/state/AppLoading";
 import { useToast } from "@/feedback/ToastProvider";
 import { normalizeApiError, type AppErrorModel } from "@/lib/errors";
 import { logger } from "@/lib/logger";
+import { trackNativeUxEvent } from "@/lib/nativeAnalytics";
 import { navigateFromAppRoot, resetToAppRoot } from "@/navigation/rootNavigation";
 import type { PostBackgroundTemplateId } from "@/lib/postBackgroundTemplates";
 import type { PostFontKey } from "@/lib/postContent";
@@ -279,8 +280,7 @@ export default function Write() {
     visibility !== "public" ||
     commentPolicy !== "logged_in" ||
     hasLayoutChanges;
-  const canSubmit =
-    title.trim().length > 0 && submissionContentPages.length > 0 && !hasOverLimitPage;
+  const canSubmit = submissionContentPages.length > 0 && !hasOverLimitPage;
   const submissionLayout = useMemo(
     () => ({
       ...layout,
@@ -563,6 +563,14 @@ export default function Write() {
 
     if (!previewOpen) {
       dismissKeyboard();
+      void trackNativeUxEvent("write_preview_open", {
+        pagePath: "/write",
+        properties: {
+          entry: promptContext?.eventKey ? "today_prompt" : questContext ? "quest" : "direct",
+          has_title: Boolean(title.trim()),
+          page_count: submissionContentPages.length,
+        },
+      });
       if (!selectedType) {
         setSelectedType(resolvedType);
       }
@@ -648,6 +656,15 @@ export default function Write() {
         setLastQuestCompletion(created.questCompletion ?? null);
         logger.debug("[write] submit success", { postId: created.postId });
       }
+      void trackNativeUxEvent("write_publish_success", {
+        pagePath: "/write",
+        properties: {
+          mode: editPostId ? "edit" : "create",
+          entry: promptContext?.eventKey ? "today_prompt" : questContext ? "quest" : "direct",
+          has_title: Boolean(trimmedTitle),
+          page_count: submissionContentPages.length,
+        },
+      });
       setSubmitSuccess(true);
     } catch (err) {
       logger.warn("[write] submit error", err);
@@ -679,11 +696,11 @@ export default function Write() {
     showToast,
   ]);
 
-  const onSuccessGoHome = useCallback(() => {
+  const onSuccessGoBook = useCallback(() => {
     setSubmitSuccess(false);
     allowNextLeave();
     resetWriteState();
-    void resetToAppRoot();
+    void navigateFromAppRoot("/(tabs)/book");
   }, [allowNextLeave, resetWriteState]);
 
   const onSuccessViewPost = useCallback(() => {
@@ -1028,7 +1045,6 @@ export default function Write() {
                 onChangePageBody={updatePageBody}
                 onAddPage={addPageDraft}
                 onRemovePage={removePageDraft}
-                onSelectType={selectPostType}
                 styles={styles}
               />
             )}
@@ -1054,29 +1070,33 @@ export default function Write() {
               <Text style={styles.successTitle}>완료되었어요</Text>
               <Text style={styles.successMessage}>
                 {lastQuestCompletion
-                  ? "퀘스트 진행도도 반영됐어요."
+                  ? "오늘 쓴 글이 문집에 쌓였고, 퀘스트 진행도도 반영됐어요."
                   : isEditMode
                     ? "수정한 글을 확인할까요?"
-                    : "어디로 이동할까요?"}
+                    : "오늘 쓴 글이 내 문집에 한 페이지로 쌓였어요."}
               </Text>
               <View style={styles.successActions}>
                 <Pressable
-                  onPress={onSuccessViewPost}
+                  onPress={isEditMode ? onSuccessViewPost : onSuccessGoBook}
                   style={[styles.modalBtn, styles.modalBtnPrimary]}
                   accessibilityRole="button"
-                  accessibilityLabel="방금 작성한 글 보기"
-                  testID="write-success-view-post"
+                  accessibilityLabel={isEditMode ? "수정한 글 보기" : "내 문집 보기"}
+                  testID={isEditMode ? "write-success-view-post" : "write-success-go-book"}
                 >
-                  <Text style={[styles.modalBtnText, styles.modalBtnTextPrimary]}>방금 글 보기</Text>
+                  <Text style={[styles.modalBtnText, styles.modalBtnTextPrimary]}>
+                    {isEditMode ? "수정한 글 보기" : "내 문집 보기"}
+                  </Text>
                 </Pressable>
                 <Pressable
-                  onPress={onSuccessGoHome}
+                  onPress={isEditMode ? onSuccessGoBook : onSuccessViewPost}
                   style={styles.modalBtn}
                   accessibilityRole="button"
-                  accessibilityLabel="홈으로 이동"
-                  testID="write-success-go-home"
+                  accessibilityLabel={isEditMode ? "내 문집 보기" : "방금 작성한 글 보기"}
+                  testID={isEditMode ? "write-success-go-book" : "write-success-view-post"}
                 >
-                  <Text style={styles.modalBtnText}>홈으로</Text>
+                  <Text style={styles.modalBtnText}>
+                    {isEditMode ? "내 문집" : "방금 글 보기"}
+                  </Text>
                 </Pressable>
               </View>
             </View>

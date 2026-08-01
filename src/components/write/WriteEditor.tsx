@@ -25,15 +25,8 @@ type Props = {
   onChangePageBody: (pageId: string, value: string) => void;
   onAddPage: () => void;
   onRemovePage: (pageId: string) => void;
-  onSelectType: (type: PostType) => void;
   styles: any;
 };
-
-const CATEGORY_ITEMS: { type: PostType; label: string }[] = [
-  { type: "poem", label: "시" },
-  { type: "essay", label: "에세이" },
-  { type: "short", label: "짧은 구절" },
-];
 
 function estimateBodyInputHeight(value: string) {
   const lines = String(value || "")
@@ -56,7 +49,6 @@ export function WriteEditor({
   onChangePageBody,
   onAddPage,
   onRemovePage,
-  onSelectType,
   styles,
 }: Props) {
   const activeType = selectedType ?? insight.detectedType;
@@ -68,27 +60,6 @@ export function WriteEditor({
 
   return (
     <View style={styles.editorWrap}>
-      <View style={styles.quickMetaRow}>
-        {CATEGORY_ITEMS.map((item) => {
-          const active = activeType === item.type;
-          return (
-            <Pressable
-              key={item.type}
-              onPress={() => onSelectType(item.type)}
-              style={[styles.quickMetaChip, active && styles.quickMetaChipActive]}
-              accessibilityRole="button"
-              accessibilityLabel={`${item.label} 카테고리 선택`}
-              accessibilityState={{ selected: active }}
-              testID={`write-category-${item.type}`}
-            >
-              <Text style={[styles.quickMetaChipText, active && styles.quickMetaChipTextActive]}>
-                {item.label}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
-
       {promptContext ? (
         <View style={styles.questPromptCard} testID="write-quest-prompt-card">
           <Text style={styles.questPromptEyebrow}>{promptEyebrow}</Text>
@@ -100,21 +71,6 @@ export function WriteEditor({
           ) : null}
         </View>
       ) : null}
-
-      <View style={[styles.card, styles.writeTitleCard]}>
-        <Text style={styles.label}>제목</Text>
-        <TextInput
-          value={title}
-          onChangeText={onChangeTitle}
-          onSubmitEditing={Keyboard.dismiss}
-          blurOnSubmit
-          placeholder="제목을 입력해줘"
-          placeholderTextColor="rgba(74,62,48,0.35)"
-          multiline
-          style={styles.inputTitle}
-          testID="write-title-input"
-        />
-      </View>
 
       <View style={styles.pageTimeline} testID="write-page-timeline">
         {pageDrafts.map((page, index) => {
@@ -196,6 +152,21 @@ export function WriteEditor({
             + 페이지 추가
           </Text>
         </Pressable>
+      </View>
+
+      <View style={[styles.card, styles.writeTitleCard]}>
+        <Text style={styles.label}>제목 · 선택</Text>
+        <TextInput
+          value={title}
+          onChangeText={onChangeTitle}
+          onSubmitEditing={Keyboard.dismiss}
+          blurOnSubmit
+          placeholder="필요할 때만 제목을 붙여주세요"
+          placeholderTextColor="rgba(74,62,48,0.35)"
+          multiline
+          style={styles.inputTitle}
+          testID="write-title-input"
+        />
       </View>
     </View>
   );

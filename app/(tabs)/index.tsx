@@ -1,3 +1,3 @@
-import Home from "../../src/screens/Home";
+import Today from "../../src/screens/Today";
 
-export default Home;
+export default Today;
