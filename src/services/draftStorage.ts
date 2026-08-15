@@ -1,5 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { apiGet } from "@/lib/api";
+import { apiDelete, apiGet, apiPut } from "@/lib/api";
 import { getAuthToken, COOKIE_SESSION_TOKEN } from "@/lib/authToken";
 import type { MeResponse } from "@/features/me/accountCenter";
 import type { PostFontKey } from "@/lib/postContent";
@@ -48,6 +48,15 @@ const IDENTITY_CACHE_TTL_MS = 60 * 1000;
 let identityCache:
   | { token: string; namespace: string | null; cachedAt: number }
   | null = null;
+const remoteSyncCache = new Map<string, number>();
+
+type RemoteDraft = {
+  draft_key: string;
+  client_type: "web" | "native" | "unknown";
+  state: unknown;
+  client_updated_at_ms: number;
+  expires_at?: string | null;
+};
 
 function toBearerNamespace(token: string | null) {
   if (!token) return "anon";
@@ -105,6 +114,7 @@ async function getCurrentDraftStorageContext() {
   return {
     namespace,
     storageKey: `${DRAFTS_KEY_PREFIX}:${namespace}`,
+    canSyncRemote: namespace !== "anon",
   };
 }
 
@@ -258,12 +268,96 @@ async function saveAll(storageKey: string, drafts: WriteDraft[]): Promise<void> 
   );
 }
 
+function htmlToPlainText(value: unknown) {
+  return String(value || "")
+    .replace(/<br\s*\/?\s*>/gi, "\n")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/[ \t]+/g, " ")
+    .trim();
+}
+
+function normalizeRemoteDraft(remote: RemoteDraft, namespace: string): WriteDraft | null {
+  const stored = remote?.state as any;
+  if (!stored || typeof stored !== "object" || Array.isArray(stored)) return null;
+  const webState = stored?.state && typeof stored.state === "object" ? stored.state : null;
+  const expiresAt = Date.parse(String(remote.expires_at || ""));
+  const input = webState
+    ? {
+        id: remote.draft_key,
+        title: webState.title || "",
+        body: htmlToPlainText(webState.content_html),
+        category: webState.category,
+        hashtags: webState.hashtags,
+        fontKey: webState.font_key,
+        layoutJson: webState.layout_json,
+        mode: stored.mode,
+        postId: stored.post_id ? String(stored.post_id) : undefined,
+        updatedAt: Number(remote.client_updated_at_ms),
+        expiresAt: Number.isFinite(expiresAt) ? expiresAt : Date.now() + DRAFT_TTL_MS,
+        authNamespace: namespace,
+      }
+    : {
+        ...stored,
+        id: remote.draft_key,
+        updatedAt: Number(remote.client_updated_at_ms),
+        expiresAt: Number.isFinite(expiresAt) ? expiresAt : stored.expiresAt,
+        authNamespace: namespace,
+      };
+  return normalizeDraft(input, namespace);
+}
+
+async function uploadRemoteDraft(draft: WriteDraft) {
+  await apiPut(`/api/drafts/${encodeURIComponent(draft.id)}`, {
+    client_type: "native",
+    client_updated_at_ms: draft.updatedAt,
+    state: draft,
+  });
+  remoteSyncCache.set(draft.id, draft.updatedAt);
+}
+
+async function mergeRemoteDrafts(
+  context: { namespace: string; storageKey: string; canSyncRemote: boolean },
+  localDrafts: WriteDraft[]
+) {
+  if (!context.canSyncRemote) return localDrafts;
+
+  const pending = localDrafts.filter(
+    (draft) => remoteSyncCache.get(draft.id) !== draft.updatedAt
+  );
+  await Promise.allSettled(pending.map(uploadRemoteDraft));
+
+  const response = await apiGet<{ ok: boolean; drafts?: RemoteDraft[] }>("/api/drafts");
+  const remoteDrafts = Array.isArray(response?.drafts)
+    ? response.drafts
+        .map((draft) => normalizeRemoteDraft(draft, context.namespace))
+        .filter(Boolean) as WriteDraft[]
+    : [];
+  const byId = new Map<string, WriteDraft>();
+  [...localDrafts, ...remoteDrafts].forEach((draft) => {
+    const existing = byId.get(draft.id);
+    if (!existing || draft.updatedAt > existing.updatedAt) byId.set(draft.id, draft);
+    remoteSyncCache.set(draft.id, Math.max(remoteSyncCache.get(draft.id) || 0, draft.updatedAt));
+  });
+  const merged = [...byId.values()].sort((a, b) => b.updatedAt - a.updatedAt).slice(0, MAX_DRAFTS);
+  await saveAll(context.storageKey, merged);
+  return merged;
+}
+
 export async function listWriteDrafts(): Promise<WriteDraft[]> {
   try {
     const context = await getCurrentDraftStorageContext();
     if (!context) return [];
     const drafts = await loadAll(context.storageKey, context.namespace);
-    return drafts.filter((draft) => (draft.authNamespace ?? context.namespace) === context.namespace);
+    const owned = drafts.filter((draft) => (draft.authNamespace ?? context.namespace) === context.namespace);
+    try {
+      return await mergeRemoteDrafts(context, owned);
+    } catch {
+      return owned;
+    }
   } catch {
     return [];
   }
@@ -274,7 +368,7 @@ export async function loadWriteDraftById(id: string): Promise<WriteDraft | null>
   try {
     const context = await getCurrentDraftStorageContext();
     if (!context) return null;
-    const drafts = await loadAll(context.storageKey, context.namespace);
+    const drafts = await listWriteDrafts();
     return drafts.find((d) => d.id === id && d.authNamespace === context.namespace) ?? null;
   } catch {
     return null;
@@ -285,7 +379,7 @@ export async function loadLatestWriteDraft(): Promise<WriteDraft | null> {
   try {
     const context = await getCurrentDraftStorageContext();
     if (!context) return null;
-    const drafts = await loadAll(context.storageKey, context.namespace);
+    const drafts = await listWriteDrafts();
     return drafts.find((draft) => draft.authNamespace === context.namespace) ?? null;
   } catch {
     return null;
@@ -345,6 +439,13 @@ export async function upsertWriteDraft(input: {
     ...drafts.filter((d) => !(d.id === id && d.authNamespace === authNamespace)),
   ];
   await saveAll(context.storageKey, next);
+  if (context.canSyncRemote) {
+    try {
+      await uploadRemoteDraft(payload);
+    } catch {
+      // 로컬 저장은 완료됐다. 목록을 다시 열 때 서버 동기화를 재시도한다.
+    }
+  }
 
   return id;
 }
@@ -359,6 +460,10 @@ export async function deleteWriteDraft(id: string): Promise<void> {
       context.storageKey,
       drafts.filter((d) => !(d.id === id && d.authNamespace === context.namespace))
     );
+    if (context.canSyncRemote) {
+      await apiDelete(`/api/drafts/${encodeURIComponent(id)}`).catch(() => undefined);
+      remoteSyncCache.delete(id);
+    }
   } catch {
     // ignore
   }
@@ -369,6 +474,10 @@ export async function clearAllWriteDrafts(): Promise<void> {
     const context = await getCurrentDraftStorageContext();
     if (!context) return;
     await AsyncStorage.removeItem(context.storageKey);
+    if (context.canSyncRemote) {
+      await apiDelete("/api/drafts").catch(() => undefined);
+      remoteSyncCache.clear();
+    }
   } catch {
     // ignore
   }
