@@ -34,6 +34,7 @@ import { tokens } from "@/theme/tokens";
 import { appFontFamily, typography } from "@/theme/typography";
 import { keyboardFocusRingStyle } from "@/theme/accessibility";
 import { useKeyboardFocus } from "@/hooks/useKeyboardFocus";
+import { FolioHeader } from "@/components/editorial/FolioHeader";
 
 export default function TodayScreen() {
   const { token } = useAuth();
@@ -131,29 +132,29 @@ export default function TodayScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.header}>
-          <View style={styles.headerRail} accessibilityElementsHidden />
-          <View>
-            <Text style={styles.brand}>글숲</Text>
-            <Text style={styles.headerCopy}>{todayLabel}, 오늘의 한 페이지</Text>
-          </View>
-          <Pressable
-            {...notificationFocus.focusProps}
-            onPress={() => router.push("/notifications")}
-            style={({ pressed }) => [
-              styles.iconButton,
-              pressed && styles.pressed,
-              notificationFocus.keyboardFocused && styles.focused,
-            ]}
-            accessibilityRole="button"
-            accessibilityLabel="알림 열기"
-          >
-            <Ionicons name="notifications-outline" size={22} color={tokens.colors.text} />
-          </Pressable>
-        </View>
+        <FolioHeader
+          folio="01"
+          eyebrow={todayLabel}
+          title="글숲"
+          subtitle="오늘의 마음을 한 면에 남겨보세요"
+          actions={
+            <Pressable
+              {...notificationFocus.focusProps}
+              onPress={() => router.push("/notifications")}
+              style={({ pressed }) => [
+                styles.iconButton,
+                pressed && styles.pressed,
+                notificationFocus.keyboardFocused && styles.focused,
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel="알림 열기"
+            >
+              <Ionicons name="notifications-outline" size={22} color={tokens.colors.text} />
+            </Pressable>
+          }
+        />
 
         <View style={styles.promptCard} testID="today-writing-prompt">
-          <View style={styles.bookmarkRail} accessibilityElementsHidden />
           <View style={styles.promptMetaRow}>
             <Text style={styles.eyebrow}>{status?.promptLabel ?? "오늘의 글감"}</Text>
             {status ? (
@@ -186,7 +187,7 @@ export default function TodayScreen() {
                 testID="today-start-writing"
               >
                 <Text style={styles.primaryButtonText}>5분 쓰기 시작</Text>
-                <Ionicons name="arrow-forward" size={18} color={tokens.colors.textInverse} />
+                <Ionicons name="arrow-forward" size={18} color={tokens.colors.green900} />
               </Pressable>
             </>
           )}
@@ -261,25 +262,6 @@ export default function TodayScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: tokens.colors.bg },
   content: { width: "100%", maxWidth: 520, alignSelf: "center", paddingHorizontal: 22 },
-  header: {
-    minHeight: 92,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingLeft: 16,
-    position: "relative",
-  },
-  headerRail: {
-    position: "absolute",
-    left: 0,
-    top: 23,
-    bottom: 21,
-    width: 2,
-    borderRadius: 1,
-    backgroundColor: tokens.colors.green700,
-  },
-  brand: { ...typography.brand, color: tokens.colors.green900 },
-  headerCopy: { ...typography.eyebrow, marginTop: 1, color: tokens.colors.textMuted },
   iconButton: {
     width: 44,
     height: 44,
@@ -288,66 +270,49 @@ const styles = StyleSheet.create({
     borderRadius: tokens.radius.md,
   },
   promptCard: {
-    minHeight: 292,
-    paddingVertical: 26,
-    paddingHorizontal: 28,
-    paddingLeft: 34,
-    borderRadius: 4,
-    backgroundColor: tokens.colors.paper,
-    borderWidth: 1,
-    borderColor: tokens.colors.paperBorder,
+    minHeight: 318,
+    paddingTop: 28,
+    paddingBottom: 24,
+    backgroundColor: "transparent",
+    borderBottomWidth: 1,
+    borderBottomColor: tokens.colors.borderStrong,
     justifyContent: "space-between",
-    position: "relative",
-    overflow: "hidden",
-  },
-  bookmarkRail: {
-    position: "absolute",
-    left: 0,
-    top: 28,
-    width: 5,
-    height: 78,
-    borderTopRightRadius: 2,
-    borderBottomRightRadius: 8,
-    backgroundColor: tokens.colors.green700,
   },
   promptMetaRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   eyebrow: { ...typography.eyebrow, color: tokens.colors.green700 },
   dayLabel: { ...typography.meta, color: tokens.colors.textMuted },
   promptLoading: { flex: 1, alignItems: "center", justifyContent: "center" },
   promptTitle: {
-    marginTop: 28,
-    fontSize: 24,
-    lineHeight: 38,
+    marginTop: 34,
+    maxWidth: 330,
+    fontSize: 27,
+    lineHeight: 42,
     fontFamily: appFontFamily.editorialStrong,
     color: tokens.colors.text,
   },
-  promptBody: { ...typography.uiBody, marginTop: 14, lineHeight: 25, color: tokens.colors.textMuted },
+  promptBody: { ...typography.uiBody, marginTop: 16, maxWidth: 320, lineHeight: 26, color: tokens.colors.textMuted },
   primaryButton: {
-    marginTop: 26,
-    minHeight: 50,
-    paddingHorizontal: 18,
-    borderRadius: 3,
-    backgroundColor: tokens.colors.green700,
+    marginTop: 30,
+    minHeight: 48,
+    borderTopWidth: 1,
+    borderTopColor: tokens.colors.divider,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
-  primaryButtonText: { ...typography.action, color: tokens.colors.textInverse },
+  primaryButtonText: { ...typography.action, color: tokens.colors.green900 },
   draftCard: {
-    marginTop: 14,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: tokens.colors.border,
-    borderRadius: 4,
-    backgroundColor: tokens.colors.surfaceStrong,
+    paddingVertical: 18,
+    borderBottomWidth: 1,
+    borderBottomColor: tokens.colors.divider,
     flexDirection: "row",
     alignItems: "center",
   },
   draftIcon: {
     width: 38,
     height: 38,
-    borderRadius: 4,
-    backgroundColor: tokens.colors.green050,
+    borderRadius: 0,
+    backgroundColor: "transparent",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -355,8 +320,8 @@ const styles = StyleSheet.create({
   draftLabel: { ...typography.eyebrow, color: tokens.colors.green700 },
   draftTitle: { ...typography.uiBody, marginTop: 3, color: tokens.colors.text },
   sectionHeader: {
-    marginTop: 34,
-    marginBottom: 14,
+    marginTop: 38,
+    marginBottom: 18,
     flexDirection: "row",
     alignItems: "flex-end",
     justifyContent: "space-between",

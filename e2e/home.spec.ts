@@ -170,6 +170,17 @@ test.describe("오늘과 읽기 흐름", () => {
       .toBe("2px");
   });
 
+  test("320px 화면에서도 오늘 지면이 가로로 넘치지 않는다", async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 844 });
+    await page.goto("/");
+    await expect(page.getByTestId("today-writing-prompt")).toBeVisible();
+
+    const hasHorizontalOverflow = await page.evaluate(
+      () => document.documentElement.scrollWidth > window.innerWidth
+    );
+    expect(hasHorizontalOverflow).toBe(false);
+  });
+
   test("제목 없이 본문부터 쓰고 미리보기로 이동할 수 있다", async ({ page }) => {
     await page.goto("/");
     await page.getByTestId("fab-write").click();

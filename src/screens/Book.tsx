@@ -18,6 +18,7 @@ import { tokens } from "@/theme/tokens";
 import { typography } from "@/theme/typography";
 import { keyboardFocusRingStyle } from "@/theme/accessibility";
 import { useKeyboardFocus } from "@/hooks/useKeyboardFocus";
+import { FolioHeader } from "@/components/editorial/FolioHeader";
 
 export default function BookScreen() {
   const dock = useBottomDock();
@@ -75,14 +76,12 @@ export default function BookScreen() {
         contentContainerStyle={[styles.content, { paddingBottom: dock.tab.height + 28 }]}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.header}>
-          <View style={styles.headerRail} accessibilityElementsHidden />
-          <Text style={styles.eyebrow}>나의 글이 머무는 곳</Text>
-          <Text style={styles.title}>문집</Text>
-          <Text style={styles.description}>
-            쓰다 만 문장부터 완성한 글까지, 시간이 쌓인 모습을 한곳에서 봅니다.
-          </Text>
-        </View>
+        <FolioHeader
+          folio="04"
+          eyebrow="나의 글이 머무는 곳"
+          title="문집"
+          subtitle="쓰다 만 문장부터 완성한 글까지, 시간이 쌓인 모습을 봅니다"
+        />
 
         <View style={styles.summary}>
           <SummaryCell value={posts.items.length} label="쓴 글" />
@@ -198,9 +197,12 @@ function BookAction({
       accessibilityRole="button"
       accessibilityLabel={`${title}: ${description}`}
     >
-      <Ionicons name={icon} size={22} color={tokens.colors.green700} />
-      <Text style={styles.actionTitle}>{title}</Text>
-      <Text style={styles.actionDescription}>{description}</Text>
+      <Ionicons name={icon} size={21} color={tokens.colors.green700} />
+      <View style={styles.actionCopy}>
+        <Text style={styles.actionTitle}>{title}</Text>
+        <Text style={styles.actionDescription}>{description}</Text>
+      </View>
+      <Ionicons name="arrow-forward" size={18} color={tokens.colors.textFaint} />
     </Pressable>
   );
 }
@@ -209,24 +211,10 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: tokens.colors.bg },
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
   content: { width: "100%", maxWidth: 520, alignSelf: "center", paddingHorizontal: 22 },
-  header: { paddingTop: 28, paddingBottom: 26, paddingLeft: 16, position: "relative" },
-  headerRail: {
-    position: "absolute",
-    left: 0,
-    top: 31,
-    bottom: 29,
-    width: 2,
-    borderRadius: 1,
-    backgroundColor: tokens.colors.green700,
-  },
-  eyebrow: { ...typography.eyebrow, color: tokens.colors.green700 },
-  title: { ...typography.pageTitle, marginTop: 5, fontSize: 30, lineHeight: 41, color: tokens.colors.green900 },
-  description: { ...typography.uiBody, marginTop: 8, maxWidth: 340, color: tokens.colors.textMuted },
   summary: {
     minHeight: 84,
     flexDirection: "row",
     alignItems: "center",
-    borderTopWidth: 1,
     borderBottomWidth: 1,
     borderColor: tokens.colors.divider,
   },
@@ -234,18 +222,22 @@ const styles = StyleSheet.create({
   summaryValue: { ...typography.sectionTitle, fontSize: 21, lineHeight: 29, color: tokens.colors.text },
   summaryLabel: { ...typography.eyebrow, marginTop: 2, color: tokens.colors.textMuted },
   summaryDivider: { width: 1, height: 32, backgroundColor: tokens.colors.divider },
-  actionGrid: { flexDirection: "row", gap: 10, marginTop: 22 },
-  actionCard: {
-    flex: 1,
-    minHeight: 136,
-    padding: 16,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: tokens.colors.border,
-    backgroundColor: tokens.colors.surfaceStrong,
+  actionGrid: {
+    marginTop: 26,
+    borderTopWidth: 1,
+    borderTopColor: tokens.colors.divider,
   },
-  actionTitle: { ...typography.sectionTitle, marginTop: 16, color: tokens.colors.text },
-  actionDescription: { ...typography.meta, marginTop: 5, color: tokens.colors.textMuted },
+  actionCard: {
+    minHeight: 82,
+    paddingVertical: 15,
+    flexDirection: "row",
+    alignItems: "center",
+    borderBottomWidth: 1,
+    borderBottomColor: tokens.colors.divider,
+  },
+  actionCopy: { flex: 1, marginHorizontal: 14 },
+  actionTitle: { ...typography.sectionTitle, color: tokens.colors.text },
+  actionDescription: { ...typography.meta, marginTop: 3, color: tokens.colors.textMuted },
   sectionHeader: {
     marginTop: 34,
     marginBottom: 8,
@@ -266,7 +258,15 @@ const styles = StyleSheet.create({
   postText: { flex: 1, paddingVertical: 14, paddingRight: 10 },
   postTitle: { ...typography.sectionTitle, color: tokens.colors.text },
   postExcerpt: { ...typography.meta, marginTop: 5, color: tokens.colors.textMuted },
-  growthLink: { marginTop: 24, padding: 17, flexDirection: "row", alignItems: "center", borderRadius: 4, backgroundColor: tokens.colors.green050 },
+  growthLink: {
+    marginTop: 24,
+    paddingVertical: 18,
+    flexDirection: "row",
+    alignItems: "center",
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: tokens.colors.divider,
+  },
   growthText: { flex: 1, marginHorizontal: 12 },
   growthTitle: { ...typography.action, color: tokens.colors.text },
   growthCopy: { ...typography.meta, marginTop: 3, color: tokens.colors.textMuted },

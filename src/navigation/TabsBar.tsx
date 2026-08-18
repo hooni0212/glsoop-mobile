@@ -14,14 +14,14 @@ import { useKeyboardFocus } from "@/hooks/useKeyboardFocus";
 /**
  * ✅ 최종 탭바(실전용)
  * - 바: 완전 직사각형
- * - 가운데 FAB: 위로 살짝 떠있게(오버레이)
- * - 탭 선택 표시: 상단 라인
- * - 탭 구성: 오늘 / 발견 / (쓰기) / 문집 / 나
+ * - 가운데 쓰기: 탭바 안에 편집 행동으로 배치
+ * - 탭 선택 표시: 하단 짧은 선
+ * - 탭 구성: 오늘 / 읽기 / 쓰기 / 문집 / 나
  *
  * IMPORTANT
  * - app/(tabs) 안에 __write.tsx 같은 더미 라우트를 만들지 마세요.
  *   (탭에 __write가 끼어들거나, href/tabBarButton 충돌 이슈가 생길 수 있음)
- * - FAB는 탭 라우트가 아니라 “오버레이 버튼”으로만 존재하고,
+ * - 쓰기는 탭 라우트가 아니라 “행동 버튼”으로만 존재하고,
  *   눌렀을 때 router.push("/write") 로 이동합니다.
  */
 
@@ -68,8 +68,28 @@ export function TabsBar(props: any /* BottomTabBarProps */) {
           />
         ))}
 
-        {/* 가운데 FAB 공간 확보 */}
-        <View style={styles.centerGap} />
+        <Pressable
+          {...writeFocus.focusProps}
+          onPress={() => {
+            haptics.medium();
+            if (!token) {
+              router.push(buildAuthRoute("/(auth)/login"));
+              return;
+            }
+            router.push("/write");
+          }}
+          style={({ pressed }) => [
+            styles.writeSlot,
+            pressed && styles.pressed,
+            writeFocus.keyboardFocused && styles.focused,
+          ]}
+          accessibilityRole="button"
+          accessibilityLabel="글쓰기"
+          testID="fab-write"
+        >
+          <Ionicons name="create-outline" size={21} color="#FFFFFF" />
+          <Text style={styles.writeLabel}>쓰기</Text>
+        </Pressable>
 
         {/* 오른쪽 2개 */}
         {TAB_ORDER.slice(2).map((name) => (
@@ -82,35 +102,6 @@ export function TabsBar(props: any /* BottomTabBarProps */) {
             styles={styles}
           />
         ))}
-      </View>
-
-      {/* FAB 오버레이 */}
-      <View style={styles.fabWrap} pointerEvents="box-none">
-        <Pressable
-          {...writeFocus.focusProps}
-          onPress={() => {
-            haptics.medium();
-            if (!token) {
-              router.push(buildAuthRoute("/(auth)/login"));
-              return;
-            }
-            router.push("/write");
-          }}
-          style={({ pressed }) => [
-            styles.fab,
-            pressed && styles.pressed,
-            writeFocus.keyboardFocused && styles.focused,
-          ]}
-          hitSlop={12}
-          accessibilityRole="button"
-          accessibilityLabel="글쓰기"
-          testID="fab-write"
-        >
-          <View style={styles.fabContent}>
-            <Ionicons name="create-outline" size={22} color="#FFFFFF" />
-            <Text style={styles.fabLabel}>쓰기</Text>
-          </View>
-        </Pressable>
       </View>
     </View>
   );
@@ -146,7 +137,7 @@ function TabButton({
       accessibilityLabel={label}
       accessibilityState={{ selected: active }}
     >
-      {/* 선택 상단 라인 */}
+      {/* 선택 하단 라인 */}
       <View style={[styles.activeLine, active && styles.activeLineOn]} />
 
       <Ionicons name={icon} size={22} color={color} />
