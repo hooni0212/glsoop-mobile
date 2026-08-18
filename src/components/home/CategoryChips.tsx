@@ -2,6 +2,7 @@ import React from "react";
 import { Pressable, Text, View } from "react-native";
 
 import { categoryChipsStyles as styles } from "@/screens/Home.styles";
+import { useKeyboardFocus } from "@/hooks/useKeyboardFocus";
 
 type Props<T extends string> = {
   categories: readonly T[];
@@ -17,30 +18,45 @@ export function CategoryChips<T extends string>({
   return (
     <View style={styles.wrap}>
       <View style={styles.content}>
-        {categories.map((c) => {
-          const isActive = c === active;
-          return (
-            <Pressable
-              key={c}
-              onPress={() => onChange(c)}
-              style={({ pressed }) => [
-                styles.chip,
-                isActive && styles.chipActive,
-                pressed && styles.chipPressed,
-              ]}
-              accessibilityRole="button"
-              accessibilityState={{ selected: isActive }}
-            >
-              <View style={[styles.activeLine, isActive && styles.activeLineOn]} />
-              <Text
-                style={[styles.chipText, isActive && styles.chipTextActive]}
-              >
-                {c}
-              </Text>
-            </Pressable>
-          );
-        })}
+        {categories.map((category) => (
+          <CategoryChip
+            key={category}
+            label={category}
+            active={category === active}
+            onPress={() => onChange(category)}
+          />
+        ))}
       </View>
     </View>
+  );
+}
+
+function CategoryChip({
+  label,
+  active,
+  onPress,
+}: {
+  label: string;
+  active: boolean;
+  onPress: () => void;
+}) {
+  const focus = useKeyboardFocus();
+
+  return (
+    <Pressable
+      {...focus.focusProps}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.chip,
+        active && styles.chipActive,
+        pressed && styles.chipPressed,
+        focus.keyboardFocused && styles.focused,
+      ]}
+      accessibilityRole="button"
+      accessibilityState={{ selected: active }}
+    >
+      <View style={[styles.activeLine, active && styles.activeLineOn]} />
+      <Text style={[styles.chipText, active && styles.chipTextActive]}>{label}</Text>
+    </Pressable>
   );
 }

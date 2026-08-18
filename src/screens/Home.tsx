@@ -401,8 +401,8 @@ export default function Home() {
   return (
     <SafeAreaView style={homeScreenStyles.safe} edges={["top"]}>
       <HomeHeader
-        title="발견"
-        subtitle="마음에 오래 남을 문장을 찾아보세요"
+        title="읽기"
+        subtitle="마음에 오래 남을 문장을 천천히 골라보세요"
         onPressSearch={() => {
           haptics.selection();
           blurActiveElementBeforeRouteChange();

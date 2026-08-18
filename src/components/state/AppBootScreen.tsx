@@ -4,6 +4,7 @@ import { Animated, Easing, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { tokens } from "@/theme/tokens";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
 
 const glsoopIcon = require("../../../assets/images/icon.png");
 
@@ -16,10 +17,17 @@ export function AppBootScreen({
   title = "글숲",
   message = "문장이 머무는 곳으로 들어가는 중이에요.",
 }: Props) {
+  const reducedMotion = useReducedMotion();
   const pulse = React.useRef(new Animated.Value(0)).current;
   const progress = React.useRef(new Animated.Value(0)).current;
 
   React.useEffect(() => {
+    if (reducedMotion) {
+      pulse.setValue(0);
+      progress.setValue(1);
+      return;
+    }
+
     const pulseLoop = Animated.loop(
       Animated.sequence([
         Animated.timing(pulse, {
@@ -60,7 +68,7 @@ export function AppBootScreen({
       pulseLoop.stop();
       progressLoop.stop();
     };
-  }, [progress, pulse]);
+  }, [progress, pulse, reducedMotion]);
 
   const logoScale = pulse.interpolate({
     inputRange: [0, 1],

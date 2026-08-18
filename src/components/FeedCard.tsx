@@ -14,6 +14,7 @@ import {
 } from "react-native";
 import { Image } from "expo-image";
 import { typography } from "@/theme/typography";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
 
 type Props = {
   post: Post;
@@ -48,6 +49,7 @@ export function FeedCard({
   onBookmarkPress,
   onMorePress,
 }: Props) {
+  const reducedMotion = useReducedMotion();
   const author = post.author?.name || "익명";
   const timeLabel = formatRelativeKorean(post.createdAt);
   const likeCount = post.stats?.likeCount ?? 0;
@@ -80,7 +82,7 @@ export function FeedCard({
               source={{ uri: authorProfilePhoto }}
               style={styles.authorPhoto}
               contentFit="cover"
-              transition={120}
+              transition={reducedMotion ? 0 : 120}
             />
           ) : null}
           <View style={styles.authorTextBlock}>
@@ -127,6 +129,7 @@ export function FeedCard({
               primaryImage={primaryImage}
               showPageBadge={showPageBadge}
               pageCount={pageCount}
+              reducedMotion={reducedMotion}
             />
           ) : null}
 
@@ -143,6 +146,7 @@ export function FeedCard({
               primaryImage={primaryImage}
               showPageBadge={showPageBadge}
               pageCount={pageCount}
+              reducedMotion={reducedMotion}
             />
           ) : null}
 
@@ -216,10 +220,12 @@ function RenderedImage({
   primaryImage,
   showPageBadge,
   pageCount,
+  reducedMotion,
 }: {
   primaryImage: string;
   showPageBadge: boolean;
   pageCount: number;
+  reducedMotion: boolean;
 }) {
   const [usePngFallback, setUsePngFallback] = React.useState(false);
   const [renderFailed, setRenderFailed] = React.useState(false);
@@ -260,7 +266,7 @@ function RenderedImage({
           source={{ uri: imageUri }}
           style={styles.renderedImage}
           contentFit="contain"
-          transition={120}
+          transition={reducedMotion ? 0 : 120}
           onError={onRenderedImageError}
         />
       )}
@@ -271,7 +277,7 @@ function RenderedImage({
 const styles = StyleSheet.create({
   card: {
     width: "100%",
-    maxWidth: 393,
+    maxWidth: 520,
     alignSelf: "center",
   },
   cardSaved: {
@@ -285,7 +291,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    paddingHorizontal: 20,
+    paddingHorizontal: 22,
   },
   authorPressArea: {
     flex: 1,
@@ -342,8 +348,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 0,
     overflow: "hidden",
     backgroundColor: tokens.colors.paper,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
+    borderWidth: 1,
     borderColor: tokens.colors.paperBorder,
   },
   renderedImage: {
@@ -392,10 +397,10 @@ const styles = StyleSheet.create({
     backgroundColor: tokens.colors.paper,
     borderWidth: 1,
     borderColor: tokens.colors.paperBorder,
-    borderRadius: 6,
-    marginHorizontal: 20,
-    paddingHorizontal: 22,
-    paddingVertical: 24,
+    borderRadius: 3,
+    marginHorizontal: 22,
+    paddingHorizontal: 26,
+    paddingVertical: 28,
   },
 
   socialRow: {
@@ -403,7 +408,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     minHeight: 48,
-    paddingHorizontal: 20,
+    paddingHorizontal: 22,
     paddingTop: 4,
   },
 

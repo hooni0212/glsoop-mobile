@@ -3,6 +3,7 @@ import { Animated, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { tokens } from "@/theme/tokens";
 import * as haptics from "@/lib/haptics";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
 
 export type ToastTone = "default" | "success" | "error";
 
@@ -27,6 +28,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toast, setToast] = useState<ToastState | null>(null);
   const opacity = useRef(new Animated.Value(0)).current;
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const reducedMotion = useReducedMotion();
 
   const clearToastTimer = useCallback(() => {
     if (!timerRef.current) return;
@@ -35,6 +37,12 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const hideToast = useCallback(() => {
+    if (reducedMotion) {
+      opacity.setValue(0);
+      setToast(null);
+      return;
+    }
+
     Animated.timing(opacity, {
       toValue: 0,
       duration: 220,
@@ -42,7 +50,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     }).start(({ finished }) => {
       if (finished) setToast(null);
     });
-  }, [opacity]);
+  }, [opacity, reducedMotion]);
 
   const showToast = useCallback(
     (message: string, options?: ToastOptions) => {

@@ -3,6 +3,7 @@ import React from "react";
 import { Pressable, Text, View } from "react-native";
 
 import { homeHeaderStyles } from "@/screens/Home.styles";
+import { useKeyboardFocus } from "@/hooks/useKeyboardFocus";
 import { tokens } from "@/theme/tokens";
 
 type Props = {
@@ -22,8 +23,12 @@ export function HomeHeader({
   hasUnreadNotifications = false,
   showNotifications = false,
 }: Props) {
+  const searchFocus = useKeyboardFocus();
+  const notificationsFocus = useKeyboardFocus();
+
   return (
     <View style={homeHeaderStyles.header}>
+      <View style={homeHeaderStyles.marginRail} accessibilityElementsHidden />
       <View style={homeHeaderStyles.titleWrap}>
         <Text style={homeHeaderStyles.brand}>{title}</Text>
         {subtitle ? (
@@ -35,11 +40,13 @@ export function HomeHeader({
 
       <View style={homeHeaderStyles.actions}>
         <Pressable
+          {...searchFocus.focusProps}
           onPress={onPressSearch}
           hitSlop={12}
           style={({ pressed }) => [
             homeHeaderStyles.iconBtn,
             pressed && homeHeaderStyles.iconBtnPressed,
+            searchFocus.keyboardFocused && homeHeaderStyles.focused,
           ]}
           accessibilityRole="button"
           accessibilityLabel="검색"
@@ -53,11 +60,13 @@ export function HomeHeader({
 
         {showNotifications ? (
           <Pressable
+            {...notificationsFocus.focusProps}
             onPress={onPressNotifications}
             hitSlop={12}
             style={({ pressed }) => [
               homeHeaderStyles.iconBtn,
               pressed && homeHeaderStyles.iconBtnPressed,
+              notificationsFocus.keyboardFocused && homeHeaderStyles.focused,
             ]}
             accessibilityRole="button"
             accessibilityLabel="알림"

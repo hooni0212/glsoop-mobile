@@ -3,7 +3,7 @@ import type { TextStyle } from "react-native";
 export const appFontFamily = {
   editorial: "Hahmlet-Medium",
   editorialStrong: "Hahmlet-SemiBold",
-  ui: "IBMPlexSansKR-Medium",
+  ui: "Hahmlet-Medium",
   handwriting: "Gaegu-Regular",
 } as const;
 
@@ -22,9 +22,9 @@ export const typography = {
   },
   tabLabel: {
     fontFamily: appFontFamily.ui,
-    fontSize: 14,
+    fontSize: 13,
     lineHeight: 20,
-    letterSpacing: -0.15,
+    letterSpacing: -0.25,
   },
   author: {
     fontFamily: appFontFamily.ui,
@@ -49,5 +49,29 @@ export const typography = {
     fontSize: 12,
     lineHeight: 18,
     letterSpacing: -0.1,
+  },
+  pageTitle: {
+    fontFamily: appFontFamily.editorialStrong,
+    fontSize: 27,
+    lineHeight: 38,
+    letterSpacing: -0.7,
+  },
+  eyebrow: {
+    fontFamily: appFontFamily.ui,
+    fontSize: 11,
+    lineHeight: 17,
+    letterSpacing: 0.4,
+  },
+  uiBody: {
+    fontFamily: appFontFamily.ui,
+    fontSize: 14,
+    lineHeight: 23,
+    letterSpacing: -0.15,
+  },
+  action: {
+    fontFamily: appFontFamily.ui,
+    fontSize: 14,
+    lineHeight: 20,
+    letterSpacing: -0.15,
   },
 } satisfies Record<string, TextStyle>;

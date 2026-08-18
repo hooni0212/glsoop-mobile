@@ -28,7 +28,7 @@ export default function TabsLayout() {
       tabBar={(props) => <TabsBar {...props} />}
     >
       <Tabs.Screen name="index" options={{ title: "오늘" }} />
-      <Tabs.Screen name="explore" options={{ title: "발견" }} />
+      <Tabs.Screen name="explore" options={{ title: "읽기" }} />
       <Tabs.Screen name="book" options={{ title: "문집" }} />
       <Tabs.Screen name="me" options={{ title: "나" }} />
 

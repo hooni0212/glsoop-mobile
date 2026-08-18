@@ -1,6 +1,8 @@
 import { StyleSheet } from "react-native";
 import { COLORS } from "./tabs.meta";
 import { floatingShadowStyle } from "@/theme/shadows";
+import { keyboardFocusRingStyle } from "@/theme/accessibility";
+import { typography } from "@/theme/typography";
 
 /**
  * Bottom Tabs UI tokens
@@ -28,13 +30,13 @@ export const ACTION_BAR_BASE_HEIGHT = 62;
 export const ACTION_BAR_PADDING_BOTTOM = 10;
 
 /** 가운데 FAB 자리를 위한 탭 간격 */
-export const TAB_BAR_CENTER_GAP = 74;
+export const TAB_BAR_CENTER_GAP = 66;
 
 /** FAB 크기(지름) */
-export const TAB_BAR_FAB_SIZE = 66;
+export const TAB_BAR_FAB_SIZE = 58;
 
 /** FAB가 바 위로 떠 있는 정도(기존 디자인 유지) */
-export const TAB_BAR_FAB_LIFT = 14;
+export const TAB_BAR_FAB_LIFT = 12;
 
 // =========================
 // Helpers
@@ -100,25 +102,20 @@ export function createTabsStyles(insetBottom?: number) {
     },
 
     label: {
-      fontSize: 12,
-      fontWeight: "900",
-      letterSpacing: 0,
+      ...typography.meta,
       marginTop: 4,
     },
 
     activeLine: {
       position: "absolute",
-      top: 0,
-      left: 18,
-      right: 18,
-      height: 3,
+      bottom: 1,
+      width: 16,
+      height: 2,
       borderRadius: 2,
       backgroundColor: "transparent",
     },
     activeLineOn: {
       backgroundColor: COLORS.active,
-      borderWidth: 3,
-      borderColor: "#fffefa",
     },
 
     // ✅ 가운데 FAB 자리 확보(탭 간격)
@@ -133,8 +130,8 @@ export function createTabsStyles(insetBottom?: number) {
       transform: [{ translateX: -(TAB_BAR_FAB_SIZE / 2) }],
       top: -TAB_BAR_FAB_LIFT,
       width: TAB_BAR_FAB_SIZE,
-      height: TAB_BAR_FAB_SIZE,
-      borderRadius: TAB_BAR_FAB_SIZE / 2,
+      height: TAB_BAR_FAB_SIZE + 8,
+      borderRadius: 8,
       ...floatingShadowStyle,
       alignItems: "center",
       justifyContent: "center",
@@ -142,19 +139,30 @@ export function createTabsStyles(insetBottom?: number) {
 
     fab: {
       width: TAB_BAR_FAB_SIZE,
-      height: TAB_BAR_FAB_SIZE,
-      borderRadius: TAB_BAR_FAB_SIZE / 2,
+      height: TAB_BAR_FAB_SIZE + 8,
+      borderTopLeftRadius: 7,
+      borderTopRightRadius: 7,
+      borderBottomLeftRadius: 18,
+      borderBottomRightRadius: 18,
       backgroundColor: COLORS.active,
       alignItems: "center",
       justifyContent: "center",
     },
 
-    fabLabel: {
-      marginTop: -2,
-      color: "#ffffff",
-      fontSize: 10,
-      lineHeight: 12,
-      fontWeight: "800",
+    fabContent: {
+      alignItems: "center",
+      justifyContent: "center",
+      paddingBottom: 3,
     },
+
+    fabLabel: {
+      marginTop: 0,
+      color: "#ffffff",
+      ...typography.meta,
+      fontSize: 10,
+      lineHeight: 13,
+    },
+    pressed: { opacity: 0.72 },
+    focused: keyboardFocusRingStyle,
   });
 }

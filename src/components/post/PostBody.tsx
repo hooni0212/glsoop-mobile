@@ -11,6 +11,7 @@ import { normalizePostBackgroundTemplateId } from "@/lib/postBackgroundTemplates
 import type { WriteLayoutModel } from "@/lib/postLayout";
 import type { PostRenderImages, PostType } from "@/types/post";
 import { tokens } from "@/theme/tokens";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
 
 export type PostBodyProps = {
   postId?: string;
@@ -35,6 +36,7 @@ export function PostBody({
   versionSeed,
   renderImages,
 }: PostBodyProps) {
+  const reducedMotion = useReducedMotion();
   const [renderFailed, setRenderFailed] = useState(false);
   const [usePngFallback, setUsePngFallback] = useState(false);
   const [carouselWidth, setCarouselWidth] = useState(0);
@@ -72,7 +74,7 @@ export function PostBody({
   const scrollToPage = (nextIndex: number) => {
     if (!scrollRef.current || carouselWidth <= 0) return;
     const safeIndex = Math.max(0, Math.min(nextIndex, imageUrls.length - 1));
-    scrollRef.current.scrollTo({ x: safeIndex * carouselWidth, animated: true });
+    scrollRef.current.scrollTo({ x: safeIndex * carouselWidth, animated: !reducedMotion });
     setActivePage(safeIndex);
   };
 
@@ -96,7 +98,7 @@ export function PostBody({
               source={{ uri: imageUrl }}
               style={styles.image}
               contentFit="contain"
-              transition={120}
+              transition={reducedMotion ? 0 : 120}
               allowDownscaling={allowImageDownscaling}
               recyclingKey={imageUrl}
               onError={onRenderImageError}
@@ -141,7 +143,7 @@ export function PostBody({
                       source={{ uri: imageUrl }}
                       style={styles.image}
                       contentFit="contain"
-                      transition={120}
+                      transition={reducedMotion ? 0 : 120}
                       allowDownscaling={allowImageDownscaling}
                       recyclingKey={`${imageUrl}-${index}`}
                       onError={onRenderImageError}

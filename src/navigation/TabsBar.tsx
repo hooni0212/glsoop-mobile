@@ -9,6 +9,7 @@ import { buildAuthRoute } from "@/lib/authRedirect";
 import * as haptics from "@/lib/haptics";
 import { COLORS, TAB_META, TAB_ORDER, type TabRouteName } from "./tabs.meta";
 import { createTabsStyles } from "./tabs.styles";
+import { useKeyboardFocus } from "@/hooks/useKeyboardFocus";
 
 /**
  * ✅ 최종 탭바(실전용)
@@ -33,6 +34,7 @@ export function TabsBar(props: any /* BottomTabBarProps */) {
 
   const { token } = useAuth();
   const insets = useSafeAreaInsets();
+  const writeFocus = useKeyboardFocus();
   const styles = React.useMemo(
     () => createTabsStyles(insets.bottom),
     [insets.bottom]
@@ -85,6 +87,7 @@ export function TabsBar(props: any /* BottomTabBarProps */) {
       {/* FAB 오버레이 */}
       <View style={styles.fabWrap} pointerEvents="box-none">
         <Pressable
+          {...writeFocus.focusProps}
           onPress={() => {
             haptics.medium();
             if (!token) {
@@ -93,14 +96,20 @@ export function TabsBar(props: any /* BottomTabBarProps */) {
             }
             router.push("/write");
           }}
-          style={styles.fab}
+          style={({ pressed }) => [
+            styles.fab,
+            pressed && styles.pressed,
+            writeFocus.keyboardFocused && styles.focused,
+          ]}
           hitSlop={12}
           accessibilityRole="button"
           accessibilityLabel="글쓰기"
           testID="fab-write"
         >
-          <Ionicons name="create-outline" size={26} color="#FFFFFF" />
-          <Text style={styles.fabLabel}>쓰기</Text>
+          <View style={styles.fabContent}>
+            <Ionicons name="create-outline" size={22} color="#FFFFFF" />
+            <Text style={styles.fabLabel}>쓰기</Text>
+          </View>
         </Pressable>
       </View>
     </View>
@@ -120,12 +129,18 @@ function TabButton({
   onPress: () => void;
   styles: any;
 }) {
+  const focus = useKeyboardFocus();
   const color = active ? COLORS.active : COLORS.inactive;
 
   return (
     <Pressable
+      {...focus.focusProps}
       onPress={onPress}
-      style={styles.tabSlot}
+      style={({ pressed }) => [
+        styles.tabSlot,
+        pressed && styles.pressed,
+        focus.keyboardFocused && styles.focused,
+      ]}
       hitSlop={10}
       accessibilityRole="tab"
       accessibilityLabel={label}

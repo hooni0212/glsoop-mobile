@@ -2,6 +2,7 @@ import { StyleSheet } from "react-native";
 
 import { tokens } from "@/theme/tokens";
 import { typography } from "@/theme/typography";
+import { keyboardFocusRingStyle } from "@/theme/accessibility";
 
 /**
  * Home screen design tokens + styles (single source of truth).
@@ -18,7 +19,10 @@ export const homeScreenStyles = StyleSheet.create({
     backgroundColor: tokens.colors.bg,
   },
   premiumDiscoveryWrap: {
-    paddingHorizontal: 20,
+    width: "100%",
+    maxWidth: 520,
+    alignSelf: "center",
+    paddingHorizontal: 22,
     paddingBottom: 10,
   },
 });
@@ -26,15 +30,25 @@ export const homeScreenStyles = StyleSheet.create({
 export const homeHeaderStyles = StyleSheet.create({
   header: {
     width: "100%",
-    maxWidth: 393,
+    maxWidth: 520,
     alignSelf: "center",
-    paddingTop: 10,
+    paddingTop: 18,
     paddingHorizontal: 22,
-    paddingBottom: 8,
+    paddingLeft: 38,
+    paddingBottom: 12,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     gap: 18,
+  },
+  marginRail: {
+    position: "absolute",
+    left: 22,
+    top: 22,
+    bottom: 15,
+    width: 2,
+    borderRadius: 1,
+    backgroundColor: tokens.colors.green700,
   },
   brand: {
     ...typography.brand,
@@ -46,9 +60,8 @@ export const homeHeaderStyles = StyleSheet.create({
     minWidth: 0,
   },
   subtitle: {
-    marginTop: 1,
-    fontSize: 11,
-    lineHeight: 16,
+    ...typography.eyebrow,
+    marginTop: 2,
     color: tokens.colors.textMuted,
   },
   actions: {
@@ -73,6 +86,7 @@ export const homeHeaderStyles = StyleSheet.create({
   iconBtnPressed: {
     backgroundColor: tokens.colors.bgMuted,
   },
+  focused: keyboardFocusRingStyle,
   iconBtnDisabled: {
     opacity: 0.5,
   },
@@ -92,17 +106,19 @@ export const homeHeaderStyles = StyleSheet.create({
 export const categoryChipsStyles = StyleSheet.create({
   wrap: {
     width: "100%",
-    maxWidth: 393,
+    maxWidth: 520,
     alignSelf: "center",
     paddingTop: 0,
-    paddingBottom: 10,
+    paddingBottom: 12,
     paddingHorizontal: 22,
   },
   content: {
     minHeight: 44,
     flexDirection: "row",
     alignItems: "center",
-    gap: 26,
+    gap: 28,
+    borderBottomWidth: 1,
+    borderBottomColor: tokens.colors.divider,
   },
   chip: {
     minHeight: 44,
@@ -121,8 +137,8 @@ export const categoryChipsStyles = StyleSheet.create({
     position: "absolute",
     left: 1,
     width: 18,
-    bottom: 3,
-    height: 2,
+    bottom: -1,
+    height: 3,
     borderRadius: tokens.radius.pill,
     backgroundColor: "transparent",
   },
@@ -136,12 +152,13 @@ export const categoryChipsStyles = StyleSheet.create({
   chipTextActive: {
     color: tokens.colors.text,
   },
+  focused: keyboardFocusRingStyle,
 });
 
 export const feedSectionStyles = StyleSheet.create({
   listContent: {
     width: "100%",
-    maxWidth: 393,
+    maxWidth: 520,
     alignSelf: "center",
     paddingHorizontal: 0,
     paddingBottom: 18,
@@ -153,8 +170,8 @@ export const feedSectionStyles = StyleSheet.create({
     height: 8,
   },
   itemSeparator: {
-    height: 28,
-    marginHorizontal: 20,
+    height: 30,
+    marginHorizontal: 22,
     borderBottomWidth: 1,
     borderBottomColor: tokens.colors.divider,
   },

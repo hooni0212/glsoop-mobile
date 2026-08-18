@@ -16,6 +16,8 @@ import { useBottomDock } from "@/navigation/bottomDock";
 import { listWriteDrafts, type WriteDraft } from "@/services/draftStorage";
 import { tokens } from "@/theme/tokens";
 import { typography } from "@/theme/typography";
+import { keyboardFocusRingStyle } from "@/theme/accessibility";
+import { useKeyboardFocus } from "@/hooks/useKeyboardFocus";
 
 export default function BookScreen() {
   const dock = useBottomDock();
@@ -74,6 +76,7 @@ export default function BookScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
+          <View style={styles.headerRail} accessibilityElementsHidden />
           <Text style={styles.eyebrow}>나의 글이 머무는 곳</Text>
           <Text style={styles.title}>문집</Text>
           <Text style={styles.description}>
@@ -181,8 +184,20 @@ function BookAction({
   description: string;
   onPress: () => void;
 }) {
+  const focus = useKeyboardFocus();
+
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [styles.actionCard, pressed && styles.pressed]}>
+    <Pressable
+      {...focus.focusProps}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.actionCard,
+        pressed && styles.pressed,
+        focus.keyboardFocused && styles.focused,
+      ]}
+      accessibilityRole="button"
+      accessibilityLabel={`${title}: ${description}`}
+    >
       <Ionicons name={icon} size={22} color={tokens.colors.green700} />
       <Text style={styles.actionTitle}>{title}</Text>
       <Text style={styles.actionDescription}>{description}</Text>
@@ -193,11 +208,20 @@ function BookAction({
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: tokens.colors.bg },
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
-  content: { width: "100%", maxWidth: 393, alignSelf: "center", paddingHorizontal: 20 },
-  header: { paddingTop: 26, paddingBottom: 24 },
-  eyebrow: { fontSize: 12, fontWeight: "800", color: tokens.colors.green700 },
-  title: { ...typography.brand, marginTop: 6, fontSize: 30, lineHeight: 40, color: tokens.colors.green900 },
-  description: { marginTop: 10, maxWidth: 310, fontSize: 14, lineHeight: 22, color: tokens.colors.textMuted },
+  content: { width: "100%", maxWidth: 520, alignSelf: "center", paddingHorizontal: 22 },
+  header: { paddingTop: 28, paddingBottom: 26, paddingLeft: 16, position: "relative" },
+  headerRail: {
+    position: "absolute",
+    left: 0,
+    top: 31,
+    bottom: 29,
+    width: 2,
+    borderRadius: 1,
+    backgroundColor: tokens.colors.green700,
+  },
+  eyebrow: { ...typography.eyebrow, color: tokens.colors.green700 },
+  title: { ...typography.pageTitle, marginTop: 5, fontSize: 30, lineHeight: 41, color: tokens.colors.green900 },
+  description: { ...typography.uiBody, marginTop: 8, maxWidth: 340, color: tokens.colors.textMuted },
   summary: {
     minHeight: 84,
     flexDirection: "row",
@@ -207,21 +231,21 @@ const styles = StyleSheet.create({
     borderColor: tokens.colors.divider,
   },
   summaryCell: { flex: 1, alignItems: "center" },
-  summaryValue: { fontSize: 21, lineHeight: 28, fontWeight: "700", color: tokens.colors.text },
-  summaryLabel: { marginTop: 2, fontSize: 11, color: tokens.colors.textMuted },
+  summaryValue: { ...typography.sectionTitle, fontSize: 21, lineHeight: 29, color: tokens.colors.text },
+  summaryLabel: { ...typography.eyebrow, marginTop: 2, color: tokens.colors.textMuted },
   summaryDivider: { width: 1, height: 32, backgroundColor: tokens.colors.divider },
   actionGrid: { flexDirection: "row", gap: 10, marginTop: 22 },
   actionCard: {
     flex: 1,
     minHeight: 136,
     padding: 16,
-    borderRadius: tokens.radius.lg,
+    borderRadius: 4,
     borderWidth: 1,
     borderColor: tokens.colors.border,
     backgroundColor: tokens.colors.surfaceStrong,
   },
-  actionTitle: { marginTop: 16, fontSize: 15, fontWeight: "800", color: tokens.colors.text },
-  actionDescription: { marginTop: 5, fontSize: 12, lineHeight: 18, color: tokens.colors.textMuted },
+  actionTitle: { ...typography.sectionTitle, marginTop: 16, color: tokens.colors.text },
+  actionDescription: { ...typography.meta, marginTop: 5, color: tokens.colors.textMuted },
   sectionHeader: {
     marginTop: 34,
     marginBottom: 8,
@@ -229,22 +253,23 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
   },
-  sectionTitle: { fontSize: 19, lineHeight: 27, fontWeight: "700", color: tokens.colors.text },
-  textButton: { fontSize: 13, fontWeight: "700", color: tokens.colors.green700 },
+  sectionTitle: { ...typography.sectionTitle, fontSize: 19, lineHeight: 28, color: tokens.colors.text },
+  textButton: { ...typography.meta, color: tokens.colors.green700 },
   empty: { alignItems: "center", paddingVertical: 34, paddingHorizontal: 20 },
-  emptyTitle: { marginTop: 12, fontSize: 17, fontWeight: "700", color: tokens.colors.text },
-  emptyCopy: { marginTop: 6, fontSize: 13, lineHeight: 20, textAlign: "center", color: tokens.colors.textMuted },
+  emptyTitle: { ...typography.sectionTitle, marginTop: 12, fontSize: 17, color: tokens.colors.text },
+  emptyCopy: { ...typography.meta, marginTop: 6, lineHeight: 20, textAlign: "center", color: tokens.colors.textMuted },
   emptyButton: { marginTop: 18, paddingVertical: 11, paddingHorizontal: 20, borderRadius: tokens.radius.md, backgroundColor: tokens.colors.green700 },
-  emptyButtonText: { fontSize: 14, fontWeight: "800", color: tokens.colors.textInverse },
+  emptyButtonText: { ...typography.action, color: tokens.colors.textInverse },
   postList: { borderTopWidth: 1, borderColor: tokens.colors.divider },
   postRow: { minHeight: 92, flexDirection: "row", alignItems: "center", borderBottomWidth: 1, borderColor: tokens.colors.divider },
-  postNumber: { width: 34, fontSize: 12, color: tokens.colors.textFaint },
+  postNumber: { ...typography.meta, width: 34, color: tokens.colors.textFaint },
   postText: { flex: 1, paddingVertical: 14, paddingRight: 10 },
-  postTitle: { fontSize: 15, fontWeight: "700", color: tokens.colors.text },
-  postExcerpt: { marginTop: 5, fontSize: 12, lineHeight: 18, color: tokens.colors.textMuted },
-  growthLink: { marginTop: 24, padding: 17, flexDirection: "row", alignItems: "center", borderRadius: tokens.radius.lg, backgroundColor: tokens.colors.green050 },
+  postTitle: { ...typography.sectionTitle, color: tokens.colors.text },
+  postExcerpt: { ...typography.meta, marginTop: 5, color: tokens.colors.textMuted },
+  growthLink: { marginTop: 24, padding: 17, flexDirection: "row", alignItems: "center", borderRadius: 4, backgroundColor: tokens.colors.green050 },
   growthText: { flex: 1, marginHorizontal: 12 },
-  growthTitle: { fontSize: 14, fontWeight: "800", color: tokens.colors.text },
-  growthCopy: { marginTop: 3, fontSize: 12, color: tokens.colors.textMuted },
+  growthTitle: { ...typography.action, color: tokens.colors.text },
+  growthCopy: { ...typography.meta, marginTop: 3, color: tokens.colors.textMuted },
   pressed: { opacity: 0.7 },
+  focused: keyboardFocusRingStyle,
 });
