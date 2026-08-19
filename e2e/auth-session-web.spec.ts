@@ -93,11 +93,13 @@ test.describe("웹 인증 세션 유지", () => {
     await page.getByTestId("login-submit-btn").click();
 
     await expect(page).toHaveURL(/\/(\(tabs\))?\/?$/);
+    await expect(page.getByTestId("app-boot-screen")).toHaveCount(0);
     await expect(page.getByText("글숲", { exact: true })).toBeVisible();
     await expect.poll(() => getAuthToken(page)).toBe(COOKIE_SESSION_TOKEN);
 
     await page.reload();
     await expect(page).toHaveURL(/\/(\(tabs\))?\/?$/);
+    await expect(page.getByTestId("app-boot-screen")).toHaveCount(0);
     await expect(page.getByText("글숲", { exact: true })).toBeVisible();
     await expect.poll(() => getAuthToken(page)).toBe(COOKIE_SESSION_TOKEN);
   });
