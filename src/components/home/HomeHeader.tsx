@@ -30,8 +30,6 @@ export function HomeHeader({
   return (
     <View style={homeHeaderStyles.header}>
       <FolioHeader
-        folio="02"
-        eyebrow="문장을 고르는 두 번째 면"
         title={title}
         subtitle={subtitle}
         actions={

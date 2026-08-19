@@ -199,7 +199,7 @@ export function FeedCard({
               ]}
               testID={bookmarkTestID}
               accessibilityRole="button"
-              accessibilityLabel={bookmarked ? "북마크 해제" : "북마크 저장"}
+              accessibilityLabel={bookmarked ? "책갈피 해제" : "책갈피 저장"}
               accessibilityState={{ selected: bookmarked }}
             >
               <Ionicons

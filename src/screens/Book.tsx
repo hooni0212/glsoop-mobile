@@ -77,8 +77,6 @@ export default function BookScreen() {
         showsVerticalScrollIndicator={false}
       >
         <FolioHeader
-          folio="04"
-          eyebrow="나의 글이 머무는 곳"
           title="문집"
           subtitle="쓰다 만 문장부터 완성한 글까지, 시간이 쌓인 모습을 봅니다"
         />

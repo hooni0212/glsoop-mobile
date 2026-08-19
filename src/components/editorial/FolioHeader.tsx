@@ -5,25 +5,23 @@ import { tokens } from "@/theme/tokens";
 import { typography } from "@/theme/typography";
 
 type Props = {
-  folio: string;
-  eyebrow: string;
   title: string;
+  titleVariant?: "brand" | "page";
   subtitle?: string;
   actions?: React.ReactNode;
 };
 
-export function FolioHeader({ folio, eyebrow, title, subtitle, actions }: Props) {
+export function FolioHeader({
+  title,
+  titleVariant = "page",
+  subtitle,
+  actions,
+}: Props) {
   return (
     <View style={styles.header}>
-      <View style={styles.indexRow}>
-        <Text style={styles.folio}>{folio}</Text>
-        <View style={styles.rule} accessibilityElementsHidden />
-        <Text style={styles.eyebrow} numberOfLines={1}>{eyebrow}</Text>
-      </View>
-
       <View style={styles.titleRow}>
         <View style={styles.copy}>
-          <Text style={styles.title}>{title}</Text>
+          <Text style={titleVariant === "brand" ? styles.brandTitle : styles.title}>{title}</Text>
           {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
         </View>
         {actions ? <View style={styles.actions}>{actions}</View> : null}
@@ -36,33 +34,11 @@ const styles = StyleSheet.create({
   header: {
     width: "100%",
     paddingTop: 18,
-    paddingBottom: 18,
+    paddingBottom: 16,
     borderBottomWidth: 1,
     borderBottomColor: tokens.colors.divider,
   },
-  indexRow: {
-    minHeight: 18,
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  folio: {
-    ...typography.meta,
-    minWidth: 22,
-    color: tokens.colors.green700,
-  },
-  rule: {
-    width: 28,
-    height: 1,
-    marginHorizontal: 8,
-    backgroundColor: tokens.colors.green700,
-  },
-  eyebrow: {
-    ...typography.eyebrow,
-    flex: 1,
-    color: tokens.colors.textMuted,
-  },
   titleRow: {
-    marginTop: 9,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -76,9 +52,13 @@ const styles = StyleSheet.create({
     ...typography.pageTitle,
     color: tokens.colors.green900,
   },
+  brandTitle: {
+    ...typography.brand,
+    color: tokens.colors.green900,
+  },
   subtitle: {
-    ...typography.eyebrow,
-    marginTop: 2,
+    ...typography.meta,
+    marginTop: 1,
     color: tokens.colors.textMuted,
   },
   actions: {
