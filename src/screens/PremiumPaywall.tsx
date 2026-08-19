@@ -581,7 +581,7 @@ const styles = StyleSheet.create({
   },
   topBarTitle: {
     fontSize: 17,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
   },
   topBarSpacer: {
@@ -614,12 +614,12 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     fontSize: 12,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.green900,
   },
   title: {
     fontSize: 28,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
   },
   description: {
@@ -655,7 +655,7 @@ const styles = StyleSheet.create({
   },
   benefitTitle: {
     fontSize: 15,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
   },
   benefitBody: {
@@ -687,7 +687,7 @@ const styles = StyleSheet.create({
   },
   planTitle: {
     fontSize: 12,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.green700,
   },
   valuePill: {
@@ -698,12 +698,12 @@ const styles = StyleSheet.create({
   },
   valuePillText: {
     fontSize: 11,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.green900,
   },
   planName: {
     fontSize: 16,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
   },
   planDescription: {
@@ -718,7 +718,7 @@ const styles = StyleSheet.create({
   },
   price: {
     fontSize: 15,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
   },
   purchaseBtn: {
@@ -732,7 +732,7 @@ const styles = StyleSheet.create({
   },
   purchaseBtnText: {
     fontSize: 14,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.textInverse,
   },
   restoreBtn: {
@@ -749,7 +749,7 @@ const styles = StyleSheet.create({
   },
   restoreBtnText: {
     fontSize: 14,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
   },
   subscriptionNotice: {
@@ -777,7 +777,7 @@ const styles = StyleSheet.create({
   },
   legalLinkText: {
     fontSize: 12,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
   },
   disabledBtn: {

@@ -100,23 +100,20 @@ test.describe("iOS 프리미엄 발견성", () => {
     await prepareUser(page);
   });
 
-  test("내 정보 카드에서 출처를 유지해 프리미엄 화면으로 이동한다", async ({ page }) => {
+  test("내 정보 화면에는 프리미엄과 꾸미기 진입을 노출하지 않는다", async ({ page }) => {
     const events: Array<Record<string, unknown>> = [];
     await mockApis(page, events);
 
     await page.goto("/me");
-    const card = page.getByTestId("premium-discovery-me_card");
-    await expect(card).toBeVisible();
-    await card.getByRole("button", { name: "글숲 프리미엄 혜택 보기" }).click();
-
-    await expect(page).toHaveURL(/\/premium\?source=me_card/);
+    await expect(page.getByTestId("premium-discovery-me_card")).toHaveCount(0);
+    await expect(page.getByTestId("author-profile-customize-btn")).toHaveCount(0);
   });
 
   test("홈 소개를 닫으면 14일 쿨다운 동안 다시 노출하지 않는다", async ({ page }) => {
     const events: Array<Record<string, unknown>> = [];
     await mockApis(page, events);
 
-    await page.goto("/");
+    await page.goto("/explore");
     const card = page.getByTestId("premium-discovery-home_discovery");
     await expect(card).toBeVisible();
     await card.getByRole("button", { name: "프리미엄 소개 닫기" }).click();

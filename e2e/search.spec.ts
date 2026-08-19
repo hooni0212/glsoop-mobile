@@ -2,6 +2,8 @@ import { expect, test, type Page } from "@playwright/test";
 
 const AUTH_TOKEN_KEY = "glsoop_auth_token_v1";
 const PUBLIC_UGC_NOTICE_STORAGE_KEY = "glsoop.public_ugc_notice_ack";
+const APP_ONBOARDING_COMPLETED_KEY = "glsoop.appOnboardingTour.completed.v1";
+const GUIDED_HELP_DISMISSED_KEY = "glsoop.guidedHelp.dismissed.v1";
 
 const SEARCH_FIXTURE_POSTS = [
   {
@@ -75,10 +77,12 @@ async function setAuthToken(page: Page, token: string) {
     key: AUTH_TOKEN_KEY,
     value: token,
     noticeKey: PUBLIC_UGC_NOTICE_STORAGE_KEY,
+    onboardingKey: APP_ONBOARDING_COMPLETED_KEY,
+    guidedHelpKey: GUIDED_HELP_DISMISSED_KEY,
   };
 
   await page.addInitScript(
-    ({ key, value, noticeKey }) => {
+    ({ key, value, noticeKey, onboardingKey, guidedHelpKey }) => {
       localStorage.setItem(key, value);
       localStorage.setItem(
         noticeKey,
@@ -87,19 +91,47 @@ async function setAuthToken(page: Page, token: string) {
           acknowledgedAt: "2026-04-20T00:00:00.000Z",
         })
       );
+      localStorage.setItem(
+        onboardingKey,
+        JSON.stringify({
+          version: "app-onboarding-tour.v1",
+          completedAt: "2026-08-19T00:00:00.000Z",
+        })
+      );
+      localStorage.setItem(
+        guidedHelpKey,
+        JSON.stringify({
+          version: "guided-help.v1",
+          completedAt: "2026-08-19T00:00:00.000Z",
+        })
+      );
     },
     storagePayload
   );
   await page.goto("/");
   await page.waitForLoadState("domcontentloaded");
   await page.evaluate(
-    ({ key, value, noticeKey }) => {
+    ({ key, value, noticeKey, onboardingKey, guidedHelpKey }) => {
       localStorage.setItem(key, value);
       localStorage.setItem(
         noticeKey,
         JSON.stringify({
           versionKey: "public-ugc-notice.v1",
           acknowledgedAt: "2026-04-20T00:00:00.000Z",
+        })
+      );
+      localStorage.setItem(
+        onboardingKey,
+        JSON.stringify({
+          version: "app-onboarding-tour.v1",
+          completedAt: "2026-08-19T00:00:00.000Z",
+        })
+      );
+      localStorage.setItem(
+        guidedHelpKey,
+        JSON.stringify({
+          version: "guided-help.v1",
+          completedAt: "2026-08-19T00:00:00.000Z",
         })
       );
     },
@@ -178,7 +210,7 @@ test.describe("검색 화면", () => {
   });
 
   test("제목/본문/작가 키워드로 결과를 필터링한다", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/explore");
     await page.getByRole("button", { name: "검색" }).click();
 
     await expect(page.getByTestId("search-screen")).toBeVisible();
@@ -204,7 +236,7 @@ test.describe("검색 화면", () => {
   });
 
   test("결과가 없을 때 empty 상태를 보여주고 입력 초기화가 동작한다", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/explore");
     await page.getByRole("button", { name: "검색" }).click();
 
     await page.getByTestId("search-input").fill("없는검색어");
@@ -217,7 +249,7 @@ test.describe("검색 화면", () => {
   });
 
   test("자동 탭 전환은 쿼리 변경 시에만 동작하고 수동 탭 선택은 유지된다", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/explore");
     await page.getByRole("button", { name: "검색" }).click();
 
     await expect(page.getByTestId("search-screen")).toBeVisible();

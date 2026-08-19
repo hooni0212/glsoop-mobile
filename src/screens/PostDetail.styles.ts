@@ -78,7 +78,7 @@ export function createPostDetailStyles(actionBarHeight: number, topInset = 0) {
     introEyebrow: {
       fontSize: 11,
       letterSpacing: 1.3,
-      fontWeight: "900",
+      fontWeight: "600",
       color: tokens.colors.textFaint,
     },
     metaRow: {
@@ -88,7 +88,7 @@ export function createPostDetailStyles(actionBarHeight: number, topInset = 0) {
     },
     metaAuthor: {
       fontSize: 13,
-      fontWeight: "800",
+      fontWeight: "500",
       color: tokens.colors.text,
     },
     metaAuthorPress: {
@@ -106,12 +106,12 @@ export function createPostDetailStyles(actionBarHeight: number, topInset = 0) {
     },
     metaDot: {
       fontSize: 13,
-      fontWeight: "700",
+      fontWeight: "500",
       color: tokens.colors.textFaint,
     },
     metaDate: {
       fontSize: 13,
-      fontWeight: "700",
+      fontWeight: "500",
       color: tokens.colors.textMuted,
     },
 
@@ -134,7 +134,7 @@ export function createPostDetailStyles(actionBarHeight: number, topInset = 0) {
     },
     typeChipText: {
       fontSize: 12,
-      fontWeight: "800",
+      fontWeight: "500",
       color: tokens.colors.text,
       letterSpacing: -0.2,
     },
@@ -148,7 +148,7 @@ export function createPostDetailStyles(actionBarHeight: number, topInset = 0) {
     },
     tagChipText: {
       fontSize: 12,
-      fontWeight: "700",
+      fontWeight: "500",
       color: tokens.colors.textMuted,
       letterSpacing: -0.2,
     },
@@ -164,20 +164,20 @@ export function createPostDetailStyles(actionBarHeight: number, topInset = 0) {
     },
     relatedEyebrow: {
       fontSize: 11,
-      fontWeight: "900",
+      fontWeight: "600",
       color: tokens.colors.textFaint,
       letterSpacing: 0,
       marginBottom: -4,
     },
     relatedTitle: {
       fontSize: 16,
-      fontWeight: "900",
+      fontWeight: "600",
       color: tokens.colors.text,
     },
     relatedHint: {
       fontSize: tokens.font.small,
       color: tokens.colors.textMuted,
-      fontWeight: "700",
+      fontWeight: "500",
     },
     relatedList: {
       gap: tokens.space.sm as any,
@@ -223,18 +223,18 @@ export function createPostDetailStyles(actionBarHeight: number, topInset = 0) {
     },
     relatedFeedAuthor: {
       fontSize: 12,
-      fontWeight: "900",
+      fontWeight: "600",
       color: tokens.colors.textMuted,
     },
     relatedFeedTitle: {
       fontSize: 14,
       lineHeight: 20,
-      fontWeight: "900",
+      fontWeight: "600",
       color: tokens.colors.text,
     },
     relatedFeedMeta: {
       fontSize: 12,
-      fontWeight: "800",
+      fontWeight: "500",
       color: tokens.colors.green700,
     },
     relatedFeedMetaRow: {
@@ -252,7 +252,7 @@ export function createPostDetailStyles(actionBarHeight: number, topInset = 0) {
     },
     relatedCardTitle: {
       fontSize: 14,
-      fontWeight: "800",
+      fontWeight: "500",
       color: tokens.colors.text,
     },
     relatedCardExcerpt: {
@@ -263,7 +263,7 @@ export function createPostDetailStyles(actionBarHeight: number, topInset = 0) {
     relatedCardMeta: {
       fontSize: tokens.font.small,
       color: tokens.colors.textFaint,
-      fontWeight: "700",
+      fontWeight: "500",
     },
     commentSection: {
       marginTop: tokens.space.xl,
@@ -286,7 +286,7 @@ export function createPostDetailStyles(actionBarHeight: number, topInset = 0) {
     },
     permissionChipText: {
       fontSize: 12,
-      fontWeight: "800",
+      fontWeight: "500",
       color: tokens.colors.textMuted,
     },
     commentHeaderRow: {
@@ -357,12 +357,12 @@ export function createPostDetailStyles(actionBarHeight: number, topInset = 0) {
     },
     commentTitle: {
       fontSize: 16,
-      fontWeight: "900",
+      fontWeight: "600",
       color: tokens.colors.text,
     },
     commentKicker: {
       fontSize: 11,
-      fontWeight: "900",
+      fontWeight: "600",
       color: tokens.colors.textFaint,
       letterSpacing: 0,
       marginBottom: 3,
@@ -388,12 +388,12 @@ export function createPostDetailStyles(actionBarHeight: number, topInset = 0) {
     replyTargetText: {
       flex: 1,
       fontSize: tokens.font.small,
-      fontWeight: "800",
+      fontWeight: "500",
       color: tokens.colors.green900,
     },
     replyCancelText: {
       fontSize: tokens.font.small,
-      fontWeight: "900",
+      fontWeight: "600",
       color: tokens.colors.textMuted,
     },
     commentInput: {
@@ -418,7 +418,7 @@ export function createPostDetailStyles(actionBarHeight: number, topInset = 0) {
     },
     commentInputCount: {
       fontSize: tokens.font.small,
-      fontWeight: "700",
+      fontWeight: "500",
       color: tokens.colors.textFaint,
     },
     commentSubmitBtn: {
@@ -434,7 +434,7 @@ export function createPostDetailStyles(actionBarHeight: number, topInset = 0) {
     },
     commentSubmitText: {
       fontSize: tokens.font.small,
-      fontWeight: "900",
+      fontWeight: "600",
       color: tokens.colors.textInverse,
     },
     commentLoadingRow: {
@@ -452,7 +452,7 @@ export function createPostDetailStyles(actionBarHeight: number, topInset = 0) {
     },
     commentHint: {
       fontSize: tokens.font.small,
-      fontWeight: "700",
+      fontWeight: "500",
       color: tokens.colors.textMuted,
       lineHeight: 20,
     },
@@ -512,18 +512,18 @@ export function createPostDetailStyles(actionBarHeight: number, topInset = 0) {
     },
     commentMarkerText: {
       fontSize: 12,
-      fontWeight: "900",
+      fontWeight: "600",
       color: tokens.colors.green700,
     },
     commentAuthor: {
       flex: 1,
       fontSize: tokens.font.small,
-      fontWeight: "900",
+      fontWeight: "600",
       color: tokens.colors.text,
     },
     commentDate: {
       fontSize: 12,
-      fontWeight: "700",
+      fontWeight: "500",
       color: tokens.colors.textFaint,
     },
     commentBody: {
@@ -544,7 +544,7 @@ export function createPostDetailStyles(actionBarHeight: number, topInset = 0) {
     },
     commentActionText: {
       fontSize: tokens.font.small,
-      fontWeight: "900",
+      fontWeight: "600",
       color: tokens.colors.green700,
     },
     commentActionTextActive: {
@@ -552,7 +552,7 @@ export function createPostDetailStyles(actionBarHeight: number, topInset = 0) {
     },
     commentDangerText: {
       fontSize: tokens.font.small,
-      fontWeight: "900",
+      fontWeight: "600",
       color: tokens.colors.danger,
     },
 
@@ -584,7 +584,7 @@ export function createPostDetailStyles(actionBarHeight: number, topInset = 0) {
     },
     actionLabel: {
       fontSize: tokens.font.small,
-      fontWeight: "700",
+      fontWeight: "500",
       color: tokens.colors.textMuted,
     },
     actionLabelActive: {
@@ -619,14 +619,14 @@ export function createPostDetailStyles(actionBarHeight: number, topInset = 0) {
     },
     bookmarkModalTitle: {
       fontSize: 16,
-      fontWeight: "900",
+      fontWeight: "600",
       color: tokens.colors.text,
     },
     bookmarkModalDescription: {
       marginTop: 8,
       fontSize: tokens.font.small,
       color: tokens.colors.textMuted,
-      fontWeight: "700",
+      fontWeight: "500",
     },
     shareModalProgressRow: {
       marginTop: 14,
@@ -644,7 +644,7 @@ export function createPostDetailStyles(actionBarHeight: number, topInset = 0) {
       flex: 1,
       color: tokens.colors.green900,
       fontSize: 13,
-      fontWeight: "800",
+      fontWeight: "500",
     },
     shareBlockingOverlay: {
       flex: 1,
@@ -669,12 +669,12 @@ export function createPostDetailStyles(actionBarHeight: number, topInset = 0) {
       marginTop: tokens.space.sm,
       color: tokens.colors.text,
       fontSize: 16,
-      fontWeight: "900",
+      fontWeight: "600",
     },
     shareBlockingText: {
       color: tokens.colors.textMuted,
       fontSize: tokens.font.small,
-      fontWeight: "700",
+      fontWeight: "500",
       lineHeight: 19,
       textAlign: "center",
     },
@@ -700,7 +700,7 @@ export function createPostDetailStyles(actionBarHeight: number, topInset = 0) {
     },
     modalActionText: {
       fontSize: tokens.font.small,
-      fontWeight: "800",
+      fontWeight: "500",
       color: tokens.colors.text,
     },
     modalActionTextDanger: {
@@ -712,7 +712,7 @@ export function createPostDetailStyles(actionBarHeight: number, topInset = 0) {
     bookmarkModalLoadingText: {
       fontSize: 13,
       color: tokens.colors.textMuted,
-      fontWeight: "700",
+      fontWeight: "500",
     },
     bookmarkModalEmptyWrap: {
       marginTop: 14,
@@ -721,7 +721,7 @@ export function createPostDetailStyles(actionBarHeight: number, topInset = 0) {
     bookmarkModalEmptyText: {
       fontSize: 13,
       color: tokens.colors.textMuted,
-      fontWeight: "700",
+      fontWeight: "500",
     },
     bookmarkModalCreateBtn: {
       borderRadius: 12,
@@ -732,7 +732,7 @@ export function createPostDetailStyles(actionBarHeight: number, topInset = 0) {
     bookmarkModalCreateBtnText: {
       color: tokens.colors.textInverse,
       fontSize: 13,
-      fontWeight: "900",
+      fontWeight: "600",
     },
     bookmarkModalList: {
       marginTop: 14,
@@ -759,12 +759,12 @@ export function createPostDetailStyles(actionBarHeight: number, topInset = 0) {
     bookmarkModalListItemName: {
       color: tokens.colors.text,
       fontSize: 13,
-      fontWeight: "800",
+      fontWeight: "500",
     },
     bookmarkModalListItemStatus: {
       color: tokens.colors.textMuted,
       fontSize: tokens.font.small,
-      fontWeight: "700",
+      fontWeight: "500",
     },
     bookmarkModalCloseBtn: {
       marginTop: 14,
@@ -778,7 +778,7 @@ export function createPostDetailStyles(actionBarHeight: number, topInset = 0) {
     bookmarkModalCloseBtnText: {
       color: tokens.colors.text,
       fontSize: 13,
-      fontWeight: "900",
+      fontWeight: "600",
     },
   });
 }

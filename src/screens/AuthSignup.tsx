@@ -585,8 +585,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: tokens.colors.border,
   },
-  backText: { fontSize: 18, fontWeight: "900", color: tokens.colors.text },
-  h1: { fontSize: tokens.font.h1, fontWeight: "900", color: tokens.colors.text },
+  backText: { fontSize: 18, fontWeight: "600", color: tokens.colors.text },
+  h1: { fontSize: tokens.font.h1, fontWeight: "600", color: tokens.colors.text },
   sub: { fontSize: tokens.font.body, color: tokens.colors.textMuted, lineHeight: 22 },
   panel: {
     borderWidth: 1,
@@ -634,7 +634,7 @@ const styles = StyleSheet.create({
   checkboxMark: {
     color: "white",
     fontSize: 12,
-    fontWeight: "800",
+    fontWeight: "500",
   },
   checkboxLabel: {
     flex: 1,
@@ -662,7 +662,7 @@ const styles = StyleSheet.create({
   },
   primaryBtnPressed: { opacity: 0.92 },
   primaryBtnDisabled: { opacity: 0.5 },
-  primaryBtnText: { color: "white", fontSize: 15, fontWeight: "800" },
+  primaryBtnText: { color: "white", fontSize: 15, fontWeight: "500" },
   secondaryBtn: {
     backgroundColor: tokens.colors.surfaceStrong,
     borderRadius: tokens.radius.lg,
@@ -673,7 +673,7 @@ const styles = StyleSheet.create({
   },
   secondaryBtnPressed: { opacity: 0.9 },
   secondaryBtnDisabled: { opacity: 0.6 },
-  secondaryBtnText: { color: tokens.colors.text, fontSize: 14, fontWeight: "700" },
+  secondaryBtnText: { color: tokens.colors.text, fontSize: 14, fontWeight: "500" },
   helper: { fontSize: tokens.font.small, color: tokens.colors.textMuted, marginTop: 4 },
   linkButton: {
     alignItems: "center",
@@ -682,7 +682,7 @@ const styles = StyleSheet.create({
   link: {
     fontSize: tokens.font.small,
     color: tokens.colors.green900,
-    fontWeight: "800",
+    fontWeight: "500",
   },
   infoBox: {
     padding: tokens.space.md,

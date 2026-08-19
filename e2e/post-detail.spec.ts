@@ -345,7 +345,7 @@ test.describe("글 상세 화면", () => {
     await openPostDetailFromHome(page);
 
     await page.getByTestId("post-bookmark-btn").click();
-    await expect(page.getByText("북마크 폴더 선택")).toBeVisible();
+    await expect(page.getByText("책갈피 폴더 선택")).toBeVisible();
     await expect(
       page.getByText("최근 사용 폴더 정렬을 불러오지 못해 기본 목록으로 표시했어요.")
     ).toBeVisible();
@@ -379,7 +379,7 @@ test.describe("글 상세 화면", () => {
     await expect(page).toHaveURL(/\/posts\/101/);
 
     await page.getByTestId("post-bookmark-btn").click();
-    await expect(page.getByText("북마크 폴더 선택")).toBeVisible();
+    await expect(page.getByText("책갈피 폴더 선택")).toBeVisible();
   });
 
   test("댓글 목록을 표시하고 새 댓글과 답글을 등록한다", async ({ page }) => {

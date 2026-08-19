@@ -265,7 +265,7 @@ const styles = StyleSheet.create({
   },
   topBarTitle: {
     fontSize: 17,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
   },
   topBarSpacer: {
@@ -292,7 +292,7 @@ const styles = StyleSheet.create({
   },
   heroTitle: {
     fontSize: 18,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
   },
   heroDescription: {
@@ -321,7 +321,7 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     fontSize: 16,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
   },
   cardNickname: {
@@ -349,7 +349,7 @@ const styles = StyleSheet.create({
   },
   unblockBtnText: {
     fontSize: tokens.font.body,
-    fontWeight: "800",
+    fontWeight: "500",
     color: tokens.colors.text,
   },
   disabledBtn: {

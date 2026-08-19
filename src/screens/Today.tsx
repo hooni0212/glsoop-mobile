@@ -31,7 +31,10 @@ import {
   updateTodayPromptWidgetSnapshot,
 } from "@/services/widgetSnapshotService";
 import { tokens } from "@/theme/tokens";
-import { appFontFamily, typography } from "@/theme/typography";
+import { typography } from "@/theme/typography";
+import { keyboardFocusRingStyle } from "@/theme/accessibility";
+import { useKeyboardFocus } from "@/hooks/useKeyboardFocus";
+import { FolioHeader } from "@/components/editorial/FolioHeader";
 
 export default function TodayScreen() {
   const { token } = useAuth();
@@ -41,6 +44,10 @@ export default function TodayScreen() {
   const [promptLoading, setPromptLoading] = React.useState(true);
   const [refreshing, setRefreshing] = React.useState(false);
   const feed = useFeed({ limit: 3, sort: "recommended" });
+  const notificationFocus = useKeyboardFocus();
+  const writeFocus = useKeyboardFocus();
+  const draftFocus = useKeyboardFocus();
+  const readMoreFocus = useKeyboardFocus();
 
   const loadToday = React.useCallback(async () => {
     const [nextStatus, drafts] = await Promise.all([
@@ -116,22 +123,27 @@ export default function TodayScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.brand}>글숲</Text>
-            <Text style={styles.headerCopy}>오늘 한 문장을 남겨볼까요?</Text>
-          </View>
-          <Pressable
-            onPress={() => router.push("/notifications")}
-            style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}
-            accessibilityRole="button"
-            accessibilityLabel="알림 열기"
-          >
-            <Ionicons name="notifications-outline" size={22} color={tokens.colors.text} />
-          </Pressable>
-        </View>
+        <FolioHeader
+          title="글숲"
+          titleVariant="brand"
+          actions={
+            <Pressable
+              {...notificationFocus.focusProps}
+              onPress={() => router.push("/notifications")}
+              style={({ pressed }) => [
+                styles.iconButton,
+                pressed && styles.pressed,
+                notificationFocus.keyboardFocused && styles.focused,
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel="알림 열기"
+            >
+              <Ionicons name="notifications-outline" size={22} color={tokens.colors.text} />
+            </Pressable>
+          }
+        />
 
-        <View style={styles.promptCard} testID="today-writing-prompt">
+        <View style={styles.promptSection} testID="today-writing-prompt">
           <View style={styles.promptMetaRow}>
             <Text style={styles.eyebrow}>{status?.promptLabel ?? "오늘의 글감"}</Text>
             {status ? (
@@ -145,30 +157,41 @@ export default function TodayScreen() {
             </View>
           ) : (
             <>
-              <Text style={styles.promptTitle}>
-                {status?.prompt.title ?? "지금 마음에 오래 남아 있는 장면"}
-              </Text>
+              <View style={styles.promptMainRow}>
+                <Text style={styles.promptTitle}>
+                  {status?.prompt.title ?? "지금 마음에 오래 남아 있는 장면"}
+                </Text>
+                <Pressable
+                  {...writeFocus.focusProps}
+                  onPress={startWriting}
+                  style={({ pressed }) => [
+                    styles.writeLink,
+                    pressed && styles.pressed,
+                    writeFocus.keyboardFocused && styles.focused,
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel="오늘의 글감으로 쓰기"
+                  testID="today-start-writing"
+                >
+                  <Text style={styles.writeLinkText}>써보기&nbsp; →</Text>
+                </Pressable>
+              </View>
               <Text style={styles.promptBody}>
                 {status?.prompt.body ?? "잘 쓰려고 애쓰지 말고, 떠오르는 문장부터 천천히 적어보세요."}
               </Text>
-              <Pressable
-                onPress={startWriting}
-                style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}
-                accessibilityRole="button"
-                accessibilityLabel="오늘의 글감으로 쓰기"
-                testID="today-start-writing"
-              >
-                <Text style={styles.primaryButtonText}>5분 쓰기 시작</Text>
-                <Ionicons name="arrow-forward" size={18} color={tokens.colors.textInverse} />
-              </Pressable>
             </>
           )}
         </View>
 
         {latestDraft ? (
           <Pressable
+            {...draftFocus.focusProps}
             onPress={resumeDraft}
-            style={({ pressed }) => [styles.draftCard, pressed && styles.pressed]}
+            style={({ pressed }) => [
+              styles.draftCard,
+              pressed && styles.pressed,
+              draftFocus.keyboardFocused && styles.focused,
+            ]}
             accessibilityRole="button"
             accessibilityLabel="임시저장 글 이어쓰기"
             testID="today-resume-draft"
@@ -187,17 +210,19 @@ export default function TodayScreen() {
         ) : null}
 
         <View style={styles.sectionHeader}>
-          <View>
-            <Text style={styles.sectionEyebrow}>오늘의 문장</Text>
-            <Text style={styles.sectionTitle}>천천히 읽어볼 글</Text>
-          </View>
-          <Pressable onPress={() => router.push("/(tabs)/explore" as never)} hitSlop={10}>
-            <Text style={styles.textButton}>더 발견하기</Text>
+          <Text style={styles.sectionLabel}>오늘의 한 문장</Text>
+          <Pressable
+            {...readMoreFocus.focusProps}
+            onPress={() => router.push("/(tabs)/explore" as never)}
+            hitSlop={10}
+            style={readMoreFocus.keyboardFocused && styles.focused}
+          >
+            <Text style={styles.textButton}>더 읽기</Text>
           </Pressable>
         </View>
 
         <View style={styles.feedList}>
-          {feed.items.slice(0, 2).map((post) => (
+          {feed.items.slice(0, 1).map((post) => (
             <FeedCard
               key={post.id}
               post={post}
@@ -223,15 +248,7 @@ export default function TodayScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: tokens.colors.bg },
-  content: { width: "100%", maxWidth: 393, alignSelf: "center", paddingHorizontal: 20 },
-  header: {
-    minHeight: 78,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  brand: { ...typography.brand, color: tokens.colors.green900 },
-  headerCopy: { marginTop: 2, fontSize: 13, color: tokens.colors.textMuted },
+  content: { width: "100%", maxWidth: 520, alignSelf: "center", paddingHorizontal: 20 },
   iconButton: {
     width: 44,
     height: 44,
@@ -239,72 +256,77 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderRadius: tokens.radius.md,
   },
-  promptCard: {
-    minHeight: 278,
-    padding: 24,
-    borderRadius: tokens.radius.xl,
-    backgroundColor: tokens.colors.paper,
-    borderWidth: 1,
-    borderColor: tokens.colors.paperBorder,
-    justifyContent: "space-between",
+  promptSection: {
+    minHeight: 204,
+    paddingTop: 26,
+    paddingBottom: 24,
+    backgroundColor: "transparent",
+    borderBottomWidth: 1,
+    borderBottomColor: tokens.colors.borderStrong,
   },
   promptMetaRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  eyebrow: { fontSize: 12, fontWeight: "800", color: tokens.colors.green700, letterSpacing: 0.3 },
-  dayLabel: { fontSize: 12, color: tokens.colors.textMuted },
-  promptLoading: { flex: 1, alignItems: "center", justifyContent: "center" },
+  eyebrow: { ...typography.eyebrow, color: tokens.colors.green700 },
+  dayLabel: { ...typography.meta, color: tokens.colors.textMuted },
+  promptLoading: { minHeight: 128, alignItems: "center", justifyContent: "center" },
+  promptMainRow: {
+    marginTop: 14,
+    flexDirection: "row",
+    alignItems: "flex-end",
+    justifyContent: "space-between",
+    gap: 18,
+  },
   promptTitle: {
-    marginTop: 28,
-    fontSize: 25,
-    lineHeight: 36,
-    fontFamily: appFontFamily.editorialStrong,
+    flex: 1,
+    maxWidth: 270,
+    ...typography.heroQuote,
     color: tokens.colors.text,
   },
-  promptBody: { marginTop: 14, fontSize: 15, lineHeight: 24, color: tokens.colors.textMuted },
-  primaryButton: {
-    marginTop: 26,
-    minHeight: 50,
-    paddingHorizontal: 18,
-    borderRadius: tokens.radius.md,
-    backgroundColor: tokens.colors.green700,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+  promptBody: {
+    ...typography.meta,
+    marginTop: 12,
+    maxWidth: 300,
+    color: tokens.colors.textMuted,
   },
-  primaryButtonText: { fontSize: 15, fontWeight: "800", color: tokens.colors.textInverse },
+  writeLink: {
+    minWidth: 72,
+    minHeight: 44,
+    alignItems: "center",
+    justifyContent: "center",
+    borderBottomWidth: 1,
+    borderBottomColor: tokens.colors.green700,
+  },
+  writeLinkText: { ...typography.meta, color: tokens.colors.green700 },
   draftCard: {
-    marginTop: 14,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: tokens.colors.border,
-    borderRadius: tokens.radius.lg,
-    backgroundColor: tokens.colors.surfaceStrong,
+    paddingVertical: 18,
+    borderBottomWidth: 1,
+    borderBottomColor: tokens.colors.divider,
     flexDirection: "row",
     alignItems: "center",
   },
   draftIcon: {
     width: 38,
     height: 38,
-    borderRadius: 19,
-    backgroundColor: tokens.colors.green050,
+    borderRadius: 0,
+    backgroundColor: "transparent",
     alignItems: "center",
     justifyContent: "center",
   },
   draftText: { flex: 1, marginHorizontal: 12 },
-  draftLabel: { fontSize: 11, fontWeight: "800", color: tokens.colors.green700 },
-  draftTitle: { marginTop: 3, fontSize: 15, color: tokens.colors.text },
+  draftLabel: { ...typography.eyebrow, color: tokens.colors.green700 },
+  draftTitle: { ...typography.uiBody, marginTop: 3, color: tokens.colors.text },
   sectionHeader: {
-    marginTop: 34,
-    marginBottom: 14,
+    minHeight: 46,
+    marginTop: 26,
     flexDirection: "row",
-    alignItems: "flex-end",
+    alignItems: "center",
     justifyContent: "space-between",
   },
-  sectionEyebrow: { fontSize: 11, fontWeight: "800", color: tokens.colors.green700 },
-  sectionTitle: { marginTop: 3, fontSize: 20, lineHeight: 28, color: tokens.colors.text, fontWeight: "700" },
-  textButton: { fontSize: 13, fontWeight: "700", color: tokens.colors.green700 },
-  feedList: { gap: 26 },
+  sectionLabel: { ...typography.meta, color: tokens.colors.textMuted },
+  textButton: { ...typography.meta, color: tokens.colors.green700 },
+  feedList: { marginHorizontal: -20 },
   feedLoading: { paddingVertical: 36 },
   emptyReading: { paddingVertical: 32, alignItems: "center", gap: 10 },
-  emptyReadingText: { fontSize: 14, color: tokens.colors.textMuted },
+  emptyReadingText: { ...typography.uiBody, color: tokens.colors.textMuted },
   pressed: { opacity: 0.72 },
+  focused: keyboardFocusRingStyle,
 });

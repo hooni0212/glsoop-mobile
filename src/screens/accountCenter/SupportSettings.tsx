@@ -182,7 +182,7 @@ const styles = StyleSheet.create({
   },
   topBarTitle: {
     fontSize: 17,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
   },
   topBarSpacer: {
@@ -209,7 +209,7 @@ const styles = StyleSheet.create({
   },
   heroTitle: {
     fontSize: 19,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
   },
   heroDescription: {
@@ -228,7 +228,7 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     fontSize: 17,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
   },
   cardDescription: {
@@ -246,13 +246,13 @@ const styles = StyleSheet.create({
   },
   contactLabel: {
     fontSize: 12,
-    fontWeight: "800",
+    fontWeight: "500",
     letterSpacing: 0.4,
     color: tokens.colors.textFaint,
   },
   contactValue: {
     fontSize: 16,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
   },
   contactHint: {
@@ -298,7 +298,7 @@ const styles = StyleSheet.create({
   },
   primaryActionTitle: {
     fontSize: 15,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.bg,
   },
   primaryActionDescription: {
@@ -308,7 +308,7 @@ const styles = StyleSheet.create({
   },
   secondaryActionTitle: {
     fontSize: 15,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
   },
   secondaryActionDescription: {
@@ -329,7 +329,7 @@ const styles = StyleSheet.create({
   },
   linkLabel: {
     fontSize: 15,
-    fontWeight: "700",
+    fontWeight: "500",
     color: tokens.colors.text,
   },
   noteCard: {
@@ -341,7 +341,7 @@ const styles = StyleSheet.create({
   },
   noteTitle: {
     fontSize: 16,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
   },
   noteBody: {

@@ -192,7 +192,8 @@ test.describe("글쓰기 임시저장 (웹)", () => {
     await page.getByTestId("write-close-btn").click();
     await page.getByTestId("confirm-close-discard").click();
 
-    await page.goto("/write-drafts");
+    await expect(page).toHaveURL(/\/write-drafts$/);
+    await expect(page.getByTestId("draft-item-draft-b")).toBeVisible();
     await page.getByTestId("draft-delete-draft-b").click();
     await expect(page.getByTestId("draft-item-draft-b")).toHaveCount(0);
   });

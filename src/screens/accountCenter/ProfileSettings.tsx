@@ -403,12 +403,6 @@ export default function AccountCenterProfileSettingsScreen() {
             >
               <Text style={styles.primaryBtnText}>{saving ? "저장 중..." : "저장하기"}</Text>
             </Pressable>
-            <Pressable
-              onPress={() => router.push("/profile-customize")}
-              style={styles.secondaryBtn}
-            >
-              <Text style={styles.secondaryBtnText}>프로필 꾸미기</Text>
-            </Pressable>
           </View>
         </View>
       </ScrollView>
@@ -464,7 +458,7 @@ const styles = StyleSheet.create({
   },
   topBarTitle: {
     fontSize: 17,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
   },
   topBarSpacer: {
@@ -490,7 +484,7 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     fontSize: 18,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
   },
   cardDescription: {
@@ -522,7 +516,7 @@ const styles = StyleSheet.create({
   premiumPillText: {
     color: tokens.colors.green700,
     fontSize: 12,
-    fontWeight: "900",
+    fontWeight: "600",
   },
   photoRow: {
     flexDirection: "row",
@@ -547,7 +541,7 @@ const styles = StyleSheet.create({
   photoInitial: {
     color: tokens.colors.green900,
     fontSize: 30,
-    fontWeight: "900",
+    fontWeight: "600",
   },
   photoActionColumn: {
     flex: 1,
@@ -576,7 +570,7 @@ const styles = StyleSheet.create({
   photoPrimaryBtnText: {
     color: tokens.colors.textInverse,
     fontSize: 14,
-    fontWeight: "900",
+    fontWeight: "600",
   },
   photoSecondaryBtn: {
     minHeight: 44,
@@ -593,7 +587,7 @@ const styles = StyleSheet.create({
   photoSecondaryBtnText: {
     color: tokens.colors.text,
     fontSize: 14,
-    fontWeight: "900",
+    fontWeight: "600",
   },
   photoBtnPressed: {
     opacity: 0.82,
@@ -603,7 +597,7 @@ const styles = StyleSheet.create({
   },
   fieldLabel: {
     fontSize: tokens.font.small,
-    fontWeight: "800",
+    fontWeight: "500",
     color: tokens.colors.text,
   },
   input: {
@@ -636,20 +630,7 @@ const styles = StyleSheet.create({
   primaryBtnText: {
     color: tokens.colors.textInverse,
     fontSize: 15,
-    fontWeight: "800",
-  },
-  secondaryBtn: {
-    backgroundColor: tokens.colors.surface,
-    borderWidth: 1,
-    borderColor: tokens.colors.borderStrong,
-    borderRadius: tokens.radius.lg,
-    paddingVertical: 14,
-    alignItems: "center",
-  },
-  secondaryBtnText: {
-    color: tokens.colors.text,
-    fontSize: 15,
-    fontWeight: "800",
+    fontWeight: "500",
   },
   disabledBtn: {
     opacity: 0.6,

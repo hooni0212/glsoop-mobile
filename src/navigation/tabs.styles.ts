@@ -1,6 +1,9 @@
 import { StyleSheet } from "react-native";
 import { COLORS } from "./tabs.meta";
-import { floatingShadowStyle } from "@/theme/shadows";
+import { keyboardFocusRingStyle } from "@/theme/accessibility";
+import { typography } from "@/theme/typography";
+import { tokens } from "@/theme/tokens";
+import { softChipShadowStyle } from "@/theme/shadows";
 
 /**
  * Bottom Tabs UI tokens
@@ -15,26 +18,17 @@ import { floatingShadowStyle } from "@/theme/shadows";
 // =========================
 
 /** 탭바의 시각적(디자인) 베이스 높이. safe-area는 별도 합산한다. */
-export const TAB_BAR_BASE_HEIGHT = 64;
+export const TAB_BAR_BASE_HEIGHT = 68;
 
 /** 탭바 내부 상단/하단 패딩(디자인값). safe-area는 paddingBottom에 더해진다. */
-export const TAB_BAR_PADDING_TOP = 6;
-export const TAB_BAR_PADDING_BOTTOM = 8;
+export const TAB_BAR_PADDING_TOP = 0;
+export const TAB_BAR_PADDING_BOTTOM = 0;
 
 /** 글 상세/행동 영역 하단 액션바의 베이스 높이 */
 export const ACTION_BAR_BASE_HEIGHT = 62;
 
 /** 액션바 하단 패딩(디자인값). safe-area는 paddingBottom에 더해진다. */
 export const ACTION_BAR_PADDING_BOTTOM = 10;
-
-/** 가운데 FAB 자리를 위한 탭 간격 */
-export const TAB_BAR_CENTER_GAP = 74;
-
-/** FAB 크기(지름) */
-export const TAB_BAR_FAB_SIZE = 66;
-
-/** FAB가 바 위로 떠 있는 정도(기존 디자인 유지) */
-export const TAB_BAR_FAB_LIFT = 14;
 
 // =========================
 // Helpers
@@ -87,7 +81,7 @@ export function createTabsStyles(insetBottom?: number) {
       borderTopWidth: 1,
       borderTopColor: COLORS.border,
       flexDirection: "row",
-      alignItems: "center",
+      alignItems: "flex-start",
       paddingBottom: TAB_BAR_PADDING_BOTTOM + ib,
       paddingTop: TAB_BAR_PADDING_TOP,
     },
@@ -96,65 +90,50 @@ export function createTabsStyles(insetBottom?: number) {
       flex: 1,
       alignItems: "center",
       justifyContent: "center",
-      height: "100%",
+      height: TAB_BAR_BASE_HEIGHT,
+      paddingTop: 3,
+      outlineWidth: 0,
     },
 
     label: {
-      fontSize: 12,
-      fontWeight: "900",
-      letterSpacing: 0,
-      marginTop: 4,
+      ...typography.tabLabel,
+      marginTop: 2,
+      fontSize: 11,
+      lineHeight: 15,
     },
 
-    activeLine: {
-      position: "absolute",
-      top: 0,
-      left: 18,
-      right: 18,
-      height: 3,
-      borderRadius: 2,
-      backgroundColor: "transparent",
-    },
-    activeLineOn: {
-      backgroundColor: COLORS.active,
-      borderWidth: 3,
-      borderColor: "#fffefa",
-    },
-
-    // ✅ 가운데 FAB 자리 확보(탭 간격)
-    centerGap: {
-      width: TAB_BAR_CENTER_GAP,
-    },
-
-    // ✅ FAB 오버레이: 위로 살짝 띄움(기존 디자인 유지)
-    fabWrap: {
-      position: "absolute",
-      left: "50%",
-      transform: [{ translateX: -(TAB_BAR_FAB_SIZE / 2) }],
-      top: -TAB_BAR_FAB_LIFT,
-      width: TAB_BAR_FAB_SIZE,
-      height: TAB_BAR_FAB_SIZE,
-      borderRadius: TAB_BAR_FAB_SIZE / 2,
-      ...floatingShadowStyle,
+    tabIconWrap: {
+      width: 38,
+      height: 31,
       alignItems: "center",
       justifyContent: "center",
     },
+    activeHalo: {
+      position: "absolute",
+      width: 38,
+      height: 31,
+      borderRadius: tokens.radius.pill,
+      backgroundColor: tokens.colors.forestSoft,
+    },
 
-    fab: {
-      width: TAB_BAR_FAB_SIZE,
-      height: TAB_BAR_FAB_SIZE,
-      borderRadius: TAB_BAR_FAB_SIZE / 2,
+    writeSlot: {
+      flex: 1,
+      height: TAB_BAR_BASE_HEIGHT,
+      alignItems: "center",
+      justifyContent: "center",
+      outlineWidth: 0,
+    },
+    writeMark: {
+      width: 50,
+      height: 50,
+      borderRadius: tokens.radius.pill,
       backgroundColor: COLORS.active,
       alignItems: "center",
       justifyContent: "center",
+      transform: [{ translateY: -3 }],
+      ...softChipShadowStyle,
     },
-
-    fabLabel: {
-      marginTop: -2,
-      color: "#ffffff",
-      fontSize: 10,
-      lineHeight: 12,
-      fontWeight: "800",
-    },
+    pressed: { opacity: 0.72 },
+    focused: keyboardFocusRingStyle,
   });
 }

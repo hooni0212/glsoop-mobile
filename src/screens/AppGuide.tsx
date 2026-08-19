@@ -49,7 +49,7 @@ const GUIDE_SECTIONS = [
     items: [
       {
         icon: "bookmark-outline" as GuideIconName,
-        title: "북마크 폴더",
+        title: "책갈피 폴더",
         body: "글 상세에서 저장을 누르면 폴더별로 글을 정리할 수 있어요.",
       },
       {
@@ -372,7 +372,7 @@ const styles = StyleSheet.create({
   },
   topBarTitle: {
     fontSize: 17,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
   },
   topBarSpacer: {
@@ -398,19 +398,19 @@ const styles = StyleSheet.create({
   },
   kicker: {
     fontSize: 11,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.textFaint,
     letterSpacing: 1.1,
   },
   heroTitle: {
     fontSize: 24,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
     lineHeight: 31,
   },
   heroDescription: {
     fontSize: tokens.font.body,
-    fontWeight: "700",
+    fontWeight: "500",
     color: tokens.colors.textMuted,
     lineHeight: 22,
   },
@@ -433,7 +433,7 @@ const styles = StyleSheet.create({
   },
   quickActionText: {
     fontSize: tokens.font.small,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.green900,
   },
   interactiveGuide: {
@@ -470,12 +470,12 @@ const styles = StyleSheet.create({
   },
   interactiveGuideTitle: {
     fontSize: 15,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
   },
   interactiveGuideBody: {
     fontSize: tokens.font.small,
-    fontWeight: "700",
+    fontWeight: "500",
     color: tokens.colors.textMuted,
     lineHeight: 19,
   },
@@ -487,12 +487,12 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
   },
   sectionDescription: {
     fontSize: tokens.font.small,
-    fontWeight: "700",
+    fontWeight: "500",
     color: tokens.colors.textMuted,
     lineHeight: 20,
   },
@@ -532,7 +532,7 @@ const styles = StyleSheet.create({
   },
   miniChipText: {
     fontSize: 11,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.green900,
   },
   pageDetailButton: {
@@ -549,7 +549,7 @@ const styles = StyleSheet.create({
   },
   pageDetailButtonText: {
     fontSize: 12,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.green900,
   },
   pageGuideButtons: {
@@ -575,7 +575,7 @@ const styles = StyleSheet.create({
   },
   pageGuideButtonText: {
     fontSize: 12,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.green900,
   },
   pageGuideButtonTextDisabled: {
@@ -607,12 +607,12 @@ const styles = StyleSheet.create({
   },
   itemTitle: {
     fontSize: 15,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
   },
   itemBody: {
     fontSize: tokens.font.small,
-    fontWeight: "700",
+    fontWeight: "500",
     color: tokens.colors.textMuted,
     lineHeight: 19,
   },
