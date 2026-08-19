@@ -278,6 +278,6 @@ test.describe("버튼 하이라이트 안내 배치", () => {
 
     await page.goto("/me");
 
-    await verifyVisibleStepsDoNotOverlap(page, 5);
+    await verifyVisibleStepsDoNotOverlap(page, 4);
   });
 });

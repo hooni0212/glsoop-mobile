@@ -301,11 +301,11 @@ export default function BookmarksScreen() {
             l.id === selectedListId ? { ...l, itemCount: Math.max(0, (l.itemCount ?? 1) - 1) } : l
           )
         );
-        showToast("북마크에서 삭제했어요.", { tone: "success" });
+        showToast("책갈피에서 삭제했어요.", { tone: "success" });
       } catch (e) {
         const normalized = normalizeApiError(e);
         setFolderItems((prev) => ({ ...prev, error: normalized }));
-        showToast(normalized.description || normalized.title || "북마크 삭제에 실패했어요.", {
+        showToast(normalized.description || normalized.title || "책갈피 삭제에 실패했어요.", {
           tone: "error",
         });
       }
@@ -374,7 +374,7 @@ export default function BookmarksScreen() {
         } else {
           const normalized = normalizeApiError(err);
           setFolderItems((prev) => ({ ...prev, error: normalized }));
-          showToast(normalized.description || normalized.title || "좋아요 처리에 실패했어요.", {
+          showToast(normalized.description || normalized.title || "공감 처리에 실패했어요.", {
             tone: "error",
           });
         }
@@ -429,7 +429,7 @@ export default function BookmarksScreen() {
     if (loadingLists) {
       return (
         <View style={styles.center}>
-          <AppLoading message="북마크 폴더를 불러오는 중..." />
+          <AppLoading message="책갈피 폴더를 불러오는 중..." />
         </View>
       );
     }
@@ -444,7 +444,7 @@ export default function BookmarksScreen() {
       return (
         <View style={styles.center}>
           <AppEmpty
-            title="북마크 폴더가 없어요"
+            title="책갈피 폴더가 없어요"
             description="새 폴더를 만들어 글을 모아보세요."
             primaryAction={{ label: "폴더 만들기", onPress: () => setShowCreate(true) }}
           />
@@ -512,7 +512,7 @@ export default function BookmarksScreen() {
                   style={({ pressed }) => [styles.folderMainBtn, pressed && styles.folderMainBtnPressed]}
                   testID={`bookmark-folder-${list.id}`}
                   accessibilityRole="button"
-                  accessibilityLabel={`${list.name} 북마크 폴더 열기`}
+                  accessibilityLabel={`${list.name} 책갈피 폴더 열기`}
                 >
                   <View style={styles.folderCardTop}>
                     <View style={styles.folderIcon}>
@@ -644,7 +644,7 @@ export default function BookmarksScreen() {
         <>
           <View style={styles.header}>
             <View style={styles.headerCopy}>
-              <Text style={styles.title}>북마크 폴더</Text>
+              <Text style={styles.title}>책갈피 폴더</Text>
               <Text style={styles.headerMeta}>
                 {loadingLists ? "불러오는 중" : `${lists.length}개 폴더`}
               </Text>
@@ -711,13 +711,13 @@ export default function BookmarksScreen() {
               onPress={() => setMode("lists")}
               style={({ pressed }) => [styles.backBtn, pressed && styles.controlPressed]}
               accessibilityRole="button"
-              accessibilityLabel="북마크 폴더 목록으로 돌아가기"
+              accessibilityLabel="책갈피 폴더 목록으로 돌아가기"
             >
               <Ionicons name="arrow-back" size={16} color={tokens.colors.text} />
               <Text style={styles.backBtnText}>목록</Text>
             </Pressable>
             <Text style={styles.detailTitle} numberOfLines={1}>
-              {selectedList?.name || "북마크"}
+              {selectedList?.name || "책갈피"}
             </Text>
             <View style={styles.detailHeaderSpacer} />
           </View>
@@ -813,10 +813,10 @@ const styles = StyleSheet.create({
   headerCopy: {
     gap: 3,
   },
-  title: { fontSize: 22, fontWeight: "900", color: tokens.colors.text },
+  title: { fontSize: 22, fontWeight: "600", color: tokens.colors.text },
   headerMeta: {
     fontSize: tokens.font.small,
-    fontWeight: "700",
+    fontWeight: "500",
     color: tokens.colors.textMuted,
   },
   headerBtn: {
@@ -832,7 +832,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     backgroundColor: tokens.colors.surfaceStrong,
   },
-  headerBtnText: { fontSize: 12, fontWeight: "800", color: tokens.colors.green700 },
+  headerBtnText: { fontSize: 12, fontWeight: "500", color: tokens.colors.green700 },
   controlPressed: { opacity: 0.82 },
 
   createBox: {
@@ -872,7 +872,7 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
   },
   createBtnDisabled: { opacity: 0.5 },
-  createBtnText: { fontSize: 13, fontWeight: "800", color: tokens.colors.textInverse },
+  createBtnText: { fontSize: 13, fontWeight: "500", color: tokens.colors.textInverse },
 
   listScroll: {
     width: "100%",
@@ -920,7 +920,7 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 4,
   },
-  folderTitle: { flex: 1, fontSize: 15, fontWeight: "900", color: tokens.colors.text },
+  folderTitle: { flex: 1, fontSize: 15, fontWeight: "600", color: tokens.colors.text },
   folderCountPill: {
     minWidth: 44,
     minHeight: 30,
@@ -932,8 +932,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: tokens.colors.border,
   },
-  folderCount: { fontSize: 12, color: tokens.colors.green700, fontWeight: "800" },
-  folderDescription: { fontSize: 12, color: tokens.colors.textMuted, fontWeight: "700", lineHeight: 18 },
+  folderCount: { fontSize: 12, color: tokens.colors.green700, fontWeight: "500" },
+  folderDescription: { fontSize: 12, color: tokens.colors.textMuted, fontWeight: "500", lineHeight: 18 },
   folderOpenRow: {
     minHeight: 28,
     flexDirection: "row",
@@ -941,7 +941,7 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
     gap: 2,
   },
-  folderOpenHint: { fontSize: 12, color: tokens.colors.green700, fontWeight: "800" },
+  folderOpenHint: { fontSize: 12, color: tokens.colors.green700, fontWeight: "500" },
   folderActions: {
     flexDirection: "row",
     justifyContent: "flex-end",
@@ -960,7 +960,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: tokens.colors.border,
   },
-  folderEditText: { fontSize: 12, fontWeight: "800", color: tokens.colors.text },
+  folderEditText: { fontSize: 12, fontWeight: "500", color: tokens.colors.text },
   folderDeleteBtn: {
     minHeight: 36,
     flexDirection: "row",
@@ -974,7 +974,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: tokens.colors.dangerBorder,
   },
-  folderDeleteText: { fontSize: 12, fontWeight: "800", color: tokens.colors.danger },
+  folderDeleteText: { fontSize: 12, fontWeight: "500", color: tokens.colors.danger },
   editActions: {
     flexDirection: "row",
     justifyContent: "flex-end",
@@ -991,7 +991,7 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
     backgroundColor: tokens.colors.surface,
   },
-  editSecondaryBtnText: { fontSize: 13, fontWeight: "800", color: tokens.colors.text },
+  editSecondaryBtnText: { fontSize: 13, fontWeight: "500", color: tokens.colors.text },
   editPrimaryBtn: {
     minHeight: 44,
     alignItems: "center",
@@ -1001,7 +1001,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 11,
   },
-  editPrimaryBtnText: { fontSize: 13, fontWeight: "800", color: "#fff" },
+  editPrimaryBtnText: { fontSize: 13, fontWeight: "500", color: "#fff" },
 
   detailHeader: {
     width: "100%",
@@ -1029,8 +1029,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  backBtnText: { fontSize: 12, color: tokens.colors.text, fontWeight: "800" },
-  detailTitle: { flex: 1, textAlign: "center", fontSize: 17, fontWeight: "900", color: tokens.colors.text },
+  backBtnText: { fontSize: 12, color: tokens.colors.text, fontWeight: "500" },
+  detailTitle: { flex: 1, textAlign: "center", fontSize: 17, fontWeight: "600", color: tokens.colors.text },
   detailHeaderSpacer: { width: 66 },
 
   itemsScroll: {
@@ -1068,12 +1068,12 @@ const styles = StyleSheet.create({
   },
   premiumPillText: {
     fontSize: 10,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.green700,
   },
   sentenceFrameBtnText: {
     fontSize: 13,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.green700,
   },
   moreBtn: {
@@ -1086,5 +1086,5 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     backgroundColor: tokens.colors.surfaceStrong,
   },
-  moreBtnText: { fontSize: 13, fontWeight: "800", color: tokens.colors.text },
+  moreBtnText: { fontSize: 13, fontWeight: "500", color: tokens.colors.text },
 });

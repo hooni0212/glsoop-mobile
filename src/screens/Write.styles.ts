@@ -39,7 +39,7 @@ export function createWriteStyles() {
       flex: 1,
       marginLeft: 12,
       fontSize: 18,
-      fontWeight: "900",
+      fontWeight: "600",
       letterSpacing: 0,
       color: tokens.colors.text,
     },
@@ -61,7 +61,7 @@ export function createWriteStyles() {
     },
     doneText: {
       color: tokens.colors.textInverse,
-      fontWeight: "800",
+      fontWeight: "500",
       fontSize: 14,
       letterSpacing: 0,
     },
@@ -81,7 +81,7 @@ export function createWriteStyles() {
     },
     secondaryTopBtnText: {
       fontSize: 14,
-      fontWeight: "900",
+      fontWeight: "600",
       color: tokens.colors.text,
       letterSpacing: 0,
     },
@@ -120,7 +120,7 @@ export function createWriteStyles() {
     },
     questPromptEyebrow: {
       fontSize: 12,
-      fontWeight: "900",
+      fontWeight: "600",
       color: tokens.colors.green700,
       letterSpacing: 0,
     },
@@ -128,7 +128,7 @@ export function createWriteStyles() {
       marginTop: 6,
       fontSize: 17,
       lineHeight: 23,
-      fontWeight: "900",
+      fontWeight: "600",
       color: tokens.colors.text,
       letterSpacing: 0,
     },
@@ -136,7 +136,7 @@ export function createWriteStyles() {
       marginTop: 8,
       fontSize: 13,
       lineHeight: 19,
-      fontWeight: "700",
+      fontWeight: "500",
       color: tokens.colors.textMuted,
       letterSpacing: 0,
     },
@@ -185,20 +185,20 @@ export function createWriteStyles() {
     },
     editorInsightBadgeText: {
       fontSize: 12,
-      fontWeight: "900",
+      fontWeight: "600",
       color: tokens.colors.green700,
       letterSpacing: 0,
     },
     editorInsightMetric: {
       fontSize: 12,
-      fontWeight: "900",
+      fontWeight: "600",
       color: tokens.colors.textMuted,
       letterSpacing: 0,
     },
     editorInsightText: {
       fontSize: 14,
       lineHeight: 20,
-      fontWeight: "900",
+      fontWeight: "600",
       color: tokens.colors.text,
       letterSpacing: 0,
     },
@@ -206,7 +206,7 @@ export function createWriteStyles() {
       marginTop: -4,
       fontSize: 12,
       lineHeight: 18,
-      fontWeight: "700",
+      fontWeight: "500",
       color: tokens.colors.textMuted,
       letterSpacing: 0,
     },
@@ -227,7 +227,7 @@ export function createWriteStyles() {
     },
     editorStatText: {
       fontSize: 11,
-      fontWeight: "800",
+      fontWeight: "500",
       color: tokens.colors.textMuted,
       letterSpacing: 0,
     },
@@ -244,7 +244,7 @@ export function createWriteStyles() {
     },
     label: {
       fontSize: tokens.font.small,
-      fontWeight: "800",
+      fontWeight: "500",
       color: tokens.colors.textMuted,
       marginBottom: 8,
       letterSpacing: 0,
@@ -252,7 +252,7 @@ export function createWriteStyles() {
 
     inputTitle: {
       fontSize: 16,
-      fontWeight: "800",
+      fontWeight: "500",
       color: tokens.colors.text,
       paddingHorizontal: 16,
       paddingVertical: 14,
@@ -305,7 +305,7 @@ export function createWriteStyles() {
     },
     pageAvatarText: {
       fontSize: 12,
-      fontWeight: "900",
+      fontWeight: "600",
       color: tokens.colors.textInverse,
       letterSpacing: 0,
     },
@@ -337,7 +337,7 @@ export function createWriteStyles() {
     },
     writePageEyebrow: {
       fontSize: 13,
-      fontWeight: "900",
+      fontWeight: "600",
       color: tokens.colors.text,
       letterSpacing: 0,
     },
@@ -345,7 +345,7 @@ export function createWriteStyles() {
       marginTop: 3,
       fontSize: 11,
       lineHeight: 15,
-      fontWeight: "800",
+      fontWeight: "500",
       color: tokens.colors.textMuted,
       letterSpacing: 0,
     },
@@ -361,14 +361,14 @@ export function createWriteStyles() {
     },
     writePageRemoveText: {
       fontSize: 12,
-      fontWeight: "900",
+      fontWeight: "600",
       color: tokens.colors.textMuted,
       letterSpacing: 0,
     },
     writePageWarning: {
       fontSize: 12,
       lineHeight: 17,
-      fontWeight: "800",
+      fontWeight: "500",
       color: tokens.colors.danger,
       letterSpacing: 0,
     },
@@ -388,7 +388,7 @@ export function createWriteStyles() {
     },
     addPageButtonText: {
       fontSize: 14,
-      fontWeight: "900",
+      fontWeight: "600",
       color: tokens.colors.green700,
       letterSpacing: 0,
     },
@@ -400,7 +400,7 @@ export function createWriteStyles() {
       marginTop: 10,
       fontSize: tokens.font.small,
       color: tokens.colors.textFaint,
-      fontWeight: "700",
+      fontWeight: "500",
       letterSpacing: -0.2,
     },
     metaCard: {
@@ -435,7 +435,7 @@ export function createWriteStyles() {
     },
     metaChipText: {
       fontSize: tokens.font.small,
-      fontWeight: "800",
+      fontWeight: "500",
       color: tokens.colors.text,
     },
     metaChipTextActive: {
@@ -472,7 +472,7 @@ export function createWriteStyles() {
     },
     hashChipText: {
       fontSize: tokens.font.small,
-      fontWeight: "800",
+      fontWeight: "500",
       color: tokens.colors.green900,
     },
     layoutBlock: {
@@ -491,13 +491,13 @@ export function createWriteStyles() {
     },
     layoutDockTitle: {
       fontSize: 13,
-      fontWeight: "900",
+      fontWeight: "600",
       color: tokens.colors.text,
       letterSpacing: 0,
     },
     layoutDockHint: {
       fontSize: 12,
-      fontWeight: "700",
+      fontWeight: "500",
       color: tokens.colors.textMuted,
       letterSpacing: 0,
     },
@@ -518,13 +518,13 @@ export function createWriteStyles() {
     },
     layoutSectionTitle: {
       fontSize: 13,
-      fontWeight: "900",
+      fontWeight: "600",
       color: "#3b2d1d",
       letterSpacing: -0.2,
     },
     layoutSectionHint: {
       fontSize: 12,
-      fontWeight: "700",
+      fontWeight: "500",
       color: "rgba(76,57,34,0.62)",
       letterSpacing: -0.2,
     },
@@ -604,7 +604,7 @@ export function createWriteStyles() {
     backgroundOptionTitle: {
       marginTop: 8,
       fontSize: 12,
-      fontWeight: "900",
+      fontWeight: "600",
       color: tokens.colors.text,
       letterSpacing: 0,
     },
@@ -615,7 +615,7 @@ export function createWriteStyles() {
       marginTop: 2,
       fontSize: 11,
       lineHeight: 15,
-      fontWeight: "700",
+      fontWeight: "500",
       color: tokens.colors.textMuted,
       letterSpacing: 0,
     },
@@ -638,7 +638,7 @@ export function createWriteStyles() {
     layoutMetrics: {
       marginTop: 8,
       fontSize: 12,
-      fontWeight: "700",
+      fontWeight: "500",
       color: tokens.colors.textMuted,
     },
     layoutOptionRow: {
@@ -667,7 +667,7 @@ export function createWriteStyles() {
     layoutOptionText: {
       flexShrink: 1,
       fontSize: 12,
-      fontWeight: "800",
+      fontWeight: "500",
       color: tokens.colors.text,
       textAlign: "center",
       letterSpacing: 0,
@@ -718,7 +718,7 @@ export function createWriteStyles() {
     },
     previewPanelTabText: {
       fontSize: 13,
-      fontWeight: "900",
+      fontWeight: "600",
       color: tokens.colors.textMuted,
       letterSpacing: 0,
     },
@@ -750,7 +750,7 @@ export function createWriteStyles() {
     },
     modalTitle: {
       fontSize: 15,
-      fontWeight: "900",
+      fontWeight: "600",
       color: tokens.colors.text,
       letterSpacing: -0.2,
     },
@@ -759,7 +759,7 @@ export function createWriteStyles() {
       fontSize: 13,
       lineHeight: 18,
       color: tokens.colors.textMuted,
-      fontWeight: "700",
+      fontWeight: "500",
       letterSpacing: -0.2,
     },
     modalButtons: {
@@ -784,7 +784,7 @@ export function createWriteStyles() {
     },
     modalBtnText: {
       fontSize: 13,
-      fontWeight: "900",
+      fontWeight: "600",
       color: tokens.colors.text,
       letterSpacing: -0.2,
     },
@@ -798,7 +798,7 @@ export function createWriteStyles() {
     // --- Small util for topbar text-icon (draft list screen) ---
     iconText: {
       fontSize: 16,
-      fontWeight: "900",
+      fontWeight: "600",
       color: tokens.colors.text,
     },
 
@@ -818,7 +818,7 @@ export function createWriteStyles() {
     },
     chipText: {
       fontSize: 13,
-      fontWeight: "900",
+      fontWeight: "600",
       color: tokens.colors.text,
       letterSpacing: -0.2,
     },
@@ -838,13 +838,13 @@ export function createWriteStyles() {
       width: 260,
     },
     successTitle: {
-      fontWeight: "900",
+      fontWeight: "600",
       fontSize: 16,
       color: tokens.colors.text,
     },
     successMessage: {
       marginTop: 8,
-      fontWeight: "700",
+      fontWeight: "500",
       color: tokens.colors.textMuted,
       textAlign: "center",
     },
@@ -879,7 +879,7 @@ export function createWriteStyles() {
       alignItems: "center",
     },
     devTitle: {
-      fontWeight: "800",
+      fontWeight: "500",
       color: tokens.colors.text,
     },
     devDescription: {

@@ -73,7 +73,7 @@ export const GUIDED_HELP_PAGES: Record<GuidedHelpPageKey, GuidedHelpPage> = {
       { key: "following", label: "팔로잉", iconName: "people-outline", role: "내가 팔로우한 작가의 글을 봅니다.", requirement: "login" },
       { key: "latest", label: "최신", iconName: "time-outline", role: "방금 올라온 글을 시간순으로 봅니다." },
       { key: "like", label: "하트", iconName: "heart-outline", role: "마음에 드는 글을 표시합니다." },
-      { key: "bookmark", label: "저장", iconName: "bookmark-outline", role: "글을 북마크 폴더에 담습니다.", requirement: "login" },
+      { key: "bookmark", label: "저장", iconName: "bookmark-outline", role: "글을 책갈피 폴더에 담습니다.", requirement: "login" },
       { key: "more", label: "더보기", iconName: "ellipsis-horizontal", role: "신고, 차단 등 안전 기능과 추가 액션을 엽니다." },
       { key: "write", label: "글쓰기", iconName: "create-outline", role: "새 글 작성을 시작합니다.", requirement: "login" },
     ],
@@ -123,7 +123,7 @@ export const GUIDED_HELP_PAGES: Record<GuidedHelpPageKey, GuidedHelpPage> = {
     iconName: "reader-outline",
     summary:
       "글을 크게 읽고 반응하는 화면이에요. 하트, 저장, 사진 저장, 공유를 할 수 있고 더보기에서 안전 기능과 문장 액자를 열 수 있어요.",
-    visibleContent: ["글 이미지 또는 글 카드", "제목과 본문", "작가 정보", "좋아요/저장/공유", "더보기 액션"],
+    visibleContent: ["글 이미지 또는 글 카드", "제목과 본문", "작가 정보", "공감/저장/공유", "더보기 액션"],
     firstVisit: [
       "상단에는 뒤로가기와 더보기 메뉴가 있어요.",
       "본문 아래 또는 하단 액션 영역에서 하트, 저장, 사진 저장, 공유를 사용할 수 있어요.",
@@ -133,16 +133,16 @@ export const GUIDED_HELP_PAGES: Record<GuidedHelpPageKey, GuidedHelpPage> = {
       "글을 읽고 마음에 들면 하트를 누릅니다.",
       "나중에 다시 읽을 글은 저장 버튼으로 폴더에 담습니다.",
       "이미지로 남기고 싶으면 사진 저장을, 다른 사람에게 보내고 싶으면 공유를 사용합니다.",
-      "문장 액자는 북마크에 저장한 글을 직접 골라 홈 위젯에 담는 흐름입니다.",
+      "문장 액자는 책갈피에 저장한 글을 직접 골라 홈 위젯에 담는 흐름입니다.",
     ],
     buttons: [
       { key: "back", label: "뒤로", iconName: "chevron-back", role: "이전 화면으로 돌아갑니다." },
       { key: "author", label: "작가", iconName: "person-circle-outline", role: "작가 프로필로 이동합니다." },
-      { key: "like", label: "하트", iconName: "heart-outline", role: "글을 좋아요로 표시합니다." },
-      { key: "bookmark", label: "저장", iconName: "bookmark-outline", role: "글을 북마크 폴더에 담습니다. 문장 액자 후보 조건에도 쓰입니다.", requirement: "login" },
+      { key: "like", label: "하트", iconName: "heart-outline", role: "글을 공감로 표시합니다." },
+      { key: "bookmark", label: "저장", iconName: "bookmark-outline", role: "글을 책갈피 폴더에 담습니다. 문장 액자 후보 조건에도 쓰입니다.", requirement: "login" },
       { key: "download", label: "사진 저장", iconName: "download-outline", role: "글 이미지를 내 기기에 저장합니다." },
       { key: "share", label: "공유", iconName: "share-social-outline", role: "링크 또는 이미지를 다른 앱으로 보냅니다." },
-      { key: "sentence-frame", label: "문장 액자", iconName: "albums-outline", role: "북마크에 저장한 글을 홈 화면 위젯용 글 사진으로 선택합니다.", requirement: "premium" },
+      { key: "sentence-frame", label: "문장 액자", iconName: "albums-outline", role: "책갈피에 저장한 글을 홈 화면 위젯용 글 사진으로 선택합니다.", requirement: "premium" },
       { key: "safety", label: "신고/차단", iconName: "shield-checkmark-outline", role: "부적절한 글이나 사용자를 신고하거나 차단합니다." },
     ],
     nextActions: ["작가 프로필 열기", "마음에 드는 글 저장하기", "공유 또는 사진 저장하기"],
@@ -211,7 +211,7 @@ export const GUIDED_HELP_PAGES: Record<GuidedHelpPageKey, GuidedHelpPage> = {
     ],
     nextActions: ["이어 쓸 초안 열기", "오래된 초안 정리하기"],
     tips: [
-      "초안 삭제는 되돌리기 어렵기 때문에 발행 전 글인지 확인하고 지우는 게 좋아요.",
+      "초안 삭제는 되돌리기 어렵기 때문에 발행 전 글인지 확인하고 지우는 게 공감.",
     ],
   },
   bookmarks: {
@@ -221,7 +221,7 @@ export const GUIDED_HELP_PAGES: Record<GuidedHelpPageKey, GuidedHelpPage> = {
     iconName: "bookmark-outline",
     summary:
       "다시 읽고 싶은 글을 폴더로 정리하는 공간이에요. 글 상세나 글 카드에서 저장한 글이 여기에 모입니다.",
-    visibleContent: ["북마크 폴더", "폴더별 저장 글", "폴더 생성", "폴더 수정", "폴더 삭제"],
+    visibleContent: ["책갈피 폴더", "폴더별 저장 글", "폴더 생성", "폴더 수정", "폴더 삭제"],
     firstVisit: [
       "처음에는 폴더 목록이 먼저 보여요.",
       "폴더를 열면 그 안에 저장한 글 목록을 볼 수 있어요.",
@@ -362,30 +362,27 @@ export const GUIDED_HELP_PAGES: Record<GuidedHelpPageKey, GuidedHelpPage> = {
     route: "/me",
     iconName: "person-circle-outline",
     summary:
-      "다른 사람에게 보이는 내 프로필을 확인하고 관리하는 곳이에요. 프로필 꾸미기와 계정 설정도 여기서 시작합니다.",
-    visibleContent: ["내 공개 프로필", "내 글", "팔로워/팔로잉", "프로필 꾸미기", "계정 센터"],
+      "내 소개와 활동 기록, 내가 쓴 글을 한 흐름에서 확인하는 곳이에요. 계정 관리는 상단 설정에서 시작합니다.",
+    visibleContent: ["내 이름과 소개", "글과 공감 기록", "팔로워/팔로잉", "내 글", "계정 설정"],
     firstVisit: [
-      "상단 프로필 영역은 다른 사용자에게 보이는 내 공개 정보예요.",
+      "상단에는 내 이름과 소개, 글 활동 수치가 간결하게 보여요.",
       "내 글 목록에서는 내가 발행한 글을 다시 열 수 있어요.",
       "설정 버튼은 계정 센터로 이어집니다.",
     ],
     userFlow: [
       "내 프로필 이름과 소개가 어떻게 보이는지 확인합니다.",
-      "프로필 꾸미기에서 배경이나 보상을 적용합니다.",
       "팔로워/팔로잉을 확인합니다.",
+      "내가 작성한 글을 최신순, 공감순, 오래된순으로 살펴봅니다.",
       "계정 센터에서 보안, 차단, 도움말을 관리합니다.",
     ],
     buttons: [
-      { key: "customize", label: "프로필 꾸미기", iconName: "color-wand-outline", role: "배경, 뱃지, 꾸미기 요소를 바꿉니다." },
       { key: "followers", label: "팔로워", iconName: "people-outline", role: "나를 팔로우한 사람을 봅니다." },
       { key: "followings", label: "팔로잉", iconName: "person-add-outline", role: "내가 팔로우한 사람을 봅니다." },
       { key: "settings", label: "설정", iconName: "settings-outline", role: "계정 센터로 이동합니다." },
       { key: "post", label: "내 글", iconName: "reader-outline", role: "내가 쓴 글 상세로 이동합니다." },
     ],
-    nextActions: ["내 프로필 확인", "프로필 꾸미기", "계정 센터 열기"],
-    tips: [
-      "프로필 사진 업로드 같은 일부 기능은 프리미엄 상태에 따라 제한될 수 있어요.",
-    ],
+    nextActions: ["내 기록 확인", "내 글 다시 읽기", "계정 센터 열기"],
+    tips: ["소개 문구나 계정 정보는 설정에서 바꿀 수 있어요."],
   },
   author: {
     key: "author",
@@ -415,7 +412,7 @@ export const GUIDED_HELP_PAGES: Record<GuidedHelpPageKey, GuidedHelpPage> = {
     nextActions: ["작가 팔로우하기", "작가의 글 읽기"],
     tips: [
       "팔로우는 로그인 후 사용할 수 있어요.",
-      "내 프로필에서는 팔로우 대신 프로필 꾸미기와 계정 센터가 보입니다.",
+      "내 프로필에서는 팔로우 대신 활동 기록과 계정 설정이 보입니다.",
     ],
   },
   notifications: {
@@ -543,12 +540,12 @@ export const GUIDED_HELP_REPLAYABLE_PAGE_KEYS = new Set<GuidedHelpPageKey>([
 
 export const GUIDED_HELP_BUTTON_DICTIONARY: GuidedHelpButton[] = [
   { key: "tab-home", label: "홈", iconName: "home-outline", role: "글을 발견하고 읽는 기본 화면입니다." },
-  { key: "tab-bookmarks", label: "저장", iconName: "bookmark-outline", role: "북마크 폴더와 저장한 글을 봅니다.", requirement: "login" },
+  { key: "tab-bookmarks", label: "저장", iconName: "bookmark-outline", role: "책갈피 폴더와 저장한 글을 봅니다.", requirement: "login" },
   { key: "tab-growth", label: "성장", iconName: "sparkles-outline", role: "기록, 퀘스트, 업적을 봅니다.", requirement: "login" },
   { key: "tab-me", label: "내 정보", iconName: "person-circle-outline", role: "내 프로필과 계정을 관리합니다.", requirement: "login" },
   { key: "write", label: "글쓰기", iconName: "create-outline", role: "새 글 작성을 시작합니다.", requirement: "login" },
   { key: "heart", label: "하트", iconName: "heart-outline", role: "글이 마음에 든다는 표시입니다." },
-  { key: "bookmark", label: "저장 아이콘", iconName: "bookmark-outline", role: "글을 북마크 폴더에 담습니다.", requirement: "login" },
+  { key: "bookmark", label: "저장 아이콘", iconName: "bookmark-outline", role: "글을 책갈피 폴더에 담습니다.", requirement: "login" },
   { key: "share", label: "공유", iconName: "share-social-outline", role: "링크 또는 이미지를 공유합니다." },
   { key: "download", label: "다운로드", iconName: "download-outline", role: "글 이미지를 기기에 저장합니다." },
   { key: "more", label: "더보기", iconName: "ellipsis-horizontal", role: "안전 기능과 추가 액션을 엽니다." },

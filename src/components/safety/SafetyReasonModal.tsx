@@ -218,7 +218,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 20,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
   },
   description: {
@@ -246,7 +246,7 @@ const styles = StyleSheet.create({
   },
   reasonChipText: {
     fontSize: 15,
-    fontWeight: "800",
+    fontWeight: "500",
     color: tokens.colors.text,
   },
   reasonChipTextActive: {
@@ -257,7 +257,7 @@ const styles = StyleSheet.create({
   },
   detailLabel: {
     fontSize: tokens.font.small,
-    fontWeight: "800",
+    fontWeight: "500",
     color: tokens.colors.text,
   },
   detailInput: {
@@ -311,7 +311,7 @@ const styles = StyleSheet.create({
   },
   secondaryBtnText: {
     fontSize: tokens.font.body,
-    fontWeight: "800",
+    fontWeight: "500",
     color: tokens.colors.text,
   },
   primaryBtn: {
@@ -319,7 +319,7 @@ const styles = StyleSheet.create({
   },
   primaryBtnText: {
     fontSize: tokens.font.body,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.textInverse,
   },
   disabledBtn: {

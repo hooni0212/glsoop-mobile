@@ -320,14 +320,14 @@ const styles = StyleSheet.create({
   },
   eyebrow: {
     fontSize: 11,
-    fontWeight: "900",
+    fontWeight: "600",
     letterSpacing: 1.2,
     color: tokens.colors.textFaint,
   },
   title: {
     fontSize: 24,
     lineHeight: 30,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
   },
   description: {
@@ -356,7 +356,7 @@ const styles = StyleSheet.create({
   },
   linkLabel: {
     fontSize: 15,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
   },
   linkHint: {
@@ -365,7 +365,7 @@ const styles = StyleSheet.create({
   },
   linkArrow: {
     fontSize: 13,
-    fontWeight: "800",
+    fontWeight: "500",
     color: tokens.colors.green700,
   },
   supportCard: {
@@ -378,7 +378,7 @@ const styles = StyleSheet.create({
   },
   supportTitle: {
     fontSize: 14,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
   },
   supportBody: {
@@ -388,7 +388,7 @@ const styles = StyleSheet.create({
   },
   supportEmail: {
     fontSize: 15,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
   },
   supportActions: {
@@ -406,7 +406,7 @@ const styles = StyleSheet.create({
   },
   supportActionText: {
     fontSize: tokens.font.small,
-    fontWeight: "800",
+    fontWeight: "500",
     color: tokens.colors.text,
   },
   noticeBox: {
@@ -417,7 +417,7 @@ const styles = StyleSheet.create({
   },
   noticeTitle: {
     fontSize: 14,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
   },
   noticeBody: {
@@ -450,7 +450,7 @@ const styles = StyleSheet.create({
   },
   checkboxMark: {
     fontSize: 13,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.green900,
   },
   checkText: {
@@ -472,7 +472,7 @@ const styles = StyleSheet.create({
   },
   continueBtnText: {
     fontSize: 15,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.textInverse,
   },
 });

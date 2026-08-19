@@ -106,7 +106,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: tokens.font.small,
     lineHeight: 18,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.green700,
   },
   rail: {
@@ -133,7 +133,7 @@ const styles = StyleSheet.create({
   stateLabel: {
     fontSize: 12,
     lineHeight: 16,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.textFaint,
   },
   stateLabelCompleted: {
@@ -162,7 +162,7 @@ const styles = StyleSheet.create({
   },
   circleText: {
     fontSize: tokens.font.small,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.textFaint,
   },
   circleTextActive: {
@@ -174,7 +174,7 @@ const styles = StyleSheet.create({
   dayLabel: {
     fontSize: 11,
     lineHeight: 14,
-    fontWeight: "800",
+    fontWeight: "500",
     color: tokens.colors.textMuted,
   },
   dayLabelCurrent: {

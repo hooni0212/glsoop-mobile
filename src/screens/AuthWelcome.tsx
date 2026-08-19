@@ -107,10 +107,10 @@ const styles = StyleSheet.create({
     width: "100%",
     height: "100%",
   },
-  title: { fontSize: 30, fontWeight: "900", color: tokens.colors.text, letterSpacing: 0 },
+  title: { fontSize: 30, fontWeight: "600", color: tokens.colors.text, letterSpacing: 0 },
   subtitle: {
     fontSize: tokens.font.body,
-    fontWeight: "700",
+    fontWeight: "500",
     color: tokens.colors.textMuted,
     textAlign: "center",
     lineHeight: 22,
@@ -146,12 +146,12 @@ const styles = StyleSheet.create({
   },
   onboardingTitle: {
     fontSize: tokens.font.body,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
   },
   onboardingBody: {
     fontSize: tokens.font.small,
-    fontWeight: "700",
+    fontWeight: "500",
     color: tokens.colors.textMuted,
     lineHeight: 19,
   },
@@ -171,7 +171,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   primaryBtnPressed: { opacity: 0.92 },
-  primaryText: { color: "white", fontSize: 15, fontWeight: "800" },
+  primaryText: { color: "white", fontSize: 15, fontWeight: "500" },
   secondaryBtn: {
     backgroundColor: tokens.colors.surfaceStrong,
     borderWidth: 1,
@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   secondaryBtnPressed: { opacity: 0.92 },
-  secondaryText: { color: tokens.colors.text, fontSize: 15, fontWeight: "800" },
+  secondaryText: { color: tokens.colors.text, fontSize: 15, fontWeight: "500" },
   actionHint: {
     textAlign: "center",
     fontSize: tokens.font.small,

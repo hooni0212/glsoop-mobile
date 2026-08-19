@@ -18,7 +18,6 @@ import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 
 import { FeedCard } from "@/components/FeedCard";
-import { PremiumDiscoveryCard } from "@/components/premium/PremiumDiscoveryCard";
 import { SafetyReasonModal } from "@/components/safety/SafetyReasonModal";
 import { useBookmarkSnapshot } from "@/features/bookmarks/bookmarkStore";
 import { PostTopBar } from "@/components/post/PostTopBar";
@@ -47,7 +46,6 @@ import { resolveRuntimeLegalDocumentUrl } from "@/services/runtimeConfigService"
 import { toggleFollowUser } from "@/services/userService";
 import { ApiError } from "@/lib/errors";
 import { useRuntimeLegalConfig } from "@/hooks/useRuntimeLegalConfig";
-import { usePremiumStatus } from "@/hooks/usePremiumStatus";
 import { useBottomDock } from "@/navigation/bottomDock";
 import { resetToAppRoot } from "@/navigation/rootNavigation";
 import {
@@ -252,9 +250,6 @@ export default function Author({
   const followingsTarget = useGuidedHelpTarget("me", "followings", {
     scrollIntoView: scrollGuidedTargetIntoView,
   });
-  const customizeTarget = useGuidedHelpTarget("me", "customize", {
-    scrollIntoView: scrollGuidedTargetIntoView,
-  });
   const settingsTarget = useGuidedHelpTarget("me", "settings", {
     scrollIntoView: scrollGuidedTargetIntoView,
   });
@@ -276,7 +271,6 @@ export default function Author({
   const joinedAtLabel = joinedAtValue ? `${formatKstDateKorean(joinedAtValue)} 가입` : "";
   const showProfileCustomize = forceOwnProfile || isOwnProfile(viewer, user);
   const showFollowButton = Boolean(userId && !showProfileCustomize);
-  const { isPremium } = usePremiumStatus(showProfileCustomize);
   const profilePhotoUrl = toProfilePhotoDisplayUrl(
     user?.profile_photo_thumbnail_url ??
       user?.profilePhotoThumbnailUrl ??
@@ -343,7 +337,7 @@ export default function Author({
 
   const handleLike = async (postId: string) => {
     if (!token) {
-      promptAuthForAction("좋아요는 로그인한 회원만 남길 수 있어요.");
+      promptAuthForAction("공감은 로그인한 회원만 남길 수 있어요.");
       return;
     }
     if (likePending[postId]) return;
@@ -384,7 +378,7 @@ export default function Author({
       if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
         await handleAuthError();
       } else {
-        showToast("좋아요 처리에 실패했어요. 잠시 후 다시 시도해주세요.", { tone: "error" });
+        showToast("공감 처리에 실패했어요. 잠시 후 다시 시도해주세요.", { tone: "error" });
       }
     } finally {
       setPending(postId, false);
@@ -569,94 +563,132 @@ export default function Author({
       return (
         <View>
           <View
-            style={[
-              authorScreenStyles.profileCard,
-              {
-                backgroundColor: backgroundTone.backgroundColor,
-                borderColor: backgroundTone.borderColor,
-              },
-            ]}
+            style={
+              showProfileCustomize
+                ? authorScreenStyles.ownProfileSection
+                : [
+                    authorScreenStyles.profileCard,
+                    {
+                      backgroundColor: backgroundTone.backgroundColor,
+                      borderColor: backgroundTone.borderColor,
+                    },
+                  ]
+            }
           >
-            <View
-              pointerEvents="none"
-              style={[
-                authorScreenStyles.profilePaperWash,
-                { backgroundColor: backgroundTone.surfaceColor },
-              ]}
-            />
-            <View
-              pointerEvents="none"
-              style={[
-                authorScreenStyles.profilePaperLine,
-                authorScreenStyles.profilePaperLineTop,
-                { backgroundColor: backgroundTone.lineColor },
-              ]}
-            />
-            <View
-              pointerEvents="none"
-              style={[
-                authorScreenStyles.profilePaperLine,
-                authorScreenStyles.profilePaperLineBottom,
-                { backgroundColor: backgroundTone.lineColor },
-              ]}
-            />
-            {headerStickers.map(({ slot, sticker }) => (
-              <View
-                key={`${slot}-${sticker.key}`}
-                pointerEvents="none"
-                style={[
-                  authorScreenStyles.stickerOverlay,
-                  getStickerAnchorStyle(slot),
-                ]}
-              >
-                <Text style={authorScreenStyles.stickerText}>
-                  {emojiOrFallback(sticker.icon_emoji, "✨")}
-                </Text>
-              </View>
-            ))}
-
-            <View
-              style={[
-                authorScreenStyles.profileHeader,
-                hasTopLeftSticker && authorScreenStyles.profileHeaderWithLeftSticker,
-              ]}
-            >
-              <View
-                style={[
-                  authorScreenStyles.avatar,
-                  {
-                    borderColor: backgroundTone.borderColor,
-                    backgroundColor: "rgba(255,255,255,0.72)",
-                  },
-                ]}
-              >
-                {profilePhotoUrl ? (
-                  <Image
-                    source={{ uri: profilePhotoUrl }}
-                    style={authorScreenStyles.avatarImage}
-                    contentFit="cover"
-                  />
-                ) : (
-                  <Text style={authorScreenStyles.avatarText}>{avatarInitial}</Text>
-                )}
-              </View>
-              <View style={authorScreenStyles.identityBlock}>
-                <Text style={authorScreenStyles.profileKicker}>작가의 글숲</Text>
-                <View style={authorScreenStyles.nameRow}>
-                  <Text style={authorScreenStyles.name}>{name}</Text>
-                  {primaryBadge ? (
-                    <Text
-                      style={authorScreenStyles.badgeEmoji}
-                      accessibilityLabel={`대표 뱃지 ${primaryBadge.name}`}
-                    >
-                      {emojiOrFallback(primaryBadge.icon_emoji, "🏅")}
+            {showProfileCustomize ? null : (
+              <>
+                <View
+                  pointerEvents="none"
+                  style={[
+                    authorScreenStyles.profilePaperWash,
+                    { backgroundColor: backgroundTone.surfaceColor },
+                  ]}
+                />
+                <View
+                  pointerEvents="none"
+                  style={[
+                    authorScreenStyles.profilePaperLine,
+                    authorScreenStyles.profilePaperLineTop,
+                    { backgroundColor: backgroundTone.lineColor },
+                  ]}
+                />
+                <View
+                  pointerEvents="none"
+                  style={[
+                    authorScreenStyles.profilePaperLine,
+                    authorScreenStyles.profilePaperLineBottom,
+                    { backgroundColor: backgroundTone.lineColor },
+                  ]}
+                />
+                {headerStickers.map(({ slot, sticker }) => (
+                  <View
+                    key={`${slot}-${sticker.key}`}
+                    pointerEvents="none"
+                    style={[
+                      authorScreenStyles.stickerOverlay,
+                      getStickerAnchorStyle(slot),
+                    ]}
+                  >
+                    <Text style={authorScreenStyles.stickerText}>
+                      {emojiOrFallback(sticker.icon_emoji, "✨")}
                     </Text>
-                  ) : null}
+                  </View>
+                ))}
+              </>
+            )}
+
+            {showProfileCustomize ? (
+              <View style={authorScreenStyles.ownIdentityHeader}>
+                <View style={authorScreenStyles.identityBlock}>
+                  <Text style={authorScreenStyles.ownScreenLabel}>나</Text>
+                  <Text style={authorScreenStyles.ownName}>{name}</Text>
+                </View>
+                <Pressable
+                  {...settingsTarget}
+                  onPress={() => router.push("/account-center")}
+                  style={authorScreenStyles.ownSettingsButton}
+                  testID="author-account-center-btn"
+                  accessibilityRole="button"
+                  accessibilityLabel="설정 열기"
+                >
+                  <Ionicons
+                    name="settings-outline"
+                    size={20}
+                    color={tokens.colors.textMuted}
+                  />
+                </Pressable>
+              </View>
+            ) : (
+              <View
+                style={[
+                  authorScreenStyles.profileHeader,
+                  hasTopLeftSticker && authorScreenStyles.profileHeaderWithLeftSticker,
+                ]}
+              >
+                <View
+                  style={[
+                    authorScreenStyles.avatar,
+                    {
+                      borderColor: backgroundTone.borderColor,
+                      backgroundColor: "rgba(255,255,255,0.72)",
+                    },
+                  ]}
+                >
+                  {profilePhotoUrl ? (
+                    <Image
+                      source={{ uri: profilePhotoUrl }}
+                      style={authorScreenStyles.avatarImage}
+                      contentFit="cover"
+                    />
+                  ) : (
+                    <Text style={authorScreenStyles.avatarText}>{avatarInitial}</Text>
+                  )}
+                </View>
+                <View style={authorScreenStyles.identityBlock}>
+                  <Text style={authorScreenStyles.profileKicker}>작가의 글숲</Text>
+                  <View style={authorScreenStyles.nameRow}>
+                    <Text style={authorScreenStyles.name}>{name}</Text>
+                    {primaryBadge ? (
+                      <Text
+                        style={authorScreenStyles.badgeEmoji}
+                        accessibilityLabel={`대표 뱃지 ${primaryBadge.name}`}
+                      >
+                        {emojiOrFallback(primaryBadge.icon_emoji, "🏅")}
+                      </Text>
+                    ) : null}
+                  </View>
                 </View>
               </View>
-            </View>
+            )}
 
-            <Text style={authorScreenStyles.bio}>{collapsedAbout || bio}</Text>
+            <Text
+              style={[
+                authorScreenStyles.bio,
+                showProfileCustomize && authorScreenStyles.ownBio,
+              ]}
+            >
+              {collapsedAbout || bio}
+            </Text>
             {about.length > 96 ? (
               <Pressable
                 onPress={() => setBioExpanded((current) => !current)}
@@ -668,7 +700,7 @@ export default function Author({
               </Pressable>
             ) : null}
 
-            {showcaseBadges.length > 0 ? (
+            {!showProfileCustomize && showcaseBadges.length > 0 ? (
               <View style={authorScreenStyles.showcaseRow}>
                 {showcaseBadges.map((badge) => (
                   <View
@@ -684,97 +716,69 @@ export default function Author({
               </View>
             ) : null}
 
-            <View style={authorScreenStyles.statsRow}>
-              <Text style={authorScreenStyles.statText}>글 {postCount}</Text>
-              <View
-                style={authorScreenStyles.statMetric}
-                accessibilityLabel={`좋아요 ${totalLikes}개`}
-              >
-                <Ionicons name="heart" size={13} color={tokens.colors.textMuted} />
-                <Text style={authorScreenStyles.statText}>{totalLikes}</Text>
-              </View>
-              {showProfileCustomize ? (
+            {showProfileCustomize ? (
+              <View style={authorScreenStyles.ownStatsRow}>
+                <View style={authorScreenStyles.ownStatItem}>
+                  <Text style={authorScreenStyles.ownStatLabel}>글</Text>
+                  <Text style={authorScreenStyles.ownStatValue}>{postCount}</Text>
+                </View>
+                <View
+                  style={[authorScreenStyles.ownStatItem, authorScreenStyles.ownStatItemDivider]}
+                  accessibilityLabel={`공감 ${totalLikes}개`}
+                >
+                  <Text style={authorScreenStyles.ownStatLabel}>공감</Text>
+                  <Text style={authorScreenStyles.ownStatValue}>{totalLikes}</Text>
+                </View>
                 <Pressable
                   {...followersTarget}
                   onPress={() => router.push("/me/followers" as never)}
-                  style={authorScreenStyles.statLink}
+                  style={[authorScreenStyles.ownStatItem, authorScreenStyles.ownStatItemDivider]}
                   testID="author-own-followers-toggle"
                   accessibilityRole="button"
                   accessibilityLabel={`팔로워 ${followerCount}명 목록 보기`}
                 >
-                  <Text style={authorScreenStyles.statLinkText}>팔로워 {followerCount}</Text>
-                  <Ionicons
-                    name="chevron-forward"
-                    size={13}
-                    color={tokens.colors.textFaint}
-                  />
+                  <Text style={authorScreenStyles.ownStatLabel}>팔로워</Text>
+                  <Text style={authorScreenStyles.ownStatValue}>{followerCount}</Text>
                 </Pressable>
-              ) : (
-                <Text style={authorScreenStyles.statText}>팔로워 {followerCount}</Text>
-              )}
-              {showProfileCustomize ? (
                 <Pressable
                   {...followingsTarget}
                   onPress={() => router.push("/me/followings")}
-                  style={authorScreenStyles.statLink}
+                  style={[authorScreenStyles.ownStatItem, authorScreenStyles.ownStatItemDivider]}
                   testID="author-own-followings-toggle"
                   accessibilityRole="button"
                   accessibilityLabel={`팔로잉 ${followingCount}명 목록 보기`}
                 >
-                  <Text style={authorScreenStyles.statLinkText}>팔로잉 {followingCount}</Text>
-                  <Ionicons
-                    name="chevron-forward"
-                    size={13}
-                    color={tokens.colors.textFaint}
-                  />
+                  <Text style={authorScreenStyles.ownStatLabel}>팔로잉</Text>
+                  <Text style={authorScreenStyles.ownStatValue}>{followingCount}</Text>
                 </Pressable>
-              ) : null}
-            </View>
+              </View>
+            ) : (
+              <View style={authorScreenStyles.statsRow}>
+                <Text style={authorScreenStyles.statText}>글 {postCount}</Text>
+                <View
+                  style={authorScreenStyles.statMetric}
+                  accessibilityLabel={`공감 ${totalLikes}개`}
+                >
+                  <Ionicons name="heart" size={13} color={tokens.colors.textMuted} />
+                  <Text style={authorScreenStyles.statText}>{totalLikes}</Text>
+                </View>
+                <Text style={authorScreenStyles.statText}>팔로워 {followerCount}</Text>
+              </View>
+            )}
 
-            {joinedAtLabel ? (
+            {!showProfileCustomize && joinedAtLabel ? (
               <Text style={authorScreenStyles.joinedAt}>{joinedAtLabel}</Text>
             ) : null}
 
-            {visibleItems.length > 0 || showProfileCustomize ? (
+            {!showProfileCustomize && visibleItems.length > 0 ? (
               <View style={authorScreenStyles.primaryActionRow}>
-                {visibleItems.length > 0 ? (
-                  <Pressable
-                    {...postTarget}
-                    onPress={() => router.push(`/posts/${visibleItems[0].id}`)}
-                    style={authorScreenStyles.latestPostBtn}
-                  >
-                    <Text style={authorScreenStyles.latestPostBtnText}>최신 글 읽기</Text>
-                  </Pressable>
-                ) : null}
-                {showProfileCustomize ? (
-                  <Pressable
-                    {...customizeTarget}
-                    onPress={() => router.push("/profile-customize")}
-                    style={authorScreenStyles.profileCustomizeBtn}
-                    testID="author-profile-customize-btn"
-                  >
-                    <Text style={authorScreenStyles.profileCustomizeBtnText}>
-                      프로필 꾸미기
-                    </Text>
-                  </Pressable>
-                ) : null}
-                {showProfileCustomize ? (
-                  <Pressable
-                    {...settingsTarget}
-                    onPress={() => router.push("/account-center")}
-                    style={authorScreenStyles.settingsBtn}
-                    testID="author-account-center-btn"
-                    accessibilityRole="button"
-                    accessibilityLabel="설정 열기"
-                  >
-                    <Ionicons
-                      name="settings-outline"
-                      size={15}
-                      color={tokens.colors.green700}
-                    />
-                    <Text style={authorScreenStyles.settingsBtnText}>설정</Text>
-                  </Pressable>
-                ) : null}
+                <Pressable
+                  {...postTarget}
+                  onPress={() => router.push(`/posts/${visibleItems[0].id}`)}
+                  style={authorScreenStyles.latestPostBtn}
+                >
+                  <Text style={authorScreenStyles.latestPostBtnText}>최신 글 읽기</Text>
+                </Pressable>
               </View>
             ) : null}
 
@@ -858,18 +862,29 @@ export default function Author({
             ) : null}
           </View>
 
-          {showProfileCustomize ? (
-            <View style={authorScreenStyles.premiumDiscoveryWrap}>
-              <PremiumDiscoveryCard source="me_card" isPremium={isPremium} />
-            </View>
-          ) : null}
-
-          <View style={authorScreenStyles.sectionRow}>
-            <Text style={authorScreenStyles.sectionLabel}>작성한 글</Text>
-            <View style={authorScreenStyles.sortRow}>
+          <View
+            style={[
+              authorScreenStyles.sectionRow,
+              showProfileCustomize && authorScreenStyles.ownSectionRow,
+            ]}
+          >
+            <Text
+              style={[
+                authorScreenStyles.sectionLabel,
+                showProfileCustomize && authorScreenStyles.ownSectionLabel,
+              ]}
+            >
+              작성한 글
+            </Text>
+            <View
+              style={[
+                authorScreenStyles.sortRow,
+                showProfileCustomize && authorScreenStyles.ownSortRow,
+              ]}
+            >
               {([
                 { value: "newest", label: "최신순" },
-                { value: "likes", icon: "heart" },
+                { value: "likes", label: "공감순", icon: "heart" },
                 { value: "oldest", label: "오래된순" },
               ] as const).map((item) => {
                 const value = item.value;
@@ -880,14 +895,16 @@ export default function Author({
                     onPress={() => setSort(value)}
                     testID={`author-sort-${value}`}
                     accessibilityRole="button"
-                    accessibilityLabel={"label" in item ? item.label : "좋아요 많은 순"}
+                    accessibilityLabel={"label" in item ? item.label : "공감 많은 순"}
                     accessibilityState={{ selected: active }}
                     style={[
                       authorScreenStyles.sortChip,
+                      showProfileCustomize && authorScreenStyles.ownSortTab,
                       active && authorScreenStyles.sortChipActive,
+                      showProfileCustomize && active && authorScreenStyles.ownSortTabActive,
                     ]}
                   >
-                    {"icon" in item ? (
+                    {!showProfileCustomize && "icon" in item ? (
                       <Ionicons
                         name={item.icon}
                         size={14}
@@ -897,7 +914,9 @@ export default function Author({
                       <Text
                         style={[
                           authorScreenStyles.sortChipText,
+                          showProfileCustomize && authorScreenStyles.ownSortTabText,
                           active && authorScreenStyles.sortChipTextActive,
+                          showProfileCustomize && active && authorScreenStyles.ownSortTabTextActive,
                         ]}
                       >
                         {item.label}
@@ -916,7 +935,6 @@ export default function Author({
       bio,
       bioExpanded,
       collapsedAbout,
-      customizeTarget,
       followingCount,
       followingsTarget,
       followerCount,
@@ -936,7 +954,6 @@ export default function Author({
       promptBlockAuthor,
       promptReportAuthor,
       showProfileCustomize,
-      isPremium,
       showFollowButton,
       settingsTarget,
       overflowOpen,
@@ -996,6 +1013,7 @@ export default function Author({
         keyExtractor={(item) => item.id}
         contentContainerStyle={[
           authorScreenStyles.listContent,
+          showProfileCustomize && authorScreenStyles.ownListContent,
           reserveBottomDock && { paddingBottom: dock.tab.height + tokens.space.xl },
         ]}
         ListHeaderComponent={listHeader}
@@ -1019,7 +1037,13 @@ export default function Author({
         ListEmptyComponent={
           !postsLoading ? (
             <View style={authorScreenStyles.listFooter}>
-              <AppEmpty title="작성한 글이 없어요" />
+              {showProfileCustomize ? (
+                <View style={authorScreenStyles.ownEmptyState}>
+                  <Text style={authorScreenStyles.ownEmptyText}>아직 쌓인 글이 없어요</Text>
+                </View>
+              ) : (
+                <AppEmpty title="작성한 글이 없어요" />
+              )}
             </View>
           ) : null
         }

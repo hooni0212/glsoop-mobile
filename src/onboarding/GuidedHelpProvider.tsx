@@ -309,7 +309,7 @@ const GUIDED_BUTTON_HIGHLIGHTS: Partial<Record<GuidedHelpPageKey, GuidedHighligh
       placement: "middle",
       target: ({ width, top }) => {
         const cLeft = contentLeft(width);
-        return targetRect(cLeft + 138, top + 176, 104, 32);
+        return targetRect(cLeft + 188, top + 128, 82, 46);
       },
     },
     {
@@ -318,27 +318,17 @@ const GUIDED_BUTTON_HIGHLIGHTS: Partial<Record<GuidedHelpPageKey, GuidedHighligh
       placement: "middle",
       target: ({ width, top }) => {
         const cLeft = contentLeft(width);
-        return targetRect(cLeft + 238, top + 176, 110, 32);
-      },
-    },
-    {
-      buttonKey: "customize",
-      highlightShape: "pill",
-      placement: "middle",
-      target: ({ width, top }) => {
-        const cWidth = contentWidth(width);
-        const cLeft = contentLeft(width);
-        return targetRect(cLeft + 24, top + 242, (cWidth - 58) / 2, 42);
+        return targetRect(cLeft + 270, top + 128, 82, 46);
       },
     },
     {
       buttonKey: "settings",
-      highlightShape: "pill",
-      placement: "middle",
+      highlightShape: "circle",
+      placement: "top",
       target: ({ width, top }) => {
-        const cWidth = contentWidth(width);
         const cLeft = contentLeft(width);
-        return targetRect(cLeft + 34 + (cWidth - 58) / 2, top + 242, (cWidth - 58) / 2, 42);
+        const cWidth = contentWidth(width);
+        return targetRect(cLeft + cWidth - 60, top + 20, 40, 40);
       },
     },
     {
@@ -348,7 +338,7 @@ const GUIDED_BUTTON_HIGHLIGHTS: Partial<Record<GuidedHelpPageKey, GuidedHighligh
       target: ({ width, top }) => {
         const cWidth = contentWidth(width);
         const cLeft = contentLeft(width);
-        return targetRect(cLeft + 24, top + 342, cWidth - 48, 72);
+        return targetRect(cLeft + 20, top + 234, cWidth - 40, 72);
       },
     },
   ],
@@ -1023,13 +1013,13 @@ const styles = StyleSheet.create({
   tourKicker: {
     color: tokens.colors.green700,
     fontSize: 12,
-    fontWeight: "900",
+    fontWeight: "600",
   },
   tourTitle: {
     marginTop: 2,
     color: tokens.colors.text,
     fontSize: 20,
-    fontWeight: "900",
+    fontWeight: "600",
     lineHeight: 26,
   },
   tourCloseButton: {
@@ -1045,7 +1035,7 @@ const styles = StyleSheet.create({
   tourBody: {
     color: tokens.colors.textMuted,
     fontSize: tokens.font.body,
-    fontWeight: "700",
+    fontWeight: "500",
     lineHeight: 21,
   },
   tourRequirementPill: {
@@ -1057,7 +1047,7 @@ const styles = StyleSheet.create({
   },
   tourRequirementText: {
     fontSize: 11,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.green900,
   },
   tourDots: {
@@ -1086,7 +1076,7 @@ const styles = StyleSheet.create({
   tourStepText: {
     color: tokens.colors.textFaint,
     fontSize: 12,
-    fontWeight: "900",
+    fontWeight: "600",
   },
   tourNav: {
     flexDirection: "row",
@@ -1116,7 +1106,7 @@ const styles = StyleSheet.create({
   tourNavPrimaryText: {
     color: tokens.colors.textInverse,
     fontSize: tokens.font.small,
-    fontWeight: "900",
+    fontWeight: "600",
   },
   modalRoot: {
     flex: 1,
@@ -1176,13 +1166,13 @@ const styles = StyleSheet.create({
   },
   kicker: {
     fontSize: 11,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.textFaint,
   },
   title: {
     marginTop: 2,
     fontSize: 21,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
   },
   iconButton: {
@@ -1197,7 +1187,7 @@ const styles = StyleSheet.create({
   },
   summary: {
     fontSize: 15,
-    fontWeight: "700",
+    fontWeight: "500",
     color: tokens.colors.textMuted,
     lineHeight: 23,
   },
@@ -1206,7 +1196,7 @@ const styles = StyleSheet.create({
   },
   sectionLabel: {
     fontSize: 13,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
   },
   chipWrap: {
@@ -1225,7 +1215,7 @@ const styles = StyleSheet.create({
   },
   chipText: {
     fontSize: 12,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.green900,
   },
   actionRow: {
@@ -1238,7 +1228,7 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
     fontSize: 13,
-    fontWeight: "800",
+    fontWeight: "500",
     color: tokens.colors.textMuted,
     lineHeight: 19,
   },
@@ -1262,7 +1252,7 @@ const styles = StyleSheet.create({
   },
   secondaryButtonText: {
     fontSize: 14,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.green900,
   },
   ghostButton: {
@@ -1277,7 +1267,7 @@ const styles = StyleSheet.create({
   },
   ghostButtonText: {
     fontSize: 14,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.textMuted,
   },
   primaryButton: {
@@ -1290,7 +1280,7 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     fontSize: 14,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.textInverse,
   },
   pressed: {
@@ -1334,12 +1324,12 @@ const styles = StyleSheet.create({
   },
   rowTitle: {
     fontSize: 14,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
   },
   rowBody: {
     fontSize: 13,
-    fontWeight: "700",
+    fontWeight: "500",
     color: tokens.colors.textMuted,
     lineHeight: 19,
   },
@@ -1351,7 +1341,7 @@ const styles = StyleSheet.create({
   },
   requirementText: {
     fontSize: 10,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.green900,
   },
 });

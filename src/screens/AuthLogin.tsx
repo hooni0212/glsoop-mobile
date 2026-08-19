@@ -336,7 +336,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: tokens.colors.border,
   },
-  backText: { fontSize: 18, fontWeight: "900", color: tokens.colors.text },
+  backText: { fontSize: 18, fontWeight: "600", color: tokens.colors.text },
   brandBlock: {
     alignItems: "center",
     paddingTop: tokens.space.md,
@@ -356,12 +356,12 @@ const styles = StyleSheet.create({
     width: "100%",
     height: "100%",
   },
-  h1: { fontSize: 28, fontWeight: "900", color: tokens.colors.text, letterSpacing: 0 },
+  h1: { fontSize: 28, fontWeight: "600", color: tokens.colors.text, letterSpacing: 0 },
   sub: {
     maxWidth: 270,
     textAlign: "center",
     fontSize: tokens.font.body,
-    fontWeight: "700",
+    fontWeight: "500",
     color: tokens.colors.textMuted,
     lineHeight: 22,
   },
@@ -383,7 +383,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: tokens.space.lg,
     paddingVertical: 14,
     fontSize: tokens.font.body,
-    fontWeight: "700",
+    fontWeight: "500",
     color: tokens.colors.text,
   },
   primaryBtn: {
@@ -395,7 +395,7 @@ const styles = StyleSheet.create({
   },
   primaryBtnPressed: { opacity: 0.92 },
   primaryBtnDisabled: { opacity: 0.5 },
-  primaryBtnText: { color: "white", fontSize: 15, fontWeight: "800" },
+  primaryBtnText: { color: "white", fontSize: 15, fontWeight: "500" },
   helper: { fontSize: tokens.font.small, color: tokens.colors.textMuted, marginTop: 4 },
   linkGroup: {
     marginTop: tokens.space.xs,
@@ -408,7 +408,7 @@ const styles = StyleSheet.create({
   link: {
     fontSize: tokens.font.small,
     color: tokens.colors.green900,
-    fontWeight: "800",
+    fontWeight: "500",
   },
   modalOverlay: {
     flex: 1,
@@ -430,7 +430,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: tokens.font.h1,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
   },
   modalDescription: {
@@ -446,7 +446,7 @@ const styles = StyleSheet.create({
   modalMeta: {
     fontSize: tokens.font.small,
     color: tokens.colors.green900,
-    fontWeight: "700",
+    fontWeight: "500",
   },
   modalButtons: {
     flexDirection: "row",
@@ -471,7 +471,7 @@ const styles = StyleSheet.create({
   },
   modalBtnText: {
     fontSize: tokens.font.small,
-    fontWeight: "800",
+    fontWeight: "500",
   },
   modalBtnTextCancel: {
     color: tokens.colors.text,

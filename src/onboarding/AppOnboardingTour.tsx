@@ -78,7 +78,7 @@ const TOUR_STEPS: TourStep[] = [
     key: "post-card",
     icon: "heart-outline",
     title: "글 카드에서 바로 반응해요",
-    body: "좋아요, 저장, 더보기 메뉴로 좋은 글을 남기고 안전 기능도 사용할 수 있어요.",
+    body: "공감, 저장, 더보기 메뉴로 좋은 글을 남기고 안전 기능도 사용할 수 있어요.",
     targetLabel: "글 카드 액션",
     highlightShape: "rounded",
     placement: "bottom",
@@ -416,23 +416,23 @@ const styles = StyleSheet.create({
     flex: 1,
     color: tokens.colors.green700,
     fontSize: 12,
-    fontWeight: "900",
+    fontWeight: "600",
   },
   progress: {
     color: tokens.colors.textFaint,
     fontSize: 12,
-    fontWeight: "900",
+    fontWeight: "600",
   },
   title: {
     color: tokens.colors.text,
     fontSize: 21,
-    fontWeight: "900",
+    fontWeight: "600",
     lineHeight: 27,
   },
   body: {
     color: tokens.colors.textMuted,
     fontSize: tokens.font.body,
-    fontWeight: "700",
+    fontWeight: "500",
     lineHeight: 21,
   },
   dots: {
@@ -472,7 +472,7 @@ const styles = StyleSheet.create({
   skipText: {
     color: tokens.colors.textMuted,
     fontSize: tokens.font.small,
-    fontWeight: "900",
+    fontWeight: "600",
   },
   backBtn: {
     width: 42,
@@ -497,7 +497,7 @@ const styles = StyleSheet.create({
   dontShowText: {
     color: tokens.colors.textMuted,
     fontSize: 12,
-    fontWeight: "900",
+    fontWeight: "600",
   },
   nextBtn: {
     minHeight: 42,
@@ -512,7 +512,7 @@ const styles = StyleSheet.create({
   nextText: {
     color: tokens.colors.textInverse,
     fontSize: tokens.font.small,
-    fontWeight: "900",
+    fontWeight: "600",
   },
   btnPressed: {
     opacity: 0.82,

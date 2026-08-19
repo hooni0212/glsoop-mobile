@@ -639,7 +639,7 @@ export default function PostDetail() {
 
   const onPressCommentLike = async (comment: PostComment) => {
     if (!token) {
-      promptAuthForAction("댓글 좋아요는 로그인한 회원만 남길 수 있어요.");
+      promptAuthForAction("댓글 공감는 로그인한 회원만 남길 수 있어요.");
       return;
     }
     if (comment.status !== "active" || commentLikePending[comment.id]) return;
@@ -680,7 +680,7 @@ export default function PostDetail() {
         await handleAuthError();
         return;
       }
-      showToast("댓글 좋아요 처리에 실패했어요. 잠시 후 다시 시도해주세요.", { tone: "error" });
+      showToast("댓글 공감 처리에 실패했어요. 잠시 후 다시 시도해주세요.", { tone: "error" });
     } finally {
       setCommentLikePending((prev) => ({ ...prev, [comment.id]: false }));
     }
@@ -688,7 +688,7 @@ export default function PostDetail() {
 
   const onPressLike = async () => {
     if (!token) {
-      promptAuthForAction("좋아요는 로그인한 회원만 남길 수 있어요.");
+      promptAuthForAction("공감는 로그인한 회원만 남길 수 있어요.");
       return;
     }
     if (!post || likePending) return;
@@ -727,7 +727,7 @@ export default function PostDetail() {
       if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
         await handleAuthError();
       } else {
-        showToast("좋아요 처리에 실패했어요. 잠시 후 다시 시도해주세요.", { tone: "error" });
+        showToast("공감 처리에 실패했어요. 잠시 후 다시 시도해주세요.", { tone: "error" });
       }
     } finally {
       setLikePending(false);
@@ -745,7 +745,7 @@ export default function PostDetail() {
 
   const openBookmarkModal = async () => {
     if (!token) {
-      promptAuthForAction("북마크는 로그인한 회원만 사용할 수 있어요.");
+      promptAuthForAction("책갈피는 로그인한 회원만 사용할 수 있어요.");
       return;
     }
     if (!post) return;
@@ -783,7 +783,7 @@ export default function PostDetail() {
         return;
       }
       showToast(
-        err instanceof Error ? err.message : "북마크 폴더를 불러오지 못했어요. 잠시 후 다시 시도해주세요.",
+        err instanceof Error ? err.message : "책갈피 폴더를 불러오지 못했어요. 잠시 후 다시 시도해주세요.",
         { tone: "error" }
       );
     } finally {
@@ -818,7 +818,7 @@ export default function PostDetail() {
         return;
       }
       showToast(
-        err instanceof Error ? err.message : "북마크 처리에 실패했어요. 잠시 후 다시 시도해주세요.",
+        err instanceof Error ? err.message : "책갈피 처리에 실패했어요. 잠시 후 다시 시도해주세요.",
         { tone: "error" }
       );
     } finally {
@@ -1195,7 +1195,7 @@ export default function PostDetail() {
     }
     if (!isBookmarked) {
       setSafetyMenuVisible(false);
-      showToast("북마크에 저장한 글만 문장 액자에 담을 수 있어요.", { tone: "error" });
+      showToast("책갈피에 저장한 글만 문장 액자에 담을 수 있어요.", { tone: "error" });
       return;
     }
 
@@ -1447,7 +1447,7 @@ export default function PostDetail() {
             <View style={styles.commentSection} testID="post-comments-section">
               <View style={styles.commentHeaderRow}>
                 <View>
-                  <Text style={styles.commentKicker}>COMMENTS</Text>
+                  <Text style={styles.commentKicker}>댓글</Text>
                   <Text style={styles.commentTitle}>댓글 {commentCount}</Text>
                 </View>
                 <View style={styles.commentHeaderActions}>
@@ -1470,7 +1470,7 @@ export default function PostDetail() {
             </View>
 
             <View style={styles.relatedSection}>
-              <Text style={styles.relatedEyebrow}>RELATED</Text>
+              <Text style={styles.relatedEyebrow}>함께 읽기</Text>
               <Text style={styles.relatedTitle}>함께 읽기</Text>
               {relatedLoading ? (
                 <Text style={styles.relatedHint}>불러오는 중...</Text>
@@ -1544,7 +1544,7 @@ export default function PostDetail() {
               <View style={styles.commentSheetHandle} />
               <View style={styles.commentHeaderRow}>
                 <View>
-                  <Text style={styles.commentKicker}>COMMENTS</Text>
+                  <Text style={styles.commentKicker}>댓글</Text>
                   <Text style={styles.commentTitle}>댓글 {commentCount}</Text>
                 </View>
               </View>
@@ -1784,7 +1784,7 @@ export default function PostDetail() {
       <Modal visible={bookmarkModalVisible} transparent animationType="fade">
         <View style={styles.bookmarkModalOverlay}>
           <View style={styles.bookmarkModalCard}>
-            <Text style={styles.bookmarkModalTitle}>북마크 폴더 선택</Text>
+            <Text style={styles.bookmarkModalTitle}>책갈피 폴더 선택</Text>
             <Text style={styles.bookmarkModalDescription}>
               저장할 폴더를 선택하면 토글됩니다.
             </Text>
@@ -1795,7 +1795,7 @@ export default function PostDetail() {
               </View>
             ) : bookmarkLists.length === 0 ? (
               <View style={styles.bookmarkModalEmptyWrap}>
-                <Text style={styles.bookmarkModalEmptyText}>북마크 폴더가 없어요.</Text>
+                <Text style={styles.bookmarkModalEmptyText}>책갈피 폴더가 없어요.</Text>
                 <Pressable
                   onPress={() => void createDefaultBookmarkList()}
                   style={styles.bookmarkModalCreateBtn}
@@ -2150,7 +2150,7 @@ function RelatedPostCard({
         <Text style={styles.relatedFeedTitle} numberOfLines={2}>
           {title}
         </Text>
-        <View style={styles.relatedFeedMetaRow} accessibilityLabel={`좋아요 ${likeCount}개`}>
+        <View style={styles.relatedFeedMetaRow} accessibilityLabel={`공감 ${likeCount}개`}>
           <Ionicons name="heart" size={13} color={tokens.colors.green700} />
           <Text style={styles.relatedFeedMeta} numberOfLines={1}>
             {likeCount}

@@ -287,7 +287,7 @@ test.describe("작가 화면 흐름", () => {
     await expect.poll(() => logs.some((entry) => entry.sort === "newest" && entry.offset >= 10)).toBeTruthy();
     await expect(page.getByTestId("author-post-card-1190")).toBeVisible();
 
-    await page.goto("/");
+    await page.goto("/explore");
     await expect(page.getByRole("button", { name: "검색" })).toBeVisible();
     await page.goto(`/users/${AUTHOR_ID}`);
     await expect(page.getByTestId("author-screen")).toBeVisible();

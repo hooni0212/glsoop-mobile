@@ -2,6 +2,7 @@ import React, { useMemo, type ReactNode } from "react";
 import { Text, View } from "react-native";
 
 import { toLayoutLetterSpacingPx, type WriteLayoutModel } from "@/lib/postLayout";
+import { appFontFamily } from "@/theme/typography";
 import type { PostType } from "@/types/post";
 
 import { PaperSurface, paperSurfaceStyles } from "./PaperSurface";
@@ -149,7 +150,8 @@ const styles = {
     justifyContent: "center" as const,
   },
   title: {
-    fontWeight: "700" as const,
+    fontFamily: appFontFamily.editorialMedium,
+    fontWeight: "500" as const,
     letterSpacing: -0.5,
   },
   titleGap: {
@@ -162,7 +164,8 @@ const styles = {
     justifyContent: "center" as const,
   },
   body: {
-    fontWeight: "500" as const,
+    fontFamily: appFontFamily.editorial,
+    fontWeight: "400" as const,
     letterSpacing: -0.1,
   },
   bodyParagraphGap: {
@@ -176,6 +179,6 @@ const styles = {
   },
   footer: {
     color: "rgba(76,57,34,0.62)",
-    fontWeight: "700" as const,
+    fontWeight: "400" as const,
   },
 };

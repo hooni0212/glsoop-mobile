@@ -163,7 +163,7 @@ function buildFeedback({
 
   if (type === "poem") {
     return {
-      primaryFeedback: "줄바꿈의 리듬이 살아 있어 운문 카드로 보기 좋아요.",
+      primaryFeedback: "줄바꿈의 리듬이 살아 있어 운문 카드로 보기 공감.",
       secondaryFeedback: lineCount >= 8 ? "연 사이에 빈 줄을 두면 페이지 호흡이 더 또렷해집니다." : undefined,
     };
   }

@@ -53,7 +53,7 @@ async function setAuthToken(page: Page, token: string) {
   );
 }
 
-test.describe("오늘과 발견 흐름", () => {
+test.describe("오늘과 읽기 흐름", () => {
   test.beforeEach(async ({ page }) => {
     await page.route("**/api/runtime-config", async (route) => {
       await route.fulfill({
@@ -143,7 +143,7 @@ test.describe("오늘과 발견 흐름", () => {
     await expect(page.getByTestId("today-writing-prompt")).toBeVisible();
     await expect(page.getByText("오늘을 붙잡는 문장")).toBeVisible();
     await expect(page.getByRole("tab", { name: "오늘" })).toBeVisible();
-    await expect(page.getByRole("tab", { name: "발견" })).toBeVisible();
+    await expect(page.getByRole("tab", { name: "읽기" })).toBeVisible();
     await expect(page.getByRole("tab", { name: "문집" })).toBeVisible();
     await expect(page.getByRole("tab", { name: "나" })).toBeVisible();
     await expect(page.getByTestId("fab-write")).toBeVisible();
@@ -153,6 +153,32 @@ test.describe("오늘과 발견 흐름", () => {
     await page.goto("/");
     await page.getByTestId("today-start-writing").click();
     await expect(page).toHaveURL(/\/write/);
+  });
+
+  test("키보드로 핵심 행동을 탐색하면 포커스가 또렷하게 보인다", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.getByTestId("today-writing-prompt")).toBeVisible();
+
+    await page.keyboard.press("Tab");
+    await expect(page.getByRole("button", { name: "알림 열기" })).toBeFocused();
+
+    await page.keyboard.press("Tab");
+    const writeButton = page.getByTestId("today-start-writing");
+    await expect(writeButton).toBeFocused();
+    await expect
+      .poll(() => writeButton.evaluate((element) => getComputedStyle(element).outlineWidth))
+      .toBe("2px");
+  });
+
+  test("320px 화면에서도 오늘 지면이 가로로 넘치지 않는다", async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 844 });
+    await page.goto("/");
+    await expect(page.getByTestId("today-writing-prompt")).toBeVisible();
+
+    const hasHorizontalOverflow = await page.evaluate(
+      () => document.documentElement.scrollWidth > window.innerWidth
+    );
+    expect(hasHorizontalOverflow).toBe(false);
   });
 
   test("제목 없이 본문부터 쓰고 미리보기로 이동할 수 있다", async ({ page }) => {
@@ -169,29 +195,31 @@ test.describe("오늘과 발견 흐름", () => {
     await page.goto("/");
     await page.getByRole("tab", { name: "문집" }).click();
 
-    await expect(page.getByText("나의 글이 머무는 곳")).toBeVisible();
+    await expect(
+      page.getByText("쓰다 만 문장부터 완성한 글까지, 시간이 쌓인 모습을 봅니다")
+    ).toBeVisible();
     await expect(page.getByText("최근에 쓴 글")).toBeVisible();
     await expect(page.getByText("여름 저녁의 기록")).toBeVisible();
     await expect(page.getByText("임시저장")).toBeVisible();
     await expect(page.getByText("모아둔 문장")).toBeVisible();
   });
 
-  test("발견에서 검색 버튼을 누르면 검색 화면으로 이동한다", async ({ page }) => {
+  test("읽기에서 검색 버튼을 누르면 검색 화면으로 이동한다", async ({ page }) => {
     await page.goto("/");
-    await page.getByRole("tab", { name: "발견" }).click();
+    await page.getByRole("tab", { name: "읽기" }).click();
     await page.getByRole("button", { name: "검색" }).click();
     await expect(page.getByTestId("search-screen")).toBeVisible();
     await expect(page.getByTestId("search-input")).toBeVisible();
   });
 
-  test("발견의 알림 버튼은 알림함으로 이동한다", async ({ page }) => {
+  test("읽기의 알림 버튼은 알림함으로 이동한다", async ({ page }) => {
     await page.goto("/");
-    await page.getByRole("tab", { name: "발견" }).click();
+    await page.getByRole("tab", { name: "읽기" }).click();
     await page.getByTestId("home-notifications-btn").click();
     await expect(page.getByTestId("notifications-screen")).toBeVisible();
   });
 
-  test("읽지 않은 알림이 있으면 발견 알림 버튼에 점 배지를 표시한다", async ({ page }) => {
+  test("읽지 않은 알림이 있으면 읽기 알림 버튼에 점 배지를 표시한다", async ({ page }) => {
     await page.unroute("**/api/notifications?**");
     await page.route("**/api/notifications?**", async (route) => {
       await route.fulfill({
@@ -221,11 +249,11 @@ test.describe("오늘과 발견 흐름", () => {
     });
 
     await page.goto("/");
-    await page.getByRole("tab", { name: "발견" }).click();
+    await page.getByRole("tab", { name: "읽기" }).click();
     await expect(page.getByTestId("home-notifications-unread-dot")).toBeVisible();
   });
 
-  test("피드 카드의 공감과 북마크 버튼이 상세 이동 없이 동작한다", async ({ page }) => {
+  test("피드 카드의 공감과 책갈피 버튼이 상세 이동 없이 동작한다", async ({ page }) => {
     let likeToggleCalls = 0;
     let bookmarkAddCalls = 0;
 
@@ -279,7 +307,7 @@ test.describe("오늘과 발견 흐름", () => {
     });
 
     await page.goto("/");
-    await page.getByRole("tab", { name: "발견" }).click();
+    await page.getByRole("tab", { name: "읽기" }).click();
 
     await expect(
       page.getByRole("button", { name: "게시글 열기: 홈 액션 테스트 글" })

@@ -133,13 +133,13 @@ export default function WriteDrafts() {
               const title = d.title?.trim() ? d.title.trim() : "(제목 없음)";
               return (
                 <View key={d.id} style={styles.metaCard} testID={`draft-item-${d.id}`}>
-                  <Text style={{ fontSize: 14, fontWeight: "900", color: "#2B2B2B" }}>{title}</Text>
+                  <Text style={{ fontSize: 14, fontWeight: "600", color: "#2B2B2B" }}>{title}</Text>
                   {!!d.category && (
-                    <Text style={{ marginTop: 6, fontSize: 12, color: "#2E5A3D", fontWeight: "800" }}>
+                    <Text style={{ marginTop: 6, fontSize: 12, color: "#2E5A3D", fontWeight: "500" }}>
                       {CATEGORY_LABEL[d.category] ?? d.category}
                     </Text>
                   )}
-                  <Text style={{ marginTop: 6, fontSize: 12, color: "#6C6C6C", fontWeight: "700" }}>
+                  <Text style={{ marginTop: 6, fontSize: 12, color: "#6C6C6C", fontWeight: "500" }}>
                     {formatDate(d.updatedAt)}
                   </Text>
                   {!!preview && (

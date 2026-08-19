@@ -525,18 +525,18 @@ const styles = StyleSheet.create({
   },
   recordHeroLabel: {
     fontSize: tokens.font.small,
-    fontWeight: "800",
+    fontWeight: "500",
     color: tokens.colors.green700,
   },
   recordHeroTitle: {
     fontSize: 21,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.green900,
   },
   recordHeroText: {
     fontSize: tokens.font.small,
     lineHeight: 19,
-    fontWeight: "700",
+    fontWeight: "500",
     color: tokens.colors.textMuted,
   },
   progressTrack: {
@@ -576,14 +576,14 @@ const styles = StyleSheet.create({
   writingCampaignProgressTitle: {
     fontSize: 20,
     lineHeight: 26,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.green900,
     letterSpacing: 0,
   },
   writingCampaignProgressText: {
     fontSize: tokens.font.small,
     lineHeight: 18,
-    fontWeight: "700",
+    fontWeight: "500",
     color: tokens.colors.textMuted,
     letterSpacing: 0,
   },
@@ -599,7 +599,7 @@ const styles = StyleSheet.create({
   },
   writingCampaignProgressBadgeText: {
     fontSize: tokens.font.small,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.green700,
   },
   writingCampaignProgressTrack: {
@@ -626,19 +626,19 @@ const styles = StyleSheet.create({
   },
   writingCampaignTodayMeta: {
     fontSize: 12,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.green700,
   },
   writingCampaignTodayTitle: {
     fontSize: tokens.font.body,
     lineHeight: 21,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
   },
   writingCampaignTodayBody: {
     fontSize: tokens.font.small,
     lineHeight: 18,
-    fontWeight: "700",
+    fontWeight: "500",
     color: tokens.colors.textMuted,
   },
   writingCampaignProgressFooter: {
@@ -650,7 +650,7 @@ const styles = StyleSheet.create({
   writingCampaignProgressHint: {
     flex: 1,
     fontSize: tokens.font.small,
-    fontWeight: "800",
+    fontWeight: "500",
     color: tokens.colors.textMuted,
   },
   writingCampaignWriteButton: {
@@ -663,7 +663,7 @@ const styles = StyleSheet.create({
   },
   writingCampaignWriteButtonText: {
     fontSize: tokens.font.small,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.textInverse,
   },
   pressed: {
@@ -679,7 +679,7 @@ const styles = StyleSheet.create({
   },
   recordSectionTitle: {
     fontSize: tokens.font.body,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
   },
   recordRows: {
@@ -696,12 +696,12 @@ const styles = StyleSheet.create({
   },
   recordLabel: {
     fontSize: tokens.font.small,
-    fontWeight: "800",
+    fontWeight: "500",
     color: tokens.colors.textMuted,
   },
   recordValue: {
     fontSize: tokens.font.body,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.green900,
   },
   writingEventPostsSection: {
@@ -726,7 +726,7 @@ const styles = StyleSheet.create({
   writingEventPostsSubtitle: {
     fontSize: tokens.font.small,
     lineHeight: 18,
-    fontWeight: "700",
+    fontWeight: "500",
     color: tokens.colors.textMuted,
   },
   writingEventPostsCount: {
@@ -741,7 +741,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     fontSize: tokens.font.small,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.green700,
   },
   writingEventPostsList: {
@@ -761,25 +761,25 @@ const styles = StyleSheet.create({
   writingEventPostMeta: {
     fontSize: 12,
     lineHeight: 16,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.green700,
   },
   writingEventPostTitle: {
     fontSize: tokens.font.body,
     lineHeight: 21,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
   },
   writingEventPostExcerpt: {
     flex: 1,
     fontSize: tokens.font.small,
     lineHeight: 18,
-    fontWeight: "700",
+    fontWeight: "500",
     color: tokens.colors.textMuted,
   },
   writingEventPostDate: {
     fontSize: 12,
-    fontWeight: "800",
+    fontWeight: "500",
     color: tokens.colors.textMuted,
   },
   writingEventPostsStateBox: {
@@ -793,7 +793,7 @@ const styles = StyleSheet.create({
   writingEventPostsStateText: {
     fontSize: tokens.font.small,
     lineHeight: 18,
-    fontWeight: "700",
+    fontWeight: "500",
     color: tokens.colors.textMuted,
   },
   writingEventPostsEmpty: {
@@ -807,13 +807,13 @@ const styles = StyleSheet.create({
   },
   writingEventPostsEmptyTitle: {
     fontSize: tokens.font.body,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
   },
   writingEventPostsEmptyText: {
     fontSize: tokens.font.small,
     lineHeight: 18,
-    fontWeight: "700",
+    fontWeight: "500",
     color: tokens.colors.textMuted,
   },
   writingEventPostsEmptyButton: {
@@ -827,7 +827,7 @@ const styles = StyleSheet.create({
   },
   writingEventPostsEmptyButtonText: {
     fontSize: tokens.font.small,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.textInverse,
   },
   sectionCard: {
@@ -840,7 +840,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: tokens.font.body,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
   },
   achievementList: {
@@ -862,7 +862,7 @@ const styles = StyleSheet.create({
   },
   achievementTitle: {
     fontSize: tokens.font.body,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
   },
   achievementMeta: {

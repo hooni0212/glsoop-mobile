@@ -268,7 +268,7 @@ const styles = StyleSheet.create({
   },
   topBarTitle: {
     fontSize: 17,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
   },
   topBarSpacer: {
@@ -304,17 +304,17 @@ const styles = StyleSheet.create({
   },
   kicker: {
     fontSize: 11,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.textFaint,
   },
   heroTitle: {
     fontSize: 27,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
   },
   heroBody: {
     fontSize: 15,
-    fontWeight: "700",
+    fontWeight: "500",
     color: tokens.colors.textMuted,
     lineHeight: 23,
   },
@@ -341,7 +341,7 @@ const styles = StyleSheet.create({
   },
   actionButtonText: {
     fontSize: 12,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.green900,
   },
   actionButtonTextDisabled: {
@@ -363,7 +363,7 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
     fontSize: 13,
-    fontWeight: "700",
+    fontWeight: "500",
     color: tokens.colors.textMuted,
     lineHeight: 20,
   },
@@ -378,7 +378,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
   },
   listBlock: {
@@ -405,14 +405,14 @@ const styles = StyleSheet.create({
   },
   listMarkerText: {
     fontSize: 12,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.green900,
   },
   listText: {
     flex: 1,
     minWidth: 0,
     fontSize: 14,
-    fontWeight: "700",
+    fontWeight: "500",
     color: tokens.colors.textMuted,
     lineHeight: 21,
   },
@@ -432,7 +432,7 @@ const styles = StyleSheet.create({
   },
   chipText: {
     fontSize: 12,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.green900,
   },
   buttonList: {
@@ -469,12 +469,12 @@ const styles = StyleSheet.create({
   },
   buttonTitle: {
     fontSize: 14,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
   },
   buttonBody: {
     fontSize: 13,
-    fontWeight: "700",
+    fontWeight: "500",
     color: tokens.colors.textMuted,
     lineHeight: 19,
   },
@@ -486,7 +486,7 @@ const styles = StyleSheet.create({
   },
   requirementText: {
     fontSize: 10,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.green900,
   },
 });

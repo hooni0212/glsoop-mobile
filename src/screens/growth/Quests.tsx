@@ -456,13 +456,13 @@ const styles = StyleSheet.create({
   },
   emptyQuestTitle: {
     fontSize: tokens.font.body,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
   },
   emptyQuestText: {
     fontSize: tokens.font.small,
     lineHeight: 18,
-    fontWeight: "700",
+    fontWeight: "500",
     color: tokens.colors.textMuted,
   },
   notice: {
@@ -504,7 +504,7 @@ const styles = StyleSheet.create({
   },
   campaignName: {
     fontSize: tokens.font.body,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
   },
   campaignBadge: {
@@ -517,13 +517,13 @@ const styles = StyleSheet.create({
   },
   campaignBadgeText: {
     fontSize: tokens.font.small,
-    fontWeight: "800",
+    fontWeight: "500",
     color: tokens.colors.green900,
   },
   campaignMeta: {
     fontSize: tokens.font.small,
     color: tokens.colors.textMuted,
-    fontWeight: "700",
+    fontWeight: "500",
   },
   campaignDesc: {
     fontSize: tokens.font.small,
@@ -555,7 +555,7 @@ const styles = StyleSheet.create({
   },
   questName: {
     fontSize: tokens.font.body,
-    fontWeight: "800",
+    fontWeight: "500",
     color: tokens.colors.text,
   },
   questDesc: {
@@ -566,12 +566,12 @@ const styles = StyleSheet.create({
   lockHint: {
     fontSize: tokens.font.small,
     color: tokens.colors.textFaint,
-    fontWeight: "700",
+    fontWeight: "500",
     lineHeight: 18,
   },
   statusChip: {
     fontSize: tokens.font.small,
-    fontWeight: "900",
+    fontWeight: "600",
     backgroundColor: tokens.colors.green050,
     borderRadius: tokens.radius.pill,
     overflow: "hidden",
@@ -591,7 +591,7 @@ const styles = StyleSheet.create({
   questMeta: {
     fontSize: tokens.font.small,
     color: tokens.colors.textMuted,
-    fontWeight: "700",
+    fontWeight: "500",
   },
   rewardPreviewRow: {
     flexDirection: "row",
@@ -608,7 +608,7 @@ const styles = StyleSheet.create({
   },
   rewardPreviewText: {
     fontSize: tokens.font.small,
-    fontWeight: "800",
+    fontWeight: "500",
     color: tokens.colors.green900,
   },
   progressTrack: {
@@ -635,18 +635,18 @@ const styles = StyleSheet.create({
   },
   promptLabel: {
     fontSize: 11,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.green700,
   },
   promptTitle: {
     fontSize: tokens.font.body,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
     lineHeight: 20,
   },
   promptBody: {
     fontSize: tokens.font.small,
-    fontWeight: "700",
+    fontWeight: "500",
     color: tokens.colors.textMuted,
     lineHeight: 18,
   },
@@ -664,7 +664,7 @@ const styles = StyleSheet.create({
   },
   promptBtnText: {
     fontSize: tokens.font.small,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.textInverse,
   },
   claimBtn: {
@@ -685,12 +685,12 @@ const styles = StyleSheet.create({
   },
   claimBtnText: {
     fontSize: tokens.font.small,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.green900,
   },
   claimedText: {
     fontSize: tokens.font.small,
-    fontWeight: "800",
+    fontWeight: "500",
     color: tokens.colors.textMuted,
   },
   claimedActionRow: {
@@ -710,7 +710,7 @@ const styles = StyleSheet.create({
   },
   customizeBtnText: {
     fontSize: tokens.font.small,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.green700,
   },
 });

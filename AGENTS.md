@@ -84,6 +84,14 @@ For API work, inspect:
 - Avoid large UI rewrites when a targeted fix is enough.
 - Preserve existing UX unless the task asks for a redesign.
 
+## Maintainable implementation
+
+- Organize new code by feature and keep independently changing responsibilities in small, focused files, components, hooks, and functions.
+- Extract a responsibility when it has its own state, side effects, fallback behavior, or test boundary; do not split trivial one-line helpers only to reduce line counts.
+- Keep screen and route files focused on orchestration. Move reusable presentation, request lifecycle, mapping, and validation logic into feature-local modules.
+- Add comments actively around intent, contracts, concurrency guards, fallback decisions, platform differences, and non-obvious product rules.
+- Comments should explain why the code exists or what must remain true. Avoid narrating obvious syntax, and update comments when behavior changes.
+
 ## Product direction
 
 - Glsoop is a text-centered literary platform, not an image/video-first social feed.

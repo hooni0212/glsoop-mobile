@@ -15,10 +15,14 @@ import { BottomDockProvider } from "@/navigation/bottomDock";
 import { registerRootNavigationRef } from "@/navigation/rootNavigation";
 import { AppOnboardingTour } from "@/onboarding/AppOnboardingTour";
 import { GuidedHelpProvider } from "@/onboarding/GuidedHelpProvider";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { Stack, useNavigationContainerRef } from "expo-router";
 import { StyleSheet, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider, initialWindowMetrics } from "react-native-safe-area-context";
+import { installTypographyDefaults } from "@/theme/installTypographyDefaults";
+
+installTypographyDefaults();
 
 SplashScreen.preventAutoHideAsync().catch(() => {
   // 이미 스플래시 제어 중이면 무시
@@ -41,6 +45,7 @@ function RootLayoutContent() {
   const { ready } = useAuth();
   const [fontsLoaded, fontLoadError] = useFonts(PREVIEW_FONT_ASSETS);
   const [layoutReady, setLayoutReady] = React.useState(false);
+  const reducedMotion = useReducedMotion();
   const splashHiddenRef = React.useRef(false);
   const bootReady = ready && (fontsLoaded || Boolean(fontLoadError));
 
@@ -81,12 +86,29 @@ function RootLayoutContent() {
           ) : (
             <GuidedHelpProvider>
               <AuthGate />
-              <Stack screenOptions={{ headerShown: false }}>
+              <Stack
+                screenOptions={{
+                  headerShown: false,
+                  animation: reducedMotion ? "none" : "slide_from_right",
+                }}
+              >
                 {/* (auth): 로그인 전 랜딩/로그인/회원가입 */}
-                <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+                <Stack.Screen
+                  name="(auth)"
+                  options={{
+                    headerShown: false,
+                    animation: reducedMotion ? "none" : "fade",
+                  }}
+                />
 
                 {/* (tabs): 로그인 후 앱 본문 */}
-                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                <Stack.Screen
+                  name="(tabs)"
+                  options={{
+                    headerShown: false,
+                    animation: reducedMotion ? "none" : "fade",
+                  }}
+                />
 
                 {/* ✅ FAB로 들어가는 글쓰기: 모달처럼 아래에서 올라오게 */}
                 <Stack.Screen
@@ -94,7 +116,7 @@ function RootLayoutContent() {
                   options={{
                     headerShown: false,
                     presentation: "modal",
-                    animation: "slide_from_bottom",
+                    animation: reducedMotion ? "none" : "slide_from_bottom",
                     gestureEnabled: false,
                   }}
                 />
@@ -104,7 +126,7 @@ function RootLayoutContent() {
                   options={{
                     headerShown: false,
                     presentation: "transparentModal",
-                    animation: "fade",
+                    animation: reducedMotion ? "none" : "fade",
                   }}
                 />
                 <Stack.Screen
@@ -112,7 +134,7 @@ function RootLayoutContent() {
                   options={{
                     headerShown: false,
                     presentation: "modal",
-                    animation: "slide_from_right",
+                    animation: reducedMotion ? "none" : "slide_from_right",
                   }}
                 />
                 <Stack.Screen
@@ -120,7 +142,7 @@ function RootLayoutContent() {
                   options={{
                     headerShown: false,
                     presentation: "modal",
-                    animation: "slide_from_right",
+                    animation: reducedMotion ? "none" : "slide_from_right",
                   }}
                 />
                 <Stack.Screen
@@ -128,7 +150,7 @@ function RootLayoutContent() {
                   options={{
                     headerShown: false,
                     presentation: "modal",
-                    animation: "slide_from_right",
+                    animation: reducedMotion ? "none" : "slide_from_right",
                   }}
                 />
 
@@ -138,21 +160,21 @@ function RootLayoutContent() {
                   options={{
                     headerShown: false,
                     presentation: "modal",
-                    animation: "slide_from_bottom",
+                    animation: reducedMotion ? "none" : "slide_from_bottom",
                   }}
                 />
                 <Stack.Screen
                   name="guide"
                   options={{
                     headerShown: false,
-                    animation: "slide_from_right",
+                    animation: reducedMotion ? "none" : "slide_from_right",
                   }}
                 />
                 <Stack.Screen
                   name="guide-detail"
                   options={{
                     headerShown: false,
-                    animation: "slide_from_right",
+                    animation: reducedMotion ? "none" : "slide_from_right",
                   }}
                 />
                 <Stack.Screen name="notifications" options={{ headerShown: false }} />
@@ -161,14 +183,14 @@ function RootLayoutContent() {
                   name="me/followings"
                   options={{
                     headerShown: false,
-                    animation: "slide_from_right",
+                    animation: reducedMotion ? "none" : "slide_from_right",
                   }}
                 />
                 <Stack.Screen
                   name="me/followers"
                   options={{
                     headerShown: false,
-                    animation: "slide_from_right",
+                    animation: reducedMotion ? "none" : "slide_from_right",
                   }}
                 />
                 <Stack.Screen name="ui-kit" options={{ headerShown: false }} />

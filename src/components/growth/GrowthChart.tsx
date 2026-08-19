@@ -146,7 +146,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: tokens.font.body,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
   },
   headerMeta: {
@@ -156,7 +156,7 @@ const styles = StyleSheet.create({
   },
   sourceBadge: {
     fontSize: tokens.font.small,
-    fontWeight: "800",
+    fontWeight: "500",
     color: tokens.colors.green900,
     backgroundColor: tokens.colors.green100,
     borderRadius: tokens.radius.pill,
@@ -171,12 +171,12 @@ const styles = StyleSheet.create({
   },
   levelText: {
     fontSize: tokens.font.h1,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
   },
   levelTitle: {
     fontSize: tokens.font.body,
-    fontWeight: "700",
+    fontWeight: "500",
     color: tokens.colors.textMuted,
   },
   progressBlock: {
@@ -191,12 +191,12 @@ const styles = StyleSheet.create({
   progressLabel: {
     fontSize: tokens.font.small,
     color: tokens.colors.textMuted,
-    fontWeight: "700",
+    fontWeight: "500",
   },
   progressValue: {
     fontSize: tokens.font.small,
     color: tokens.colors.text,
-    fontWeight: "800",
+    fontWeight: "500",
   },
   progressTrack: {
     height: 10,
@@ -231,12 +231,12 @@ const styles = StyleSheet.create({
   metricLabel: {
     fontSize: tokens.font.small,
     color: tokens.colors.textMuted,
-    fontWeight: "700",
+    fontWeight: "500",
   },
   metricValue: {
     fontSize: tokens.font.body,
     color: tokens.colors.text,
-    fontWeight: "800",
+    fontWeight: "500",
   },
   progressTrackSoft: {
     height: 8,

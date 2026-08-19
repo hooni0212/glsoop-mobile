@@ -441,7 +441,7 @@ const styles = StyleSheet.create({
   },
   topBarTitle: {
     fontSize: 17,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
   },
   topBarSpacer: {
@@ -467,7 +467,7 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     fontSize: 18,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
   },
   cardDescription: {
@@ -493,7 +493,7 @@ const styles = StyleSheet.create({
   },
   toggleChipText: {
     fontSize: tokens.font.small,
-    fontWeight: "800",
+    fontWeight: "500",
     color: tokens.colors.textMuted,
   },
   toggleChipTextActive: {
@@ -506,7 +506,7 @@ const styles = StyleSheet.create({
   },
   consentNote: {
     fontSize: 12,
-    fontWeight: "700",
+    fontWeight: "500",
     color: tokens.colors.textFaint,
     lineHeight: 18,
   },
@@ -529,7 +529,7 @@ const styles = StyleSheet.create({
   },
   sessionTitle: {
     fontSize: 15,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
     flex: 1,
   },
@@ -552,7 +552,7 @@ const styles = StyleSheet.create({
   },
   sessionLogoutBtnText: {
     fontSize: 12,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
   },
   sessionLogoutBtnDangerText: {
@@ -569,7 +569,7 @@ const styles = StyleSheet.create({
   secondaryBtnText: {
     color: tokens.colors.text,
     fontSize: 15,
-    fontWeight: "800",
+    fontWeight: "500",
   },
   disabledBtn: {
     opacity: 0.6,

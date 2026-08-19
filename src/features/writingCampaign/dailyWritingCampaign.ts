@@ -61,6 +61,7 @@ export const DAILY_WRITING_CAMPAIGN_TOTAL_DAYS = 30;
 
 const CAMPAIGN_START_LOCAL_DATE = "2026-06-14";
 const NEXT_DAILY_WRITING_PROMPTS_START_LOCAL_DATE = "2026-07-14";
+const THIRD_DAILY_WRITING_PROMPTS_START_LOCAL_DATE = "2026-08-13";
 
 export const NEXT_DAILY_WRITING_PROMPTS: DailyWritingPrompt[] = [
   {
@@ -557,6 +558,12 @@ const DAILY_WRITING_PROMPT_SETS: WritingEventPromptSet[] = [
   {
     key: "next-2026-07",
     startsLocalDate: NEXT_DAILY_WRITING_PROMPTS_START_LOCAL_DATE,
+    prompts: NEXT_DAILY_WRITING_PROMPTS,
+  },
+  {
+    key: "cycle-2026-08",
+    startsLocalDate: THIRD_DAILY_WRITING_PROMPTS_START_LOCAL_DATE,
+    // 온라인에서는 서버가 신규 30개 글감을 내려준다. 이 목록은 오프라인 안전망이다.
     prompts: NEXT_DAILY_WRITING_PROMPTS,
   },
 ];
