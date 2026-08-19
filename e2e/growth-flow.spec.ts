@@ -632,7 +632,7 @@ test.describe("Growth 플로우", () => {
     );
     await expect(page.getByTestId("growth-writing-campaign-day-24")).toHaveCSS(
       "background-color",
-      "rgb(255, 255, 255)"
+      "rgb(255, 253, 248)"
     );
 
     await page.getByTestId("growth-writing-campaign-day-1").click();

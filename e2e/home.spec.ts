@@ -195,7 +195,9 @@ test.describe("오늘과 읽기 흐름", () => {
     await page.goto("/");
     await page.getByRole("tab", { name: "문집" }).click();
 
-    await expect(page.getByText("나의 글이 머무는 곳")).toBeVisible();
+    await expect(
+      page.getByText("쓰다 만 문장부터 완성한 글까지, 시간이 쌓인 모습을 봅니다")
+    ).toBeVisible();
     await expect(page.getByText("최근에 쓴 글")).toBeVisible();
     await expect(page.getByText("여름 저녁의 기록")).toBeVisible();
     await expect(page.getByText("임시저장")).toBeVisible();
@@ -251,7 +253,7 @@ test.describe("오늘과 읽기 흐름", () => {
     await expect(page.getByTestId("home-notifications-unread-dot")).toBeVisible();
   });
 
-  test("피드 카드의 공감과 북마크 버튼이 상세 이동 없이 동작한다", async ({ page }) => {
+  test("피드 카드의 공감과 책갈피 버튼이 상세 이동 없이 동작한다", async ({ page }) => {
     let likeToggleCalls = 0;
     let bookmarkAddCalls = 0;
 
