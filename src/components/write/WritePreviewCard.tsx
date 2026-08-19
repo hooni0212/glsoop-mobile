@@ -388,13 +388,13 @@ const styles = StyleSheet.create({
   },
   summaryEyebrow: {
     fontSize: 11,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.textFaint,
     letterSpacing: 0,
   },
   summaryTitle: {
     fontSize: 14,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
     letterSpacing: 0,
   },
@@ -410,7 +410,7 @@ const styles = StyleSheet.create({
   },
   summaryPillText: {
     fontSize: 12,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.green700,
     letterSpacing: 0,
   },
@@ -493,7 +493,7 @@ const styles = StyleSheet.create({
     color: tokens.colors.textMuted,
     textAlign: "center",
     lineHeight: 20,
-    fontWeight: "700",
+    fontWeight: "500",
   },
   pageCounter: {
     marginTop: 12,
@@ -501,7 +501,7 @@ const styles = StyleSheet.create({
   },
   pageCounterText: {
     fontSize: 13,
-    fontWeight: "800",
+    fontWeight: "500",
     color: tokens.colors.textMuted,
   },
   thumbnailStrip: {
@@ -538,6 +538,6 @@ const styles = StyleSheet.create({
   noticeText: {
     color: tokens.colors.textMuted,
     lineHeight: 20,
-    fontWeight: "700",
+    fontWeight: "500",
   },
 });
