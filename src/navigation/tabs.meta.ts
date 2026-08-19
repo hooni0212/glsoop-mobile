@@ -9,15 +9,15 @@ export type TabRouteName = (typeof TAB_ORDER)[number];
 export type IoniconName = ComponentProps<typeof Ionicons>["name"];
 
 export const TAB_META = {
-  index: { label: "오늘", icon: "today-outline" as const },
-  explore: { label: "읽기", icon: "library-outline" as const },
-  book: { label: "문집", icon: "book-outline" as const },
-  me: { label: "나", icon: "person-outline" as const },
-} satisfies Record<TabRouteName, { label: string; icon: IoniconName }>;
+  index: { label: "오늘", icon: "today-outline" as const, activeIcon: "today" as const },
+  explore: { label: "읽기", icon: "library-outline" as const, activeIcon: "library" as const },
+  book: { label: "문집", icon: "book-outline" as const, activeIcon: "book" as const },
+  me: { label: "나", icon: "person-outline" as const, activeIcon: "person" as const },
+} satisfies Record<TabRouteName, { label: string; icon: IoniconName; activeIcon: IoniconName }>;
 
 export const COLORS = {
   active: tokens.colors.green700,
-  inactive: tokens.colors.textMuted,
+  inactive: tokens.colors.textFaint,
   bg: tokens.colors.surface,
   border: tokens.colors.border,
 } as const;

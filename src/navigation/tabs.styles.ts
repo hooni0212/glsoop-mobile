@@ -2,6 +2,8 @@ import { StyleSheet } from "react-native";
 import { COLORS } from "./tabs.meta";
 import { keyboardFocusRingStyle } from "@/theme/accessibility";
 import { typography } from "@/theme/typography";
+import { tokens } from "@/theme/tokens";
+import { softChipShadowStyle } from "@/theme/shadows";
 
 /**
  * Bottom Tabs UI tokens
@@ -89,36 +91,47 @@ export function createTabsStyles(insetBottom?: number) {
       alignItems: "center",
       justifyContent: "center",
       height: TAB_BAR_BASE_HEIGHT,
+      paddingTop: 3,
+      outlineWidth: 0,
     },
 
     label: {
-      ...typography.meta,
-      marginTop: 4,
+      ...typography.tabLabel,
+      marginTop: 2,
+      fontSize: 11,
+      lineHeight: 15,
     },
 
-    activeLine: {
-      position: "absolute",
-      bottom: 6,
-      width: 16,
-      height: 2,
-      borderRadius: 2,
-      backgroundColor: "transparent",
-    },
-    activeLineOn: {
-      backgroundColor: COLORS.active,
-    },
-
-    writeSlot: {
-      flex: 1.05,
-      height: TAB_BAR_BASE_HEIGHT,
-      backgroundColor: COLORS.active,
+    tabIconWrap: {
+      width: 38,
+      height: 31,
       alignItems: "center",
       justifyContent: "center",
     },
-    writeLabel: {
-      marginTop: 3,
-      color: "#ffffff",
-      ...typography.meta,
+    activeHalo: {
+      position: "absolute",
+      width: 38,
+      height: 31,
+      borderRadius: tokens.radius.pill,
+      backgroundColor: tokens.colors.forestSoft,
+    },
+
+    writeSlot: {
+      flex: 1,
+      height: TAB_BAR_BASE_HEIGHT,
+      alignItems: "center",
+      justifyContent: "center",
+      outlineWidth: 0,
+    },
+    writeMark: {
+      width: 50,
+      height: 50,
+      borderRadius: tokens.radius.pill,
+      backgroundColor: COLORS.active,
+      alignItems: "center",
+      justifyContent: "center",
+      transform: [{ translateY: -3 }],
+      ...softChipShadowStyle,
     },
     pressed: { opacity: 0.72 },
     focused: keyboardFocusRingStyle,

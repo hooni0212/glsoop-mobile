@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React from "react";
-import { Pressable, Text, View } from "react-native";
+import { Animated, Easing, Platform, Pressable, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAuth } from "@/auth/AuthContext";
@@ -10,6 +10,7 @@ import * as haptics from "@/lib/haptics";
 import { COLORS, TAB_META, TAB_ORDER, type TabRouteName } from "./tabs.meta";
 import { createTabsStyles } from "./tabs.styles";
 import { useKeyboardFocus } from "@/hooks/useKeyboardFocus";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
 
 /**
  * ✅ 최종 탭바(실전용)
@@ -35,6 +36,7 @@ export function TabsBar(props: any /* BottomTabBarProps */) {
   const { token } = useAuth();
   const insets = useSafeAreaInsets();
   const writeFocus = useKeyboardFocus();
+  const reducedMotion = useReducedMotion();
   const styles = React.useMemo(
     () => createTabsStyles(insets.bottom),
     [insets.bottom]
@@ -62,9 +64,11 @@ export function TabsBar(props: any /* BottomTabBarProps */) {
             key={name}
             label={TAB_META[name].label}
             icon={TAB_META[name].icon}
+            activeIcon={TAB_META[name].activeIcon}
             active={focusedRouteName === name}
             onPress={() => go(name)}
             styles={styles}
+            reducedMotion={reducedMotion}
           />
         ))}
 
@@ -87,8 +91,9 @@ export function TabsBar(props: any /* BottomTabBarProps */) {
           accessibilityLabel="글쓰기"
           testID="fab-write"
         >
-          <Ionicons name="create-outline" size={21} color="#FFFFFF" />
-          <Text style={styles.writeLabel}>쓰기</Text>
+          <View style={styles.writeMark}>
+            <Ionicons name="create-outline" size={24} color="#FFFFFF" />
+          </View>
         </Pressable>
 
         {/* 오른쪽 2개 */}
@@ -97,9 +102,11 @@ export function TabsBar(props: any /* BottomTabBarProps */) {
             key={name}
             label={TAB_META[name].label}
             icon={TAB_META[name].icon}
+            activeIcon={TAB_META[name].activeIcon}
             active={focusedRouteName === name}
             onPress={() => go(name)}
             styles={styles}
+            reducedMotion={reducedMotion}
           />
         ))}
       </View>
@@ -109,19 +116,61 @@ export function TabsBar(props: any /* BottomTabBarProps */) {
 
 function TabButton({
   icon,
+  activeIcon,
   label,
   active,
   onPress,
   styles,
+  reducedMotion,
 }: {
   icon: any;
+  activeIcon: any;
   label: string;
   active: boolean;
   onPress: () => void;
   styles: any;
+  reducedMotion: boolean;
 }) {
   const focus = useKeyboardFocus();
+  const activeProgress = React.useRef(new Animated.Value(active ? 1 : 0)).current;
   const color = active ? COLORS.active : COLORS.inactive;
+
+  React.useEffect(() => {
+    if (reducedMotion) {
+      activeProgress.setValue(active ? 1 : 0);
+      return;
+    }
+
+    Animated.timing(activeProgress, {
+      toValue: active ? 1 : 0,
+      duration: 190,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: Platform.OS !== "web",
+    }).start();
+  }, [active, activeProgress, reducedMotion]);
+
+  const haloStyle = {
+    opacity: activeProgress,
+    transform: [
+      {
+        scale: activeProgress.interpolate({
+          inputRange: [0, 1],
+          outputRange: [0.82, 1],
+        }),
+      },
+    ],
+  };
+
+  const contentStyle = {
+    transform: [
+      {
+        translateY: activeProgress.interpolate({
+          inputRange: [0, 1],
+          outputRange: [0, -1],
+        }),
+      },
+    ],
+  };
 
   return (
     <Pressable
@@ -137,10 +186,10 @@ function TabButton({
       accessibilityLabel={label}
       accessibilityState={{ selected: active }}
     >
-      {/* 선택 하단 라인 */}
-      <View style={[styles.activeLine, active && styles.activeLineOn]} />
-
-      <Ionicons name={icon} size={22} color={color} />
+      <Animated.View style={[styles.tabIconWrap, contentStyle]}>
+        <Animated.View style={[styles.activeHalo, haloStyle]} />
+        <Ionicons name={active ? activeIcon : icon} size={21} color={color} />
+      </Animated.View>
       <Text style={[styles.label, { color }]} numberOfLines={1}>
         {label}
       </Text>

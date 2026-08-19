@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { TabsBar } from "@/navigation/TabsBar";
 import { getTabBarTotalHeight } from "@/navigation/tabs.styles";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
 
 /**
  * (tabs) 라우팅 전용 레이아웃
@@ -11,6 +12,7 @@ import { getTabBarTotalHeight } from "@/navigation/tabs.styles";
  */
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
+  const reducedMotion = useReducedMotion();
   const tabBarHeight = getTabBarTotalHeight(insets.bottom);
 
   return (
@@ -20,6 +22,13 @@ export default function TabsLayout() {
         headerShown: false,
         freezeOnBlur: true,
         lazy: true,
+        animation: reducedMotion ? "none" : "shift",
+        transitionSpec: reducedMotion
+          ? undefined
+          : {
+              animation: "timing",
+              config: { duration: 210 },
+            },
         // 기본 탭바는 숨기고 우리가 직접 그립니다.
         // NOTE: tabBarStyle.height를 명시해두면 RN이 "하단 영역"을 안정적으로 예약하는 데 도움이 됨
         // (커스텀 tabBar를 쓰는 경우에도 화면별 체감 높이 차이가 줄어든다)

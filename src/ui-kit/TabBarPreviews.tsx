@@ -109,9 +109,9 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#F6F6F4" },
 
   content: { flex: 1, paddingHorizontal: 18, paddingTop: 16 },
-  title: { fontSize: 16, fontWeight: "800", color: "#2B2B2B", marginBottom: 6 },
+  title: { fontSize: 16, fontWeight: "500", color: "#2B2B2B", marginBottom: 6 },
   desc: { fontSize: 13, color: "#6C6C6C" },
-  hint: { marginTop: 10, fontSize: 12, color: "#8B8B8B", fontWeight: "700" },
+  hint: { marginTop: 10, fontSize: 12, color: "#8B8B8B", fontWeight: "500" },
 
   barWrap: { position: "relative" },
 
@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
   activeLineOn: { backgroundColor: COLORS.active },
 
   tabItem: { alignItems: "center", justifyContent: "center", gap: 6, minWidth: 60 },
-  tabLabel: { fontSize: 12, fontWeight: "700", letterSpacing: -0.2 },
+  tabLabel: { fontSize: 12, fontWeight: "500", letterSpacing: -0.2 },
 
   fabShadow: {
     position: "absolute",
