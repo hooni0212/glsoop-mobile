@@ -20,6 +20,9 @@ import { Stack, useNavigationContainerRef } from "expo-router";
 import { StyleSheet, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider, initialWindowMetrics } from "react-native-safe-area-context";
+import { installTypographyDefaults } from "@/theme/installTypographyDefaults";
+
+installTypographyDefaults();
 
 SplashScreen.preventAutoHideAsync().catch(() => {
   // 이미 스플래시 제어 중이면 무시
@@ -86,14 +89,26 @@ function RootLayoutContent() {
               <Stack
                 screenOptions={{
                   headerShown: false,
-                  animation: reducedMotion ? "none" : "default",
+                  animation: reducedMotion ? "none" : "slide_from_right",
                 }}
               >
                 {/* (auth): 로그인 전 랜딩/로그인/회원가입 */}
-                <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+                <Stack.Screen
+                  name="(auth)"
+                  options={{
+                    headerShown: false,
+                    animation: reducedMotion ? "none" : "fade",
+                  }}
+                />
 
                 {/* (tabs): 로그인 후 앱 본문 */}
-                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                <Stack.Screen
+                  name="(tabs)"
+                  options={{
+                    headerShown: false,
+                    animation: reducedMotion ? "none" : "fade",
+                  }}
+                />
 
                 {/* ✅ FAB로 들어가는 글쓰기: 모달처럼 아래에서 올라오게 */}
                 <Stack.Screen
