@@ -88,7 +88,7 @@ export function TopPostsList({
                 <View style={styles.metaRow}>
                   {item.authorName ? <Text style={styles.metaText}>{item.authorName}</Text> : null}
                   {createdAtLabel ? <Text style={styles.metaText}>{createdAtLabel}</Text> : null}
-                  <View style={styles.metaMetric} accessibilityLabel={`좋아요 ${item.likeCount ?? 0}개`}>
+                  <View style={styles.metaMetric} accessibilityLabel={`공감 ${item.likeCount ?? 0}개`}>
                     <Ionicons name="heart" size={13} color={tokens.colors.textFaint} />
                     <Text style={styles.metaText}>{item.likeCount ?? 0}</Text>
                   </View>
@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: tokens.font.body,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
   },
   description: {
@@ -173,7 +173,7 @@ const styles = StyleSheet.create({
   },
   rankText: {
     fontSize: tokens.font.small,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.green900,
   },
   body: {
@@ -182,7 +182,7 @@ const styles = StyleSheet.create({
   },
   itemTitle: {
     fontSize: tokens.font.body,
-    fontWeight: "800",
+    fontWeight: "500",
     color: tokens.colors.text,
   },
   itemExcerpt: {
@@ -197,7 +197,7 @@ const styles = StyleSheet.create({
   metaText: {
     fontSize: tokens.font.small,
     color: tokens.colors.textFaint,
-    fontWeight: "700",
+    fontWeight: "500",
   },
   metaMetric: {
     flexDirection: "row",

@@ -917,7 +917,7 @@ const styles = StyleSheet.create({
   },
   screenTitle: {
     fontSize: tokens.font.h1,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
   },
   forestCard: {
@@ -938,12 +938,12 @@ const styles = StyleSheet.create({
   },
   forestEyebrow: {
     fontSize: tokens.font.body,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
   },
   forestTitle: {
     fontSize: tokens.font.small,
-    fontWeight: "700",
+    fontWeight: "500",
     color: tokens.colors.textMuted,
   },
   levelRow: {
@@ -953,12 +953,12 @@ const styles = StyleSheet.create({
   },
   levelText: {
     fontSize: 24,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.green900,
   },
   levelTitle: {
     fontSize: tokens.font.body,
-    fontWeight: "800",
+    fontWeight: "500",
     color: tokens.colors.text,
   },
   progressBlock: {
@@ -966,7 +966,7 @@ const styles = StyleSheet.create({
   },
   progressHint: {
     fontSize: tokens.font.small,
-    fontWeight: "800",
+    fontWeight: "500",
     color: tokens.colors.textMuted,
   },
   progressHeader: {
@@ -1004,7 +1004,7 @@ const styles = StyleSheet.create({
   },
   recordButtonText: {
     fontSize: tokens.font.body,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
   },
   actionRow: {
@@ -1025,7 +1025,7 @@ const styles = StyleSheet.create({
   },
   actionButtonText: {
     fontSize: tokens.font.body,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
   },
   sectionCard: {
@@ -1038,12 +1038,12 @@ const styles = StyleSheet.create({
   },
   sectionLabel: {
     fontSize: tokens.font.small,
-    fontWeight: "800",
+    fontWeight: "500",
     color: tokens.colors.textFaint,
   },
   sectionTitle: {
     fontSize: tokens.font.body,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
   },
   reflectionCard: {
@@ -1057,13 +1057,13 @@ const styles = StyleSheet.create({
   reflectionTitle: {
     fontSize: tokens.font.body,
     lineHeight: 24,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.green900,
   },
   reflectionBody: {
     fontSize: tokens.font.small,
     lineHeight: 19,
-    fontWeight: "700",
+    fontWeight: "500",
     color: tokens.colors.textMuted,
   },
   reflectionMetaRow: {
@@ -1085,7 +1085,7 @@ const styles = StyleSheet.create({
   },
   reflectionPillText: {
     fontSize: tokens.font.small,
-    fontWeight: "800",
+    fontWeight: "500",
     color: tokens.colors.green700,
   },
   writingCampaignStack: {
@@ -1117,14 +1117,14 @@ const styles = StyleSheet.create({
   writingCampaignTitle: {
     fontSize: 18,
     lineHeight: 24,
-    fontWeight: "900",
+    fontWeight: "600",
     color: GROWTH_COLORS.text,
     letterSpacing: 0,
   },
   writingCampaignSubtitle: {
     fontSize: tokens.font.small,
     lineHeight: 18,
-    fontWeight: "700",
+    fontWeight: "500",
     color: GROWTH_COLORS.muted,
   },
   writingCampaignBadge: {
@@ -1140,14 +1140,14 @@ const styles = StyleSheet.create({
   },
   writingCampaignBadgeText: {
     fontSize: tokens.font.small,
-    fontWeight: "900",
+    fontWeight: "600",
     color: GROWTH_COLORS.green,
   },
   writingCampaignBadgeSubText: {
     marginTop: 1,
     fontSize: 10,
     lineHeight: 13,
-    fontWeight: "800",
+    fontWeight: "500",
     color: tokens.colors.textMuted,
   },
   campaignMetricGrid: {
@@ -1169,13 +1169,13 @@ const styles = StyleSheet.create({
   campaignMetricLabel: {
     fontSize: 11,
     lineHeight: 14,
-    fontWeight: "800",
+    fontWeight: "500",
     color: GROWTH_COLORS.muted,
   },
   campaignMetricValue: {
     fontSize: tokens.font.body,
     lineHeight: 18,
-    fontWeight: "900",
+    fontWeight: "600",
     color: GROWTH_COLORS.text,
   },
   campaignMetricValuePrimary: {
@@ -1211,7 +1211,7 @@ const styles = StyleSheet.create({
   todayPromptDayText: {
     fontSize: 12,
     lineHeight: 15,
-    fontWeight: "900",
+    fontWeight: "600",
     color: GROWTH_COLORS.muted,
   },
   calendarCard: {
@@ -1232,7 +1232,7 @@ const styles = StyleSheet.create({
     marginTop: 3,
     fontSize: tokens.font.body,
     lineHeight: 20,
-    fontWeight: "900",
+    fontWeight: "600",
     color: GROWTH_COLORS.text,
   },
   calendarCountText: {
@@ -1244,7 +1244,7 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     fontSize: 12,
     lineHeight: 15,
-    fontWeight: "900",
+    fontWeight: "600",
     color: GROWTH_COLORS.green,
   },
   writingCampaignCalendar: {
@@ -1289,7 +1289,7 @@ const styles = StyleSheet.create({
   writingCampaignDayText: {
     fontSize: 11,
     lineHeight: 14,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.textMuted,
   },
   writingCampaignDayTextWritten: {
@@ -1341,14 +1341,14 @@ const styles = StyleSheet.create({
   writingCampaignLegendText: {
     fontSize: 11,
     lineHeight: 14,
-    fontWeight: "800",
+    fontWeight: "500",
     color: tokens.colors.textMuted,
   },
   writingCampaignStatusNotice: {
     marginTop: -4,
     fontSize: 12,
     lineHeight: 16,
-    fontWeight: "700",
+    fontWeight: "500",
     color: tokens.colors.textMuted,
   },
   writingPromptPreview: {
@@ -1361,19 +1361,19 @@ const styles = StyleSheet.create({
   },
   writingPromptMeta: {
     fontSize: 12,
-    fontWeight: "900",
+    fontWeight: "600",
     color: GROWTH_COLORS.green,
   },
   writingPromptTitle: {
     fontSize: 18,
     lineHeight: 25,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
   },
   writingPromptBody: {
     fontSize: tokens.font.small,
     lineHeight: 18,
-    fontWeight: "700",
+    fontWeight: "500",
     color: tokens.colors.textMuted,
   },
   writingCampaignFooter: {
@@ -1385,7 +1385,7 @@ const styles = StyleSheet.create({
   writingCampaignHint: {
     flex: 1,
     fontSize: tokens.font.small,
-    fontWeight: "800",
+    fontWeight: "500",
     color: tokens.colors.textMuted,
   },
   writingCampaignCta: {
@@ -1401,12 +1401,12 @@ const styles = StyleSheet.create({
   },
   writingCampaignCtaText: {
     fontSize: tokens.font.small,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.textInverse,
   },
   progressSmallText: {
     fontSize: tokens.font.small,
-    fontWeight: "800",
+    fontWeight: "500",
     color: tokens.colors.textMuted,
   },
   progressTrackSoft: {
@@ -1443,7 +1443,7 @@ const styles = StyleSheet.create({
   },
   eventBadge: {
     fontSize: tokens.font.small,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.green700,
   },
   pressed: {

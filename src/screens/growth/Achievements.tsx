@@ -373,18 +373,18 @@ const styles = StyleSheet.create({
   },
   summaryTitle: {
     fontSize: tokens.font.body,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
   },
   summaryMeta: {
     marginTop: 3,
     fontSize: tokens.font.small,
-    fontWeight: "800",
+    fontWeight: "500",
     color: tokens.colors.textMuted,
   },
   summaryPercent: {
     fontSize: 24,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.green700,
   },
   section: {
@@ -398,13 +398,13 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: tokens.font.body,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
   },
   sectionCount: {
     fontSize: tokens.font.small,
     color: tokens.colors.textMuted,
-    fontWeight: "800",
+    fontWeight: "500",
   },
   list: {
     gap: tokens.space.sm as any,
@@ -444,7 +444,7 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     fontSize: tokens.font.body,
-    fontWeight: "800",
+    fontWeight: "500",
     color: tokens.colors.text,
   },
   cardDesc: {
@@ -454,7 +454,7 @@ const styles = StyleSheet.create({
   },
   statusChip: {
     fontSize: tokens.font.small,
-    fontWeight: "900",
+    fontWeight: "600",
     backgroundColor: tokens.colors.green050,
     borderRadius: tokens.radius.pill,
     overflow: "hidden",
@@ -469,7 +469,7 @@ const styles = StyleSheet.create({
   progressLabel: {
     fontSize: tokens.font.small,
     color: tokens.colors.textMuted,
-    fontWeight: "700",
+    fontWeight: "500",
   },
   progressTrack: {
     height: 8,
@@ -485,7 +485,7 @@ const styles = StyleSheet.create({
   dateText: {
     fontSize: tokens.font.small,
     color: tokens.colors.textFaint,
-    fontWeight: "700",
+    fontWeight: "500",
   },
   rewardRow: {
     flexDirection: "row",
@@ -506,7 +506,7 @@ const styles = StyleSheet.create({
   },
   rewardText: {
     fontSize: tokens.font.small,
-    fontWeight: "800",
+    fontWeight: "500",
     color: tokens.colors.green900,
   },
   claimBtn: {
@@ -526,7 +526,7 @@ const styles = StyleSheet.create({
   },
   claimBtnText: {
     fontSize: tokens.font.small,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.textInverse,
   },
   customizeBtn: {
@@ -542,7 +542,7 @@ const styles = StyleSheet.create({
   },
   customizeBtnText: {
     fontSize: tokens.font.small,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.green700,
   },
 });
