@@ -211,12 +211,12 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 20,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
   },
   subtitle: {
     fontSize: tokens.font.small,
-    fontWeight: "800",
+    fontWeight: "500",
     color: tokens.colors.textMuted,
   },
   listContent: {
@@ -266,7 +266,7 @@ const styles = StyleSheet.create({
   },
   avatarText: {
     fontSize: 18,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.green700,
   },
   copy: {
@@ -276,7 +276,7 @@ const styles = StyleSheet.create({
   },
   name: {
     fontSize: 15,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
   },
   bio: {
@@ -290,7 +290,7 @@ const styles = StyleSheet.create({
   },
   meta: {
     fontSize: 12,
-    fontWeight: "800",
+    fontWeight: "500",
     color: tokens.colors.green700,
   },
   controlPressed: {

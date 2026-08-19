@@ -35,6 +35,9 @@ export const authorScreenStyles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingBottom: tokens.space.xl,
   },
+  ownListContent: {
+    paddingHorizontal: 20,
+  },
 
   profileCard: {
     marginTop: tokens.space.sm,
@@ -53,8 +56,13 @@ export const authorScreenStyles = StyleSheet.create({
     shadowOffset: { width: 0, height: 8 },
     elevation: 3,
   },
-  premiumDiscoveryWrap: {
-    marginTop: tokens.space.md,
+  ownProfileSection: {
+    paddingTop: 24,
+    paddingBottom: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: tokens.colors.borderStrong,
+    position: "relative",
+    gap: 0,
   },
   profilePaperWash: {
     position: "absolute",
@@ -90,6 +98,32 @@ export const authorScreenStyles = StyleSheet.create({
   profileHeaderWithLeftSticker: {
     paddingTop: 18,
   },
+  ownIdentityHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: tokens.space.md as any,
+  },
+  ownScreenLabel: {
+    fontSize: 12,
+    lineHeight: 18,
+    color: tokens.colors.green700,
+    fontWeight: "600",
+    marginBottom: 2,
+  },
+  ownName: {
+    fontSize: 27,
+    lineHeight: 34,
+    color: tokens.colors.text,
+    fontWeight: "600",
+    letterSpacing: -0.5,
+  },
+  ownSettingsButton: {
+    width: 40,
+    height: 40,
+    alignItems: "flex-end",
+    justifyContent: "center",
+  },
   avatar: {
     width: 58,
     height: 58,
@@ -105,7 +139,7 @@ export const authorScreenStyles = StyleSheet.create({
   },
   avatarText: {
     fontSize: 21,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.green700,
   },
   identityBlock: {
@@ -116,7 +150,7 @@ export const authorScreenStyles = StyleSheet.create({
   profileKicker: {
     fontSize: 12,
     color: tokens.colors.textMuted,
-    fontWeight: "800",
+    fontWeight: "500",
   },
   nameRow: {
     flexDirection: "row",
@@ -125,7 +159,7 @@ export const authorScreenStyles = StyleSheet.create({
   },
   name: {
     fontSize: 25,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
     flexShrink: 1,
   },
@@ -139,6 +173,12 @@ export const authorScreenStyles = StyleSheet.create({
     color: tokens.colors.textMuted,
     lineHeight: 22,
   },
+  ownBio: {
+    marginTop: 12,
+    maxWidth: 318,
+    fontSize: 14,
+    lineHeight: 21,
+  },
   inlineActionBtn: {
     alignSelf: "flex-start",
     marginTop: -2,
@@ -146,7 +186,7 @@ export const authorScreenStyles = StyleSheet.create({
   inlineActionText: {
     fontSize: tokens.font.small,
     color: tokens.colors.green700,
-    fontWeight: "800",
+    fontWeight: "500",
   },
   statsRow: {
     flexDirection: "row",
@@ -154,10 +194,41 @@ export const authorScreenStyles = StyleSheet.create({
     gap: 10,
     flexWrap: "wrap",
   },
+  ownStatsRow: {
+    marginTop: 20,
+    paddingVertical: 13,
+    borderTopWidth: 1,
+    borderColor: tokens.colors.border,
+    flexDirection: "row",
+    alignItems: "stretch",
+  },
+  ownStatItem: {
+    flex: 1,
+    minWidth: 0,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 2,
+  },
+  ownStatItemDivider: {
+    borderLeftWidth: 1,
+    borderLeftColor: tokens.colors.border,
+  },
+  ownStatLabel: {
+    fontSize: 11,
+    lineHeight: 16,
+    fontWeight: "500",
+    color: tokens.colors.textFaint,
+  },
+  ownStatValue: {
+    fontSize: 14,
+    lineHeight: 19,
+    fontWeight: "600",
+    color: tokens.colors.text,
+  },
   statText: {
     fontSize: 12,
     color: tokens.colors.textMuted,
-    fontWeight: "900",
+    fontWeight: "600",
   },
   statMetric: {
     flexDirection: "row",
@@ -173,7 +244,7 @@ export const authorScreenStyles = StyleSheet.create({
   statLinkText: {
     fontSize: 12,
     color: tokens.colors.textMuted,
-    fontWeight: "900",
+    fontWeight: "600",
   },
   joinedAt: {
     fontSize: tokens.font.small,
@@ -231,40 +302,6 @@ export const authorScreenStyles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 16,
   },
-  profileCustomizeBtn: {
-    flexGrow: 1,
-    borderRadius: tokens.radius.pill,
-    borderWidth: 1,
-    borderColor: tokens.colors.green700,
-    backgroundColor: tokens.colors.green050,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    alignItems: "center",
-  },
-  profileCustomizeBtnText: {
-    fontSize: tokens.font.small,
-    fontWeight: "900",
-    color: tokens.colors.green700,
-  },
-  settingsBtn: {
-    flexGrow: 1,
-    minHeight: 40,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 5,
-    borderRadius: tokens.radius.pill,
-    borderWidth: 1,
-    borderColor: tokens.colors.border,
-    backgroundColor: "rgba(255,255,255,0.62)",
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-  },
-  settingsBtnText: {
-    fontSize: tokens.font.small,
-    fontWeight: "900",
-    color: tokens.colors.green700,
-  },
   primaryActionRow: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -286,7 +323,7 @@ export const authorScreenStyles = StyleSheet.create({
   },
   latestPostBtnText: {
     fontSize: tokens.font.small,
-    fontWeight: "900",
+    fontWeight: "600",
     color: "#fff",
   },
   followBtn: {
@@ -306,7 +343,7 @@ export const authorScreenStyles = StyleSheet.create({
   },
   followBtnText: {
     fontSize: tokens.font.small,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.textInverse,
   },
   followBtnTextActive: {
@@ -322,7 +359,7 @@ export const authorScreenStyles = StyleSheet.create({
   },
   shareBtnText: {
     fontSize: tokens.font.small,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
   },
   overflowCard: {
@@ -341,7 +378,7 @@ export const authorScreenStyles = StyleSheet.create({
   },
   overflowItemText: {
     fontSize: tokens.font.small,
-    fontWeight: "800",
+    fontWeight: "500",
     color: tokens.colors.text,
   },
   sectionRow: {
@@ -349,16 +386,36 @@ export const authorScreenStyles = StyleSheet.create({
     marginBottom: tokens.space.sm,
     gap: 10,
   },
+  ownSectionRow: {
+    marginTop: 0,
+    marginBottom: 0,
+    minHeight: 64,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderBottomWidth: 1,
+    borderBottomColor: tokens.colors.border,
+  },
   sectionLabel: {
     fontSize: tokens.font.small,
-    fontWeight: "800",
+    fontWeight: "500",
     color: tokens.colors.textFaint,
     letterSpacing: -0.2,
+  },
+  ownSectionLabel: {
+    fontSize: 15,
+    lineHeight: 21,
+    fontWeight: "600",
+    color: tokens.colors.text,
   },
   sortRow: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: tokens.space.xs as any,
+  },
+  ownSortRow: {
+    flexWrap: "nowrap",
+    gap: 14,
   },
   sortChip: {
     minHeight: 31,
@@ -371,16 +428,38 @@ export const authorScreenStyles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  ownSortTab: {
+    minHeight: 36,
+    borderRadius: 0,
+    borderWidth: 0,
+    borderBottomWidth: 1,
+    borderBottomColor: "transparent",
+    backgroundColor: "transparent",
+    paddingHorizontal: 0,
+    paddingVertical: 8,
+  },
+  ownSortTabActive: {
+    backgroundColor: "transparent",
+    borderColor: tokens.colors.green700,
+  },
   sortChipActive: {
     backgroundColor: tokens.colors.green050,
     borderColor: tokens.colors.green700,
   },
   sortChipText: {
     fontSize: tokens.font.small,
-    fontWeight: "700",
+    fontWeight: "500",
     color: tokens.colors.textMuted,
   },
   sortChipTextActive: {
+    color: tokens.colors.green900,
+  },
+  ownSortTabText: {
+    fontSize: 12,
+    fontWeight: "500",
+    color: tokens.colors.textFaint,
+  },
+  ownSortTabTextActive: {
     color: tokens.colors.green900,
   },
   listItemSpacer: {
@@ -388,6 +467,17 @@ export const authorScreenStyles = StyleSheet.create({
   },
   listFooter: {
     paddingVertical: tokens.space.lg,
+  },
+  ownEmptyState: {
+    minHeight: 76,
+    alignItems: "flex-start",
+    justifyContent: "center",
+  },
+  ownEmptyText: {
+    fontSize: tokens.font.body,
+    lineHeight: 22,
+    fontWeight: "500",
+    color: tokens.colors.textMuted,
   },
   center: {
     flex: 1,
