@@ -104,7 +104,7 @@ const styles = StyleSheet.create({
   linkChipText: {
     color: tokens.colors.text,
     fontSize: tokens.font.small,
-    fontWeight: "800",
+    fontWeight: "500",
   },
   hint: {
     fontSize: 12,

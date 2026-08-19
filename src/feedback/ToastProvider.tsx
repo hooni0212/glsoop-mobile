@@ -141,7 +141,7 @@ const styles = StyleSheet.create({
   message: {
     color: tokens.colors.textInverse,
     fontSize: 13,
-    fontWeight: "800",
+    fontWeight: "500",
     textAlign: "center",
   },
 });

@@ -50,7 +50,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 18,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
     textAlign: "center",
     lineHeight: 24,
@@ -74,7 +74,7 @@ const styles = StyleSheet.create({
   },
   actionText: {
     fontSize: 14,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.textInverse,
   },
 });

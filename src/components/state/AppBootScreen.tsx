@@ -152,7 +152,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 24,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
     textAlign: "center",
   },

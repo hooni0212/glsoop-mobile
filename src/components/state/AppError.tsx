@@ -50,7 +50,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 14,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.danger,
     textAlign: "center",
     lineHeight: 20,
@@ -60,7 +60,7 @@ const styles = StyleSheet.create({
     color: tokens.colors.danger,
     textAlign: "center",
     lineHeight: 18,
-    fontWeight: "700",
+    fontWeight: "500",
   },
   retryButton: {
     marginTop: 6,
@@ -74,7 +74,7 @@ const styles = StyleSheet.create({
   },
   retryText: {
     fontSize: 13,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.danger,
   },
 });

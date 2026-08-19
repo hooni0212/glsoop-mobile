@@ -162,8 +162,8 @@ function badgeDetail(item: CosmeticItem | null, fallback = "보유 중") {
   if (key.includes("first_post")) return "첫 글을 남기면 얻는 흔적";
   if (key.includes("posts_10")) return "열 편의 글을 쌓아 얻는 배지";
   if (key.includes("posts_50")) return "꾸준히 쓴 작가에게 주어져요";
-  if (key.includes("first_like")) return "첫 좋아요를 받으면 열려요";
-  if (key.includes("loved")) return "많은 좋아요를 받은 글의 기록";
+  if (key.includes("first_like")) return "첫 공감를 받으면 열려요";
+  if (key.includes("loved")) return "많은 공감를 받은 글의 기록";
   if (key.includes("streak_30")) return "긴 글쓰기 리듬을 지킨 보상";
   if (key.includes("streak_7")) return "일주일의 발걸음을 남긴 배지";
   if (key.includes("streak_3")) return "짧은 리듬을 시작한 기록";
@@ -996,7 +996,7 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: "center",
     fontSize: 16,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
   },
   topBarSpacer: {
@@ -1034,7 +1034,7 @@ const styles = StyleSheet.create({
   rewardNoticeIconText: {
     ...NON_SELECTABLE_TEXT,
     fontSize: 16,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.textInverse,
   },
   rewardNoticeCopy: {
@@ -1044,14 +1044,14 @@ const styles = StyleSheet.create({
   rewardNoticeTitle: {
     ...NON_SELECTABLE_TEXT,
     fontSize: tokens.font.body,
-    fontWeight: "900",
+    fontWeight: "600",
     color: PROFILE_UI_COLORS.ink,
   },
   rewardNoticeText: {
     ...NON_SELECTABLE_TEXT,
     fontSize: tokens.font.small,
     lineHeight: 18,
-    fontWeight: "700",
+    fontWeight: "500",
     color: PROFILE_UI_COLORS.muted,
   },
   notice: {
@@ -1094,7 +1094,7 @@ const styles = StyleSheet.create({
     ...NON_SELECTABLE_TEXT,
     color: tokens.colors.text,
     fontSize: tokens.font.body,
-    fontWeight: "900",
+    fontWeight: "600",
   },
   profilePhotoShortcutText: {
     ...NON_SELECTABLE_TEXT,
@@ -1168,7 +1168,7 @@ const styles = StyleSheet.create({
   previewAvatarText: {
     ...NON_SELECTABLE_TEXT,
     fontSize: 21,
-    fontWeight: "900",
+    fontWeight: "600",
     color: PROFILE_UI_COLORS.green,
   },
   previewIdentity: {
@@ -1180,7 +1180,7 @@ const styles = StyleSheet.create({
     ...NON_SELECTABLE_TEXT,
     fontSize: 12,
     color: PROFILE_UI_COLORS.muted,
-    fontWeight: "800",
+    fontWeight: "500",
   },
   previewNameRow: {
     flexDirection: "row",
@@ -1193,7 +1193,7 @@ const styles = StyleSheet.create({
   previewName: {
     ...NON_SELECTABLE_TEXT,
     fontSize: 25,
-    fontWeight: "900",
+    fontWeight: "600",
     color: PROFILE_UI_COLORS.ink,
     flexShrink: 1,
   },
@@ -1228,7 +1228,7 @@ const styles = StyleSheet.create({
   previewShowcaseText: {
     ...NON_SELECTABLE_TEXT,
     fontSize: tokens.font.small,
-    fontWeight: "800",
+    fontWeight: "500",
     color: tokens.colors.green900,
   },
   previewSticker: {
@@ -1271,7 +1271,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     ...NON_SELECTABLE_TEXT,
     fontSize: 17,
-    fontWeight: "900",
+    fontWeight: "600",
     color: PROFILE_UI_COLORS.ink,
   },
   sectionHint: {
@@ -1383,7 +1383,7 @@ const styles = StyleSheet.create({
     fontSize: tokens.font.small,
     lineHeight: 17,
     color: PROFILE_UI_COLORS.ink,
-    fontWeight: "800",
+    fontWeight: "500",
     textAlign: "center",
   },
   optionCardDetail: {
@@ -1392,7 +1392,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     lineHeight: 16,
     color: PROFILE_UI_COLORS.muted,
-    fontWeight: "700",
+    fontWeight: "500",
     textAlign: "center",
   },
   optionCardTitleSelected: {
@@ -1423,14 +1423,14 @@ const styles = StyleSheet.create({
     ...NON_SELECTABLE_TEXT,
     fontSize: tokens.font.body,
     color: PROFILE_UI_COLORS.ink,
-    fontWeight: "900",
+    fontWeight: "600",
   },
   slotSelectedText: {
     ...NON_SELECTABLE_TEXT,
     flexShrink: 1,
     fontSize: tokens.font.small,
     color: PROFILE_UI_COLORS.muted,
-    fontWeight: "800",
+    fontWeight: "500",
     lineHeight: 18,
   },
   slotMiniMap: {
@@ -1535,7 +1535,7 @@ const styles = StyleSheet.create({
     fontSize: tokens.font.small,
     lineHeight: 17,
     color: PROFILE_UI_COLORS.muted,
-    fontWeight: "800",
+    fontWeight: "500",
     textAlign: "center",
   },
   stickerOptionLabelSelected: {
@@ -1559,7 +1559,7 @@ const styles = StyleSheet.create({
   saveButtonText: {
     ...NON_SELECTABLE_TEXT,
     fontSize: 15,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.textInverse,
   },
   saveDock: {
@@ -1580,13 +1580,13 @@ const styles = StyleSheet.create({
   saveDockTitle: {
     ...NON_SELECTABLE_TEXT,
     fontSize: tokens.font.body,
-    fontWeight: "900",
+    fontWeight: "600",
     color: PROFILE_UI_COLORS.ink,
   },
   saveDockHint: {
     ...NON_SELECTABLE_TEXT,
     fontSize: tokens.font.small,
-    fontWeight: "700",
+    fontWeight: "500",
     color: PROFILE_UI_COLORS.muted,
     lineHeight: 17,
   },

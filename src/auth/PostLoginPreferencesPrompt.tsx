@@ -492,13 +492,13 @@ const styles = StyleSheet.create({
   },
   eyebrow: {
     fontSize: 11,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.textFaint,
     letterSpacing: 1.1,
   },
   title: {
     fontSize: 24,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
   },
   description: {
@@ -532,7 +532,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 17,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
   },
   sectionDescription: {
@@ -562,7 +562,7 @@ const styles = StyleSheet.create({
   },
   choiceBtnText: {
     fontSize: tokens.font.small,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.textMuted,
   },
   choiceBtnTextSelected: {
@@ -577,7 +577,7 @@ const styles = StyleSheet.create({
   },
   noteText: {
     fontSize: 12,
-    fontWeight: "700",
+    fontWeight: "500",
     color: tokens.colors.textMuted,
     lineHeight: 18,
   },
@@ -595,7 +595,7 @@ const styles = StyleSheet.create({
   },
   laterBtnText: {
     fontSize: 15,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.textMuted,
   },
   saveBtn: {
@@ -611,7 +611,7 @@ const styles = StyleSheet.create({
   },
   saveBtnText: {
     fontSize: 15,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.textInverse,
   },
   disabled: {

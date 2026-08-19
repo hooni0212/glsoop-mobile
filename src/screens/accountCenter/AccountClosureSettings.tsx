@@ -288,7 +288,7 @@ const styles = StyleSheet.create({
   },
   topBarTitle: {
     fontSize: 17,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
   },
   topBarSpacer: {
@@ -314,7 +314,7 @@ const styles = StyleSheet.create({
   },
   heroTitle: {
     fontSize: 20,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
   },
   heroDescription: {
@@ -325,7 +325,7 @@ const styles = StyleSheet.create({
   heroMeta: {
     fontSize: tokens.font.small,
     color: tokens.colors.danger,
-    fontWeight: "800",
+    fontWeight: "500",
   },
   card: {
     borderWidth: 1,
@@ -337,7 +337,7 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     fontSize: 18,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
   },
   cardDescription: {
@@ -368,7 +368,7 @@ const styles = StyleSheet.create({
   },
   modeToggleChipText: {
     fontSize: tokens.font.small,
-    fontWeight: "800",
+    fontWeight: "500",
     color: tokens.colors.textMuted,
   },
   modeToggleChipTextActive: {
@@ -387,7 +387,7 @@ const styles = StyleSheet.create({
   },
   fieldLabel: {
     fontSize: tokens.font.small,
-    fontWeight: "800",
+    fontWeight: "500",
     color: tokens.colors.text,
   },
   input: {
@@ -414,7 +414,7 @@ const styles = StyleSheet.create({
   dangerBtnText: {
     color: tokens.colors.textInverse,
     fontSize: 15,
-    fontWeight: "800",
+    fontWeight: "500",
   },
   disabledBtn: {
     opacity: 0.6,
