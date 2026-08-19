@@ -202,7 +202,7 @@ test.describe("Write 임시저장 UX", () => {
     await expect(page).toHaveURL(/\/(\(tabs\))?\/?$/);
   });
 
-  test("S2: 완료 제출 → 완료 메시지 + 홈 이동, 임시저장 생성 안됨", async ({ page }) => {
+  test("S2: 완료 제출 → 완료 메시지 + 문집 이동, 임시저장 생성 안됨", async ({ page }) => {
     await clearDrafts(page);
     await page.goto("/write");
 
@@ -218,8 +218,8 @@ test.describe("Write 임시저장 UX", () => {
     await submitBtn.click();
 
     await expect(page.getByText("완료되었어요")).toBeVisible();
-    await page.getByTestId("write-success-go-home").click();
-    await expect(page).toHaveURL(/\/(\(tabs\))?\/?$/);
+    await page.getByTestId("write-success-go-book").click();
+    await expect(page).toHaveURL(/\/book$/);
 
     await page.getByTestId("fab-write").click();
     await expect(page).toHaveURL(/\/write$/);
