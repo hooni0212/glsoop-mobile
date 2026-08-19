@@ -798,7 +798,7 @@ const styles = StyleSheet.create({
   },
   tabButtonLabel: {
     fontSize: 13,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.textMuted,
   },
   tabButtonLabelActive: {
@@ -836,12 +836,12 @@ const styles = StyleSheet.create({
   },
   recentTitle: {
     fontSize: 13,
-    fontWeight: "800",
+    fontWeight: "500",
     color: tokens.colors.text,
   },
   recentClearText: {
     fontSize: 12,
-    fontWeight: "700",
+    fontWeight: "500",
     color: tokens.colors.textMuted,
   },
   recentChipWrap: {
@@ -865,12 +865,12 @@ const styles = StyleSheet.create({
     maxWidth: 180,
     fontSize: 12,
     color: tokens.colors.textMuted,
-    fontWeight: "700",
+    fontWeight: "500",
   },
   countLabel: {
     fontSize: tokens.font.small,
     color: tokens.colors.textMuted,
-    fontWeight: "700",
+    fontWeight: "500",
     marginBottom: tokens.space.sm,
     marginLeft: 4,
   },
@@ -897,7 +897,7 @@ const styles = StyleSheet.create({
   sortChipText: {
     fontSize: 12,
     color: tokens.colors.textMuted,
-    fontWeight: "700",
+    fontWeight: "500",
   },
   sortChipTextActive: {
     color: tokens.colors.green700,
@@ -936,7 +936,7 @@ const styles = StyleSheet.create({
   },
   authorName: {
     fontSize: 16,
-    fontWeight: "800",
+    fontWeight: "500",
     color: tokens.colors.text,
   },
   authorNickname: {
@@ -952,12 +952,12 @@ const styles = StyleSheet.create({
   },
   authorMetaText: {
     fontSize: 12,
-    fontWeight: "700",
+    fontWeight: "500",
     color: tokens.colors.textMuted,
   },
   authorMetaDot: {
     fontSize: 12,
-    fontWeight: "700",
+    fontWeight: "500",
     color: tokens.colors.textFaint,
   },
   authorLatestLabel: {
@@ -981,7 +981,7 @@ const styles = StyleSheet.create({
   },
   loadMoreText: {
     fontSize: 13,
-    fontWeight: "700",
+    fontWeight: "500",
     color: tokens.colors.textMuted,
   },
 });

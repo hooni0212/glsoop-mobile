@@ -329,7 +329,7 @@ const styles = StyleSheet.create({
   },
   topTitle: {
     fontSize: 18,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
   },
   topSpacer: {
@@ -381,7 +381,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     lineHeight: 20,
-    fontWeight: "900",
+    fontWeight: "600",
     color: tokens.colors.text,
   },
   rowBody: {
@@ -393,7 +393,7 @@ const styles = StyleSheet.create({
   rowTime: {
     marginTop: 1,
     fontSize: 12,
-    fontWeight: "800",
+    fontWeight: "500",
     color: tokens.colors.textFaint,
   },
   unreadDot: {

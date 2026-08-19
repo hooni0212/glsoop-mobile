@@ -244,7 +244,7 @@ const styles = {
   },
   carouselStatusText: {
     fontSize: 12,
-    fontWeight: "800" as const,
+    fontWeight: "500" as const,
     color: "rgba(80,58,32,0.68)",
   },
   carouselDots: {
